@@ -1,0 +1,10 @@
+Hi {{user.get_full_name}}!
+
+We've successfully imported {{count}} of your contact(s).
+They're all stored in the group {{group.name}}
+
+Please visit http://go.vumi.org.
+
+thanks!
+
+Vumi Go.

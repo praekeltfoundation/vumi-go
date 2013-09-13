@@ -1,0 +1,11 @@
+<label>Define the question</label>
+<%= partials.text %>
+
+<label>Define the answers</label>
+<ol class='choices'>
+  <% partials.choices.forEach(function(choice) { %>
+    <%= choice %>
+  <% }); %>
+</ol>
+
+<button class='btn btn-primary new-choice'>Add another answer</button>

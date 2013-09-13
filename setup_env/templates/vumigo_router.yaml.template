@@ -1,0 +1,13 @@
+transport_names:
+{% for transport_name in transport_names %}  - {{transport_name}}
+{% endfor %}
+
+exposed_names:
+  - vumigo_router
+middleware:
+  - logging_mw: vumi.middleware.logging.LoggingMiddleware
+router_class: vumi.dispatchers.base.SimpleDispatchRouter
+route_mappings:
+{% for transport_name in transport_names %}  {{transport_name}}:
+    - vumigo_router
+{% endfor %}

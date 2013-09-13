@@ -1,0 +1,18 @@
+#!/bin/bash
+
+{% for contact_group in contact_groups %}
+./go-admin.sh go_import_contacts --email-address {{contact_group.account}} \
+    --contacts {{contact_group.contacts_csv}} --group {{contact_group.key}}
+{% endfor %}
+
+{% for conversation in conversations %}{% if conversation.start %}
+echo "Starting conversation: {{conversation.key}}"
+./go-admin.sh go_manage_conversation --email-address {{conversation.account}} \
+    --conversation-key {{conversation.key}} --start
+{% endif %}{% endfor %}
+
+{% for router in routers %}{% if router.start %}
+echo "Starting router: {{router.key}}"
+./go-admin.sh go_manage_router --email-address {{router.account}} \
+    --router-key {{router.key}} --start
+{% endif %}{% endfor %}

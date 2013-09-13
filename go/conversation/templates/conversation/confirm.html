@@ -1,0 +1,76 @@
+{% extends "app.html" %}
+
+{% block content_extraclass %}confirm{% endblock %}
+
+{% block content_title %}{{ action_name }} confirmation{% endblock %}
+
+{% block content_main %}
+    {% include "base/includes/messages.html" %}
+
+    <div class='row-fluid details'>
+        {% if not success %}
+          <p>Please review the details below and click confirm if everything is in order.</p>
+        {% endif %}
+
+        <div class='span6'>
+            <h4>Conversation details</h4>
+            <table class="conversation table table-bordered">
+                <thead>
+                    <tr>
+                        <th colspan="2">{{ conversation.name }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>Description</th>
+                        <td>{{ conversation.description }}</td>
+                    </tr>
+                    <tr>
+                        <th>Type</th>
+                        <td>{{ conversation.conversation_type }}</td>
+                    </tr>
+                    <tr>
+                        <th>Channels</th>
+                        <td>
+                            {% for channel in conversation.get_channels %}
+                                <span class="label label-inverse">{{ channel.name }}</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <th>Groups</th>
+                        <td>
+                            {% for group in conversation.get_groups %}
+                                <span class="label label-inverse">{{ group.name }}</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            {% if action_details %}
+            <h4>Action details</h4>
+            <table class="action table table-bordered">
+                <tbody>
+                    {% for name, value in action_details.items %}
+                    <tr>
+                        <th>{{ name }}</th>
+                        <td>{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+
+            {% if not success %}
+            <form method="post">
+                {{form}}
+                <div>
+                    <input type="submit" class="btn btn-primary" data-loading-text="saving..." value="Confirm">
+                </div>
+                {% csrf_token %}
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+{% endblock %}

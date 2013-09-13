@@ -1,0 +1,24 @@
+{% extends "registration/base.html" %}
+{% load url from future %}
+
+{% block auth_form %}
+<form action="" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if form.errors %}
+    <p class="alert alert-error">
+        <strong>Whoops!</strong> The email address or password that you've provided is incorrect.
+    </p>
+    {% endif %}
+    <p>
+        <input type="text" name="{{ form.username.name }}" placeholder="Email address" class="input-large">            
+    </p>
+    <p>
+        <input type="password" name="{{ form.password.name }}" placeholder="{{ form.password.label }}" class="input-large">            
+    </p>
+    <p>
+        <button type="submit" class="btn">Sign In</button>
+        <a href="{% url 'auth_password_reset' %}">Forgot your password?</a>
+    </p>
+</form>
+{% endblock %}

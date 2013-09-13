@@ -1,0 +1,54 @@
+{% extends "conversation/dashboard_base.html" %}
+{% load url from future %}
+{% load humanize %}
+{% load channel_tags %}
+
+
+{% block content_extraclass %}dashboard channels{% endblock %}
+
+{% block content_title %}All channels{% endblock %}
+
+{% block content_dashboard %}
+<form class="table-form-view" method="post" action="">
+    {% csrf_token %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>{# Action markers go here, dashboard does not use them #}</th>
+                <th>Channels</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if channels %}
+                {% for channel in page.object_list %}
+                <tr data-url="{% channel_screen channel %}">
+                    <td>{# Action markers go here, dashboard does not use them #}</td>
+                    <td>
+                        <a href="{% channel_screen channel %}">
+                            {{ channel.name }}
+                        </a>
+                    </td>
+                    <td>
+                      {% include "channel/includes/actions.html" with channel=channel %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="9">
+                    No channels.
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    {% include "base/includes/pagination.html" %}
+</form>
+{% endblock %}
+
+{% block ondomready %}
+    var dashboard = new go.channel.dashboard.ChannelDashboardView({
+        el: '.table-form-view'
+    });
+{% endblock %}

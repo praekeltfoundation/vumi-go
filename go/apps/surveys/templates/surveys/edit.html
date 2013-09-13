@@ -1,0 +1,48 @@
+{% extends "conversation/edit.html" %}
+{% load url from future %}
+
+{% block content_extraclass %}campaigns surveys{% endblock %}
+
+{% block content_actions_left %}
+{% endblock %}
+
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <button class="btn btn-primary" data-action="save-and-close">Save and close &rarr;</button>
+    <button class="btn btn-primary" data-action="save-add-question">Save and add question</button>
+{% endblock %}
+
+{% block content_main %}
+    <div class="row">
+        <div class="span12">
+            <form name="conversation" id="conversation" class="indent form-horizontal" method="post" action="">
+                <fieldset>
+                    {% include "surveys/includes/contents.html" %}
+                    <div class="control-group">
+                        <label class="control-label">&nbsp;</label>
+                        <div class="controls">
+                            <input type="submit" name="_save_contents" id="_save_contents" value="Save and add question" class="btn btn-primary" />
+                            <input type="submit" name="submit" id="submit" value="Save and close &rarr;" class="btn" />
+                        </div>
+                    </div>
+                </fieldset>
+                {% csrf_token %}
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block ondomready %}
+  {{ block.super }}
+
+  $('.actions button[data-action="save-and-close"]').click(function(e) {
+      e.preventDefault();
+      $('#conversation #submit').click();
+  });
+
+  $('.actions button[data-action="save-add-question"]').click(function(e) {
+      e.preventDefault();
+      $('#conversation #_save_contents').click();
+  });
+
+{% endblock %}

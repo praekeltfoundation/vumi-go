@@ -1,0 +1,63 @@
+{% extends "conversation/dashboard_base.html" %}
+{% load url from future %}
+{% load conversation_tags %}
+{% load humanize %}
+
+
+{% block content_dashboard %}
+<form class="table-form-view" method="post" action="">
+    {% csrf_token %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>{# Action markers go here, dashboard does not use them #}</th>
+                <th>Campaigns</th>
+                <th>Status</th>
+                <th>Interactions</th>
+                <!-- TODO: We don't have a backend service yet for this value -->
+                <!-- <th>In Last</th> -->
+                <!-- TODO: We're only storing the created_at value :\ -->
+                <th>Last Edited</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if conversations %}
+                {% for conversation in page.object_list %}
+                <tr data-url="{% conversation_screen conversation %}">
+                    <td>{# Action markers go here, dashboard does not use them #}</td>
+                    <td>
+                        <a href="{% conversation_screen conversation %}">
+                            {{ conversation.name }}
+                        </a>
+                    </td>
+                    <td class="status {{ conversation.get_status }}">{{ conversation.get_status }}</td>
+                    <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
+                    <!-- <td></td> -->
+                    <td title="{{conversation.created_at }}">{{ conversation.created_at|naturalday }}</td>
+                    <td>
+                        <a href="{% conversation_screen conversation 'message_list' %}">Messages</a>
+                        {# <a href="{% url 'todo' %}">Reports</a> #}
+                    </td>
+                    <td>
+                      {% include "conversation/includes/actions.html" with conversation=conversation %}
+                    </td>
+                </tr>
+                {% endfor %}
+
+            {% else %}
+            <tr>
+                <td colspan="9">
+                {% if query %}
+                    No contacts match <strong>{{ query }}</strong>
+                {% else %}
+                    No conversations.
+                {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    {% include "base/includes/pagination.html" %}
+</form>
+{% endblock %}

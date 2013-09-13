@@ -1,0 +1,39 @@
+{% extends "app.html" %}
+
+{% block content_extraclass %}conversation groups{% endblock %}
+{% block content_title %}Contact Groups for {{conversation.name}}{% endblock %}
+
+{% block content_actions_right %}
+    <div class="pull-right">
+        <input type="text" placeholder="Find people..." class="input-large search-query search">
+        <button class="btn btn-primary save">Save</button>
+    </div>
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid">
+    <div class="span12">
+        <div class="indent">
+            <h3>Select contact groups</h3>
+            <table class="table group-table">
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+    {{ block.super }}
+    {% include "contacts/includes/tools.html" %}
+{% endblock %}
+
+{% block ondomready %}
+    {{ block.super }}
+
+    var view = new go.conversation.groups.EditConversationGroupsView({
+        el: $('body'),
+        model: new go.conversation.models.ConversationGroupsModel({{ model_data|safe }})
+    });
+
+    view.render();
+{% endblock %}

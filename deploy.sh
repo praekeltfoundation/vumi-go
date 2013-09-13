@@ -1,1 +1,0 @@
-source ve/bin/activate && fab deploy && deactivate

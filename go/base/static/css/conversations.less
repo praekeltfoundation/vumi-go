@@ -1,0 +1,273 @@
+.confirm {
+  .details {
+    margin-left: 24px;
+
+    table {
+      th:first-child {
+        width: 100px;
+      }
+    }
+  }
+}
+
+.dialogue {
+  .actions {
+    .sidebar {
+      background: #d9d8d3;
+    }
+  }
+
+  .popover {
+    font-size: 11px;
+    width: 220px;
+
+    input {
+      font-size:11px;
+      width:90%;
+    }
+  }
+
+  #diagram {
+
+    ._jsPlumb_connector {
+      z-index: 1;
+      opacity: 0.5;
+    }
+
+    ._jsPlumb_endpoint {
+      z-index: 5;
+      opacity: 0.5;
+    }
+
+    ._jsPlumb_endpoint svg circle:hover {
+      cursor: move;
+    }
+
+    ._jsPlumb_dragging {
+      z-index: 3;
+      opacity: 0.5;
+    }
+
+    ._jsPlumb_hover {
+      z-index: 3;
+      opacity: 0.75;
+    }
+
+    .grid {
+      width: 1024px;
+      text-align: center;
+      margin: 0 auto;
+
+      .placeholder {
+        background: #2f3436;
+        width: 8px;
+        height: 200px;
+        float: left;
+        .border-radius(10px);
+      }
+
+      .row {
+        margin: 0;
+      }
+
+      .item {
+        margin: 40px 40px;
+        float: left;
+        z-index: 2;
+      }
+    }
+
+    .add {
+      height: 65px;
+      font-size: 65px;
+      .user-select(none);
+    }
+
+    .state {
+      width: 260px;
+      float: left;
+      text-align: left;
+      position: relative;
+      color: #2f3436;
+      .user-select(none);
+
+      .titlebar, label {
+        background: #b0b0b0;
+        height: 35px;
+        line-height: 35px;
+        font-size: 11px;
+        padding: 0 6px;
+        text-indent: 0;
+        font-weight: normal;
+        text-align: left;
+      }
+
+      .titlebar {
+        margin-top: -14px;
+        margin-bottom: 10px;
+        .border-radius(5px);
+
+        .remove {
+          float: right;
+          height: 22px;
+          width: 20px;
+          margin-top: 6px;
+          padding-bottom: 4px;          
+          color: #eee;
+          background: #000;
+        }
+      }
+
+      .titlebar:hover {
+        cursor: move;
+      }
+
+      .edit.mode {
+        .actions {
+
+          background: inherit;
+          margin: 10px 5px 0 0;
+
+          a {
+            font-size: 12px;
+          }
+        }
+      }
+
+      .preview.mode {
+        .edit-switch {
+          margin-left: 8px;
+        }
+
+        .text {
+          margin-left: 8px;
+        }
+      }
+
+      label, p {
+        cursor: default;
+        color: #2f3436;
+      }
+
+      textarea, select, input {
+        width:80%;
+        margin-left: 3px;
+        font-size: 11px;
+      }
+
+      textarea {
+        resize: none;
+        max-width: 80%;
+
+      }
+
+      
+
+      p {
+        text-align: left;
+      }
+
+      .close {
+        font-size: 16px;
+      }
+
+      .hint {
+        margin: 0;
+        text-align: center;
+        font-size: 10px;
+        font-weight: bold;
+      }
+
+      .important {
+        color: #cc3333;
+      }
+    }
+
+    .endpoint {
+      z-index: 4;
+      background: teal;
+      width: 15px;
+      height: 15px;
+      .border-radius(15px);
+    }
+
+    .endpoint:hover {
+      cursor: pointer;
+
+    }
+
+    .search_enabled {
+      input {
+        margin: 0;
+        margin-left: 3px;
+        padding: 0;
+        width: auto;
+        min-width: 10px;
+        display: inline;
+      }
+
+      label {
+        margin: 0;
+        text-indent: 0;
+        padding: 0;
+        display: inline;
+        background: transparent;
+        font-size: 10px;
+        color: #666;
+      }
+    }
+
+
+
+    
+
+    .choice.state {
+      .edit.mode {
+
+        .choices {
+
+          font-size: 11px;
+          margin-left: 20px;
+
+
+          li { 
+            padding: 0; 
+            margin: 0 0 18px 0;
+          }
+          
+          input {
+            min-width: 130px;
+            width: 170px;
+            margin-bottom: 0;
+          }
+
+          .close {
+            margin: 4px 10px 0 0;
+          }
+        }
+
+        .new-choice {
+          float: right;
+          font-size: 11px;
+          margin-right: 43px;
+
+        }
+      }
+
+      .preview.mode {
+        .choices {
+          text-align: left;
+        }
+      }
+    }
+  }
+}
+
+
+.conversation.groups {
+  .group-table {
+    th:first-child, td:first-child {
+      width: 20px;
+    }
+  }
+}

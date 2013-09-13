@@ -1,0 +1,23 @@
+Hi {{user.get_full_name}}!
+
+Unfortunately there was an error while importing your contacts. Please
+forward this email to support@vumi.org so our technicians can investigate
+this problem for you.
+
+Apologies for the inconvenience.
+
+Vumi Go.
+
+----
+
+Account Key: {{account_key}}
+Group Key: {{group_key}}
+File Name: {{file_name}}
+File Path: {{file_path}}
+Fields: {{fields}}
+Has Header: {{has_header}}
+Exception Type: {{exception_type}}
+Exception Value: {{exception_value}}
+Exception Traceback:
+
+{{exception_traceback|join:""|safe}}

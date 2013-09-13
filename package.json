@@ -1,0 +1,29 @@
+{
+  "name": "vumi-go",
+  "version": "0.5.0-dev",
+  "dependencies": {
+    "q": "~0.9.7",
+    "jed": "~0.5.4",
+    "vumigo_v01": "~0.1.17",
+    "libxmljs": "~0.8.1"
+  },
+  "devDependencies": {
+    "js-yaml": "~2.1.0",
+    "grunt": "~0.4.1",
+    "grunt-mocha-test": "~0.6.3",
+    "grunt-karma": "~0.6.2",
+    "karma": "~0.10.2",
+    "karma-mocha": "~0.1.0",
+    "karma-phantomjs-launcher": "~0.1.0",
+    "grunt-contrib-jst": "~0.5.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/praekelt/vumi-go"
+  },
+  "author": "Praekelt Foundation",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/praekelt/vumi-go/issues"
+  }
+}

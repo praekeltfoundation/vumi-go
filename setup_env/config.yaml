@@ -1,0 +1,6 @@
+redis_manager:
+  db: 1
+  key_prefix: "vumigo"
+riak_manager:
+  bucket_prefix: vumigo.
+vhost: "/develop"
