@@ -1,7 +1,6 @@
 from bootstrap.forms import BootstrapForm
 from django.conf import settings
 from django.contrib import messages
-from django.http import HttpResponse
 
 from vumi.persist.redis_manager import RedisManager
 from vxpolls.manager import PollManager
@@ -99,14 +98,12 @@ class SurveyEditView(ConversationTemplateView):
         })
 
 
-class SendSurveyForm(BootstrapForm):
-    # TODO: Something better than this?
-    pass
-
-
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     edit_view = SurveyEditView
 
     action_forms = {
-        'send_survey': SendSurveyForm,
+        # TODO: These are both work-arounds for not being able to directly
+        #       trigger POSTs via conversation action buttons
+        'send_survey': BootstrapForm,
+        'download_user_data': BootstrapForm,
     }
