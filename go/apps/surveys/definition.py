@@ -1,5 +1,6 @@
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
+from go.apps.surveys.tasks import export_vxpolls_data
 
 
 class SendSurveyAction(ConversationAction):
@@ -28,7 +29,6 @@ class DownloadUserDataAction(ConversationAction):
     action_display_name = 'Download User Data'
 
     def perform_action(self, action_data):
-        from go.apps.surveys.tasks import export_vxpolls_data
         return export_vxpolls_data.delay(self._conv.user_account.key,
                                          self._conv.key)
 

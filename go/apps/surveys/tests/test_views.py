@@ -1,3 +1,8 @@
+from StringIO import StringIO
+from zipfile import ZipFile
+
+from django.core import mail
+
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.surveys.view_definition import get_poll_config
@@ -164,9 +169,20 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         participant.set_last_question_index(1)
         poll.submit_answer(participant, 'answer 2')
 
-        response = self.client.get(self.get_view_url('user_data'))
-        self.assertEqual(response['Content-Type'], 'application/csv')
-        lines = response.content.split('\r\n')
+        response = self.client.post(
+            self.get_action_view_url('download_user_data'))
+
+        self.assertRedirects(response, self.get_view_url('show'))
+
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(file_name, 'survey-data-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('survey-data-export.csv', 'r').read()
+
+        lines = csv_contents.split('\r\n')
         self.assertEqual(lines[0], 'user_id,user_timestamp,label-1,label-2')
         self.assertTrue(lines[1].startswith('user-1'))
         self.assertTrue(lines[1].endswith(',answer 1,answer 2'))
