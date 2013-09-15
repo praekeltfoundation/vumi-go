@@ -99,18 +99,6 @@ class SurveyEditView(ConversationTemplateView):
         })
 
 
-class UserDataView(ConversationTemplateView):
-    view_name = 'user_data'
-    path_suffix = 'users.csv'
-
-    def get(self, request, conversation):
-        poll_id = 'poll-%s' % (conversation.key,)
-        pm, poll_data = get_poll_config(poll_id)
-        poll = pm.get(poll_id)
-        csv_data = pm.export_user_data_as_csv(poll)
-        return HttpResponse(csv_data, content_type='application/csv')
-
-
 class SendSurveyForm(BootstrapForm):
     # TODO: Something better than this?
     pass
@@ -118,10 +106,6 @@ class SendSurveyForm(BootstrapForm):
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     edit_view = SurveyEditView
-
-    extra_views = (
-        UserDataView,
-    )
 
     action_forms = {
         'send_survey': SendSurveyForm,
