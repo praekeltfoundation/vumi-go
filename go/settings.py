@@ -238,6 +238,7 @@ CELERY_IMPORTS = (
     "go.contacts.tasks",
     "go.account.tasks",
     "go.conversation.tasks",
+    "go.apps.surveys.tasks",
 )
 CELERY_RESULT_BACKEND = "amqp"
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
