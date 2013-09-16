@@ -24,7 +24,6 @@ from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.router import RouterStore
-from go.vumitools.routing_table import GoConnector
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.token_manager import TokenManager

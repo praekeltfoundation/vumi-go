@@ -11,7 +11,6 @@ from twisted.web.server import Site
 
 from vumi.utils import http_request
 
-from go.vumitools.routing_table import GoConnector
 from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
