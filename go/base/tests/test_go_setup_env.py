@@ -380,8 +380,8 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             self.assertEqual(set(keys), set(obj.key for obj in objects))
 
         self.assertEqual(
-            set([('pool1', 'default0'), ('pool1', 'default1')]),
-            user_api.list_endpoints())
+            set([u'pool1:default0', u'pool1:default1']),
+            set(ch.key for ch in user_api.active_channels()))
         assert_keys(['router1'], user_api.active_routers())
         assert_keys(['conv1', 'conv2'], user_api.active_conversations())
         assert_keys(['group1'], user_api.list_groups())
@@ -396,8 +396,8 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
 
         user_api = vumi_api_for_user(user)
         self.assertEqual(
-            set([('pool1', 'default0'), ('pool1', 'default1')]),
-            user_api.list_endpoints())
+            set([u'pool1:default0', u'pool1:default1']),
+            set(ch.key for ch in user_api.active_channels()))
 
     def test_setup_conversations(self):
         self.command.setup_tagpools(self.tagpool_file.name)

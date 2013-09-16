@@ -115,12 +115,21 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertFalse((yield VumiUserApi(self.vumi_api, 'foo').exists()))
 
     @inlineCallbacks
-    def test_list_endpoints(self):
+    def test_active_channels(self):
         tag1, tag2, tag3 = yield self.setup_tagpool(
             u"pool1", [u"1234", u"5678", u"9012"])
+
         yield self.user_api.acquire_specific_tag(tag1)
-        endpoints = yield self.user_api.list_endpoints()
-        self.assertEqual(endpoints, set([tag1]))
+        channels = yield self.user_api.active_channels()
+        self.assertEqual(
+            set(ch.key for ch in channels),
+            set(u':'.join(tag) for tag in [tag1]))
+
+        yield self.user_api.acquire_specific_tag(tag2)
+        channels = yield self.user_api.active_channels()
+        self.assertEqual(
+            set(ch.key for ch in channels),
+            set(u':'.join(tag) for tag in [tag1, tag2]))
 
     @inlineCallbacks
     def assert_account_tags(self, expected):

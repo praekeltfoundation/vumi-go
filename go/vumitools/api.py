@@ -191,9 +191,9 @@ class VumiUserApi(object):
     @Manager.calls_manager
     def active_channels(self):
         channels = []
-        endpoints = yield self.list_endpoints()
-        for tag in endpoints:
-            channel = yield self.get_channel(tag)
+        user_account = yield self.get_user_account()
+        for tag in user_account.tags:
+            channel = yield self.get_channel(tuple(tag))
             channels.append(channel)
         returnValue(channels)
 
@@ -266,15 +266,6 @@ class VumiUserApi(object):
         router = yield self.router_store.new_router(
             router_type, name, description, config, batch_id, **fields)
         returnValue(router)
-
-    @Manager.calls_manager
-    def list_endpoints(self, user_account=None):
-        """Returns a set of endpoints owned by an account.
-        """
-        # TODO: Remove or rename this when we implement channels properly.
-        if user_account is None:
-            user_account = yield self.get_user_account()
-        returnValue(set(tuple(tag) for tag in user_account.tags))
 
     @Manager.calls_manager
     def get_routing_table(self, user_account=None):

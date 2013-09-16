@@ -121,12 +121,14 @@ class ChannelType(Dict):
         super(ChannelType, self).__init__(*args, **kw)
 
     @classmethod
-    def format_channel(cls, tag):
-        pool, tagname = tag
-        uuid = u":".join(tag)
-        conn = GoConnector.for_transport_tag(pool, tagname)
+    def format_channel(cls, channel):
+        # TODO: Clean up the tag-specific stuff in here.
+        pool = channel.tagpool
+        tagname = channel.tag
+        uuid = channel.key
+        conn = channel.get_connector()
         return {
-            'uuid': uuid, 'tag': tag, 'name': tagname,
+            'uuid': uuid, 'tag': (pool, tagname), 'name': tagname,
             'description': u"%s: %s" % (
                 pool.replace('_', ' ').title(), tagname),
             'endpoints': [

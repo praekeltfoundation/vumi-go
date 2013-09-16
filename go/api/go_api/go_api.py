@@ -51,11 +51,11 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
         return d
 
     def _channels(self, user_api):
-        def endpoints_to_channels(endpoints):
-            return [ChannelType.format_channel(tag) for tag in endpoints]
+        def format_channels(channels):
+            return [ChannelType.format_channel(ch) for ch in channels]
 
-        d = user_api.list_endpoints()
-        d.addCallback(endpoints_to_channels)
+        d = user_api.active_channels()
+        d.addCallback(format_channels)
         return d
 
     def _routers(self, user_api):

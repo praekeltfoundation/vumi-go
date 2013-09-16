@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse
 
 from go.base.tests.utils import VumiGoDjangoTestCase
-from go.vumitools.routing_table import RoutingTable, GoConnector
+from go.vumitools.routing_table import RoutingTable
 
 
 class WizardViewsTestCase(VumiGoDjangoTestCase):
@@ -13,14 +13,16 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         self.setup_user_api()
         self.setup_client()
 
-    def assert_stored_models(self, tags=[], routers=[], convs=[]):
-        self.assertEqual(set(tags), self.user_api.list_endpoints())
+    def assert_stored_models(self, channels=[], routers=[], convs=[]):
+        self.assertEqual([ch.key for ch in channels],
+                         [ch.key for ch in self.user_api.active_channels()])
         self.assertEqual([r.key for r in routers],
                          [r.key for r in self.user_api.active_routers()])
         self.assertEqual([c.key for c in convs],
                          [c.key for c in self.user_api.active_conversations()])
 
-    def assert_routing_table(self, tag_conv=[], tag_router=[], router_conv=[]):
+    def assert_routing_table(self, channel_conv=[], channel_router=[],
+                             router_conv=[]):
         """Assert that the routing table has a particular form.
 
         :param tag_conv: List of (tag, conversation) pairs.
@@ -28,17 +30,17 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         :param router_conv: List of (router, endpoint, conversation) triples.
         """
         rt = RoutingTable()
-        for tag, conv in tag_conv:
-            tag_conn = GoConnector.for_transport_tag(tag[0], tag[1])
+        for channel, conv in channel_conv:
+            channel_conn = channel.get_connector()
             conv_conn = conv.get_connector()
-            rt.add_entry(tag_conn, 'default', conv_conn, 'default')
-            rt.add_entry(conv_conn, 'default', tag_conn, 'default')
+            rt.add_entry(channel_conn, 'default', conv_conn, 'default')
+            rt.add_entry(conv_conn, 'default', channel_conn, 'default')
 
-        for tag, router in tag_router:
-            tag_conn = GoConnector.for_transport_tag(tag[0], tag[1])
+        for channel, router in channel_router:
+            channel_conn = channel.get_connector()
             rin_conn = router.get_inbound_connector()
-            rt.add_entry(tag_conn, 'default', rin_conn, 'default')
-            rt.add_entry(rin_conn, 'default', tag_conn, 'default')
+            rt.add_entry(channel_conn, 'default', rin_conn, 'default')
+            rt.add_entry(rin_conn, 'default', channel_conn, 'default')
 
         for router, endpoint, conv in router_conv:
             rout_conn = router.get_outbound_connector()
@@ -101,10 +103,10 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
 
         self.assertEqual([], self.user_api.active_routers())
 
-        [tag] = list(self.user_api.list_endpoints())
-        self.assertEqual((u'longcode', u'default10001'), tag)
+        [channel] = self.user_api.active_channels()
+        self.assertEqual(u'longcode:default10001', channel.key)
 
-        self.assert_routing_table(tag_conv=[(tag, conv)])
+        self.assert_routing_table(channel_conv=[(channel, conv)])
 
     def test_post_create_view_specific_tag(self):
         self.add_app_permission(u'go.apps.bulk_message')
@@ -129,10 +131,10 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
 
         self.assertEqual([], self.user_api.active_routers())
 
-        [tag] = list(self.user_api.list_endpoints())
-        self.assertEqual((u'longcode', u'default10001'), tag)
+        [channel] = self.user_api.active_channels()
+        self.assertEqual(u'longcode:default10001', channel.key)
 
-        self.assert_routing_table(tag_conv=[(tag, conv)])
+        self.assert_routing_table(channel_conv=[(channel, conv)])
 
     def test_post_create_view_editable_conversation(self):
         self.add_app_permission(u'go.apps.jsbox')
@@ -147,7 +149,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             'channel': 'longcode:',
         })
         [conv] = self.user_api.active_conversations()
-        self.assertEqual(1, len(self.user_api.list_endpoints()))
+        self.assertEqual(1, len(self.user_api.active_channels()))
         self.assertRedirects(
             response, reverse('conversations:conversation', kwargs={
                 'conversation_key': conv.key, 'path_suffix': 'edit/',
@@ -167,7 +169,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         })
         [conv] = self.user_api.active_conversations()
         self.assertEqual(list(conv.extra_endpoints), [u'sms_content'])
-        self.assertEqual(1, len(self.user_api.list_endpoints()))
+        self.assertEqual(1, len(self.user_api.active_channels()))
         self.assertRedirects(
             response, reverse('conversations:conversation', kwargs={
                 'conversation_key': conv.key, 'path_suffix': '',
@@ -246,11 +248,11 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         }, router.config)
         self.assertTrue(router.running() or router.starting())
 
-        [tag] = list(self.user_api.list_endpoints())
-        self.assertEqual((u'longcode', u'default10001'), tag)
+        [channel] = self.user_api.active_channels()
+        self.assertEqual(u'longcode:default10001', channel.key)
 
         self.assert_routing_table(
-            tag_router=[(tag, router)],
+            channel_router=[(channel, router)],
             router_conv=[(router, 'keyword_foo', conv)])
 
     def test_post_create_view_with_keyword_default(self):
@@ -285,11 +287,11 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         }, router.config)
         self.assertTrue(router.running() or router.starting())
 
-        [tag] = list(self.user_api.list_endpoints())
-        self.assertEqual((u'longcode', u'default10001'), tag)
+        [channel] = self.user_api.active_channels()
+        self.assertEqual(u'longcode:default10001', channel.key)
 
         self.assert_routing_table(
-            tag_router=[(tag, router)],
+            channel_router=[(channel, router)],
             router_conv=[(router, 'keyword_default', conv)])
 
     def test_post_create_view_with_existing_router(self):
