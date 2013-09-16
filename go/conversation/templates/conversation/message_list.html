@@ -17,7 +17,7 @@
 {% block content_actions_right %}
     <div class="pull-left">
         <span class="table-form-view-buttons">
-            <!-- TODO: 
+            <!-- TODO:
             <button class="btn" disabled="disabled">Delete</button>
             -->
         </span>
@@ -29,7 +29,7 @@
         -->
         <button class="btn" data-toggle="modal" href="#expMessagesFrm">Export</button>
     </div>
-    
+
 {% endblock %}
 
 {% block content_main %}
@@ -54,6 +54,15 @@
                     per minute inbound and {{conversation.get_outbound_throughput}} messages
                     per minute outbound.
                 </p>
+
+                {% with conversation.get_progress_status as status %}
+                <p>Sent messages: {{ status.sent }}</p>
+                <p>Acknowledgements: {{ status.ack }} accepted,
+                                     {{ status.nack }} rejected.</p>
+                <p>Delivery reports: {{ status.delivery_report_delivered }} delivered,
+                                     {{ status.delivery_report_failed }} failed,
+                                     {{ status.delivery_report_pending }} pending.</p>
+                {% endwith %}
 
                 <ul class="nav nav-tabs">
                     <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
