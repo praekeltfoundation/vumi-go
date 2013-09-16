@@ -1,7 +1,7 @@
 #!/bin/sh
 
-BINS=('grunt bower yuglify')
-PROJECT_ROOT=$(realpath `dirname $0`/../)
+BINS='grunt bower yuglify'
+PROJECT_ROOT="`dirname $0`/../"
 
 if [ -n $VIRTUAL_ENV ]; then
   for bin in $BINS
