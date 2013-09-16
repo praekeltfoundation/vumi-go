@@ -295,10 +295,11 @@ class VumiUserApi(object):
             routing_connectors.add(dst_conn)
 
         # Checking tags is cheap and easy, so do that first.
-        for tag in user_account.tags:
-            tag_conn = GoConnector.for_transport_tag(tag[0], tag[1])
-            if tag_conn in routing_connectors:
-                routing_connectors.remove(tag_conn)
+        channels = yield self.active_channels()
+        for channel in channels:
+            channel_conn = channel.get_connector()
+            if channel_conn in routing_connectors:
+                routing_connectors.remove(channel_conn)
 
         # Now we run through active conversations to check those.
         convs = yield self.active_conversations()

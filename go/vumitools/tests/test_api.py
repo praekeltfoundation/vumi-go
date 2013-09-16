@@ -182,10 +182,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         def mkconn(thing):
             if isinstance(thing, basestring):
                 return GoConnector.parse(thing)
-            elif isinstance(thing, tuple):
-                return GoConnector.for_transport_tag(*thing)
             else:
-                # Assume it's a conversation.
+                # Assume it's a conversation/channel/router.
                 return thing.get_connector()
 
         for src, dst in entries:
@@ -201,8 +199,9 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
         conv = yield self.user_api.new_conversation(
             u'bulk_message', u'name', u'desc', {})
+        channel = yield self.user_api.get_channel(tag1)
         user = yield self.user_api.get_user_account()
-        self._set_routing_table(user, [(conv, tag1), (tag1, conv)])
+        self._set_routing_table(user, [(conv, channel), (channel, conv)])
         yield user.save()
 
         self.assertNotEqual(
@@ -238,9 +237,9 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_routing_table(self):
         conv = yield self._setup_routing_table_test_new_conv()
-        tag = (u'pool1', u'1234')
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
         user = yield self.user_api.get_user_account()
-        self._set_routing_table(user, [(conv, tag), (tag, conv)])
+        self._set_routing_table(user, [(conv, channel), (channel, conv)])
         yield user.save()
         routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(routing_table, RoutingTable({
@@ -260,19 +259,19 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_routing_table_validation_valid(self):
         conv = yield self._setup_routing_table_test_new_conv()
-        tag = (u'pool1', u'1234')
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
         user = yield self.user_api.get_user_account()
-        self._set_routing_table(user, [(conv, tag), (tag, conv)])
+        self._set_routing_table(user, [(conv, channel), (channel, conv)])
         yield user.save()
         yield self.user_api.validate_routing_table(user)
 
     @inlineCallbacks
     def test_routing_table_invalid_src_conn_tag(self):
         conv = yield self._setup_routing_table_test_new_conv()
-        tag = (u'pool1', u'1234')
-        badtag = (u'badpool', u'bad')
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
+        badchannel = yield self.user_api.get_channel((u'badpool', u'bad'))
         user = yield self.user_api.get_user_account()
-        self._set_routing_table(user, [(conv, tag), (badtag, conv)])
+        self._set_routing_table(user, [(conv, channel), (badchannel, conv)])
         yield user.save()
         try:
             yield self.user_api.validate_routing_table(user)
@@ -283,10 +282,10 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_routing_table_invalid_dst_conn_tag(self):
         conv = yield self._setup_routing_table_test_new_conv()
-        tag = (u'pool1', u'1234')
-        badtag = (u'badpool', u'bad')
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
+        badchannel = yield self.user_api.get_channel((u'badpool', u'bad'))
         user = yield self.user_api.get_user_account()
-        self._set_routing_table(user, [(conv, badtag), (tag, conv)])
+        self._set_routing_table(user, [(conv, badchannel), (channel, conv)])
         yield user.save()
         try:
             yield self.user_api.validate_routing_table(user)
@@ -297,10 +296,10 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_routing_table_invalid_src_conn_conv(self):
         conv = yield self._setup_routing_table_test_new_conv()
-        tag = (u'pool1', u'1234')
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
         badconv = 'CONVERSATION:bulk_message:badkey'
         user = yield self.user_api.get_user_account()
-        self._set_routing_table(user, [(badconv, tag), (tag, conv)])
+        self._set_routing_table(user, [(badconv, channel), (channel, conv)])
         yield user.save()
         try:
             yield self.user_api.validate_routing_table(user)
@@ -311,10 +310,10 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_routing_table_invalid_dst_conn_conv(self):
         conv = yield self._setup_routing_table_test_new_conv()
-        tag = (u'pool1', u'1234')
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
         badconv = 'CONVERSATION:bulk_message:badkey'
         user = yield self.user_api.get_user_account()
-        self._set_routing_table(user, [(conv, tag), (tag, badconv)])
+        self._set_routing_table(user, [(conv, channel), (channel, badconv)])
         yield user.save()
         try:
             yield self.user_api.validate_routing_table(user)

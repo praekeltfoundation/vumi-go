@@ -197,9 +197,9 @@ class GoApiServerTestCase(GoWorkerTestCase):
         ])
 
     @inlineCallbacks
-    def _connect_conversation_to_tag_through_router(self, conv, tag, router):
+    def _connect_conv_to_channel_through_router(self, conv, channel, router):
         conv_conn = conv.get_connector()
-        channel_conn = GoConnector.for_transport_tag(*tag)
+        channel_conn = channel.get_connector()
         router_in_conn = router.get_inbound_connector()
         router_out_conn = router.get_outbound_connector()
         user_account = yield self.user_api.get_user_account()
@@ -219,8 +219,9 @@ class GoApiServerTestCase(GoWorkerTestCase):
             u'keyword', u'My Router', u'A description', {})
         yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
         tag = yield self.user_api.acquire_tag(u"pool")  # acquires tag1
-        yield self._connect_conversation_to_tag_through_router(
-            conv, tag, router)
+        channel = yield self.user_api.get_channel(tag)
+        yield self._connect_conv_to_channel_through_router(
+            conv, channel, router)
         returnValue((conv, router, tag))
 
     @inlineCallbacks
