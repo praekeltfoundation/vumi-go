@@ -20,17 +20,17 @@ client:
     dest: 'go/static/js/templates.js'
   scripts:
     vendor:
-      - 'go/base/static/bower_components/lodash/dist/lodash.underscore.js'
-      - 'go/base/static/bower_components/jquery/jquery.js'
-      - 'go/base/static/bower_components/jquery.cookie/jquery.cookie.js'
-      - 'go/base/static/bower_components/jsPlumb/dist/js/jquery.jsPlumb-1.5.2.js'
-      - 'go/base/static/bower_components/jquery-ui/ui/jquery-ui.js'
-      - 'go/base/static/bower_components/js-base64/base64.js'
-      - 'go/base/static/bower_components/node-uuid/uuid.js'
-      - 'go/base/static/bower_components/backbone/backbone.js'
-      - 'go/base/static/bower_components/backbone-relational/index.js'
-      - 'go/base/static/bower_components/bootstrap/js/bootstrap.js'
-      - 'go/base/static/bower_components/bootbox/bootbox.js'
+      - 'go/base/static/vendor/lodash/lodash/lodash.underscore.js'
+      - 'go/base/static/vendor/jquery/jquery.js'
+      - 'go/base/static/vendor/jquery.cookie/jquery.cookie.js'
+      - 'go/base/static/vendor/jsPlumb/dist/js/jquery.jsPlumb-1.5.2.js'
+      - 'go/base/static/vendor/jquery-ui/jquery-ui.js'
+      - 'go/base/static/vendor/js-base64/base64.js'
+      - 'go/base/static/vendor/node-uuid/uuid.js'
+      - 'go/base/static/vendor/backbone/backbone.js'
+      - 'go/base/static/vendor/backbone-relational/index.js'
+      - 'go/base/static/vendor/bootstrap/js/bootstrap.js'
+      - 'go/base/static/vendor/bootbox/bootbox.js'
     go:
       - 'go/base/static/js/src/go.js'
       - 'go/base/static/js/src/utils.js'
@@ -85,7 +85,7 @@ client:
 
   styles:
     vendor:
-      - 'go/base/static/bower_components/bootstrap/css/bootstrap.css'
+      - 'go/base/static/vendor/bootstrap/css/bootstrap.css'
     go:
       - 'go/base/static/css/vumigo.css'
 
@@ -95,9 +95,9 @@ tests:
       - 'go/apps/**/test_vumi_app.js'
   client:
     vendor:
-      - 'go/base/static/bower_components/chai/chai.js'
-      - 'go/base/static/bower_components/sinon/index.js'
-      - 'go/base/static/bower_components/jquery-simulate/jquery.simulate.js'
+      - 'bower_components/chai/chai.js'
+      - 'bower_components/sinon/index.js'
+      - 'bower_components/jquery-simulate/jquery.simulate.js'
     spec:
       - 'go/base/static/js/test/testHelpers/testHelpers.js'
       - 'go/base/static/js/test/testHelpers/testHelpers.test.js'

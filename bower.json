@@ -14,15 +14,20 @@
     "jquery": "1.9.1",
     "jquery.cookie": "~1.3.1",
     "jquery-ui": "~1.10.3",
-    "lodash": "~1.3.1",
     "node-uuid": "~1.4.1",
     "js-base64": "~2.1.2",
     "jsPlumb": "git@github.com:praekelt/jsPlumb.git#~1.5.2",
-    "bootstrap": "http://getbootstrap.com/2.3.2/assets/bootstrap.zip"
+    "bootstrap": "http://getbootstrap.com/2.3.2/assets/bootstrap.zip",
+    "lodash": "~2.0.0"
   },
   "devDependencies": {
     "chai": "~1.7.2",
     "sinon": "http://sinonjs.org/releases/sinon-1.7.3.js",
     "jquery-simulate": "git@github.com:jquery/jquery-simulate.git"
+  },
+  "exportsOverride": {
+    "lodash": {
+      "lodash": "dist/lodash.underscore.js"
+    }
   }
 }
