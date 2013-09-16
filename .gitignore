@@ -7,7 +7,7 @@
 /coverage-html/
 /coverage.xml
 /node_modules/
-/go/base/static/bower_components/
+/bower_components/
 /nosetests.xml
 /pyflakes.log
 /pep8.log

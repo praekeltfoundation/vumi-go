@@ -2,12 +2,20 @@ require('js-yaml');
 var path = require('path');
 
 module.exports = function (grunt) {
+  grunt.loadNpmTasks('grunt-bower-task');
   grunt.loadNpmTasks('grunt-contrib-jst');
   grunt.loadNpmTasks('grunt-mocha-test');
   grunt.loadNpmTasks('grunt-karma');
 
   grunt.initConfig({
     paths: require('./js_paths.yml'),
+    bower: {
+      install: {
+        options: {
+          targetDir: 'go/base/static/vendor'
+        }
+      }
+    },
     mochaTest: {
       jsbox_apps: {
         src: ['<%= paths.tests.jsbox_apps.spec %>'],
@@ -49,6 +57,7 @@ module.exports = function (grunt) {
   ]);
 
   grunt.registerTask('test:client', [
+    'bower',
     'jst:templates',
     'karma:dev'
   ]);
