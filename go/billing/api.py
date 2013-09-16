@@ -2,7 +2,7 @@ import sys
 import json
 import decimal
 
-from twisted.python import log, util
+from twisted.python import log
 from twisted.internet import defer
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
