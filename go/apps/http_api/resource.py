@@ -46,7 +46,7 @@ class BaseResource(resource.Resource):
         return user_api.get_wrapped_conversation(conversation_key)
 
 
-class StreamResource(BaseResource):
+class OutgoingMessageResource(BaseResource):
 
     message_class = None
     proxy_buffering = False
@@ -104,13 +104,13 @@ class InvalidAggregate(errors.VumiError):
     pass
 
 
-class EventStream(StreamResource):
+class OutgoingEventResource(OutgoingMessageResource):
 
     message_class = TransportEvent
     routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
 
 
-class MessageStream(StreamResource):
+class IncomingMessageResource(BaseResource):
 
     message_class = TransportUserMessage
     routing_key = '%(transport_name)s.stream.message.%(conversation_key)s'
@@ -213,7 +213,7 @@ class MessageStream(StreamResource):
         request.finish()
 
 
-class MetricResource(BaseResource):
+class IncomingMetricResource(BaseResource):
 
     DEFAULT_STORE_NAME = 'default'
 
@@ -259,17 +259,30 @@ class MetricResource(BaseResource):
         request.finish()
 
 
-class ConversationResource(resource.Resource):
+class BaseConversationResource(resource.Resource):
 
     def __init__(self, worker, conversation_key):
         resource.Resource.__init__(self)
         self.worker = worker
-        self.redis = worker.redis
         self.conversation_key = conversation_key
 
     def get_worker_config(self, user_account_key):
         ctxt = ConfigContext(user_account=user_account_key)
         return self.worker.get_config(msg=None, ctxt=ctxt)
+
+    def render(self, request):
+        return resource.NoResource().render(request)
+
+    def getChild(self, path, request):
+        return util.DeferredResource(self.getDeferredChild(path, request))
+
+
+class OutgoingConversationResource(BaseConversationResource):
+
+    def __init__(self, worker, conversation_key):
+        super(BaseConversationResource, self).__init__(worker,
+                                                       conversation_key)
+        self.redis = worker.redis
 
     def key(self, *args):
         return ':'.join(['concurrency'] + map(unicode, args))
@@ -287,19 +300,12 @@ class ConversationResource(resource.Resource):
     def release_request(self, err, user_id):
         return self.redis.decr(self.key(user_id))
 
-    def render(self, request):
-        return resource.NoResource().render(request)
-
-    def getChild(self, path, request):
-        return util.DeferredResource(self.getDeferredChild(path, request))
-
     @inlineCallbacks
     def getDeferredChild(self, path, request):
 
         class_map = {
-            'events.json': EventStream,
-            'messages.json': MessageStream,
-            'metrics.json': MetricResource,
+            'events.json': OutgoingEventResource,
+            'messages.json': OutgoingMessageResource,
         }
         stream_class = class_map.get(path)
 
@@ -320,11 +326,28 @@ class ConversationResource(resource.Resource):
                                        'Too many concurrent connections'))
 
 
+class IncomingConversationResource(BaseConversationResource):
+
+    resource_class = IncomingMessageResource
+
+    @inlineCallbacks
+    def getDeferredChild(self, path, request):
+
+        class_map = {
+            'messages.json': IncomingMessageResource,
+            'metrics.json': IncomingMetricResource,
+        }
+        resource_class = class_map.get(path)
+        if resource_class is None:
+            instance = resource.NoResource()
+        else:
+            instance = resource_class(self.worker, self.conversation_key)
+        returnValue(instance)
+
+
 class AuthorizedResource(resource.Resource):
 
-    resource_class = ConversationResource
-
-    def __init__(self, worker):
+    def __init__(self, worker, resource_class):
         resource.Resource.__init__(self)
         self.worker = worker
 

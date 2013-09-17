@@ -11,8 +11,10 @@ from vumi.transports.httprpc import httprpc
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
-from go.apps.http_api.resource import (AuthorizedResource, MessageStream,
-                                       EventStream)
+from go.apps.http_api.resource import (AuthorizedResource,
+                                       OutgoingConversationResource,
+                                       OutgoingMessageResource,
+                                       OutgoingEventResource)
 
 
 class StreamingClientManager(object):
@@ -100,7 +102,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
             self.redis.sub_manager('http_api:message_cache'))
 
         self.webserver = self.start_web_resources([
-            (AuthorizedResource(self), self.web_path),
+            (AuthorizedResource(self, OutgoingConversationResource),
+             self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),
         ], self.web_port)
 
@@ -141,7 +144,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, push_message_url))
         else:
-            yield self.stream(MessageStream, conversation.key, message)
+            yield self.stream(OutgoingMessageResource, conversation.key,
+                              message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
@@ -163,7 +167,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, push_event_url))
         else:
-            yield self.stream(EventStream, conversation.key, event)
+            yield self.stream(OutgoingEventResource, conversation.key, event)
 
     def push(self, url, vumi_message):
         data = vumi_message.to_json().encode('utf-8')
