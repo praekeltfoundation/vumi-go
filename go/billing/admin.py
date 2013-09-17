@@ -1,5 +1,5 @@
-from django.conf.urls.defaults import patterns, include, url
-from django.http import HttpResponse, HttpResponseRedirect
+from django.conf.urls.defaults import patterns
+from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.forms.models import modelformset_factory
 from django.utils.translation import ugettext_lazy as _
@@ -41,7 +41,8 @@ class AccountAdmin(admin.ModelAdmin):
 
     def load_credits(self, request, queryset):
         selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
-        redirect_url = "credits/load/?ids=%s" % (",".join(selected))
+        request.session['account_ids'] = selected
+        redirect_url = "credits/load/"
         return HttpResponseRedirect(redirect_url)
     load_credits.short_description = "Load credits for selected accounts"
 
@@ -53,9 +54,8 @@ class AccountAdmin(admin.ModelAdmin):
 
     def credits_load(self, request):
         """Load credits in the selected accounts"""
-        queryset = Account.objects.filter(
-            pk__in=request.GET.getlist('ids'))
-
+        account_ids = request.session.get('account_ids', [])
+        queryset = Account.objects.filter(pk__in=account_ids)
         CreditLoadFormSet = modelformset_factory(
             Account, form=CreditLoadForm, formset=BaseCreditLoadFormSet,
             fields=('account_number',), extra=0)
@@ -65,6 +65,7 @@ class AccountAdmin(admin.ModelAdmin):
             if formset.is_valid():
                 for form in formset:
                     form.load_credits()
+                del request.session['account_ids']
                 messages.info(request, _("Credits loaded successfully."))
                 return HttpResponseRedirect('../../')
         else:

@@ -1,8 +1,7 @@
-import sys
 import json
 import decimal
 
-from twisted.python import log, util
+from twisted.python import log
 from twisted.internet import defer
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
@@ -11,8 +10,6 @@ from django.contrib.auth.hashers import make_password
 
 from go.billing import settings as app_settings
 from go.billing.utils import RealDictConnectionPool, JSONEncoder
-
-log.startLogging(sys.stdout)
 
 _connection_pool = None  # The txpostgres connection pool instance
 

@@ -1,3 +1,6 @@
+import sys
+
+from twisted.python import log
 from twisted.internet import reactor
 
 from django.core.management.base import BaseCommand, CommandError
@@ -15,7 +18,7 @@ class Command(BaseCommand):
         if len(args) > 0:
             try:
                 port = int(args[0])
-            except ValueError as err:
+            except ValueError:
                 raise CommandError("%s is not a valid port number.\n" %
                                   (args[0],))
 
@@ -30,6 +33,7 @@ class Command(BaseCommand):
         def connection_error(err):
             self.stderr.write(err)
 
+        log.startLogging(sys.stdout)
         d = api.start_connection_pool()
         d.addCallbacks(connection_established, connection_error)
         reactor.run()

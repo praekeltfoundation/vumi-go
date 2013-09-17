@@ -39,6 +39,7 @@ class RealDictConnection(txpostgres.Connection):
 
     connectionFactory = staticmethod(real_dict_connect)
 
+    @property
     def closed(self):
         """Return ``True`` if the underlying connection is closed
         ``False`` otherwise
@@ -47,7 +48,6 @@ class RealDictConnection(txpostgres.Connection):
         if self._connection:
             return self._connection.closed
         return True
-    closed = property(closed)
 
 
 class RealDictConnectionPool(txpostgres.ConnectionPool):
@@ -58,6 +58,7 @@ class RealDictConnectionPool(txpostgres.ConnectionPool):
 
     connectionFactory = RealDictConnection
 
+    @property
     def closed(self):
         """Return ``True`` all the connections are closed
         ``False`` otherwise
@@ -67,7 +68,6 @@ class RealDictConnectionPool(txpostgres.ConnectionPool):
             if not c.closed:
                 return False
         return True
-    closed = property(closed)
 
 
 class DummyRequest(test_web.DummyRequest):
