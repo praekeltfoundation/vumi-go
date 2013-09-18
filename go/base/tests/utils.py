@@ -178,6 +178,35 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         params.update(kwargs)
         return self.user_api.new_router(**params)
 
+    def ack_message(self, msg_out):
+        ack = TransportEvent(
+            event_type='ack',
+            user_message_id=msg_out['message_id'],
+            sent_message_id=msg_out['message_id'],
+            transport_type='sms',
+            transport_name='sphex')
+        self.api.mdb.add_event(ack)
+        return ack
+
+    def nack_message(self, msg_out, reason="nacked"):
+        nack = TransportEvent(
+            event_type='nack',
+            user_message_id=msg_out['message_id'],
+            nack_reason=reason,
+        )
+        self.api.mdb.add_event(nack)
+        return nack
+
+    def delivery_report_on_message(self, msg_out, status='delivered'):
+        assert status in TransportEvent.DELIVERY_STATUSES
+        dr = TransportEvent(
+            event_type='delivery_report',
+            user_message_id=msg_out['message_id'],
+            delivery_status=status,
+        )
+        self.api.mdb.add_event(dr)
+        return dr
+
     def add_messages_to_conv(self, message_count, conversation, reply=False,
                              ack=False, start_date=None, time_multiplier=10):
         now = start_date or datetime.now().date()
@@ -205,13 +234,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
                 messages.append((msg_in, msg_out))
                 continue
 
-            ack = TransportEvent(
-                event_type='ack',
-                user_message_id=msg_out['message_id'],
-                sent_message_id=msg_out['message_id'],
-                transport_type='sms',
-                transport_name='sphex')
-            self.api.mdb.add_event(ack)
+            ack = self.ack_message(msg_out)
             messages.append((msg_in, msg_out, ack))
         return messages
 
