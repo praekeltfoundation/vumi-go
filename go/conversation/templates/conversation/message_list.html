@@ -55,15 +55,6 @@
                     per minute outbound.
                 </p>
 
-                {% with conversation.get_progress_status as status %}
-                <p>Sent messages: {{ status.sent }}</p>
-                <p>Acknowledgements: {{ status.ack }} accepted,
-                                     {{ status.nack }} rejected.</p>
-                <p>Delivery reports: {{ status.delivery_report_delivered }} delivered,
-                                     {{ status.delivery_report_failed }} failed,
-                                     {{ status.delivery_report_pending }} pending.</p>
-                {% endwith %}
-
                 <ul class="nav nav-tabs">
                     <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
                         <a href="?direction=inbound">
@@ -79,13 +70,45 @@
                             {% ifequal message_direction 'outbound' %}</strong>{% endifequal %}
                         </a>
                     </li>
+                    <li>
+                        <a data-toggle="tab" href="#outbound-msg-stats">Statistics</a>
+                    </li>
                 </ul>
                 <div class="tab-content" id="message-page">
+                    <div class="tab-pane active">
                     {% if message_page.paginator.num_pages %}
                         {% include "conversation/message_list_table.html" %}
                     {% else %}
                         {% include "conversation/message_list_table_load.html" %}
                     {% endif %}
+                    </div>
+                    <div class="tab-pane" id="outbound-msg-stats">
+                    {% with conversation.get_progress_status as status %}
+                      <div class="well">
+                        <h4>Outbound message statistics</h4>
+                        <ul>
+                          <li>Total sent: {{ status.sent }}</li>
+                          <li>Accepted by aggregator, MNO or other third-party for sending:
+                            <ul>
+                              <li>Accepted: {{ status.ack }} ({% percentage status.ack status.sent %}%)</li>
+                              <li>Rejected: {{ status.nack}} ({% percentage status.nack status.sent %}%)</li>
+                            </ul>
+                          </li>
+                          <li>Delivery reports:
+                            <ul>
+                              <li>Delivered: {{ status.delivery_report_delivered }}
+                                ({% percentage status.delivery_report_delivered status.sent %}%)</li>
+                              <li>Pending: {{ status.delivery_report_pending }}
+                                ({% percentage status.delivery_report_pending status.sent %}%)</li>
+                              <li>Failed: {{ status.delivery_report_failed }}
+                                ({% percentage status.delivery_report_failed status.sent %}%)</li>
+                            </ul>
+                          </li>
+                        </ul>
+                        <p>Note: not all channels support delivery reports.</p>
+                      </div>
+                    {% endwith %}
+                    </div>
                 </div>
             </form>
         </div>
