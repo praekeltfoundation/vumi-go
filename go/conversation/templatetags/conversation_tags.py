@@ -20,6 +20,13 @@ def conversation_screen(conv, view_name='show'):
 
 
 @register.simple_tag
+def percentage(amount, total):
+    if total != 0:
+        return int(amount * 100. / total)
+    return 0
+
+
+@register.simple_tag
 def conversation_action(conv, action_name):
     return reverse('conversations:conversation_action', kwargs={
         'conversation_key': conv.key, 'action_name': action_name})
