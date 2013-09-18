@@ -574,6 +574,46 @@ class TestConversationViews(BaseConversationViewTestCase):
         # the first page.
         self.assertContains(response, '&amp;p=0', 0)
 
+    def test_message_list_statistics(self):
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+        msgs = self.add_messages_to_conv(10, conv, reply=True)
+        replies = [reply for _msg, reply in msgs]
+        for msg in replies[:4]:
+            self.ack_message(msg)
+        for msg in replies[4:9]:
+            self.nack_message(msg)
+        for msg in replies[:2]:
+            self.delivery_report_on_message(msg, status='delivered')
+        for msg in replies[2:5]:
+            self.delivery_report_on_message(msg, status='pending')
+        for msg in replies[5:9]:
+            self.delivery_report_on_message(msg, status='failed')
+
+        response = self.client.get(self.get_view_url(conv, 'message_list'))
+
+        self.assertContains(
+            response,
+            '<tr><th>Total&nbsp;sent</th><td colspan="2">10</td></tr>',
+            html=True)
+
+        self.assertContains(
+            response, '<tr><th>Accepted</th><td>4</td><td>40%</td></tr>',
+            html=True)
+        self.assertContains(
+            response, '<tr><th>Rejected</th><td>5</td><td>50%</td></tr>',
+            html=True)
+
+        self.assertContains(
+            response, '<tr><th>Delivered</th><td>2</td><td>20%</td></tr>',
+            html=True)
+        self.assertContains(
+            response, '<tr><th>Pending</th><td>3</td><td>30%</td></tr>',
+            html=True)
+        self.assertContains(
+            response, '<tr><th>Failed</th><td>4</td><td>40%</td></tr>',
+            html=True)
+
     def test_message_list_no_sensitive_msgs(self):
         conv = self.create_conversation(
             conversation_type=u'dummy', started=True)
