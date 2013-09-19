@@ -166,9 +166,6 @@ class RoutingTable(object):
     """
 
     def __init__(self, routing_table=None):
-        # XXX: Kill this check later.
-        if isinstance(routing_table, RoutingTable):
-            raise TypeError("I want a dict.")
         if routing_table is None:
             routing_table = {}
         self._routing_table = routing_table
