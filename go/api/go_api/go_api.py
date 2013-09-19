@@ -24,7 +24,7 @@ from go.api.go_api.action_dispatcher import (
     ConversationSubhandler, RouterSubhandler)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
 from go.api.go_api.utils import GoApiSubHandler, GoApiError
-from go.vumitools.account import RoutingTableHelper
+from go.vumitools.routing_table import RoutingTable
 from go.vumitools.api import VumiApi
 
 
@@ -51,11 +51,11 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
         return d
 
     def _channels(self, user_api):
-        def endpoints_to_channels(endpoints):
-            return [ChannelType.format_channel(tag) for tag in endpoints]
+        def format_channels(channels):
+            return [ChannelType.format_channel(ch) for ch in channels]
 
-        d = user_api.list_endpoints()
-        d.addCallback(endpoints_to_channels)
+        d = user_api.active_channels()
+        d.addCallback(format_channels)
         return d
 
     def _routers(self, user_api):
@@ -69,7 +69,6 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
 
     def _routing_entries(self, user_api):
         def format_routing_entries(routing_table):
-            routing_table = RoutingTableHelper(routing_table)
             return [
                 RoutingEntryType.format_entry((src_conn, src_endp),
                                               (dst_conn, dst_endp))
@@ -214,15 +213,14 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
             return routing_entries
 
         def populate_routing_table(routing_entries):
-            routing_table = {}
-            rt_helper = RoutingTableHelper(routing_table)
+            routing_table = RoutingTable()
             for entry in routing_entries:
                 source, target = entry['source'], entry['target']
                 src_conn, src_endp = EndpointType.parse_uuid(
                     source['uuid'])
                 dst_conn, dst_endp = EndpointType.parse_uuid(
                     target['uuid'])
-                rt_helper.add_entry(src_conn, src_endp, dst_conn, dst_endp)
+                routing_table.add_entry(src_conn, src_endp, dst_conn, dst_endp)
 
             d = user_api.get_user_account()
             d.addCallback(save_routing_table, routing_table)

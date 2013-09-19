@@ -105,6 +105,21 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         returnValue(events)
 
     @inlineCallbacks
+    def add_channels_to_conversation(self, conv, *channel_tags):
+        for tag in channel_tags:
+            yield self.user_api.acquire_specific_tag(tag)
+        user_account = yield self.user_api.get_user_account()
+        for tag in channel_tags:
+            channel = yield self.user_api.get_channel(tag)
+            user_account.routing_table.add_entry(
+                conv.get_connector(), 'default',
+                channel.get_connector(), 'default')
+            user_account.routing_table.add_entry(
+                channel.get_connector(), 'default',
+                conv.get_connector(), 'default')
+        yield user_account.save()
+
+    @inlineCallbacks
     def test_count_replies(self):
         yield self.conv.start()
         yield self.store_inbound(self.conv.batch.key)
@@ -231,9 +246,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_channels(self):
         yield self.conv.start()
-        tags = [["pool", "tag1"], ["pool", "tag2"]]
-        for tag in tags:
-            yield self.add_channel_to_conversation(self.conv, tag)
+        yield self.add_channels_to_conversation(
+            self.conv, ("pool", "tag1"), ("pool", "tag2"))
         [chan1, chan2] = yield self.conv.get_channels()
         self.assertEqual(chan1.tag, "tag1")
         self.assertEqual(chan2.tag, "tag2")
@@ -250,8 +264,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             "supports": {"foo": True, "bar": True}})
         yield self.setup_tagpool(u"pool2", [u"tag1"], metadata={
             "supports": {"foo": True, "bar": False}})
-        yield self.add_channel_to_conversation(self.conv, ["pool1", "tag1"])
-        yield self.add_channel_to_conversation(self.conv, ["pool2", "tag1"])
+        yield self.add_channels_to_conversation(
+            self.conv, ("pool1", "tag1"), ("pool2", "tag1"))
         self.assertTrue(
             (yield self.conv.has_channel_supporting(foo=True, bar=True)))
         self.assertTrue(

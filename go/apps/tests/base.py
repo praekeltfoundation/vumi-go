@@ -52,8 +52,21 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         self.conv_key = self.conversation.key
         if with_channel:
             self.declare_tags("pool", 1, self.TEST_CHANNEL_METADATA or {})
-            self.add_channel_to_conversation(
-                self.conversation, ["pool", "default1"])
+            tag = (u'pool', u'default1')
+            self._acquire_channel_for_conversation(self.conversation, tag)
+
+    def _acquire_channel_for_conversation(self, conv, tag):
+        self.user_api.acquire_specific_tag(tag)
+        channel = self.user_api.get_channel(tag)
+        user_account = self.user_api.get_user_account()
+        rt = user_account.routing_table
+        rt.add_entry(
+            conv.get_connector(), 'default',
+            channel.get_connector(), 'default')
+        rt.add_entry(
+            channel.get_connector(), 'default',
+            conv.get_connector(), 'default')
+        user_account.save()
 
     def get_latest_conversation(self):
         # We won't have too many here, so doing it naively is fine.

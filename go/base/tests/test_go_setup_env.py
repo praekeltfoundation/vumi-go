@@ -9,6 +9,7 @@ from django.contrib.auth import authenticate
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_setup_env
 from go.base.utils import vumi_api_for_user
+from go.vumitools.routing_table import RoutingTable
 
 from mock import Mock
 
@@ -379,8 +380,8 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             self.assertEqual(set(keys), set(obj.key for obj in objects))
 
         self.assertEqual(
-            set([('pool1', 'default0'), ('pool1', 'default1')]),
-            user_api.list_endpoints())
+            set([u'pool1:default0', u'pool1:default1']),
+            set(ch.key for ch in user_api.active_channels()))
         assert_keys(['router1'], user_api.active_routers())
         assert_keys(['conv1', 'conv2'], user_api.active_conversations())
         assert_keys(['group1'], user_api.list_groups())
@@ -395,8 +396,8 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
 
         user_api = vumi_api_for_user(user)
         self.assertEqual(
-            set([('pool1', 'default0'), ('pool1', 'default1')]),
-            user_api.list_endpoints())
+            set([u'pool1:default0', u'pool1:default1']),
+            set(ch.key for ch in user_api.active_channels()))
 
     def test_setup_conversations(self):
         self.command.setup_tagpools(self.tagpool_file.name)
@@ -469,7 +470,8 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
 
         self.command.setup_routing(user, account_info)
 
-        self.assertEqual(vumi_api_for_user(user).get_routing_table(), {
+        routing_table = vumi_api_for_user(user).get_routing_table()
+        self.assertEqual(routing_table, RoutingTable({
             u'TRANSPORT_TAG:pool1:default0': {
                 u'default': [u'CONVERSATION:survey:conv1', u'default'],
             },
@@ -490,7 +492,7 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             u'CONVERSATION:wikipedia:conv2': {
                 u'default': [u'ROUTER:keyword:router1:OUTBOUND', u'default'],
             },
-        })
+        }))
 
     def test_startup_script(self):
         self.command.contact_group_info = [{
