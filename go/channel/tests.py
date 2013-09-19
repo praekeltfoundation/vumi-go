@@ -23,6 +23,11 @@ class ChannelViewsTestCase(VumiGoDjangoTestCase):
         self.client = Client()
         self.client.login(username=self.user.username, password='password')
 
+    def assert_active_channel_tags(self, expected):
+        self.assertEqual(
+            set(':'.join(tag) for tag in expected),
+            set(ch.key for ch in self.user_api.active_channels()))
+
     def add_tagpool_permission(self, tagpool, max_keys=None):
         permission = self.api.account_store.tag_permissions(
             uuid4().hex, tagpool=tagpool, max_keys=max_keys)
@@ -46,19 +51,19 @@ class ChannelViewsTestCase(VumiGoDjangoTestCase):
         self.assertContains(response, urllib.quote(channel_key))
 
     def test_get_new_channel(self):
-        self.assertEqual(set([]), self.user_api.list_endpoints())
+        self.assert_active_channel_tags([])
         response = self.client.get(reverse('channels:new_channel'))
         self.assertContains(response, 'International')
         self.assertContains(response, 'longcode:')
 
     def test_post_new_channel(self):
-        self.assertEqual(set([]), self.user_api.list_endpoints())
+        self.assert_active_channel_tags([])
         response = self.client.post(reverse('channels:new_channel'), {
             'country': 'International', 'channel': 'longcode:'})
         tag = (u'longcode', u'default10001')
         channel_key = u'%s:%s' % tag
         self.assertRedirects(response, self.get_view_url('show', channel_key))
-        self.assertEqual(set([tag]), self.user_api.list_endpoints())
+        self.assert_active_channel_tags([tag])
 
     def test_show_channel_missing(self):
         response = self.client.get(self.get_view_url('show', u'foo:bar'))
@@ -76,7 +81,7 @@ class ChannelViewsTestCase(VumiGoDjangoTestCase):
         tag = (u'longcode', u'default10002')
         channel_key = u'%s:%s' % tag
         self.user_api.acquire_specific_tag(tag)
-        self.assertEqual(set([tag]), self.user_api.list_endpoints())
+        self.assert_active_channel_tags([tag])
         response = self.client.post(self.get_view_url('release', channel_key))
         self.assertRedirects(response, reverse('conversations:index'))
-        self.assertEqual(set([]), self.user_api.list_endpoints())
+        self.assert_active_channel_tags([])

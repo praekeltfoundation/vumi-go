@@ -14,7 +14,7 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
 
 from go.vumitools.api import VumiApiCommand, VumiApi
-from go.vumitools.account import UserAccount, RoutingTableHelper
+from go.vumitools.account import UserAccount
 from go.vumitools.contact import Contact, ContactGroup
 from go.vumitools.utils import MessageMetadataHelper
 
@@ -242,16 +242,6 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         md.set_user_account(self.user_account_key)
         if endpoint is not None:
             msg.set_routing_endpoint(endpoint)
-
-    @inlineCallbacks
-    def add_channel_to_conversation(self, conv, tag):
-        # TODO: This is a duplicate of the method in
-        #       go.base.test.utils.VumiGoDjangoTestCase but
-        #       there is no suitable common base class.
-        user_account = yield self.user_api.get_user_account()
-        rt = RoutingTableHelper(user_account.routing_table)
-        rt.add_oldstyle_conversation(conv, tag)
-        yield user_account.save()
 
     @inlineCallbacks
     def start_conversation(self, conversation):

@@ -11,7 +11,6 @@ from twisted.web.server import Site
 
 from vumi.utils import http_request
 
-from go.vumitools.account.models import GoConnector, RoutingTableHelper
 from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
@@ -197,22 +196,18 @@ class GoApiServerTestCase(GoWorkerTestCase):
         ])
 
     @inlineCallbacks
-    def _connect_conversation_to_tag_through_router(self, conv, tag, router):
-        conv_conn = str(GoConnector.for_conversation(
-            conv.conversation_type, conv.key))
-        channel_conn = str(GoConnector.for_transport_tag(*tag))
-        router_in_conn = str(GoConnector.for_router(
-            router.router_type, router.key, GoConnector.INBOUND))
-        router_out_conn = str(GoConnector.for_router(
-            router.router_type, router.key, GoConnector.OUTBOUND))
+    def _connect_conv_to_channel_through_router(self, conv, channel, router):
+        conv_conn = conv.get_connector()
+        channel_conn = channel.get_connector()
+        router_in_conn = router.get_inbound_connector()
+        router_out_conn = router.get_outbound_connector()
         user_account = yield self.user_api.get_user_account()
-        rt_helper = RoutingTableHelper(user_account.routing_table)
-        rt_helper.add_entry(
-            channel_conn, 'default', router_in_conn, 'default')
-        rt_helper.add_entry(router_out_conn, 'default', conv_conn, 'default')
-        rt_helper.add_entry(conv_conn, 'default', router_out_conn, 'default')
-        rt_helper.add_entry(router_in_conn, 'default', channel_conn, 'default')
-        rt_helper.validate_all_entries()
+        rt = user_account.routing_table
+        rt.add_entry(channel_conn, 'default', router_in_conn, 'default')
+        rt.add_entry(router_out_conn, 'default', conv_conn, 'default')
+        rt.add_entry(conv_conn, 'default', router_out_conn, 'default')
+        rt.add_entry(router_in_conn, 'default', channel_conn, 'default')
+        rt.validate_all_entries()
         yield user_account.save()
 
     @inlineCallbacks
@@ -223,8 +218,9 @@ class GoApiServerTestCase(GoWorkerTestCase):
             u'keyword', u'My Router', u'A description', {})
         yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
         tag = yield self.user_api.acquire_tag(u"pool")  # acquires tag1
-        yield self._connect_conversation_to_tag_through_router(
-            conv, tag, router)
+        channel = yield self.user_api.get_channel(tag)
+        yield self._connect_conv_to_channel_through_router(
+            conv, channel, router)
         returnValue((conv, router, tag))
 
     @inlineCallbacks

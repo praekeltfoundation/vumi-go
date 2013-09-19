@@ -8,7 +8,7 @@ from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
-from go.vumitools.account import GoConnector
+from go.vumitools.routing_table import GoConnector
 
 
 class RoutingError(Exception):
@@ -292,7 +292,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         config_dict = self.config.copy()
         config_dict['user_account_key'] = user_account_key
-        config_dict['routing_table'] = routing_table
+        config_dict['routing_table'] = routing_table._routing_table
 
         returnValue(self.CONFIG_CLASS(config_dict))
 
