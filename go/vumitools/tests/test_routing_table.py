@@ -243,28 +243,6 @@ class RoutingTableTestCase(TestCase):
         rt.remove_transport_tag(tag)
         self.assert_routing_entries(rt, [])
 
-    def test_add_oldstyle_conversation(self):
-        rt = self.make_rt({})
-        conv = FakeConversation("conv_type_1", "12345")
-        tag = ["pool1", "tag1"]
-        rt.add_oldstyle_conversation(conv, tag)
-        self.assert_routing_entries(rt, [
-            ('CONVERSATION:conv_type_1:12345', 'default',
-             'TRANSPORT_TAG:pool1:tag1', 'default'),
-            ('TRANSPORT_TAG:pool1:tag1', 'default',
-             'CONVERSATION:conv_type_1:12345', 'default'),
-        ])
-
-    def test_add_oldstyle_conversation_outbound_only(self):
-        rt = self.make_rt({})
-        conv = FakeConversation("conv_type_1", "12345")
-        tag = ["pool1", "tag1"]
-        rt.add_oldstyle_conversation(conv, tag, outbound_only=True)
-        self.assert_routing_entries(rt, [
-            ('CONVERSATION:conv_type_1:12345', 'default',
-             'TRANSPORT_TAG:pool1:tag1', 'default'),
-        ])
-
     def test_transitive_targets_simple_case(self):
         rt = self.make_rt()
         self.assert_connectors(rt.transitive_targets(self.CONV_1), [

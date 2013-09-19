@@ -295,15 +295,6 @@ class RoutingTable(object):
         tag_conn = GoConnector.for_transport_tag(tag[0], tag[1])
         self.remove_connector(tag_conn)
 
-    def add_oldstyle_conversation(self, conv, tag, outbound_only=False):
-        """XXX: This can be removed when old-style conversations are gone."""
-        conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
-                                                     conv.key))
-        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
-        self.add_entry(conv_conn, "default", tag_conn, "default")
-        if not outbound_only:
-            self.add_entry(tag_conn, "default", conv_conn, "default")
-
     def transitive_targets(self, src_conn):
         """Return all connectors that are reachable from `src_conn`.
 

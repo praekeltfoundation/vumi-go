@@ -231,15 +231,6 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             self.api.mdb.add_outbound_message(
                 msg_out, batch_id=conversation.batch.key)
 
-    def add_channel_to_conversation(self, conv, tag):
-        # TODO: This is a duplicate of the method in
-        #       go.vumitools.test.utils.GoAppWorkerTestMixin but
-        #       there is no suitable common base class.
-        user_account = self.user_api.get_user_account()
-        rt = user_account.routing_table
-        rt.add_oldstyle_conversation(conv, tag)
-        user_account.save()
-
     def declare_tags(self, pool, num_tags, metadata=None, user_select=None):
         """Declare a set of long codes to the tag pool."""
         if metadata is None:

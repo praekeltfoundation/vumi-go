@@ -244,16 +244,6 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
             msg.set_routing_endpoint(endpoint)
 
     @inlineCallbacks
-    def add_channel_to_conversation(self, conv, tag):
-        # TODO: This is a duplicate of the method in
-        #       go.base.test.utils.VumiGoDjangoTestCase but
-        #       there is no suitable common base class.
-        user_account = yield self.user_api.get_user_account()
-        rt = user_account.routing_table
-        rt.add_oldstyle_conversation(conv, tag)
-        yield user_account.save()
-
-    @inlineCallbacks
     def start_conversation(self, conversation):
         old_cmds = len(self.get_dispatcher_commands())
         yield conversation.start()
