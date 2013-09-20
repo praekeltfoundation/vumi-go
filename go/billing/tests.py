@@ -1,10 +1,8 @@
 import json
 import decimal
 import pytest
-import time
 
 from twisted.internet import defer
-from twisted.web import server
 from twisted.trial import unittest
 
 from go.billing import settings as app_settings
