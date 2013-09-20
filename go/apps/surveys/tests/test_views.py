@@ -152,7 +152,17 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'rock', 'jazz', 'techno'])
         self.assertEqual(question['label'], 'favorite music')
 
-    def test_export_user_data(self):
+    def test_action_export_user_data_get(self):
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
+        response = self.client.get(
+            self.get_action_view_url('download_user_data'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        self.assertEqual([], self.get_api_commands_sent())
+        self.assertContains(response, '>Send CSV via e-mail</button>')
+
+    def test_action_export_user_data_post(self):
         self.setup_conversation()
         pm, poll = self.create_poll(self.conversation, questions=[{
                 'copy': 'question-1',
