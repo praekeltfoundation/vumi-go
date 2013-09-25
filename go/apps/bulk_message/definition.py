@@ -5,6 +5,7 @@ from go.vumitools.conversation.definition import (
 class BulkSendAction(ConversationAction):
     action_name = 'bulk_send'
     action_display_name = 'Write and send bulk message'
+    action_display_verb = 'Send message'
 
     needs_confirmation = True
 

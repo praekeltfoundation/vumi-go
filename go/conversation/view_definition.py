@@ -478,7 +478,7 @@ class ConversationActionView(ConversationTemplateView):
         return self.render_to_response({
             'conversation': conversation,
             'form': form,
-            'action_display_name': self.action.action_display_name,
+            'action': self.action,
         })
 
     @check_action_is_enabled

@@ -38,7 +38,10 @@ class ConversationAction(object):
     """
 
     action_name = None
+    # title to display for action
     action_display_name = None
+    # verb phrase describing the action in second person
+    action_display_verb = None
     needs_confirmation = False
 
     # Some actions are only possible under certain conditions.
