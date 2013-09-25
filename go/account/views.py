@@ -58,10 +58,13 @@ def details(request):
                     'token_url': token_manager.url_for_token(token),
                     })
 
-                send_mail('Confirm account detail changes',
-                    render_to_string('account/change_account_details_mail.txt',
-                        context), settings.DEFAULT_FROM_EMAIL,
-                        [request.user.email, 'support@vumi.org'])
+                send_mail(
+                    'Vumi Go account detail change confirmation',
+                    render_to_string(
+                        'account/change_account_details_mail.txt',
+                        context),
+                    settings.DEFAULT_FROM_EMAIL,
+                    [request.user.email, 'support@vumi.org'])
 
                 messages.info(request,
                     'Please confirm this change by clicking on the link '
