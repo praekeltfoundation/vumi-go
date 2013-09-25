@@ -32,9 +32,14 @@ class AccountTestCase(VumiGoDjangoTestCase):
             'existing_password': 'password',
             '_account': True,
             })
+
         token_url = response.context['token_url']
-        self.confirm(token_url)
+
+        [email] = mail.outbox
+        self.assertTrue(token_url in email.body)
+
         # reload from db
+        self.confirm(token_url)
         user = User.objects.get(pk=self.django_user.pk)
         self.assertEqual(user.first_name, 'foo')
         self.assertEqual(user.last_name, 'bar')
