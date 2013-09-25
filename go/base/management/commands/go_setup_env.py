@@ -517,8 +517,7 @@ class Command(BaseCommand):
                     self.webapp_bind,))
             cp.set(section, "stdout_logfile",
                    "./logs/%(program_name)s_%(process_num)s.log")
-            cp.set(section, "stderr_logfile",
-                   "./logs/%(program_name)s_%(process_num)s.log")
+            cp.set(section, "redirect_stderr", "true")
             cp.write(fp)
         self.stdout.write('Wrote %s.\n' % (fn,))
 
