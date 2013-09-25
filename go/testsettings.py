@@ -23,3 +23,6 @@ NOSE_ARGS = ['-evumitools', '-evumi_app', '-ehandlers', '-m^test']
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'
+
+# disable console logging to avoid log messages messing up test output
+LOGGING['loggers']['go']['handlers'].remove('console')
