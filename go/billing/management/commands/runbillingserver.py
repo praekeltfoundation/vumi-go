@@ -2,38 +2,47 @@ import sys
 
 from twisted.python import log
 from twisted.internet import reactor
+from twisted.internet.endpoints import serverFromString
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
+from go.billing import settings as app_settings
+from go.billing.utils import RealDictConnectionPool
 from go.billing import api
 
 
 class Command(BaseCommand):
+    """Custom Django management command to start the billing server"""
 
-    args = "<port>"
-    help = "Starts the Billing server on the given port (default: 9090)"
+    help = "Starts the billing server"
 
     def handle(self, *args, **options):
-        port = 9090
-        if len(args) > 0:
-            try:
-                port = int(args[0])
-            except ValueError:
-                raise CommandError("%s is not a valid port number.\n" %
-                                  (args[0],))
+        """Run the Billing server"""
 
         def connection_established(connection_pool):
             from twisted.web.server import Site
-            reactor.listenTCP(port, Site(api.root))
+            root = api.Root(connection_pool)
+            site = Site(root)
+            endpoint = serverFromString(
+                reactor, app_settings.ENDPOINT_DESCRIPTION_STRING)
+
+            endpoint.listen(site)
             reactor.callWhenRunning(
                 lambda _: _.stdout.write(
-                    "Billing server is running at "
-                    "http://127.0.0.1:%s/\n" % port), self)
+                    "Billing server is running on %s\n" %
+                    app_settings.ENDPOINT_DESCRIPTION_STRING), self)
 
         def connection_error(err):
             self.stderr.write(err)
 
         log.startLogging(sys.stdout)
-        d = api.start_connection_pool()
+        connection_string = app_settings.get_connection_string()
+        connection_pool = RealDictConnectionPool(
+            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
+
+        self.stdout.write("Connecting to database %s..." %
+                          (connection_string,))
+
+        d = connection_pool.start()
         d.addCallbacks(connection_established, connection_error)
         reactor.run()

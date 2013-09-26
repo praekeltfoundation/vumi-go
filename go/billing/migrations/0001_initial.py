@@ -16,16 +16,6 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('billing', ['TagPool'])
 
-        # Adding model 'BaseCost'
-        db.create_table('billing_basecost', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('tag_pool', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['billing.TagPool'])),
-            ('message_direction', self.gf('django.db.models.fields.CharField')(max_length=20)),
-            ('message_cost', self.gf('django.db.models.fields.IntegerField')(default=0)),
-            ('markup_percent', self.gf('django.db.models.fields.DecimalField')(default=0.0, max_digits=10, decimal_places=2)),
-        ))
-        db.send_create_signal('billing', ['BaseCost'])
-
         # Adding model 'Account'
         db.create_table('billing_account', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -38,16 +28,16 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('billing', ['Account'])
 
-        # Adding model 'CostOverride'
-        db.create_table('billing_costoverride', (
+        # Adding model 'MessageCost'
+        db.create_table('billing_messagecost', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('account', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['billing.Account'])),
+            ('account', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['billing.Account'], null=True, blank=True)),
             ('tag_pool', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['billing.TagPool'])),
             ('message_direction', self.gf('django.db.models.fields.CharField')(max_length=20)),
             ('message_cost', self.gf('django.db.models.fields.IntegerField')(default=0)),
             ('markup_percent', self.gf('django.db.models.fields.DecimalField')(default=0.0, max_digits=10, decimal_places=2)),
         ))
-        db.send_create_signal('billing', ['CostOverride'])
+        db.send_create_signal('billing', ['MessageCost'])
 
         # Adding model 'Transaction'
         db.create_table('billing_transaction', (
@@ -71,14 +61,11 @@ class Migration(SchemaMigration):
         # Deleting model 'TagPool'
         db.delete_table('billing_tagpool')
 
-        # Deleting model 'BaseCost'
-        db.delete_table('billing_basecost')
-
         # Deleting model 'Account'
         db.delete_table('billing_account')
 
-        # Deleting model 'CostOverride'
-        db.delete_table('billing_costoverride')
+        # Deleting model 'MessageCost'
+        db.delete_table('billing_messagecost')
 
         # Deleting model 'Transaction'
         db.delete_table('billing_transaction')
@@ -100,7 +87,7 @@ class Migration(SchemaMigration):
         },
         'auth.user': {
             'Meta': {'object_name': 'User'},
-            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 8, 28, 8, 17, 5, 191438)'}),
+            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 9, 25, 8, 58, 37, 911472)'}),
             'email': ('django.db.models.fields.EmailField', [], {'max_length': '75', 'blank': 'True'}),
             'first_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
             'groups': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Group']", 'symmetrical': 'False', 'blank': 'True'}),
@@ -108,7 +95,7 @@ class Migration(SchemaMigration):
             'is_active': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'is_staff': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'is_superuser': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 8, 28, 8, 17, 5, 191377)'}),
+            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 9, 25, 8, 58, 37, 911410)'}),
             'last_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
             'password': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'user_permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Permission']", 'symmetrical': 'False', 'blank': 'True'}),
@@ -124,17 +111,9 @@ class Migration(SchemaMigration):
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"})
         },
-        'billing.basecost': {
-            'Meta': {'object_name': 'BaseCost'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'markup_percent': ('django.db.models.fields.DecimalField', [], {'default': '0.0', 'max_digits': '10', 'decimal_places': '2'}),
-            'message_cost': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'message_direction': ('django.db.models.fields.CharField', [], {'max_length': '20'}),
-            'tag_pool': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['billing.TagPool']"})
-        },
-        'billing.costoverride': {
-            'Meta': {'object_name': 'CostOverride'},
-            'account': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['billing.Account']"}),
+        'billing.messagecost': {
+            'Meta': {'object_name': 'MessageCost'},
+            'account': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['billing.Account']", 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'markup_percent': ('django.db.models.fields.DecimalField', [], {'default': '0.0', 'max_digits': '10', 'decimal_places': '2'}),
             'message_cost': ('django.db.models.fields.IntegerField', [], {'default': '0'}),

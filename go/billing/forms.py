@@ -1,4 +1,4 @@
-from decimal import *
+from decimal import Decimal
 
 from django import forms
 from django.forms import ModelForm
@@ -37,7 +37,7 @@ class CreditLoadForm(ModelForm):
         account.save()
 
         # Update the transaction's status to Completed
-        transaction.status = 'Completed'
+        transaction.status = Transaction.STATUS_COMPLETED
         transaction.save()
 
     class Meta:

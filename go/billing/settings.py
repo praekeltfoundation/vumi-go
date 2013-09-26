@@ -5,6 +5,10 @@ CREDIT_CONVERSION_FACTOR = getattr(
 
 API_MIN_CONNECTIONS = getattr(settings, 'BILLING_API_MIN_CONNECTIONS', 10)
 
+ENDPOINT_DESCRIPTION_STRING = getattr(
+    settings, 'BILLING_ENDPOINT_DESCRIPTION_STRING',
+    "tcp:9090:interface=127.0.0.1")
+
 
 def get_connection_string():
     """Return the database connection string"""

@@ -9,86 +9,58 @@ from twisted.web.server import NOT_DONE_YET
 from django.contrib.auth.hashers import make_password
 
 from go.billing import settings as app_settings
-from go.billing.utils import RealDictConnectionPool, JSONEncoder
-
-_connection_pool = None  # The txpostgres connection pool instance
+from go.billing.utils import JSONEncoder
 
 
-def start_connection_pool():
-    """Start the connection pool.
+class BaseResource(Resource):
+    """Base class for the APIs ``Resource``s"""
 
-    If the connection pool has not yet been created or is closed create a
-    new one and start it.
+    _connection_pool = None  # The txpostgres connection pool
 
-    """
-    global _connection_pool
-    if not _connection_pool or _connection_pool.closed:
-        connection_string = app_settings.get_connection_string()
-        min_connections = app_settings.API_MIN_CONNECTIONS
-        _connection_pool = RealDictConnectionPool(None, connection_string,
-                                                  min=min_connections)
-        log.msg("Connecting to database %s..." % (connection_string,))
-        return _connection_pool.start()
-    return _connection_pool
+    def __init__(self, connection_pool):
+        Resource.__init__(self)
+        self._connection_pool = connection_pool
 
+    def _handle_error(self, error, request, *args, **kwargs):
+        """Log the error and return an HTTP 500 response"""
+        log.err(error)
+        request.setResponseCode(500)  # Internal Server Error
+        request.write(error.getErrorMessage())
+        request.finish()
 
-def stop_connection_pool():
-    """Close all connections in the connection pool"""
-    if _connection_pool and not _connection_pool.closed:
-        log.msg("Disconnecting from database...")
-        _connection_pool.close()
+    def _handle_bad_request(self, request, *args, **kwargs):
+        """Handle a bad request"""
+        request.setResponseCode(400)  # Bad Request
+        request.finish()
 
+    def _render_to_json(self, result, request, *args, **kwargs):
+        """Render the ``result`` as a JSON string.
 
-def _handle_error(error, request, *args, **kwargs):
-    """Log the error and return an HTTP 500 response"""
-    log.err(error)
-    request.setResponseCode(500)  # Internal Server Error
-    request.write(error.getErrorMessage())
-    request.finish()
+        If the result is ``None`` return an HTTP 404 response.
 
+        """
+        if result is not None:
+            request.setResponseCode(200)  # OK
+            request.setHeader('Content-Type', 'application/json')
+            request.write(json.dumps(result, cls=JSONEncoder))
+        else:
+            request.setResponseCode(404)  # Not Found
+        request.finish()
 
-def _render_to_json(result, request, *args, **kwargs):
-    """Render the ``result`` as a JSON string.
+    def _parse_json(self, request):
+        """Return the POSTed data as a JSON object.
 
-    If the result is ``None`` return an HTTP 404 response.
+        If the *Content-Type* is anything other than *application/json*
+        return ``None``.
 
-    """
-    if result is not None:
-        request.setResponseCode(200)  # OK
-        request.setHeader('Content-Type', 'application/json')
-        request.write(json.dumps(result, cls=JSONEncoder))
-    else:
-        request.setResponseCode(404)  # Not Found
-    request.finish()
-
-
-def _parse_json(request):
-    """Return the POSTed data as a JSON object.
-
-    If the *Content-Type* is anything other than *application/json*
-    return ``None``
-
-    """
-    content_type = request.getHeader('Content-Type')
-    if request.method == 'POST' and content_type == 'application/json':
-        return json.loads(request.content.read(), parse_float=decimal.Decimal)
-    return None
+        """
+        content_type = request.getHeader('Content-Type')
+        if request.method == 'POST' and content_type == 'application/json':
+            return json.loads(request.content.read(), parse_float=decimal.Decimal)
+        return None
 
 
-class Root(Resource):
-    """The root resource"""
-
-    def getChild(self, name, request):
-        if name == '':
-            return self
-        return Resource.getChild(self, name, request)
-
-    def render_GET(self, request):
-        request.setResponseCode(200)  # OK
-        return ''
-
-
-class UserResource(Resource):
+class UserResource(BaseResource):
     """Expose a REST interface for a user"""
 
     isLeaf = True
@@ -98,12 +70,12 @@ class UserResource(Resource):
         params = filter(None, request.postpath)
         if len(params) > 0:
             d = self.get_user(params[0])
-            d.addCallbacks(_render_to_json, _handle_error,
+            d.addCallbacks(self._render_to_json, self._handle_error,
                            callbackArgs=[request], errbackArgs=[request])
 
         else:
             d = self.get_user_list()
-            d.addCallbacks(_render_to_json, _handle_error,
+            d.addCallbacks(self._render_to_json, self._handle_error,
                            callbackArgs=[request], errbackArgs=[request])
 
         return NOT_DONE_YET
@@ -118,7 +90,7 @@ class UserResource(Resource):
         """
 
         params = {'id': id}
-        result = yield _connection_pool.runQuery(query, params)
+        result = yield self._connection_pool.runQuery(query, params)
         if len(result) > 0:
             defer.returnValue(result[0])
         else:
@@ -132,24 +104,27 @@ class UserResource(Resource):
             FROM auth_user
         """
 
-        result = yield _connection_pool.runQuery(query)
+        result = yield self._connection_pool.runQuery(query)
         defer.returnValue(result)
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
-        data = _parse_json(request)
-        email = data.get('email', None)
-        first_name = data.get('first_name', "")
-        last_name = data.get('last_name', "")
-        password = data.get('password', None)
-        if email and password:
-            d = self.create_user(email, first_name, last_name, password)
-            d.addCallbacks(_render_to_json, _handle_error,
-                           callbackArgs=[request], errbackArgs=[request])
+        data = self._parse_json(request)
+        if data:
+            email = data.get('email', None)
+            first_name = data.get('first_name', "")
+            last_name = data.get('last_name', "")
+            password = data.get('password', None)
+            if email and password:
+                d = self.create_user(email, first_name, last_name, password)
+                d.addCallbacks(self._render_to_json, self._handle_error,
+                               callbackArgs=[request], errbackArgs=[request])
 
-            return NOT_DONE_YET
+            else:
+                self._handle_bad_request(request)
         else:
-            request.setResponseCode(400)  # Bad Request
+            self._handle_bad_request(request)
+        return NOT_DONE_YET
 
     @defer.inlineCallbacks
     def create_user_interaction(self, cursor, email, first_name, last_name,
@@ -180,14 +155,14 @@ class UserResource(Resource):
     @defer.inlineCallbacks
     def create_user(self, email, first_name, last_name, password):
         """Create a new user"""
-        result = yield _connection_pool.runInteraction(
+        result = yield self._connection_pool.runInteraction(
             self.create_user_interaction, email, first_name, last_name,
             password)
 
         defer.returnValue(result)
 
 
-class AccountResource(Resource):
+class AccountResource(BaseResource):
     """Expose a REST interface for an account"""
 
     isLeaf = True
@@ -197,12 +172,12 @@ class AccountResource(Resource):
         params = filter(None, request.postpath)
         if len(params) > 0:
             d = self.get_account(params[0])
-            d.addCallbacks(_render_to_json, _handle_error,
+            d.addCallbacks(self._render_to_json, self._handle_error,
                            callbackArgs=[request], errbackArgs=[request])
 
         else:
             d = self.get_account_list()
-            d.addCallbacks(_render_to_json, _handle_error,
+            d.addCallbacks(self._render_to_json, self._handle_error,
                            callbackArgs=[request], errbackArgs=[request])
 
         return NOT_DONE_YET
@@ -220,7 +195,7 @@ class AccountResource(Resource):
         """
 
         params = {'account_number': account_number}
-        result = yield _connection_pool.runQuery(query, params)
+        result = yield self._connection_pool.runQuery(query, params)
         if len(result) > 0:
             defer.returnValue(result[0])
         else:
@@ -237,41 +212,38 @@ class AccountResource(Resource):
             WHERE a.user_id = u.id
         """
 
-        result = yield _connection_pool.runQuery(query)
+        result = yield self._connection_pool.runQuery(query)
         defer.returnValue(result)
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
         params = filter(None, request.postpath)
-        if len(params) == 0:
-            data = _parse_json(request)
+        data = self._parse_json(request)
+        if len(params) == 0 and data is not None:
             email = data.get('email', None)
             account_number = data.get('account_number', None)
             description = data.get('description', "")
             if email and account_number:
                 d = self.create_account(email, account_number, description)
-                d.addCallbacks(_render_to_json, _handle_error,
+                d.addCallbacks(self._render_to_json, self._handle_error,
                                callbackArgs=[request], errbackArgs=[request])
 
-                return NOT_DONE_YET
             else:
-                request.setResponseCode(400)  # Bad Request
-        elif len(params) == 2:
+                self._handle_bad_request(request)
+        elif len(params) == 2 and data is not None:
             (account_number, path), rest = params[:2], params[2:]
             if path == 'credits':
-                data = _parse_json(request)
                 d = self.load_credits(account_number,
                                       data.get('credit_amount', 0))
 
-                d.addCallbacks(_render_to_json, _handle_error,
+                d.addCallbacks(self._render_to_json, self._handle_error,
                                callbackArgs=[request], errbackArgs=[request])
 
-                return NOT_DONE_YET
             else:
-                request.setResponseCode(400)  # Bad Request
+                self._handle_bad_request(request)
         else:
-            request.setResponseCode(400)  # Bad Request
-        return ''
+            self._handle_bad_request(request)
+        return NOT_DONE_YET
 
     @defer.inlineCallbacks
     def create_account_interaction(self, cursor, email, account_number,
@@ -323,7 +295,7 @@ class AccountResource(Resource):
     @defer.inlineCallbacks
     def create_account(self, email, account_number, description):
         """Create a new account"""
-        result = yield _connection_pool.runInteraction(
+        result = yield self._connection_pool.runInteraction(
             self.create_account_interaction, email, account_number,
             description)
 
@@ -375,13 +347,13 @@ class AccountResource(Resource):
     @defer.inlineCallbacks
     def load_credits(self, account_number, credit_amount):
         """Load ``credit_value`` credits in the given ``account_number``"""
-        result = yield _connection_pool.runInteraction(
+        result = yield self._connection_pool.runInteraction(
             self.load_credits_interaction, account_number, credit_amount)
 
         defer.returnValue(result)
 
 
-class CostResource(Resource):
+class CostResource(BaseResource):
     """Expose a REST interface for a message cost"""
 
     isLeaf = True
@@ -394,32 +366,34 @@ class CostResource(Resource):
         d = self.get_cost_list(account_number[0], tag_pool_name[0],
                                message_direction[0])
 
-        d.addCallbacks(_render_to_json, _handle_error,
+        d.addCallbacks(self._render_to_json, self._handle_error,
                        callbackArgs=[request], errbackArgs=[request])
 
         return NOT_DONE_YET
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
-        data = _parse_json(request)
-        account_number = data.get('account_number', None)
-        tag_pool_name = data.get('tag_pool_name', None)
-        message_direction = data.get('message_direction', None)
-        message_cost = data.get('message_cost', None)
-        markup_percent = data.get('markup_percent', None)
-        if tag_pool_name and message_direction and message_cost \
-                and markup_percent:
-            d = self.create_cost(account_number, tag_pool_name,
-                                 message_direction, message_cost,
-                                 markup_percent)
+        data = self._parse_json(request)
+        if data:
+            account_number = data.get('account_number', None)
+            tag_pool_name = data.get('tag_pool_name', None)
+            message_direction = data.get('message_direction', None)
+            message_cost = data.get('message_cost', None)
+            markup_percent = data.get('markup_percent', None)
+            if tag_pool_name and message_direction and message_cost \
+                    and markup_percent:
+                d = self.create_cost(account_number, tag_pool_name,
+                                     message_direction, message_cost,
+                                     markup_percent)
 
-            d.addCallbacks(_render_to_json, _handle_error,
-                           callbackArgs=[request], errbackArgs=[request])
+                d.addCallbacks(self._render_to_json, self._handle_error,
+                               callbackArgs=[request], errbackArgs=[request])
 
-            return NOT_DONE_YET
+            else:
+                self._handle_bad_request(request)
         else:
-            request.setResponseCode(400)  # Bad Request
-            return ''
+            self._handle_bad_request(request)
+        return NOT_DONE_YET
 
     @defer.inlineCallbacks
     def get_cost_list(self, account_number, tag_pool_name,
@@ -430,62 +404,46 @@ class CostResource(Resource):
         override.
 
         """
+        query = """
+            SELECT a.account_number, t.name AS tag_pool_name,
+                   c.message_direction, c.message_cost, c.markup_percent,
+                   (c.message_cost + (c.message_cost *
+                                      c.markup_percent / 100.0))
+                    * %(credit_factor)s AS credit_amount
+            FROM billing_messagecost c
+                 INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
+                 LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
+        """
+
+        # Construct the query conditions dynamically based on the sent
+        # parameters
+        conditions = ""
+        params = {'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR}
         if account_number:
-            query = """
-                SELECT a.account_number, t.name AS tag_pool_name,
-                       c.message_direction, c.message_cost, c.markup_percent,
-                       (c.message_cost
-                        + (c.message_cost * c.markup_percent / 100.0))
-                        * %(credit_factor)s AS credit_amount
-                FROM billing_costoverride c, billing_account a,
-                     billing_tagpool t
-                WHERE c.account_id = a.id
-                AND c.tag_pool_id = t.id
-                AND a.account_number = %(account_number)s
-            """
-
-            params = {
-                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
-                'account_number': account_number
-            }
-
-            if tag_pool_name:
-                query += " AND t.name = %(tag_pool_name)s"
-                params['tag_pool_name'] = tag_pool_name
-            if message_direction:
-                query += " AND c.message_direction = %(message_direction)s"
-                params['message_direction'] = message_direction
-
-            result = yield _connection_pool.runQuery(query, params)
-        else:
-            result = None
-
-        if result:
-            defer.returnValue(result)
-        else:
-            query = """
-                SELECT t.name AS tag_pool_name, c.message_direction,
-                       c.message_cost, c.markup_percent,
-                       (c.message_cost
-                        + (c.message_cost * c.markup_percent / 100.0))
-                        * %(credit_factor)s AS credit_amount
-                FROM billing_basecost c, billing_tagpool t
-                WHERE c.tag_pool_id = t.id
-            """
-
-            params = {
-                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
-            }
-
-            if tag_pool_name:
-                query += " AND t.name = %(tag_pool_name)s"
-                params['tag_pool_name'] = tag_pool_name
-            if message_direction:
-                query += " AND c.message_direction = %(message_direction)s"
-                params['message_direction'] = message_direction
-
-            result = yield _connection_pool.runQuery(query, params)
-            defer.returnValue(result)
+            if conditions:
+                conditions += " AND "
+            else:
+                conditions += " WHERE "
+            conditions += "a.account_number = %(account_number)s"
+            params['account_number'] = account_number
+        if tag_pool_name:
+            if conditions:
+                conditions += " AND "
+            else:
+                conditions += " WHERE "
+            conditions += "t.name = %(tag_pool_name)s"
+            params['tag_pool_name'] = tag_pool_name
+        if message_direction:
+            if conditions:
+                conditions += " AND "
+            else:
+                conditions += " WHERE "
+            conditions += "c.message_direction = %(message_direction)s"
+            params['message_direction'] = message_direction
+        query += conditions
+        query += " ORDER BY a.account_number"
+        result = yield self._connection_pool.runQuery(query, params)
+        defer.returnValue(result)
 
     @defer.inlineCallbacks
     def create_cost_interaction(self, cursor, account_number, tag_pool_name,
@@ -493,8 +451,8 @@ class CostResource(Resource):
                                 markup_percent):
         """Create a new cost.
 
-        If an ``account_number`` is given create a message cost override,
-        otherwise create a base message cost.
+        If an ``account_number`` is supplied assume that there is a valid
+        account entry in the database.
 
         """
         # Get the tag pool or create a new one if it doesn't exist
@@ -504,8 +462,7 @@ class CostResource(Resource):
                 SELECT %(tag_pool_name)s, ''
                 WHERE NOT EXISTS (SELECT * FROM billing_tagpool
                                   WHERE name = %(tag_pool_name)s)
-                RETURNING id, name, description
-            )
+                RETURNING id, name, description)
             SELECT id, name, description FROM new_row
             UNION
             SELECT id, name, description
@@ -517,9 +474,9 @@ class CostResource(Resource):
         cursor = yield cursor.execute(query, params)
         tag_pool = yield cursor.fetchone()
 
-        if account_number:  # Create a message cost override
+        if account_number:
             query = """
-                INSERT INTO billing_costoverride
+                INSERT INTO billing_messagecost
                     (account_id, tag_pool_id, message_direction,
                      message_cost, markup_percent)
                 VALUES
@@ -544,19 +501,16 @@ class CostResource(Resource):
                 'markup_percent': markup_percent,
                 'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR
             }
-
-            cursor = yield cursor.execute(query, params)
-            result = yield cursor.fetchone()
-            defer.returnValue(result)
-        else:  # Create the base message cost
+        else:
             query = """
-                INSERT INTO billing_basecost
-                    (tag_pool_id, message_direction, message_cost,
-                     markup_percent)
+                INSERT INTO billing_messagecost
+                    (account_id, tag_pool_id, message_direction,
+                     message_cost, markup_percent)
                 VALUES
-                    (%(tag_pool_id)s, %(message_direction)s,
+                    (NULL, %(tag_pool_id)s, %(message_direction)s,
                      %(message_cost)s, %(markup_percent)s)
                 RETURNING
+                    NULL AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
                     message_direction, message_cost, markup_percent,
                     (message_cost + (message_cost * markup_percent / 100.0))
@@ -572,9 +526,9 @@ class CostResource(Resource):
                 'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR
             }
 
-            cursor = yield cursor.execute(query, params)
-            result = yield cursor.fetchone()
-            defer.returnValue(result)
+        cursor = yield cursor.execute(query, params)
+        result = yield cursor.fetchone()
+        defer.returnValue(result)
 
     @defer.inlineCallbacks
     def create_cost(self, account_number, tag_pool_name, message_direction,
@@ -585,14 +539,14 @@ class CostResource(Resource):
         otherwise create a base message cost.
 
         """
-        result = yield _connection_pool.runInteraction(
+        result = yield self._connection_pool.runInteraction(
             self.create_cost_interaction, account_number,
             tag_pool_name, message_direction, message_cost, markup_percent)
 
         defer.returnValue(result)
 
 
-class TransactionResource(Resource):
+class TransactionResource(BaseResource):
     """Expose a REST interface for a transaction"""
 
     isLeaf = True
@@ -606,52 +560,57 @@ class TransactionResource(Resource):
             d = self.get_transaction_list(
                 account_number[0], page_number[0], items_per_page[0])
 
-            d.addCallbacks(_render_to_json, _handle_error,
+            d.addCallbacks(self._render_to_json, self._handle_error,
                            callbackArgs=[request], errbackArgs=[request])
 
         else:
-            request.setResponseCode(400)  # Bad Request
-            return ''
+            self._handle_bad_request(request)
         return NOT_DONE_YET
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
-        data = _parse_json(request)
-        account_number = data.get('account_number', None)
-        tag_pool_name = data.get('tag_pool_name', None)
-        message_direction = data.get('message_direction', None)
-        if account_number and tag_pool_name and message_direction:
-            d = self.create_transaction(
-                account_number, tag_pool_name, message_direction)
+        data = self._parse_json(request)
+        if data:
+            account_number = data.get('account_number', None)
+            tag_pool_name = data.get('tag_pool_name', None)
+            message_direction = data.get('message_direction', None)
+            if account_number and tag_pool_name and message_direction:
+                d = self.create_transaction(
+                    account_number, tag_pool_name, message_direction)
 
-            d.addCallbacks(_render_to_json, _handle_error,
-                           callbackArgs=[request], errbackArgs=[request])
-
-            return NOT_DONE_YET
+                d.addCallbacks(self._render_to_json, self._handle_error,
+                               callbackArgs=[request], errbackArgs=[request])
+            else:
+                self._handle_bad_request(request)
         else:
-            request.setResponseCode(400)  # Bad Request
-            return ''
+            self._handle_bad_request(request)
+        return NOT_DONE_YET
 
     @defer.inlineCallbacks
     def get_cost(self, account_number, tag_pool_name, message_direction):
-        """Return the message cost.
-
-        First check if there is a cost override for the given
-        ``account_number``. If not, return the base cost.
-
-        """
-        # Check for an account cost override
+        """Return the message cost"""
         query = """
-            SELECT c.message_cost, c.markup_percent,
-                   (c.message_cost
-                   + (c.message_cost * c.markup_percent / 100.0))
-                   * %(credit_factor)s AS credit_amount
-            FROM billing_costoverride c, billing_account a, billing_tagpool t
-            WHERE c.account_id = a.id
-            AND a.account_number = %(account_number)s
-            AND c.tag_pool_id = t.id
-            AND t.name = %(tag_pool_name)s
-            AND c.message_direction = %(message_direction)s
+            SELECT t.account_number, t.tag_pool_name, t.message_direction,
+                   t.message_cost, t.markup_percent,
+                   (t.message_cost + (t.message_cost * t.markup_percent / 100.0))
+                    * %(credit_factor)s AS credit_amount
+            FROM (SELECT a.account_number, t.name AS tag_pool_name,
+                         c.message_direction, c.message_cost, c.markup_percent
+                  FROM billing_messagecost c
+                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
+                  INNER JOIN billing_account a ON (c.account_id = a.id)
+                  WHERE a.account_number = %(account_number)s
+                  AND t.name = %(tag_pool_name)s
+                  AND c.message_direction = %(message_direction)s
+                  UNION
+                  SELECT NULL AS account_number, t.name AS tag_pool_name,
+                         c.message_direction, c.message_cost, c.markup_percent
+                  FROM billing_messagecost c
+                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
+                  WHERE c.account_id IS NULL
+                  AND t.name = %(tag_pool_name)s
+                  AND c.message_direction = %(message_direction)s) t
+            ORDER BY t.account_number
             LIMIT 1
             """
 
@@ -662,34 +621,11 @@ class TransactionResource(Resource):
             'message_direction': message_direction
         }
 
-        result = yield _connection_pool.runQuery(query, params)
+        result = yield self._connection_pool.runQuery(query, params)
         if len(result) > 0:
             defer.returnValue(result[0])
         else:
-            # Find the message base cost
-            query = """
-                SELECT c.message_cost, c.markup_percent,
-                       (c.message_cost
-                       + (c.message_cost * c.markup_percent / 100.0))
-                       * %(credit_factor)s AS credit_amount
-                FROM billing_basecost c, billing_tagpool t
-                WHERE c.tag_pool_id = t.id
-                AND t.name = %(tag_pool_name)s
-                AND c.message_direction = %(message_direction)s
-                LIMIT 1
-            """
-
-            params = {
-                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
-                'tag_pool_name': tag_pool_name,
-                'message_direction': message_direction
-            }
-
-            result = yield _connection_pool.runQuery(query, params)
-            if len(result) > 0:
-                defer.returnValue(result[0])
-            else:
-                defer.returnValue(None)
+            defer.returnValue(None)
 
     @defer.inlineCallbacks
     def get_transaction_list(self, account_number, page_number,
@@ -710,9 +646,13 @@ class TransactionResource(Resource):
             offset = int(page_number) * int(items_per_page)
         except ValueError:
             offset = 0
+        except TypeError:
+            offset = 0
         try:
             limit = int(items_per_page)
         except ValueError:
+            limit = 20
+        except TypeError:
             limit = 20
         params = {
             'account_number': account_number,
@@ -720,7 +660,7 @@ class TransactionResource(Resource):
             'limit': limit
         }
 
-        result = yield _connection_pool.runQuery(query, params)
+        result = yield self._connection_pool.runQuery(query, params)
         if len(result) > 0:
             defer.returnValue(result)
         else:
@@ -801,14 +741,28 @@ class TransactionResource(Resource):
     def create_transaction(self, account_number, tag_pool_name,
                            message_direction):
         """Create a new transaction for the given ``account_number``"""
-        result = yield _connection_pool.runInteraction(
+        result = yield self._connection_pool.runInteraction(
             self.create_transaction_interaction, account_number,
             tag_pool_name, message_direction)
 
         defer.returnValue(result)
 
-root = Root()
-root.putChild('users', UserResource())
-root.putChild('accounts', AccountResource())
-root.putChild('costs', CostResource())
-root.putChild('transactions', TransactionResource())
+
+class Root(BaseResource):
+    """The root resource"""
+
+    def __init__(self, connection_pool):
+        BaseResource.__init__(self, connection_pool)
+        self.putChild('users', UserResource(connection_pool))
+        self.putChild('accounts', AccountResource(connection_pool))
+        self.putChild('costs', CostResource(connection_pool))
+        self.putChild('transactions', TransactionResource(connection_pool))
+
+    def getChild(self, name, request):
+        if name == '':
+            return self
+        return Resource.getChild(self, name, request)
+
+    def render_GET(self, request):
+        request.setResponseCode(200)  # OK
+        return ''

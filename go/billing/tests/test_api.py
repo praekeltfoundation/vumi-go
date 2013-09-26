@@ -1,27 +1,30 @@
 import json
 import decimal
 import pytest
-import time
 
 from twisted.internet import defer
-from twisted.web import server
 from twisted.trial import unittest
 
 from go.billing import settings as app_settings
 from go.billing import api
-from go.billing.utils import DummySite
+from go.billing.utils import DummySite, RealDictConnectionPool
 
 
 class UserTestCase(unittest.TestCase):
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
-        connection_pool = yield api.start_connection_pool()
-        self.web = DummySite(api.root)
+        connection_string = app_settings.get_connection_string()
+        connection_pool = RealDictConnectionPool(
+            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
+
+        self.connection_pool = yield connection_pool.start()
+        root = api.Root(connection_pool)
+        self.web = DummySite(root)
 
     @pytest.mark.django_db
     def tearDown(self):
-        api.stop_connection_pool()
+        self.connection_pool.close()
 
     @pytest.mark.django_db
     @defer.inlineCallbacks
@@ -62,12 +65,17 @@ class AccountTestCase(unittest.TestCase):
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
-        connection_pool = yield api.start_connection_pool()
-        self.web = DummySite(api.root)
+        connection_string = app_settings.get_connection_string()
+        connection_pool = RealDictConnectionPool(
+            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
+
+        self.connection_pool = yield connection_pool.start()
+        root = api.Root(connection_pool)
+        self.web = DummySite(root)
 
     @pytest.mark.django_db
     def tearDown(self):
-        api.stop_connection_pool()
+        self.connection_pool.close()
 
     @pytest.mark.django_db
     @defer.inlineCallbacks
@@ -148,12 +156,17 @@ class CostTestCase(unittest.TestCase):
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
-        connection_pool = yield api.start_connection_pool()
-        self.web = DummySite(api.root)
+        connection_string = app_settings.get_connection_string()
+        connection_pool = RealDictConnectionPool(
+            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
+
+        self.connection_pool = yield connection_pool.start()
+        root = api.Root(connection_pool)
+        self.web = DummySite(root)
 
     @pytest.mark.django_db
     def tearDown(self):
-        api.stop_connection_pool()
+        self.connection_pool.close()
 
     @pytest.mark.django_db
     @defer.inlineCallbacks
@@ -209,7 +222,6 @@ class CostTestCase(unittest.TestCase):
 
         # Get the message cost
         args = {
-            'account_number': "67890",
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound"
         }
@@ -224,7 +236,7 @@ class CostTestCase(unittest.TestCase):
 
         # Override the message cost for the account
         content = {
-            'account_number': "67890",
+            'account_number': account.get('account_number'),
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound",
             'message_cost': 50,
@@ -245,7 +257,7 @@ class CostTestCase(unittest.TestCase):
 
         # Get the message cost again
         args = {
-            'account_number': "67890",
+            'account_number': account.get('account_number'),
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound"
         }
@@ -263,12 +275,17 @@ class TransactionTestCase(unittest.TestCase):
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
-        connection_pool = yield api.start_connection_pool()
-        self.web = DummySite(api.root)
+        connection_string = app_settings.get_connection_string()
+        connection_pool = RealDictConnectionPool(
+            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
+
+        self.connection_pool = yield connection_pool.start()
+        root = api.Root(connection_pool)
+        self.web = DummySite(root)
 
     @pytest.mark.django_db
     def tearDown(self):
-        api.stop_connection_pool()
+        self.connection_pool.close()
 
     @pytest.mark.django_db
     @defer.inlineCallbacks
@@ -319,6 +336,7 @@ class TransactionTestCase(unittest.TestCase):
         cost = json.loads(response.value(), parse_float=decimal.Decimal)
         credit_factor = app_settings.CREDIT_CONVERSION_FACTOR
         credit_amount = (60 + (60 * 10.0 / 100.0)) * credit_factor
+        self.assertEqual(credit_amount, cost.get('credit_amount'))
 
         # Create a transaction
         content = {

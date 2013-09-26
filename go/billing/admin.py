@@ -1,3 +1,4 @@
+from django.core import urlresolvers
 from django.conf.urls.defaults import patterns
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
@@ -6,9 +7,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.contrib import admin
 from django.contrib import messages
 
-from go.billing.models import TagPool, BaseCost, Account, CostOverride, \
-    Transaction
-
+from go.billing.models import TagPool, Account, MessageCost, Transaction
 from go.billing.forms import CreditLoadForm, BaseCreditLoadFormSet
 
 
@@ -17,26 +16,12 @@ class TagPoolAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description')
 
 
-class BaseCostAdmin(admin.ModelAdmin):
-    list_display = ('tag_pool', 'message_direction', 'message_cost',
-                    'markup_percent')
-
-    search_fields = ('tag_pool__name',)
-    list_filter = ('tag_pool', 'message_direction')
-
-
-class ItemInline(admin.TabularInline):
-    model = CostOverride
-    extra = 1
-
-
 class AccountAdmin(admin.ModelAdmin):
     list_display = ('account_number', 'user', 'description',
                     'credit_balance')
 
     search_fields = ('account_number', 'user__email', 'description')
     readonly_fields = ('credit_balance',)
-    inlines = (ItemInline,)
     actions = ['load_credits']
 
     def load_credits(self, request, queryset):
@@ -67,10 +52,12 @@ class AccountAdmin(admin.ModelAdmin):
                     form.load_credits()
                 del request.session['account_ids']
                 messages.info(request, _("Credits loaded successfully."))
-                return HttpResponseRedirect('../../')
+                changelist_url = urlresolvers.reverse(
+                    'admin:billing_account_changelist')
+
+                return HttpResponseRedirect(changelist_url)
         else:
             formset = CreditLoadFormSet(queryset=queryset)
-
         opts = self.model._meta
         context = {
             'is_popup': "_popup" in request.REQUEST,
@@ -94,6 +81,14 @@ class AccountAdmin(admin.ModelAdmin):
         return False
 
 
+class MessageCostAdmin(admin.ModelAdmin):
+    list_display = ('id', 'account', 'tag_pool', 'message_direction',
+                    'message_cost', 'markup_percent')
+
+    search_fields = ('tag_pool__name', 'account__account_number')
+    list_filter = ('tag_pool', 'message_direction')
+
+
 class TransactionAdmin(admin.ModelAdmin):
     list_display = ('id', 'account_number', 'tag_pool_name',
                     'message_direction', 'message_cost', 'markup_percent',
@@ -114,6 +109,6 @@ class TransactionAdmin(admin.ModelAdmin):
 
 
 admin.site.register(TagPool, TagPoolAdmin)
-admin.site.register(BaseCost, BaseCostAdmin)
 admin.site.register(Account, AccountAdmin)
+admin.site.register(MessageCost, MessageCostAdmin)
 admin.site.register(Transaction, TransactionAdmin)
