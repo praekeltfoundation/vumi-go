@@ -31,6 +31,10 @@ function DialogueStateCreator() {
                   ? poll.start_state.uuid
                   : null;
 
+                self.accept_labels = 'accept_labels' in poll
+                  ? poll.accept_labels
+                  : true;
+
                 var states = poll.states || [];
                 self.state_creators = {};
                 states.forEach(function(state_description) {
@@ -133,13 +137,16 @@ function DialogueStateCreator() {
                     state_description.store_as,
                     endpoint.value,
                     im
-                )
+                );
                 p.add_callback(function() {
                     done(self.get_next_state(endpoint.uuid));
                 });
             },
             state_description.text,
-            choices
+            choices,
+            null,
+            null,
+            {accept_labels: self.accept_labels}
         );
     };
 
