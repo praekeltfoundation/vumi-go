@@ -29,7 +29,7 @@ class OptOutStore(PerAccountStore):
         opt_out_id = self.opt_out_id(addr_type, addr_value)
         opt_out = self.opt_outs(opt_out_id,
                 user_account=self.user_account_key,
-                message=message.get('message_id'))
+                message=unicode(message.get('message_id')))
         yield opt_out.save()
         returnValue(opt_out)
 
