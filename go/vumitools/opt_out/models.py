@@ -45,8 +45,12 @@ class OptOutStore(PerAccountStore):
     def list_opt_outs(self):
         return self.list_keys(self.opt_outs)
 
+    @Manager.calls_manager
     def opt_outs_for_addresses(self, addr_type, addresses):
+        if not addresses:
+            returnValue([])
         keys = ["%s:%s" % (addr_type, address) for address in addresses]
         mr = self.manager.mr_from_keys(self.opt_outs, keys)
         mr.filter_not_found()
-        return mr.get_keys()
+        opt_out_keys = yield mr.get_keys()
+        returnValue(opt_out_keys)
