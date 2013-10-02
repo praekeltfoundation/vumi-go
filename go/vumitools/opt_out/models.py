@@ -27,9 +27,16 @@ class OptOutStore(PerAccountStore):
     @Manager.calls_manager
     def new_opt_out(self, addr_type, addr_value, message):
         opt_out_id = self.opt_out_id(addr_type, addr_value)
+        message_id = message.get('message_id')
+        if isinstance(message_id, str):
+            # guard against bug-let in vumi messages that causes
+            # message ids to be bytestrings when they're first
+            # created but unicode after being de-serialized from
+            # the wire.
+            message_id = message_id.decode('ascii')
         opt_out = self.opt_outs(opt_out_id,
                 user_account=self.user_account_key,
-                message=message.get('message_id'))
+                message=message_id)
         yield opt_out.save()
         returnValue(opt_out)
 
@@ -45,8 +52,12 @@ class OptOutStore(PerAccountStore):
     def list_opt_outs(self):
         return self.list_keys(self.opt_outs)
 
+    @Manager.calls_manager
     def opt_outs_for_addresses(self, addr_type, addresses):
+        if not addresses:
+            returnValue([])
         keys = ["%s:%s" % (addr_type, address) for address in addresses]
         mr = self.manager.mr_from_keys(self.opt_outs, keys)
         mr.filter_not_found()
-        return mr.get_keys()
+        opt_out_keys = yield mr.get_keys()
+        returnValue(opt_out_keys)
