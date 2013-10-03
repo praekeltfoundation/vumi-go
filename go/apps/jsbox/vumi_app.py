@@ -34,6 +34,8 @@ class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoWorkerConfigMixin):
 
     @property
     def javascript(self):
+        if not self.jsbox:
+            return None
         return self.jsbox['javascript']
 
     @property
@@ -92,12 +94,18 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
             'xmpp': 'gtalk',
         }.get(msg['transport_type'], 'sms')
 
+    @inlineCallbacks
     def process_message_in_sandbox(self, msg):
         # TODO remove the delivery class inference and injection into the
         # message once we have message address types
         metadata = msg['helper_metadata']
         metadata['delivery_class'] = self.infer_delivery_class(msg)
-        return super(JsBoxApplication, self).process_message_in_sandbox(msg)
+        config = yield self.get_config(msg)
+        if not config.javascript:
+            log.warning("No JS for conversation: %s" % (
+                config.get_conversation().key,))
+            return
+        yield super(JsBoxApplication, self).process_message_in_sandbox(msg)
 
     def process_command_start(self, user_account_key, conversation_key):
         log.info("Starting javascript sandbox conversation (key: %r)." %
