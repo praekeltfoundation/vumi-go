@@ -116,7 +116,10 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation = yield self.setup_conversation(config={})
         yield self.start_conversation(conversation)
         msg = self.mkmsg_in()
-        yield self.dispatch_to_conv(msg, conversation)
+        with LogCatcher() as lc:
+            yield self.dispatch_to_conv(msg, conversation)
+            self.assertTrue("No JS for conversation: %s" % (conversation.key,)
+                            in lc.messages())
 
     @inlineCallbacks
     def test_user_message_sandbox_id(self):
