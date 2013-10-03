@@ -112,6 +112,13 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         yield self.dispatch_to_conv(msg, conversation)
 
     @inlineCallbacks
+    def test_user_message_no_javascript(self):
+        conversation = yield self.setup_conversation(config={})
+        yield self.start_conversation(conversation)
+        msg = self.mkmsg_in()
+        yield self.dispatch_to_conv(msg, conversation)
+
+    @inlineCallbacks
     def test_user_message_sandbox_id(self):
         conversation = yield self.setup_conversation(
             config=self.mk_conv_config('on_inbound_message'))
