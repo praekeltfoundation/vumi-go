@@ -12,6 +12,12 @@ function poll_tester(poll) {
     });
 }
 
+function clone(obj) {
+  var dup = {};
+  for (var k in obj) { dup[k] = obj[k]; }
+  return dup;
+}
+
 describe("choice states", function() {
     var tester;
 
@@ -78,6 +84,28 @@ describe("choice states", function() {
             var contact = app.api.find_contact('ussd', '+2731234567');
             assert.equal(contact['extras-message-1'], 'value-2');
         }).done(done, done);
+    });
+
+    describe("if 'accept_labels' is enabled", function() {
+      beforeEach(function() {
+          var poll = clone(dummy_polls.simple_poll);
+          poll.accept_labels = true;
+          tester = poll_tester(poll);
+      });
+
+      it("should accept both label and number based answers", function(done) {
+        var p = tester.check_state({
+            user: {current_state: "choice-1"},
+            helper_metadata: {delivery_class: 'ussd'},
+            content: "Blue",
+            next_state: "end-1",
+            response: (
+                "^Thank you for taking our survey$"
+            ),
+            continue_session: false
+        });
+        p.then(done, done);
+      });
     });
 });
 
