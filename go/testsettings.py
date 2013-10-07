@@ -8,6 +8,16 @@ VUMI_API_CONFIG['redis_manager'] = {
     'FAKE_REDIS': 'sure',
 }
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'go',
+        'USER': 'postgres',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
+    }
+}
 
 if os.environ.get('VUMIGO_FAST_TESTS'):
     DATABASES = {

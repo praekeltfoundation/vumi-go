@@ -12,8 +12,7 @@ ENDPOINT_DESCRIPTION_STRING = getattr(
 
 def get_connection_string():
     """Return the database connection string"""
+    db = settings.DATABASES['default']
     return "host='%s' dbname='%s' user='%s' password='%s'" \
-        % (settings.DATABASES['default'].get('HOST', 'localhost'),
-           settings.DATABASES['default'].get('NAME'),
-           settings.DATABASES['default'].get('USER'),
-           settings.DATABASES['default'].get('PASSWORD'))
+        % (db.get('HOST', 'localhost'), db.get('NAME'), db.get('USER'),
+           db.get('PASSWORD'))
