@@ -220,11 +220,8 @@ class CostTestCase(unittest.TestCase):
         base_cost = json.loads(response.value(), parse_float=decimal.Decimal)
         self.assertTrue('credit_amount' in base_cost)
         credit_factor = app_settings.CREDIT_CONVERSION_FACTOR
-        credit_amount = (90 + (90 * 20.0 / 100.0)) * credit_factor
-        credit_amount = decimal.Decimal(credit_amount)\
-            .quantize(decimal.Decimal('1'))
-
-        self.assertEqual(base_cost.get('credit_amount'), credit_amount)
+        credit_amount = round((90 + (90 * 20.0 / 100.0)) * credit_factor)
+        self.assertEqual(base_cost.get('credit_amount'), int(credit_amount))
 
         # Get the message cost
         args = {
@@ -342,11 +339,8 @@ class TransactionTestCase(unittest.TestCase):
         self.assertEqual(response.responseCode, 200)
         cost = json.loads(response.value(), parse_float=decimal.Decimal)
         credit_factor = app_settings.CREDIT_CONVERSION_FACTOR
-        credit_amount = (60 + (60 * 10.0 / 100.0)) * credit_factor
-        credit_amount = decimal.Decimal(credit_amount)\
-            .quantize(decimal.Decimal('1'))
-
-        self.assertEqual(cost.get('credit_amount'), credit_amount)
+        credit_amount = round((60 + (60 * 10.0 / 100.0)) * credit_factor)
+        self.assertEqual(cost.get('credit_amount'), int(credit_amount))
 
         # Create a transaction
         content = {
