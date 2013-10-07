@@ -13,4 +13,8 @@ install:
   - "pip install https://github.com/praekelt/vumi-wikipedia/tarball/develop#egg=vumi-wikipedia-dev --use-mirrors"
   - "pip install -r requirements.pip --use-mirrors"
   - "pip install -r requirements-pytest.pip --use-mirrors"
-script: VUMITEST_REDIS_DB=1 ./run-tests.sh
+  - "pip install coveralls --use-mirrors"
+script:
+  - VUMITEST_REDIS_DB=1 ./run-tests.sh
+after_success:
+  - coveralls
