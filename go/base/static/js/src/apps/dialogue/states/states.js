@@ -3,8 +3,7 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var utils = go.utils,
-      GridView = go.components.grid.GridView,
+  var GridView = go.components.grid.GridView,
       ConfirmView = go.components.views.ConfirmView,
       PopoverView = go.components.views.PopoverView,
       TemplateView = go.components.views.TemplateView;
