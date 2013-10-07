@@ -2,7 +2,7 @@
 branch = True
 source = go
 omit = 
-  ../*migrations*
+  */migrations/*
 
 [report]
 exclude_lines = 
