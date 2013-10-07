@@ -11,6 +11,7 @@ from go.billing.utils import DummySite, RealDictConnectionPool
 
 
 class UserTestCase(unittest.TestCase):
+
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
@@ -62,6 +63,7 @@ class UserTestCase(unittest.TestCase):
 
 
 class AccountTestCase(unittest.TestCase):
+
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
@@ -153,6 +155,7 @@ class AccountTestCase(unittest.TestCase):
 
 
 class CostTestCase(unittest.TestCase):
+
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
@@ -218,6 +221,9 @@ class CostTestCase(unittest.TestCase):
         self.assertTrue('credit_amount' in base_cost)
         credit_factor = app_settings.CREDIT_CONVERSION_FACTOR
         credit_amount = (90 + (90 * 20.0 / 100.0)) * credit_factor
+        credit_amount = decimal.Decimal(credit_amount)\
+            .quantize(decimal.Decimal('1'))
+
         self.assertEqual(base_cost.get('credit_amount'), credit_amount)
 
         # Get the message cost
@@ -272,6 +278,7 @@ class CostTestCase(unittest.TestCase):
 
 
 class TransactionTestCase(unittest.TestCase):
+
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
@@ -336,7 +343,10 @@ class TransactionTestCase(unittest.TestCase):
         cost = json.loads(response.value(), parse_float=decimal.Decimal)
         credit_factor = app_settings.CREDIT_CONVERSION_FACTOR
         credit_amount = (60 + (60 * 10.0 / 100.0)) * credit_factor
-        self.assertEqual(credit_amount, cost.get('credit_amount'))
+        credit_amount = decimal.Decimal(credit_amount)\
+            .quantize(decimal.Decimal('1'))
+
+        self.assertEqual(cost.get('credit_amount'), credit_amount)
 
         # Create a transaction
         content = {

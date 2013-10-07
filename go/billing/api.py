@@ -56,7 +56,9 @@ class BaseResource(Resource):
         """
         content_type = request.getHeader('Content-Type')
         if request.method == 'POST' and content_type == 'application/json':
-            return json.loads(request.content.read(), parse_float=decimal.Decimal)
+            return json.loads(request.content.read(),
+                              parse_float=decimal.Decimal)
+
         return None
 
 
@@ -407,9 +409,9 @@ class CostResource(BaseResource):
         query = """
             SELECT a.account_number, t.name AS tag_pool_name,
                    c.message_direction, c.message_cost, c.markup_percent,
-                   (c.message_cost + (c.message_cost *
-                                      c.markup_percent / 100.0))
-                    * %(credit_factor)s AS credit_amount
+                   round((c.message_cost +
+                          (c.message_cost * c.markup_percent / 100.0))
+                         * %(credit_factor)s) AS credit_amount
             FROM billing_messagecost c
                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
                  LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
@@ -488,8 +490,9 @@ class CostResource(BaseResource):
                     %(account_number)s AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
                     message_direction, message_cost, markup_percent,
-                    (message_cost + (message_cost * markup_percent / 100.0))
-                     * %(credit_factor)s AS credit_amount
+                    round((message_cost +
+                           (message_cost * markup_percent / 100.0))
+                          * %(credit_factor)s) AS credit_amount
             """
 
             params = {
@@ -513,8 +516,9 @@ class CostResource(BaseResource):
                     NULL AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
                     message_direction, message_cost, markup_percent,
-                    (message_cost + (message_cost * markup_percent / 100.0))
-                     * %(credit_factor)s AS credit_amount
+                    round((message_cost +
+                           (message_cost * markup_percent / 100.0))
+                          * %(credit_factor)s) AS credit_amount
             """
 
             params = {
@@ -592,8 +596,9 @@ class TransactionResource(BaseResource):
         query = """
             SELECT t.account_number, t.tag_pool_name, t.message_direction,
                    t.message_cost, t.markup_percent,
-                   (t.message_cost + (t.message_cost * t.markup_percent / 100.0))
-                    * %(credit_factor)s AS credit_amount
+                   round((t.message_cost +
+                          (t.message_cost * t.markup_percent / 100.0))
+                          * %(credit_factor)s) AS credit_amount
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
                          c.message_direction, c.message_cost, c.markup_percent
                   FROM billing_messagecost c
