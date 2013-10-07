@@ -1,7 +1,7 @@
 from django.conf import settings
 
 CREDIT_CONVERSION_FACTOR = getattr(
-    settings, 'BILLING_CREDIT_CONVERSION_FACTOR', 40.0)
+    settings, 'BILLING_CREDIT_CONVERSION_FACTOR', 0.4)
 
 API_MIN_CONNECTIONS = getattr(settings, 'BILLING_API_MIN_CONNECTIONS', 10)
 

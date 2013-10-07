@@ -8,6 +8,7 @@ from go.billing.models import Account, Transaction
 
 
 class BaseCreditLoadFormSet(BaseModelFormSet):
+
     def __init__(self, *args, **kwargs):
         super(BaseCreditLoadFormSet, self).__init__(*args, **kwargs)
 
@@ -17,6 +18,7 @@ class BaseCreditLoadFormSet(BaseModelFormSet):
 
 
 class CreditLoadForm(ModelForm):
+
     def __init__(self, *args, **kwargs):
         super(CreditLoadForm, self).__init__(*args, **kwargs)
         self.fields['account_number'].widget = forms.HiddenInput()

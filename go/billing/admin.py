@@ -83,10 +83,13 @@ class AccountAdmin(admin.ModelAdmin):
 
 class MessageCostAdmin(admin.ModelAdmin):
     list_display = ('id', 'account', 'tag_pool', 'message_direction',
-                    'message_cost', 'markup_percent')
+                    'message_cost', 'markup_percent', 'credit_cost')
 
     search_fields = ('tag_pool__name', 'account__account_number')
     list_filter = ('tag_pool', 'message_direction')
+
+    def credit_amount(self, obj):
+        return obj.credit_cost
 
 
 class TransactionAdmin(admin.ModelAdmin):

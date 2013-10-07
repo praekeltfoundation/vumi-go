@@ -70,7 +70,10 @@ class MessageCost(models.Model):
     @property
     def credit_cost(self):
         """Return the calculated cost in credits"""
-        return self.resulting_price * app_settings.CREDIT_CONVERSION_FACTOR
+        credit_cost = self.resulting_price * Decimal(
+            app_settings.CREDIT_CONVERSION_FACTOR)
+
+        return credit_cost.quantize(Decimal('1'))
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
