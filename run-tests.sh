@@ -11,9 +11,7 @@ echo "=== Running tests..."
 # This is necessary so that we import test modules from the working dir instead
 # of the installed package.
 export PYTHONPATH=.
-./run-tests-pytest.sh --junitxml=test_results.xml --tb=native
-# echo "=== Processing coverage data..."
-# coverage xml
+./run-tests-pytest.sh --cov=go
 echo "=== Checking for PEP-8 violations..."
 pep8 --repeat go | grep -v '^go/base/migrations/' | tee pep8.txt
 echo "=== Done."
