@@ -45,18 +45,19 @@ class ContactsResource(SandboxResource):
 
         Command fields:
             - ``delivery_class``: the type of channel used for the passed in
-            address. Can be one of the following types: ``sms``, ``ussd``,
-            ``twitter``, ``gtalk``
+              address. Can be one of the following types: ``sms``, ``ussd``,
+              ``twitter``, ``gtalk``
             - ``addr``: The address to use to lookup of the contact. For
-            example, if ``sms`` was the delivery class, the address would look
-            something like ``+27731112233``
+              example, if ``sms`` was the delivery class, the address would
+              look something like ``+27731112233``
 
         Success reply fields:
             - ``success``: set to ``true``
             - ``contact``: An object containing the contact's data. Looks
-            something like this:
+              something like this:
 
             .. code-block:: javascript
+
                 {
                     'key': 'f953710a2472447591bd59e906dc2c26',
                     'surname': 'Person',
@@ -79,7 +80,9 @@ class ContactsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'contacts.get',
                 {delivery_class: 'sms', addr: '+27731112233'},
@@ -108,14 +111,14 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def handle_get_or_create(self, api, command):
         """
-        Similar to :method:`handle_get`, but creates the contact if it does
+        Similar to :func:`handle_get`, but creates the contact if it does
         not yet exist.
 
         Success reply fields:
             - ``success``: set to ``true``
             - ``contact``: An object containing the contact's data
             - ``created``: ``true`` if a new contact was created, otherwise
-            ``false``
+              ``false``
 
         Failure reply fields:
             - ``success``: set to ``false``
@@ -170,7 +173,9 @@ class ContactsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'contacts.update', {
                      key: 'f953710a2472447591bd59e906dc2c26',
@@ -254,7 +259,9 @@ class ContactsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'contacts.update_extras', {
                     key: f953710a2472447591bd59e906dc2c26',
@@ -280,7 +287,9 @@ class ContactsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'contacts.update_subscriptions', {
                     key: f953710a2472447591bd59e906dc2c26',
@@ -306,7 +315,9 @@ class ContactsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'contacts.new',
                 {contact: {surname: 'Jones', extra: {location: 'CPT'}}},
@@ -336,11 +347,11 @@ class ContactsResource(SandboxResource):
         """
         Saves a contact's data, overwriting the contact's previous data. Use
         with care. This operation only works for existing contacts. For
-        creating new contacts, use :method:`handle_new`.
+        creating new contacts, use :func:`handle_new`.
 
         Command fields:
             - ``contact``: The contact's data. **Note**: ``key`` must be a
-            field in the contact data in order identify the contact.
+              field in the contact data in order identify the contact.
 
         Success reply fields:
             - ``success``: set to ``true``
@@ -351,7 +362,9 @@ class ContactsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'contacts.save', {
                     contact: {
@@ -412,8 +425,8 @@ class GroupsResource(SandboxResource):
     Sandbox resource for accessing, creating and modifying groups for
     a Go application.
 
-    See :class:`go.vumitools.contact.ContactGroup` for a look at the Contact model
-    and its fields.
+    See :class:`go.vumitools.contact.ContactGroup` for a look at the Contact
+    model and its fields.
     """
 
     def _contact_store_for_api(self, api):
@@ -438,7 +451,9 @@ class GroupsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'groups.search', {
                      query: 'name:"My Group"',
@@ -486,7 +501,9 @@ class GroupsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'groups.get', {
                      key: 'a-key',
@@ -529,7 +546,9 @@ class GroupsResource(SandboxResource):
                 returned.
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'groups.get_by_name', {
                      name: 'My Group',
@@ -582,7 +601,9 @@ class GroupsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'groups.get_or_create_by_name', {
                      name: 'My Group',
@@ -640,7 +661,9 @@ class GroupsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'groups.update', {
                      key: 'a-key',
@@ -687,7 +710,9 @@ class GroupsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'groups.count_members', {
                      key: 'a-key'
@@ -721,7 +746,9 @@ class GroupsResource(SandboxResource):
             - ``reason``: Reason for the failure
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'groups.list', {},
                 function(reply) { api.log_info(reply.groups); });

@@ -18,7 +18,7 @@ from go.base.utils import (
     vumi_api_for_user, get_conversation_view_definition,
     get_router_view_definition)
 from go.vumitools.api import VumiApi
-from go.vumitools.account.models import RoutingTableHelper, GoConnector
+from go.vumitools.routing_table import RoutingTable, GoConnector
 
 # Force YAML to return unicode strings
 # See: http://stackoverflow.com/questions/2890146/
@@ -340,13 +340,13 @@ class Command(BaseCommand):
             connectors[router['key'] + ':OUTBOUND'] = GoConnector.for_router(
                 router['router_type'], router['key'], GoConnector.OUTBOUND)
 
-        rt = RoutingTableHelper({})
+        rt = RoutingTable()
         for src, src_ep, dst, dst_ep in account_objects['routing_entries']:
             rt.add_entry(
                 str(connectors[src]), src_ep, str(connectors[dst]), dst_ep)
 
         user_account = vumi_api_for_user(user).get_user_account()
-        user_account.routing_table = rt.routing_table
+        user_account.routing_table = rt
         user_account.save()
 
         self.stdout.write('Routing table for %s built\n' % (user.email,))
@@ -517,8 +517,7 @@ class Command(BaseCommand):
                     self.webapp_bind,))
             cp.set(section, "stdout_logfile",
                    "./logs/%(program_name)s_%(process_num)s.log")
-            cp.set(section, "stderr_logfile",
-                   "./logs/%(program_name)s_%(process_num)s.log")
+            cp.set(section, "redirect_stderr", "true")
             cp.write(fp)
         self.stdout.write('Wrote %s.\n' % (fn,))
 

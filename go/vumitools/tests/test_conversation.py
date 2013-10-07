@@ -6,11 +6,10 @@ from uuid import uuid4
 from datetime import datetime
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 
 from vumi.persist.model import ModelMigrationError
 
-from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
+from go.vumitools.tests.utils import model_eq, GoTestCase
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
@@ -19,22 +18,18 @@ from go.vumitools.conversation.old_models import (
     ConversationVNone, ConversationV1, ConversationV2)
 
 
-class TestConversationStore(GoPersistenceMixin, TestCase):
+class TestConversationStore(GoTestCase):
     use_riak = True
-    timeout = 5
 
     @inlineCallbacks
     def setUp(self):
-        yield self._persist_setUp()
+        super(TestConversationStore, self).setUp()
         self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         self.account = yield self.mk_user(self, u'user')
         self.optout_store = OptOutStore.from_user_account(self.account)
         self.conv_store = ConversationStore.from_user_account(self.account)
         self.contact_store = ContactStore.from_user_account(self.account)
-
-    def tearDown(self):
-        return self._persist_tearDown()
 
     def assert_models_equal(self, m1, m2):
         self.assertTrue(model_eq(m1, m2),

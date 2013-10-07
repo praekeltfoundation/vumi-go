@@ -5,10 +5,7 @@
 {% block content_title %}{{ channel.tag }}{% endblock %}
 
 {% block content_actions_right %}
-<form action="{% channel_screen channel 'release' %}" class="pull-right" method="post">
-    {% csrf_token %}
-    <input type="submit" class="btn btn-primary" name="start" value="Release">
-</form>
+    {% include "channel/includes/actions.html" with channel=channel %}
 {% endblock %}
 
 {% block content_main %}
@@ -27,4 +24,10 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block ondomready %}
+    var actions = new go.channel.show.ChannelActionsView({
+        el: '.content .actions .right'
+    });
 {% endblock %}

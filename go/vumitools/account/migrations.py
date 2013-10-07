@@ -33,3 +33,24 @@ class UserAccountMigrator(ModelMigrator):
         mdata.set_value('routing_table', None)  # We populate this later
 
         return mdata
+
+    def migrate_from_2(self, mdata):
+        # There are no schema changes here, but we've tightened up some
+        # validation and added a new field type to work with routing tables.
+
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # We no longer allow nulls in these fields, so set them to empty.
+        if mdata.new_data['tags'] is None:
+            mdata.set_value('tags', [])
+        if mdata.new_data['routing_table'] is None:
+            mdata.set_value('routing_table', {})
+
+        # Add stuff that's new in this version
+        mdata.set_value('$VERSION', 3)
+
+        return mdata

@@ -6,18 +6,17 @@ from twisted.web import http
 
 from vumi.utils import http_request_full
 
-from go.vumitools.api import VumiApi
-from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.conversation_api.conversation_api import (
     ConversationApiWorker, ConversationConfigResource)
 
 from mock import Mock
 
 
-class ConversationApiTestCase(AppWorkerTestCase):
+class ConversationApiTestCase(GoWorkerTestCase):
 
     use_riak = True
-    application_class = ConversationApiWorker
+    worker_class = ConversationApiWorker
 
     @inlineCallbacks
     def setUp(self):
@@ -38,13 +37,13 @@ class ConversationApiTestCase(AppWorkerTestCase):
             'web_port': 0,
             'health_path': '/health/',
         })
-        self.app = yield self.get_application(self.config)
+        self.app = yield self.get_worker(self.config)
         self.addr = self.app.webserver.getHost()
         self.url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['web_path'])
 
         # get the router to test
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield self.get_vumi_api()
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
 

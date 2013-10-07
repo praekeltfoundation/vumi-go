@@ -1,25 +1,21 @@
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import SkipTest
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
 
-from go.vumitools.api import VumiApi
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoTestCase
 
 
-class MessageMetadataHelperTestCase(GoPersistenceMixin, TestCase):
+class MessageMetadataHelperTestCase(GoTestCase):
     use_riak = True
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
-        self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
+        super(MessageMetadataHelperTestCase, self).setUp()
+        self.vumi_api = yield self.get_vumi_api()
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
-
-    def tearDown(self):
-        return self._persist_tearDown()
 
     def create_conversation(self, conversation_type=u'bulk_message',
                             name=u'name', description=u'desc', config={}):

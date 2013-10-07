@@ -10,6 +10,7 @@ from vumi.persist.fields import Unicode, ForeignKey, Timestamp, Json, ListOf
 from vumi.components.message_store import Batch
 
 from go.vumitools.account import UserAccount, PerAccountStore
+from go.vumitools.routing_table import GoConnector
 
 
 ROUTER_ACTIVE = u'active'
@@ -80,6 +81,14 @@ class Router(Model):
 
     def __unicode__(self):
         return self.name
+
+    def get_inbound_connector(self):
+        return GoConnector.for_router(
+            self.router_type, self.key, GoConnector.INBOUND)
+
+    def get_outbound_connector(self):
+        return GoConnector.for_router(
+            self.router_type, self.key, GoConnector.OUTBOUND)
 
 
 class RouterStore(PerAccountStore):

@@ -88,9 +88,10 @@
                             <li><a href="{% conversation_action conversation action.action_name %}" class="btn">{{ action.action_display_name }}</a></li>
                         {% endif %}
                     {% endwith %}
-                {% empty %}
-                    <li>This conversation has no actions.</li>
                 {% endfor %}
+                <li>
+                    <a class="btn" href="{% conversation_screen conversation 'message_list' %}">View Messages</a>
+                </li>
             </ul>
         </div>
         {% endif %}

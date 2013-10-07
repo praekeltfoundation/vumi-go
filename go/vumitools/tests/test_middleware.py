@@ -26,16 +26,16 @@ class MiddlewareTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield super(MiddlewareTestCase, self).tearDown()
         for mw in self._middlewares:
             yield maybeDeferred(mw.teardown_middleware)
+        yield super(MiddlewareTestCase, self).tearDown()
 
     @inlineCallbacks
     def create_middleware(self, middleware_class, name='dummy_middleware',
-                            config=None):
+                          config=None):
         dummy_worker = yield self.get_application({})
-        mw = middleware_class(name, config or self.default_config,
-                                dummy_worker)
+        mw = middleware_class(
+            name, config or self.default_config, dummy_worker)
         yield mw.setup_middleware()
         returnValue(mw)
 
@@ -89,7 +89,6 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         })
         self.mw = yield self.create_middleware(OptOutMiddleware,
             config=self.config)
-        self._persist_redis_managers.append(self.mw.vumi_api.redis)
         yield self.mw.vumi_api.tpm.declare_tags([("pool", "tag1")])
         yield self.mw.vumi_api.tpm.set_metadata("pool", {
                 "transport_type": "other",
@@ -147,7 +146,6 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
 
         # This is a bit ugly. We get a new fakeredis here.
         mw = yield self.create_middleware(OptOutMiddleware, config=config)
-        self._persist_redis_managers.append(mw.vumi_api.redis)
         yield mw.vumi_api.tpm.declare_tags([("pool", "tag1")])
         yield mw.vumi_api.tpm.set_metadata("pool", {
                 "transport_type": "other",
@@ -323,6 +321,11 @@ class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
         self.conv = yield self.create_conversation()
 
     @inlineCallbacks
+    def tearDown(self):
+        yield self.mw.teardown_middleware()
+        yield super(ConversationStoringMiddlewareTestCase, self).tearDown()
+
+    @inlineCallbacks
     def test_inbound_message(self):
         msg = self.mkmsg_in()
         self.add_conversation_md_to_msg(msg, self.conv)
@@ -350,6 +353,11 @@ class RouterStoringMiddlewareTestCase(MiddlewareTestCase,
         self.vumi_api = self.mw.vumi_api  # yoink!
         yield self.setup_user_api(self.vumi_api)
         self.router = yield self.create_router()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield self.mw.teardown_middleware()
+        yield super(RouterStoringMiddlewareTestCase, self).tearDown()
 
     @inlineCallbacks
     def test_inbound_message(self):

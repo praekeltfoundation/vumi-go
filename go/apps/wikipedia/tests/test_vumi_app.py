@@ -16,7 +16,7 @@ class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
         super(TestWikipediaApplication, self).setUp()
         yield self.start_webserver(WIKIPEDIA_RESPONSES)
 
-        self.config = self.mk_config({})
+        self.config = self.mk_config({"secret_key": "s3cr3t"})
         self.app = yield self.get_application(self.config)
 
         # Steal app's vumi_api

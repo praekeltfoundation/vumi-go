@@ -7,6 +7,7 @@
 /coverage-html/
 /coverage.xml
 /node_modules/
+/bower_components/
 /nosetests.xml
 /pyflakes.log
 /pep8.log
@@ -18,6 +19,9 @@
 requirements.pip.md5
 .project
 .pydevproject
+*.komodoproject
+*.sublime-project
+*.sublime-workspace
 distribute-0.6.10.tar.gz
 .DS_Store
 *.db

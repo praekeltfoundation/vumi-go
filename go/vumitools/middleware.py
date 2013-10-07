@@ -102,13 +102,16 @@ class DebitAccountMiddleware(TransportMiddleware):
         # TODO: There really needs to be a helper function to
         #       turn this config into managers.
         from go.vumitools.api import get_redis
-        r_server = get_redis(self.config)
+        self._r_server = get_redis(self.config)
         tpm_config = self.config.get('tagpool_manager', {})
         tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
-        self.tpm = TagpoolManager(r_server, tpm_prefix)
+        self.tpm = TagpoolManager(self._r_server, tpm_prefix)
         cm_config = self.config.get('credit_manager', {})
         cm_prefix = cm_config.get('credit_prefix', 'credit_store')
-        self.cm = CreditManager(r_server, cm_prefix)
+        self.cm = CreditManager(self._r_server, cm_prefix)
+
+    def teardown_middleware(self):
+        return self._r_server.close_manager()
 
     def _credits_per_message(self, pool):
         tagpool_metadata = self.tpm.get_metadata(pool)
@@ -227,6 +230,7 @@ class MetricsMiddleware(BaseMiddleware):
 
     def teardown_middleware(self):
         self.metric_manager.stop()
+        return self.redis.close_manager()
 
     def get_or_create_metric(self, name, metric_class, *args, **kwargs):
         """
@@ -312,6 +316,11 @@ class GoStoringMiddleware(StoringMiddleware):
         yield super(GoStoringMiddleware, self).setup_middleware()
         from go.vumitools.api import VumiApi
         self.vumi_api = yield VumiApi.from_config_async(self.config)
+
+    @inlineCallbacks
+    def teardown_middleware(self):
+        yield self.vumi_api.redis.close_manager()
+        yield super(GoStoringMiddleware, self).teardown_middleware()
 
     def get_batch_id(self, msg):
         raise NotImplementedError("Sub-classes should implement .get_batch_id")

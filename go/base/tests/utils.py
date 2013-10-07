@@ -10,11 +10,12 @@ from django.core.paginator import Paginator
 from django.test.client import Client
 from django.core.management.base import CommandError
 
+from twisted.python.monkey import MonkeyPatcher
+
 from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
 
 from go.vumitools.tests.utils import GoPersistenceMixin, FakeAmqpConnection
-from go.vumitools.account.models import RoutingTableHelper
 from go.vumitools.api import VumiApi
 from go.base import models as base_models
 from go.base import utils as base_utils
@@ -59,6 +60,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
     def setUp(self):
         self._persist_setUp()
+        self._monkey_patches = []
         self._settings_patches = []
 
         # Need some hackery to make things fit together here.
@@ -91,9 +93,17 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             base_models.create_user_profile,
             sender=base_models.User,
             dispatch_uid='go.base.models.create_user_profile')
-        self._persist_tearDown()
         for patch in reversed(self._settings_patches):
             patch.disable()
+        for patch in reversed(self._monkey_patches):
+            patch.restore()
+        self._persist_tearDown()
+
+    def monkey_patch(self, obj, attribute, value):
+        monkey_patch = MonkeyPatcher((obj, attribute, value))
+        self._monkey_patches.append(monkey_patch)
+        monkey_patch.patch()
+        return monkey_patch
 
     def setup_client(self):
         self.client = Client()
@@ -122,7 +132,6 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
     def setup_api(self):
         self.api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
-        self._persist_riak_managers.append(self.api.manager)
 
     def setup_user_api(self, django_user=None):
         if django_user is None:
@@ -168,6 +177,35 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         params.update(kwargs)
         return self.user_api.new_router(**params)
 
+    def ack_message(self, msg_out):
+        ack = TransportEvent(
+            event_type='ack',
+            user_message_id=msg_out['message_id'],
+            sent_message_id=msg_out['message_id'],
+            transport_type='sms',
+            transport_name='sphex')
+        self.api.mdb.add_event(ack)
+        return ack
+
+    def nack_message(self, msg_out, reason="nacked"):
+        nack = TransportEvent(
+            event_type='nack',
+            user_message_id=msg_out['message_id'],
+            nack_reason=reason,
+        )
+        self.api.mdb.add_event(nack)
+        return nack
+
+    def delivery_report_on_message(self, msg_out, status='delivered'):
+        assert status in TransportEvent.DELIVERY_STATUSES
+        dr = TransportEvent(
+            event_type='delivery_report',
+            user_message_id=msg_out['message_id'],
+            delivery_status=status,
+        )
+        self.api.mdb.add_event(dr)
+        return dr
+
     def add_messages_to_conv(self, message_count, conversation, reply=False,
                              ack=False, start_date=None, time_multiplier=10):
         now = start_date or datetime.now().date()
@@ -195,24 +233,26 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
                 messages.append((msg_in, msg_out))
                 continue
 
-            ack = TransportEvent(
-                event_type='ack',
-                user_message_id=msg_out['message_id'],
-                sent_message_id=msg_out['message_id'],
-                transport_type='sms',
-                transport_name='sphex')
-            self.api.mdb.add_event(ack)
+            ack = self.ack_message(msg_out)
             messages.append((msg_in, msg_out, ack))
         return messages
 
-    def add_channel_to_conversation(self, conv, tag):
-        # TODO: This is a duplicate of the method in
-        #       go.vumitools.test.utils.GoAppWorkerTestMixin but
-        #       there is no suitable common base class.
-        user_account = self.user_api.get_user_account()
-        rt = RoutingTableHelper(user_account.routing_table)
-        rt.add_oldstyle_conversation(conv, tag)
-        user_account.save()
+    def add_message_to_conv(self, conversation, reply=False, sensitive=False):
+        msg = TransportUserMessage(
+            to_addr='9292',
+            from_addr='from-addr',
+            content='hello',
+            transport_type='sms',
+            transport_name='sphex')
+        if sensitive:
+            msg['helper_metadata']['go'] = {'sensitive': True}
+        self.api.mdb.add_inbound_message(msg, batch_id=conversation.batch.key)
+        if reply:
+            msg_out = msg.reply('hi')
+            if sensitive:
+                msg_out['helper_metadata']['go'] = {'sensitive': True}
+            self.api.mdb.add_outbound_message(
+                msg_out, batch_id=conversation.batch.key)
 
     def declare_tags(self, pool, num_tags, metadata=None, user_select=None):
         """Declare a set of long codes to the tag pool."""

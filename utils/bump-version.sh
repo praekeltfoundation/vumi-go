@@ -13,3 +13,6 @@ SHORT_VER=`echo "${VER}" | sed -e "s/\.[^.]*$//"`
 sed -i".bak" -e "s/\(version[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${VER}\3/" setup.py
 sed -i".bak" -e "s/^\(release[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${VER}\3/" docs/conf.py
 sed -i".bak" -e "s/^\(version[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${SHORT_VER}\3/" docs/conf.py
+
+sed -i".bak" -e "s/^\(version[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${VER}\3/" package.json
+sed -i".bak" -e "s/^\(version[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${VER}\3/" bower.json

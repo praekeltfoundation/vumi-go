@@ -13,7 +13,6 @@ from go.channel.forms import NewChannelForm
 from go.base.utils import (
     get_conversation_view_definition, conversation_or_404,
     get_router_view_definition)
-from go.vumitools.account import RoutingTableHelper, GoConnector
 
 
 import logging
@@ -93,11 +92,12 @@ class WizardCreateView(BaseWizardView):
                 'show', conversation_key=conv.key))
 
     def _handle_new_channel(self, request, chan_data, keyword, conv):
-        channel = tuple(chan_data['channel'].split(':', 1))
-        if channel[1]:
-            tag = request.user_api.acquire_specific_tag(channel)
+        channel_data = tuple(chan_data['channel'].split(':', 1))
+        if channel_data[1]:
+            tag = request.user_api.acquire_specific_tag(channel_data)
         else:
-            tag = request.user_api.acquire_tag(channel[0])
+            tag = request.user_api.acquire_tag(channel_data[0])
+        channel = request.user_api.get_channel(tag)
 
         # Set up routing
         if keyword:
@@ -105,9 +105,9 @@ class WizardCreateView(BaseWizardView):
             endpoint, router = self._create_keyword_router(
                 request, keyword, ':'.join(tag))
             self._setup_keyword_routing(
-                request, conv, tag, router, endpoint)
+                request, conv, channel, router, endpoint)
         else:
-            self._setup_basic_routing(request, conv, tag)
+            self._setup_basic_routing(request, conv, channel)
 
     def _handle_existing_channel(self, request, router_data, conv):
         # TODO: Check that keyword is unused.
@@ -151,38 +151,30 @@ class WizardCreateView(BaseWizardView):
         router_api.start_router()
         return endpoint, router
 
-    def _setup_basic_routing(self, request, conv, tag):
+    def _setup_basic_routing(self, request, conv, channel):
         user_account = request.user_api.get_user_account()
         routing_table = request.user_api.get_routing_table(user_account)
-        rt_helper = RoutingTableHelper(routing_table)
 
-        conv_conn = str(
-            GoConnector.for_conversation(conv.conversation_type, conv.key))
-        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
-        rt_helper.add_entry(conv_conn, "default", tag_conn, "default")
-        rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
+        conv_conn = conv.get_connector()
+        tag_conn = channel.get_connector()
+        routing_table.add_entry(conv_conn, "default", tag_conn, "default")
+        routing_table.add_entry(tag_conn, "default", conv_conn, "default")
         user_account.save()
 
-    def _setup_keyword_routing(self, request, conv, tag, router, endpoint):
+    def _setup_keyword_routing(self, request, conv, channel, router, endpoint):
         user_account = request.user_api.get_user_account()
         routing_table = request.user_api.get_routing_table(user_account)
-        rt_helper = RoutingTableHelper(routing_table)
 
-        if tag is not None:
-            tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
-            rin_conn = str(
-                GoConnector.for_router(
-                    router.router_type, router.key, GoConnector.INBOUND))
-            rt_helper.add_entry(rin_conn, "default", tag_conn, "default")
-            rt_helper.add_entry(tag_conn, "default", rin_conn, "default")
+        if channel is not None:
+            tag_conn = channel.get_connector()
+            rin_conn = router.get_inbound_connector()
+            routing_table.add_entry(rin_conn, "default", tag_conn, "default")
+            routing_table.add_entry(tag_conn, "default", rin_conn, "default")
 
-        conv_conn = str(
-            GoConnector.for_conversation(conv.conversation_type, conv.key))
-        rout_conn = str(
-            GoConnector.for_router(
-                router.router_type, router.key, GoConnector.OUTBOUND))
-        rt_helper.add_entry(conv_conn, "default", rout_conn, endpoint)
-        rt_helper.add_entry(rout_conn, endpoint, conv_conn, "default")
+        conv_conn = conv.get_connector()
+        rout_conn = router.get_outbound_connector()
+        routing_table.add_entry(conv_conn, "default", rout_conn, endpoint)
+        routing_table.add_entry(rout_conn, endpoint, conv_conn, "default")
 
         user_account.save()
 

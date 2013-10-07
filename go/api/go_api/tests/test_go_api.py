@@ -7,32 +7,25 @@ from txjsonrpc.jsonrpclib import Fault
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import TestCase
 from twisted.web.server import Site
 
-from vumi.tests.utils import VumiWorkerTestCase
 from vumi.utils import http_request
 
-from go.vumitools.account.models import GoConnector, RoutingTableHelper
-from go.vumitools.api import VumiApi
-from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
 
 
-class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
+class GoApiServerTestCase(GoWorkerTestCase):
 
-    use_riak = True
     worker_name = 'GoApiServer'
     transport_name = 'sphex'
     transport_type = 'sphex_type'
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
-        self.config = self.mk_config({})
-
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        super(GoApiServerTestCase, self).setUp()
+        self.vumi_api = yield self.get_vumi_api()
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.campaign_key = self.account.key
@@ -45,7 +38,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
     @inlineCallbacks
     def tearDown(self):
         yield self.server.loseConnection()
-        yield self._persist_tearDown()
+        yield super(GoApiServerTestCase, self).tearDown()
 
     @inlineCallbacks
     def assert_faults(self, d, fault_code, fault_string):
@@ -203,22 +196,18 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         ])
 
     @inlineCallbacks
-    def _connect_conversation_to_tag_through_router(self, conv, tag, router):
-        conv_conn = str(GoConnector.for_conversation(
-            conv.conversation_type, conv.key))
-        channel_conn = str(GoConnector.for_transport_tag(*tag))
-        router_in_conn = str(GoConnector.for_router(
-            router.router_type, router.key, GoConnector.INBOUND))
-        router_out_conn = str(GoConnector.for_router(
-            router.router_type, router.key, GoConnector.OUTBOUND))
+    def _connect_conv_to_channel_through_router(self, conv, channel, router):
+        conv_conn = conv.get_connector()
+        channel_conn = channel.get_connector()
+        router_in_conn = router.get_inbound_connector()
+        router_out_conn = router.get_outbound_connector()
         user_account = yield self.user_api.get_user_account()
-        rt_helper = RoutingTableHelper(user_account.routing_table)
-        rt_helper.add_entry(
-            channel_conn, 'default', router_in_conn, 'default')
-        rt_helper.add_entry(router_out_conn, 'default', conv_conn, 'default')
-        rt_helper.add_entry(conv_conn, 'default', router_out_conn, 'default')
-        rt_helper.add_entry(router_in_conn, 'default', channel_conn, 'default')
-        rt_helper.validate_all_entries()
+        rt = user_account.routing_table
+        rt.add_entry(channel_conn, 'default', router_in_conn, 'default')
+        rt.add_entry(router_out_conn, 'default', conv_conn, 'default')
+        rt.add_entry(conv_conn, 'default', router_out_conn, 'default')
+        rt.add_entry(router_in_conn, 'default', channel_conn, 'default')
+        rt.validate_all_entries()
         yield user_account.save()
 
     @inlineCallbacks
@@ -229,8 +218,9 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             u'keyword', u'My Router', u'A description', {})
         yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
         tag = yield self.user_api.acquire_tag(u"pool")  # acquires tag1
-        yield self._connect_conversation_to_tag_through_router(
-            conv, tag, router)
+        channel = yield self.user_api.get_channel(tag)
+        yield self._connect_conv_to_channel_through_router(
+            conv, channel, router)
         returnValue((conv, router, tag))
 
     @inlineCallbacks
@@ -439,20 +429,8 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                                  u"no such sub-handler unknown")
 
 
-class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
-
-    use_riak = True
-
-    def setUp(self):
-        self._persist_setUp()
-        super(GoApiWorkerTestCase, self).setUp()
-
-    @inlineCallbacks
-    def tearDown(self):
-        for worker in self._workers:
-            if worker.running:
-                yield worker.stopService()
-        yield self._persist_tearDown()
+class GoApiWorkerTestCase(GoWorkerTestCase):
+    worker_class = GoApiWorker
 
     @inlineCallbacks
     def get_api_worker(self, config=None, start=True, auth=True):
@@ -462,7 +440,7 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
         config.setdefault('web_path', 'api')
         config.setdefault('health_path', 'health')
         config = self.mk_config(config)
-        worker = yield self.get_worker(config, GoApiWorker, start)
+        worker = yield self.get_worker(config, start)
 
         vumi_api = worker.vumi_api
         user, password = None, None

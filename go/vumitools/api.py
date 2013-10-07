@@ -19,7 +19,7 @@ from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
-from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
+from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
@@ -190,9 +190,9 @@ class VumiUserApi(object):
     @Manager.calls_manager
     def active_channels(self):
         channels = []
-        endpoints = yield self.list_endpoints()
-        for tag in endpoints:
-            channel = yield self.get_channel(tag)
+        user_account = yield self.get_user_account()
+        for tag in user_account.tags:
+            channel = yield self.get_channel(tuple(tag))
             channels.append(channel)
         returnValue(channels)
 
@@ -267,15 +267,6 @@ class VumiUserApi(object):
         returnValue(router)
 
     @Manager.calls_manager
-    def list_endpoints(self, user_account=None):
-        """Returns a set of endpoints owned by an account.
-        """
-        # TODO: Remove or rename this when we implement channels properly.
-        if user_account is None:
-            user_account = yield self.get_user_account()
-        returnValue(set(tuple(tag) for tag in user_account.tags))
-
-    @Manager.calls_manager
     def get_routing_table(self, user_account=None):
         if user_account is None:
             user_account = yield self.get_user_account()
@@ -291,28 +282,28 @@ class VumiUserApi(object):
         Currently we just check account ownership of tags and conversations.
 
         TODO: Cycle detection, if that's even possible. Maybe other stuff.
+        TODO: Determine if this is necessary and move it elsewhere if it is.
         """
         if user_account is None:
             user_account = yield self.get_user_account()
         routing_table = yield self.get_routing_table(user_account)
         # We don't care about endpoints here, only connectors.
         routing_connectors = set()
-        for src_conn, connector_dict in routing_table.iteritems():
+        for src_conn, _src_ep, dst_conn, _dst_ep in routing_table.entries():
             routing_connectors.add(src_conn)
-            for dst_conn, _ in connector_dict.values():
-                routing_connectors.add(dst_conn)
+            routing_connectors.add(dst_conn)
 
         # Checking tags is cheap and easy, so do that first.
-        for tag in user_account.tags:
-            tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
-            if tag_conn in routing_connectors:
-                routing_connectors.remove(tag_conn)
+        channels = yield self.active_channels()
+        for channel in channels:
+            channel_conn = channel.get_connector()
+            if channel_conn in routing_connectors:
+                routing_connectors.remove(channel_conn)
 
         # Now we run through active conversations to check those.
         convs = yield self.active_conversations()
         for conv in convs:
-            conv_conn = str(GoConnector.for_conversation(
-                conv.conversation_type, conv.key))
+            conv_conn = conv.get_connector()
             if conv_conn in routing_connectors:
                 routing_connectors.remove(conv_conn)
 
@@ -407,8 +398,7 @@ class VumiUserApi(object):
 
             # Clean up routing table entries.
             routing_table = yield self.get_routing_table(user_account)
-            rt_helper = RoutingTableHelper(routing_table)
-            rt_helper.remove_transport_tag(tag)
+            routing_table.remove_transport_tag(tag)
 
             yield user_account.save()
         yield self.api.tpm.release_tag(tag)
@@ -452,8 +442,7 @@ class VumiRouterApi(object):
         """
         user_account = yield self.user_api.get_user_account()
         routing_table = yield self.user_api.get_routing_table(user_account)
-        rt_helper = RoutingTableHelper(routing_table)
-        rt_helper.remove_router(router)
+        routing_table.remove_router(router)
         yield user_account.save()
 
     @Manager.calls_manager

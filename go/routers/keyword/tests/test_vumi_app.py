@@ -7,14 +7,13 @@ from go.routers.keyword.vumi_app import KeywordRouter
 
 class TestKeywordRouter(RouterWorkerTestCase):
 
-    application_class = KeywordRouter
+    router_class = KeywordRouter
 
     @inlineCallbacks
     def setUp(self):
         super(TestKeywordRouter, self).setUp()
 
-        self.config = self.mk_config({})
-        worker = yield self.get_router_worker(self.config)
+        worker = yield self.get_router_worker(self.mk_config({}))
         self.vumi_api = worker.vumi_api
         user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_account_key = user_account.key

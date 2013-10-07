@@ -1,10 +1,10 @@
 {% extends "app.html" %}
 
-{% block content_title %}{{ action_display_name }}{% endblock %}
+{% block content_title %}{{ action.action_display_name }}{% endblock %}
 
 {% block content_actions_right %}
 <div class="pull-right">
-    <button type="submit" name="submit" class="btn btn-primary" value="Save">Save</button>
+    <button type="submit" name="submit" class="btn btn-primary" value="Apply">{{ action.action_display_verb|default:"Save" }}</button>
 </div>
 {% endblock %}
 
@@ -39,5 +39,5 @@
 {% block ondomready %}
     $('.actions .right button').on('click', function(e) {
         $('#conversation_action').submit();
-    });    
+    });
 {% endblock %}

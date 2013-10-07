@@ -1,13 +1,13 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import TestCase
 
 from go.vumitools.routing import (
     AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
-from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.tests.utils import GoTestCase, AppWorkerTestCase
 from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.routing_table import RoutingTable
 
 
-class TestRoutingMetadata(TestCase):
+class TestRoutingMetadata(GoTestCase):
     def mk_msg_rmeta(self, **routing_metadata):
         # We don't need a real message, just a container for routing_metadata.
         msg = {'routing_metadata': routing_metadata}
@@ -217,7 +217,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.vumi_api = self.dispatcher.vumi_api
 
         user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        user_account.routing_table = {
+        user_account.routing_table = RoutingTable({
             # Transport side
             "TRANSPORT_TAG:pool1:1234": {
                 "default": ["CONVERSATION:app1:conv1", "default"]},
@@ -243,7 +243,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                 "default": ["CONVERSATION:app1:conv1", "default"],
                 "other": ["CONVERSATION:app2:conv2", "yet-another"],
             },
-        }
+        })
         yield user_account.save()
 
         self.user_account_key = user_account.key

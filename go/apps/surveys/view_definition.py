@@ -1,7 +1,6 @@
 from bootstrap.forms import BootstrapForm
 from django.conf import settings
 from django.contrib import messages
-from django.http import HttpResponse
 
 from vumi.persist.redis_manager import RedisManager
 from vxpolls.manager import PollManager
@@ -99,30 +98,12 @@ class SurveyEditView(ConversationTemplateView):
         })
 
 
-class UserDataView(ConversationTemplateView):
-    view_name = 'user_data'
-    path_suffix = 'users.csv'
-
-    def get(self, request, conversation):
-        poll_id = 'poll-%s' % (conversation.key,)
-        pm, poll_data = get_poll_config(poll_id)
-        poll = pm.get(poll_id)
-        csv_data = pm.export_user_data_as_csv(poll)
-        return HttpResponse(csv_data, content_type='application/csv')
-
-
-class SendSurveyForm(BootstrapForm):
-    # TODO: Something better than this?
-    pass
-
-
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     edit_view = SurveyEditView
 
-    extra_views = (
-        UserDataView,
-    )
-
     action_forms = {
-        'send_survey': SendSurveyForm,
+        # TODO: These are both work-arounds for not being able to directly
+        #       trigger POSTs via conversation action buttons
+        'send_survey': BootstrapForm,
+        'download_user_data': BootstrapForm,
     }

@@ -37,7 +37,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
-        self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
         self.account = yield self.mk_user(self.vumi_api, u'testuser')
@@ -71,11 +70,39 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.mock_push_server = MockHttpServer(self.handle_request)
         yield self.mock_push_server.start()
         self.push_calls = DeferredQueue()
+        self._setup_wait_for_request()
 
     @inlineCallbacks
     def tearDown(self):
-        yield super(StreamingHTTPWorkerTestCase, self).tearDown()
+        yield self._wait_for_requests()
         yield self.mock_push_server.stop()
+        yield super(StreamingHTTPWorkerTestCase, self).tearDown()
+
+    def _setup_wait_for_request(self):
+        # Hackery to wait for the request to finish
+        self._req_state = {
+            'queue': DeferredQueue(),
+            'expected': 0,
+        }
+        orig_track = ConversationResource.track_request
+        orig_release = ConversationResource.release_request
+
+        def track_wrapper(*args, **kw):
+            self._req_state['expected'] += 1
+            return orig_track(*args, **kw)
+
+        def release_wrapper(*args, **kw):
+            return orig_release(*args, **kw).addCallback(
+                self._req_state['queue'].put)
+
+        self.patch(ConversationResource, 'track_request', track_wrapper)
+        self.patch(ConversationResource, 'release_request', release_wrapper)
+
+    @inlineCallbacks
+    def _wait_for_requests(self):
+        while self._req_state['expected'] > 0:
+            yield self._req_state['queue'].get()
+            self._req_state['expected'] -= 1
 
     def handle_request(self, request):
         self.push_calls.put(request)
@@ -143,6 +170,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         rm2 = yield messages.get()
 
         receiver.disconnect()
+
+        # Sometimes messages arrive out of order if we're hitting real redis.
+        rm1, rm2 = sorted([rm1, rm2], key=lambda m: m['message_id'])
 
         self.assertEqual(msg1['message_id'], rm1['message_id'])
         self.assertEqual(msg2['message_id'], rm2['message_id'])

@@ -41,7 +41,7 @@ class LogManager(object):
         full_msg = "[%s, %s] %s" % (ts, logging.getLevelName(level), msg)
         conv_key = self._conv_key(campaign_key, conversation_key)
         yield self.redis.lpush(conv_key, full_msg)
-        yield self.redis.ltrim(conv_key, 0, self.max_logs_per_conversation)
+        yield self.redis.ltrim(conv_key, 0, self.max_logs_per_conversation - 1)
 
     @Manager.calls_manager
     def get_logs(self, campaign_key, conversation_key):
@@ -64,9 +64,14 @@ class GoLoggingResource(LoggingResource):
         redis_config = self.config.get('redis_manager', {})
         max_logs_per_conversation = self.config.get(
             'max_logs_per_conversation')
-        redis = yield TxRedisManager.from_config(redis_config)
+        self._redis = yield TxRedisManager.from_config(redis_config)
         self.log_manager = LogManager(
-            redis, max_logs_per_conversation=max_logs_per_conversation)
+            self._redis, max_logs_per_conversation=max_logs_per_conversation)
+
+    @inlineCallbacks
+    def teardown(self):
+        yield self._redis.close_manager()
+        yield super(GoLoggingResource, self).teardown()
 
     @inlineCallbacks
     def log(self, api, msg, level):

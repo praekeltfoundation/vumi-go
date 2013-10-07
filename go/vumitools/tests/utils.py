@@ -5,6 +5,7 @@
 import uuid
 
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.trial.unittest import TestCase
 
 from vumi.persist.fields import (
     ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
@@ -12,8 +13,8 @@ from vumi.message import TransportEvent
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
 
-from go.vumitools.api import VumiApiCommand
-from go.vumitools.account import UserAccount, RoutingTableHelper
+from go.vumitools.api import VumiApiCommand, VumiApi
+from go.vumitools.account import UserAccount
 from go.vumitools.contact import Contact, ContactGroup
 from go.vumitools.utils import MessageMetadataHelper
 
@@ -100,12 +101,12 @@ class GoPersistenceMixin(PersistenceMixin):
     @PersistenceMixin.sync_or_async
     def _persist_purge_riak(self, manager):
         # If buckets are empty, they aren't listed. However, they may still
-        # have properties set. Therefore, we find all account keys and clear
-        # properties from their associated buckets.
+        # have properties set. Therefore, we find all account keys and
+        # clear properties from their associated buckets.
         accounts = yield self._list_accounts(manager)
         yield manager.purge_all()
-        # This must happen after the objects are deleted, otherwise the indexes
-        # don't go away.
+        # This must happen after the objects are deleted, otherwise the
+        # indexes don't go away.
         yield self._clear_bucket_properties(accounts, manager)
 
     def mk_config(self, config):
@@ -121,12 +122,16 @@ class GoPersistenceMixin(PersistenceMixin):
         yield user.save()
         returnValue(user)
 
+    def get_vumi_api(self, config=None, amqp_client=None):
+        if config is None:
+            config = self.mk_config({})
+        return VumiApi.from_config_async(config, amqp_client)
+
 
 class GoWorkerTestMixin(GoPersistenceMixin):
 
     def _worker_name(self):
-        # DummyApplicationWorker has no worker_name attr.
-        return getattr(self.application_class, 'worker_name', 'unnamed')
+        return getattr(self.worker_class, 'worker_name', 'unnamed')
 
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
@@ -203,14 +208,6 @@ class GoWorkerTestMixin(GoPersistenceMixin):
         return self.user_api.api.mdb.add_inbound_message(
             msg, batch_id=batch_id)
 
-
-class GoAppWorkerTestMixin(GoWorkerTestMixin):
-
-    def _conversation_type(self):
-        # This is a guess based on worker_name.
-        # We need a better way to do this.
-        return self._worker_name().rpartition('_')[0].decode('utf-8')
-
     @inlineCallbacks
     def create_conversation(self, started=False, **kw):
         conv_type = kw.pop('conversation_type', None)
@@ -226,6 +223,18 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
             conv_type, name, description, config, **kw)
         returnValue(self.user_api.wrap_conversation(conversation))
 
+
+class GoAppWorkerTestMixin(GoWorkerTestMixin):
+
+    def _worker_name(self):
+        # DummyApplicationWorker has no worker_name attr.
+        return getattr(self.application_class, 'worker_name', 'unnamed')
+
+    def _conversation_type(self):
+        # This is a guess based on worker_name.
+        # We need a better way to do this.
+        return self._worker_name().rpartition('_')[0].decode('utf-8')
+
     def add_conversation_md_to_msg(self, msg, conv, endpoint=None):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_api, msg)
@@ -233,16 +242,6 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         md.set_user_account(self.user_account_key)
         if endpoint is not None:
             msg.set_routing_endpoint(endpoint)
-
-    @inlineCallbacks
-    def add_channel_to_conversation(self, conv, tag):
-        # TODO: This is a duplicate of the method in
-        #       go.base.test.utils.VumiGoDjangoTestCase but
-        #       there is no suitable common base class.
-        user_account = yield self.user_api.get_user_account()
-        rt = RoutingTableHelper(user_account.routing_table)
-        rt.add_oldstyle_conversation(conv, tag)
-        yield user_account.save()
 
     @inlineCallbacks
     def start_conversation(self, conversation):
@@ -273,25 +272,14 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
 
 class GoRouterWorkerTestMixin(GoWorkerTestMixin):
 
+    def _worker_name(self):
+        # DummyApplicationWorker has no worker_name attr.
+        return getattr(self.router_class, 'worker_name', 'unnamed')
+
     def _router_type(self):
         # This is a guess based on worker_name.
         # We need a better way to do this.
         return self._worker_name().rpartition('_')[0].decode('utf-8')
-
-    @inlineCallbacks
-    def get_router_worker(self, config, start=True):
-        if 'worker_name' not in config:
-            config['worker_name'] = self._worker_name()
-        if 'ri_connector_name' not in config:
-            config['ri_connector_name'] = 'ri_conn'
-        if 'ro_connector_name' not in config:
-            config['ro_connector_name'] = 'ro_conn'
-        worker = yield self.get_worker(
-            config, self.application_class, start=start)
-        if hasattr(worker, 'vumi_api'):
-            self._persist_riak_managers.append(worker.vumi_api.manager)
-            self._persist_redis_managers.append(worker.vumi_api.redis)
-        returnValue(worker)
 
     def setup_router(self, config, started=True, **kw):
         if started:
@@ -366,9 +354,6 @@ class AppWorkerTestCase(GoAppWorkerTestMixin, ApplicationTestCase):
             config['worker_name'] = self._worker_name()
         worker = yield super(AppWorkerTestCase, self).get_application(
             config, *args, **kw)
-        if hasattr(worker, 'vumi_api'):
-            self._persist_riak_managers.append(worker.vumi_api.manager)
-            self._persist_redis_managers.append(worker.vumi_api.redis)
         returnValue(worker)
 
 
@@ -384,3 +369,47 @@ class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
     def tearDown(self):
         yield super(RouterWorkerTestCase, self).tearDown()
         yield self._persist_tearDown()
+
+    def get_router_worker(self, config, start=True):
+        if 'worker_name' not in config:
+            config['worker_name'] = self._worker_name()
+        if 'ri_connector_name' not in config:
+            config['ri_connector_name'] = 'ri_conn'
+        if 'ro_connector_name' not in config:
+            config['ro_connector_name'] = 'ro_conn'
+        return self.get_worker(
+            config, self.router_class, start=start)
+
+
+class GoWorkerTestCase(GoWorkerTestMixin, VumiWorkerTestCase):
+
+    use_riak = True
+
+    def setUp(self):
+        self._persist_setUp()
+        super(GoWorkerTestCase, self).setUp()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield super(GoWorkerTestCase, self).tearDown()
+        yield self._persist_tearDown()
+
+    @inlineCallbacks
+    def get_worker(self, config, *args, **kw):
+        if 'worker_name' not in config:
+            config['worker_name'] = self._worker_name()
+        worker = yield super(GoWorkerTestCase, self).get_worker(
+            config, self.worker_class, *args, **kw)
+        returnValue(worker)
+
+
+class GoTestCase(GoPersistenceMixin, TestCase):
+    timeout = 5
+
+    use_riak = False
+
+    def setUp(self):
+        self._persist_setUp()
+
+    def tearDown(self):
+        return self._persist_tearDown()

@@ -1,6 +1,7 @@
 from fabric.api import cd, sudo, env, puts
 
 env.path = '/var/praekelt/vumi-go'
+env.sudo_prefix += '-H '
 
 
 def deploy_go():
@@ -9,6 +10,11 @@ def deploy_go():
         sudo("find go -name '*.pyc' -delete")
         _venv_command('./ve/bin/django-admin.py collectstatic --pythonpath=. '
                       '--settings=go.settings --noinput')
+
+
+def setup_js_env():
+    with cd(env.path):
+        _venv_command('./utils/js-env-setup.sh')
 
 
 def deploy_vumi():
@@ -55,28 +61,17 @@ def deploy_world(restart=True):
     """
     deploy_vumi()
     deploy_go()
-    update_nodejs_modules()
     if restart:
         restart_all()
-
-
-def update_nodejs_modules():
-    """
-    Update the Node.js modules that the JS sandbox depends on.
-    """
-    npm_install("vumigo_v01")
 
 
 def supervisorctl(command):
     return sudo('supervisorctl %s' % (command,))
 
 
-def npm_install(package):
-    return sudo('npm install --global %s' % (package,))
-
-
 def _venv_command(command, user='vumi'):
-    return sudo('. ve/bin/activate && %s' % (command,), user=user)
+    return sudo('. ve/bin/activate && export PATH="ve/bin:$PATH" && %s'
+                % (command,), user=user)
 
 
 def _supervisorctl_status():
