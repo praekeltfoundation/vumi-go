@@ -13,11 +13,12 @@ button {
 .main-container {
   min-width: 650px;
   max-width: none;
-  padding: 0 25px;
+  padding: 5px 25px;
 }
 .footer {
   color: #aaa;
   margin: 1em;
+  text-align: center;
 }
 .main-nav {
   margin: 0;
