@@ -35,7 +35,7 @@ class ConversationSearchForm(BootstrapForm):
             ('finished', 'Finished'),
             ('draft', 'Draft'),
         ],
-        widget=forms.Select(attrs={'class': 'input-small'}))
+        widget=forms.Select(attrs={'class': 'input-sm'}))
 
     def __init__(self, *args, **kw):
         conversation_types = kw.pop('conversation_types')
