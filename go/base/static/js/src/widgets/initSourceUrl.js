@@ -10,7 +10,7 @@ function SourceUrl(el, dest_id) {
     var dest = $('#' + dest_id).get(0);
 
     var $button = $('<button class="btn btn-danger" type="button">' +
-                    '<i class="icon-plus"></i> ' +
+                    '<i class="glyphicon glyphicon-plus"></i> ' +
                     'Update from URL</button>');
     var $alert = $('<div></div>');
 
