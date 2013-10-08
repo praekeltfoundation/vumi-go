@@ -2,6 +2,7 @@
 
 
 body {
+  line-height: normal;
   background: #2f3436;
   color: #2f3436;
 }
@@ -25,79 +26,102 @@ a:link, button {
 
 
 .main-nav {
+  @border: 1px #212527 solid;
+
   margin: 0;
+  min-height: 0;
+
   font-size: 15px;
+  background: none;
+  border: none;
 
-  .navbar-brand {
-    position: relative;
-    width: 60px;
-    border: 0 !important;
-  }
+  .nav {
+    background: transparent !important;
 
-  .logo {
-    position: absolute;
-    top: 20px;
-    left: -5px;
-  }
+    li { 
+      height: 39px;
+      padding: 0 15px;
+    }
 
-  li { 
-    height: 39px;
-    padding: 0 15px;
-    border-right: 1px #212527 solid;
-  }
-  ul li:first-child {
-    // this is the logo
-    padding: 0;
-  }
-  ul:nth-child(2) li:first-child {
-    border-left: 1px #212527 solid;
-  }
-  li.active a { background: transparent !important; }
+    a {
+      color: #0bcac3 !important;
+      text-shadow: none !important;
+      outline: none;
 
-  a {
-    color: #0bcac3 !important;
-    text-shadow: none !important;
-    outline: none;
-  }
-  a:hover {
-    color: #fff !important;
+      padding-top: 10px;
+      padding-bottom: 10px;
 
-    .caret {
-      border-top-color: #fff !important;
-      border-bottom-color: #fff !important;
+      &:hover {
+        background: transparent;
+        color: #fff !important;
+      }
     }
   }
 
-  .caret {
-      border-top-color: #0bcac3 !important;
-      border-bottom-color: #0bcac3 !important;
+  .navbar-nav {
+    li {
+      border-right: @border;
+    }
+
+    .navbar-brand {
+      border: none;
+      padding: 0;
+      width: 60px;
+      position: relative;
+
+      .logo {
+        position: absolute;
+        top: 20px;
+        left: -20px;
+      }
+    }
   }
 
-
-  .dropdown.open > a {
-    background: transparent !important;
-    color: #fff !important;
-  }
-
-  .dropdown-menu {
-    background: #2f3436;
-
+  .dropdown {
     li {
       padding: 0;
       height: auto;
-      border: 0 !important;
     }
-    a:hover {
-      background: transparent;
+
+    .dropdown-toggle {
+      background: transparent !important;
+      border: @border !important;
+
+      .focused {
+        color: #fff !important;
+
+        .caret {
+          border-top-color: #fff;
+          border-bottom-color: #fff;
+        }
+      }
+
+      &:hover {
+        .focused();
+      }
+
+      .caret {
+        border-top-color: #0bcac3;
+        border-bottom-color: #0bcac3;
+      }
+    }
+
+    &.open {
+      .dropdown-toggle {
+        .dropdown-toggle.focused();
+      }
+    }
+
+    .dropdown-menu {
+      background: #2f3436;
+      border: none;
+      
+      &:after {
+        border-top-color: @border;
+        border-bottom-color: @border;
+      }
     }
   }
-
-  .dropdown-menu:after {
-    border-top-color: #212527 !important;
-    border-bottom-color: #212527 !important;
-  }
-
-  
 }
 
 .content {
