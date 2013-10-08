@@ -19,7 +19,7 @@
             </td>
             {% if message_direction == 'inbound' and conversation.has_channel_supporting_generic_sends %}
             <td>
-                <a href="#reply-{{message.message_id}}" class="btn" title="Reply" data-toggle='modal'><i class="glyphicon glyphicon-repeat"></i> Reply</a>
+                <a href="#reply-{{message.message_id}}" class="btn btn-default" title="Reply" data-toggle='modal'><i class="glyphicon glyphicon-repeat"></i> Reply</a>
                 <div id="reply-{{message.message_id}}" class="modal hide fade" role="dialog">
                     <div class="modal-header">
                         <a class="close" data-dismiss="modal">×</a>
@@ -32,7 +32,7 @@
                             {{ reply_form }}
                         </div>
                         <div class="modal-footer">
-                            <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+                            <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
                             <button type="submit" name="_send_one_off_reply" class="btn btn-primary" data-loading-text="sending...">Send Reply</button>
                         </div>
                     </form>

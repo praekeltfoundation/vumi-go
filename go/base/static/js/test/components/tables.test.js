@@ -114,7 +114,7 @@ describe("go.components.tables", function() {
                   'Are you sure you want to save this item?',
                 '</div>',
                 '<div class="modal-footer">',
-                  '<a class="btn" data-dismiss="modal" href="#">Cancel</a>',
+                  '<a class="btn btn-default" data-dismiss="modal" href="#">Cancel</a>',
                   '<button type="submit">OK</button>',
                 '</div>',
               '</form>',

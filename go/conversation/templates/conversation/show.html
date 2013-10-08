@@ -85,12 +85,12 @@
                                 <a href="#" class="btn btn-default disabled" title="This action is disabled" data-content="{{ is_disabled }}">{{ action.action_display_name }}</a>
                             </li>
                         {% else %}
-                            <li><a href="{% conversation_action conversation action.action_name %}" class="btn">{{ action.action_display_name }}</a></li>
+                            <li><a href="{% conversation_action conversation action.action_name %}" class="btn btn-default">{{ action.action_display_name }}</a></li>
                         {% endif %}
                     {% endwith %}
                 {% endfor %}
                 <li>
-                    <a class="btn" href="{% conversation_screen conversation 'message_list' %}">View Messages</a>
+                    <a class="btn btn-default" href="{% conversation_screen conversation 'message_list' %}">View Messages</a>
                 </li>
             </ul>
         </div>

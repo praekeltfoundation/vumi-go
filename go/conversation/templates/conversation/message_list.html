@@ -10,7 +10,7 @@
     <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
         <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="input-medium search-query">
             <input type="hidden" name="direction" value="{{message_direction}}"/>
-            <button type="submit" class="btn">Search</button>
+            <button type="submit" class="btn btn-default">Search</button>
     </form>
 {% endblock %}
 
@@ -18,7 +18,7 @@
     <div class="pull-left">
         <span class="table-form-view-buttons">
             <!-- TODO:
-            <button class="btn" disabled="disabled">Delete</button>
+            <button class="btn btn-default" disabled="disabled">Delete</button>
             -->
         </span>
 
@@ -27,7 +27,7 @@
         <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound">Download Received Stats</a>
         <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
         -->
-        <button class="btn" data-toggle="modal" href="#expMessagesFrm">Export</button>
+        <button class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export</button>
     </div>
 
 {% endblock %}

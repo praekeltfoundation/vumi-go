@@ -7,7 +7,7 @@
 
     <form id="search-filter" name="search-filter" action="" method="get">
         <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find people..." class="input-lg search-query">
-        <button type="submit" id="search-filter-btn" class="btn">Search</button>
+        <button type="submit" id="search-filter-btn" class="btn btn-default">Search</button>
     </form>
     {% if query %}
     <form action="{% url 'contacts:groups' %}" method="post">
@@ -30,9 +30,9 @@
 
 {% block content_actions_right %}
     <div class="table-form-view-buttons pull-left">
-        <button class="btn" data-action="delete" disabled="disabled">Delete</button>
-        <button class="btn" data-action="export" data-toggle="modal" data-target="#expContactFrm" disabled="disabled">Export</button>
-        {# TODO <button class="btn" disabled="disabled">Assign to group</button> #}
+        <button class="btn btn-default" data-action="delete" disabled="disabled">Delete</button>
+        <button class="btn btn-default" data-action="export" data-toggle="modal" data-target="#expContactFrm" disabled="disabled">Export</button>
+        {# TODO <button class="btn btn-default" disabled="disabled">Assign to group</button> #}
     </div>
 {% endblock %}
 
