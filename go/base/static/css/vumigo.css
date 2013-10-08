@@ -22,7 +22,7 @@ button {
   margin: 0;
   font-size: 15px;
 }
-.main-nav .brand {
+.main-nav .navbar-brand {
   position: relative;
   width: 60px;
   border: 0 !important;
