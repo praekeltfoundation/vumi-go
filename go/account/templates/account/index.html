@@ -43,9 +43,7 @@
     <div class="tab-pane active" id="info">
         <form class="form-horizontal" action="" method="post">
             {{account_form}}
-            <div class="form-actions">
-                <input type="submit" class="btn btn-primary" data-loading-text="saving..." name="_account" value="Save changes">
-            </div>
+            <input type="submit" class="btn btn-primary" data-loading-text="saving..." name="_account" value="Save changes">
             {% csrf_token %}
         </form>
     </div>
@@ -148,9 +146,7 @@
                     </div>
 
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
-                    </div>
+                    <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
                   </fieldset>
                 </form>
 
