@@ -761,10 +761,9 @@ button {
   margin-top: 1em;
   overflow: hidden;
 }
-.table-form-view td,
-.table-form-view tr {
+.table-form-view td {
   color: #2f3436;
-  vertical-align: middle;
+  vertical-align: middle !important;
 }
 .table-form-view td:first-child,
 .table-form-view th:first-child {
