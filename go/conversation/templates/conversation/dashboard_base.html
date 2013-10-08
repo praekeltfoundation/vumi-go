@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content_actions_right %}
-    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search form-inline pull-right">
+    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
         <div class="form-group">
             <input type="text" class="form-control" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
         </div>
