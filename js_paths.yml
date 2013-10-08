@@ -1,6 +1,7 @@
 client:
   templates:
     src:
+      - 'go/base/static/templates/apps/dialogue/inlineAdd.jst'
       - 'go/base/static/templates/apps/dialogue/states/modes/preview.jst'
       - 'go/base/static/templates/apps/dialogue/states/modes/edit.jst'
       - 'go/base/static/templates/apps/dialogue/states/choice/edit.jst'

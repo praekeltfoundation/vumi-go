@@ -359,7 +359,9 @@ button {
   z-index: 2;
 }
 .dialogue #diagram .add {
-  height: 65px;
+  font-family: serif;
+  padding: 24px 8px;
+  width: 85px;
   font-size: 65px;
   -webkit-user-select: none;
   -moz-user-select: none;
