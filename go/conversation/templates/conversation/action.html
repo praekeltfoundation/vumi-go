@@ -12,7 +12,7 @@
 
 {% if message %}
 <div class="row">
-    <div class="span12">
+    <div class="col-md-12">
         {% include "base/includes/messages.html" %}
     </div>
 </div>
@@ -21,7 +21,7 @@
 <form name="conversation_action" class="indent" id="conversation_action" method="post" action="">
     {% csrf_token %}
     <div class="row">
-        <div class="span12">
+        <div class="col-md-12">
             <div class="box shadow survey-box survey-questions">
                 {{ form }}
             </div>

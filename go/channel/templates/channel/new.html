@@ -6,7 +6,7 @@
 
 {% block content_main %}
 <div class="row">
-    <div class="span12">
+    <div class="col-md-12">
         {% include "base/includes/messages.html" %}
     </div>
 </div>
@@ -16,7 +16,7 @@
 
     <fieldset class="configuration_new row boxes">
 
-        <div class="span4">
+        <div class="col-md-4">
             <div class="box">
                 <label for="id_{{ new_channel_form.country.name }}">
                     {{ new_channel_form.country.label }}
@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <div class="span4 channel">
+        <div class="col-md-4 channel">
             <div class="box">
                 <label for="id_{{ new_channel_form.channel.name }}">
                   {{ new_channel_form.channel.label }}
@@ -50,7 +50,7 @@
             </div>
         </div>
 
-        <div class="span4">
+        <div class="col-md-4">
             <div class="box">
                 <br>
                 <input type="submit" class="btn btn-primary" value="Save">

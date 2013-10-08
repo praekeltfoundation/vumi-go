@@ -25,7 +25,7 @@
 
 {% block content_main %}
     <div class="row">
-        <div class="span3 sidebar">
+        <div class="col-md-3 sidebar">
 
             <div class="nav nav-list extra-actions">
                 <a href="{% url 'contacts:new_person' %}">New contact...</a>
@@ -38,7 +38,7 @@
             </ul>
 
         </div>
-        <div class="span9">
+        <div class="col-md-9">
             {% include "base/includes/messages.html" %}
             {% block content_main_list %}
             {% endblock %}

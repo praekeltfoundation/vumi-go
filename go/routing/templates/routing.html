@@ -19,19 +19,19 @@
 {% block content_main %}
     <div class="container">
       <div id="diagram" class="row">
-          <div class="span4 column-container">
+          <div class="col-md-4 column-container">
             <span class="title">Channels</span>
             <a href="{% url 'channels:new_channel' %}" class="btn btn-primary new">+</a>
             <div class="column" id="channels"></div>
           </div>
 
-          <div class="span4 column-container">
+          <div class="col-md-4 column-container">
             <span class="title">Routers</span>
             <a href="{% url 'routers:new_router' %}" class="btn btn-primary new">+</a>
             <div class="column" id="routers"></div>
           </div>
 
-          <div class="span4 column-container">
+          <div class="col-md-4 column-container">
             <span class="title">Conversations</span>
             <a href="{% url 'conversations:new_conversation' %}" class="btn btn-primary new">+</a>
             <div class="column" id="conversations"></div>

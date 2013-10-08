@@ -719,10 +719,10 @@ button {
   padding-bottom: 1em;
   margin: 0;
 }
-.accounts.details .span8 {
+.accounts.details .col-md-8 {
   padding-left: 1em;
 }
-.accounts.details .span4 {
+.accounts.details .col-md-4 {
   padding-right: 1em;
 }
 .accounts.details .sidebar .nav li {

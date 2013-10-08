@@ -10,26 +10,26 @@
 
 {% block content_main %}
 <div class="row indent">
-    <div class="span3">
+    <div class="col-md-3">
         <h4>Send messages to...</h4>
     </div>
-    <div class="span3">
+    <div class="col-md-3">
         <h4>Via...</h4>
     </div>
-    <div class="span6">
+    <div class="col-md-6">
         <h4>Number of messsages</h4>
     </div>
 </div>
 
 <div class="row indent">
-    <div class="span3">
+    <div class="col-md-3">
         <select name="country">
             <option value="za">South Africa</option>
             <option value="ke">Kenya</option>
             <option value="tz">Tanzania</option>
         </select>
     </div>
-    <div class="span3">
+    <div class="col-md-3">
         <select name="channel">
             <option value="ussd">USSD</option>
             <option value="sms">SMS</option>
@@ -39,7 +39,7 @@
             Add channel
         </button>
     </div>
-    <div class="span6">
+    <div class="col-md-6">
         <input type="text" name="amount" placeholder="100"> 
         at 1c per message = <b>$100</b>
         <br>
@@ -48,7 +48,7 @@
 </div>
 
 <div class="row indent">
-    <div class="span6">
+    <div class="col-md-6">
         <button class="btn btn-primary">
             Add country
         </button>
@@ -56,7 +56,7 @@
 </div>
 
 <div class="row indent">
-    <div class="span12 text-center">
+    <div class="col-md-12 text-center">
         <p>
             <button class="btn btn-primary btn-large">
                 Create campaign with these options

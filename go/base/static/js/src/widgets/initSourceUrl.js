@@ -42,7 +42,7 @@ function SourceUrl(el, dest_id) {
     });
     $input.wrap('<div class="input-append"></div>');
     $input.after($button);
-    $input.addClass('span8');
+    $input.addClass('col-md-8');
     $input.parent().after($alert);
 }
 
