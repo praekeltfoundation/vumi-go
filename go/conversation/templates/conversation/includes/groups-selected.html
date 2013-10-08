@@ -6,7 +6,7 @@
     {% for group in groups %}
         <tr>
         <td>
-            <label class="checkbox inline">
+            <label class="checkbox-inline">
                 <input type="checkbox" checked="checked" disabled="disabled" name="groups" value="{{group.key}}" class="group-check"> {{group.name}}
             </label>
             {% if group.is_smart_group %}

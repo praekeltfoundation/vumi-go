@@ -40,7 +40,7 @@ function SourceUrl(el, dest_id) {
         }
         return false;
     });
-    $input.wrap('<div class="input-append"></div>');
+    $input.wrap('<div class="input-group"></div>');
     $input.after($button);
     $input.addClass('col-md-8');
     $input.parent().after($alert);
