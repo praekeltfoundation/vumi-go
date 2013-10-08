@@ -12,8 +12,8 @@ a:link, button {
 
 
 .main-container {
-  // prevent wrapping.
   min-width: 650px;
+  max-width: none;
   padding: 0 25px;
 }
 
@@ -130,11 +130,6 @@ a:link, button {
     .breadcrumbs {
       text-align: right;
       padding: 0 12px;
-
-        .navbar-search {
-          margin: 0;
-        }
-
     }
   }
 
@@ -148,7 +143,7 @@ a:link, button {
       background: #d2d0c7; 
       .box-sizing(content-box);
       border-left: 5px #15191a solid;
-      margin-left: -5px !important;
+      margin-left: -20px !important;
       height: 100%;
 
       .btn {
@@ -203,7 +198,7 @@ a:link, button {
     border-left: 5px #6f0f1c solid;
     text-shadow: none;
     font-weight: bold;
-    margin-left: -20px;
+    margin-left: -5px;
   }
   a.active:hover {
     color: #fff;
