@@ -644,14 +644,11 @@ button {
   text-rendering: optimizelegibility;
 }
 .routing #diagram .column-container .new {
-  font-size: 35px;
-  line-height: 50px;
+  font-size: 30px;
   width: 130px;
-  height: 50px;
 }
 .routing #diagram .column-container .column {
   margin-top: 15px;
-  display: inline-block;
 }
 .routing #diagram .column-container .state {
   background: #d2d0c7;
@@ -676,6 +673,10 @@ button {
 }
 .routing #diagram .column-container .state:hover {
   cursor: move;
+}
+.routing #diagram .column-container .endpoint {
+  background: #888;
+  padding: 3px;
 }
 .routing #diagram .column-container .endpoint:hover {
   cursor: pointer;
