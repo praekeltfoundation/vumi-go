@@ -26,20 +26,28 @@
     "jquery-simulate": "git@github.com:jquery/jquery-simulate.git"
   },
   "exportsOverride": {
-    "lodash": {
-      "lodash": "dist/lodash.underscore.js"
+    "jquery-ui": {
+      "js": "ui/jquery-ui.js"
     },
-    "backbone": {
-      "backbone": "*.js"
-    },
-    "backbone-relational": {
-      "backbone-relational": "*.js"
-    },
-    "jsPlumb": {
-      "jsPlumb": "dist/js/jquery.jsPlumb-*.js"
-    },
-    "jquery-simulate": {
-      "jquery-simulate": "jquery-simulate.js"
+    "*": {
+      "js": [
+        "*.js",
+        "js/*.js",
+        "dist/**/*.js"
+      ],
+      "css": [
+        "*.css",
+        "css/*.css",
+        "dist/**/*.css"
+      ],
+      "img": [
+        "*.png",
+        "*.jpg",
+        "img/*.png",
+        "img/*.jpg",
+        "dist/**/*.png",
+        "dist/**/*.jpg"
+      ]
     }
   }
 }

@@ -12,6 +12,8 @@ module.exports = function (grunt) {
     bower: {
       install: {
         options: {
+          layout: 'byComponent',
+          cleanTargetDir: true,
           targetDir: 'go/base/static/vendor'
         }
       }
