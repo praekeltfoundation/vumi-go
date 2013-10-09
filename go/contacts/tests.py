@@ -285,6 +285,29 @@ class ContactsTestCase(BaseContactsTestCase):
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
+    def test_uploading_single_colum(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                                  'fixtures',
+                                  'sample-single-column-contacts.csv'))
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(group.key))
+
+        self.specify_columns(group.key, columns={
+            'column-0': 'msisdn',
+            'normalize-0': '',
+        })
+
+        group = self.contact_store.get_group(group.key)
+        self.assertEqual(len(group.backlinks.contacts()), 2)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('successfully' in mail.outbox[0].subject)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         new_group_name = u'Testing a ünicode grøüp'
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
