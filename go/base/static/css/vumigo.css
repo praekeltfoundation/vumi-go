@@ -1,5 +1,4 @@
 body {
-  line-height: normal;
   background: #2f3436;
   color: #2f3436;
 }
@@ -65,8 +64,10 @@ button {
   height: auto;
 }
 .main-nav .dropdown .dropdown-toggle {
+  line-height: normal;
   background: transparent !important;
-  border: 1px #212527 solid !important;
+  border-left: 1px #212527 solid !important;
+  border-right: 1px #212527 solid !important;
 }
 .main-nav .dropdown .dropdown-toggle .focused {
   color: #fff !important;

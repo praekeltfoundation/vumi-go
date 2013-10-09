@@ -2,7 +2,6 @@
 
 
 body {
-  line-height: normal;
   background: #2f3436;
   color: #2f3436;
 }
@@ -84,8 +83,10 @@ a:link, button {
     }
 
     .dropdown-toggle {
+      line-height: normal;
       background: transparent !important;
-      border: @border !important;
+      border-left: @border !important;
+      border-right: @border !important;
 
       .focused {
         color: #fff !important;
