@@ -230,28 +230,16 @@ button {
 }
 .boxes .box {
   background: #d2d0c7;
-  color: #000;
-  font-size: 16px;
-  padding: 15px 0;
-  text-align: center;
+  min-height: 78px;
+  padding: 10px 10px;
   -webkit-border-radius: 5px;
   -webkit-background-clip: padding-box;
   -moz-border-radius: 5px;
   -moz-background-clip: padding;
   border-radius: 5px;
   background-clip: padding-box;
-  margin-bottom: 1em;
-  min-height: 70px;
-}
-.boxes .box label {
-  text-align: left;
-  text-indent: 10%;
-}
-.boxes .box input,
-.boxes .box select {
-  width: auto;
-  max-width: 100%;
-  min-width: 80%;
+  font-size: 16px;
+  font-weight: normal;
 }
 .modal label input {
   margin: 0;
@@ -565,6 +553,9 @@ button {
   margin: 0;
   list-style-type: none;
 }
+.campaigns.details .configuration .boxes .box label {
+  font-weight: normal;
+}
 .campaigns.summary .sub-details,
 .campaigns.summary .sub-messages,
 .campaigns.summary .sub-contacts {
@@ -607,26 +598,6 @@ button {
 }
 .campaigns .actions .right a:first-child {
   margin-right: 20px;
-}
-.campaigns label {
-  color: #000;
-  font-weight: bold;
-}
-.campaigns label a:link,
-.campaigns label a:visited {
-  color: #000;
-}
-.campaigns label a:hover {
-  text-decoration: none;
-}
-.campaigns form .boxes {
-  text-align: center;
-}
-.campaigns form .title {
-  text-transform: uppercase;
-}
-.campaigns form .title .tooltip {
-  text-transform: none;
 }
 .routing #diagram .column-container {
   -webkit-user-select: none;
