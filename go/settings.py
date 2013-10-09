@@ -160,6 +160,7 @@ INSTALLED_APPS = (
     'django_nose',
     'djcelery',
     'djcelery_email',
+    'crispy_forms',
     'go.base',
     'go.conversation',
     'go.router',
@@ -410,3 +411,5 @@ PIPELINE_JS = {
         'output_filename': 'export/go.js'
     },
 }
+
+CRISPY_TEMPLATE_PACK = 'bootstrap3'
