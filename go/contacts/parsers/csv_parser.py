@@ -1,4 +1,5 @@
 import csv
+import re
 
 from go.contacts.parsers import ContactFileParser, ContactParserException
 
@@ -7,11 +8,28 @@ from django.utils.datastructures import SortedDict
 
 class CSVFileParser(ContactFileParser):
 
-    def read_data_from_file(self, file_path, field_names, has_header):
+    @classmethod
+    def _sniff(cls, csvfile):
+        sample = csvfile.read(1024)
+        csvfile.seek(0)
+
         try:
-            csvfile = open(self.get_real_path(file_path), 'rU')
-            dialect = csv.Sniffer().sniff(csvfile.read(1024))
-            csvfile.seek(0)
+            dialect = csv.Sniffer().sniff(sample)
+        except (csv.Error,), e:
+            if re.search(",|\t", sample) is None:
+                # probably indicates a single column file without
+                # delimiters which the excel format should be fine for
+                dialect = csv.excel
+            else:
+                raise ContactParserException(e)
+
+        return dialect
+
+    def read_data_from_file(self, file_path, field_names, has_header):
+        csvfile = open(self.get_real_path(file_path), 'rU')
+        dialect = self._sniff(csvfile)
+
+        try:
             reader = csv.DictReader(csvfile, field_names, dialect=dialect)
             if has_header:
                 reader.next()
@@ -36,12 +54,8 @@ class CSVFileParser(ContactFileParser):
 
             (header_found, known_headers, sample_data_row)
         """
-        try:
-            fp = open(self.get_real_path(file_path), 'rU')
-            dialect = csv.Sniffer().sniff(fp.read(1024))
-            fp.seek(0)
-        except (csv.Error,), e:
-            raise ContactParserException(e)
+        fp = open(self.get_real_path(file_path), 'rU')
+        dialect = self._sniff(fp)
 
         first_row, second_row = None, None
 
