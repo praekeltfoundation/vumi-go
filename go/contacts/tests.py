@@ -40,6 +40,12 @@ class BaseContactsTestCase(VumiGoDjangoTestCase):
         self.setup_api()
         self.setup_user_api()
         self.setup_client()
+        self.clear_tmp_storage()
+
+    def clear_tmp_storage(self):
+        folders, files = default_storage.listdir("tmp")
+        for filename in files:
+            default_storage.delete(path.join("tmp", filename))
 
     def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890',
                   **kwargs):
