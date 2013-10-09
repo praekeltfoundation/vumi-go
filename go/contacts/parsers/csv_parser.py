@@ -15,7 +15,7 @@ class CSVFileParser(ContactFileParser):
 
         try:
             dialect = csv.Sniffer().sniff(sample)
-        except (csv.Error,), e:
+        except csv.Error as e:
             if re.search(",|\t", sample) is None:
                 # probably indicates a single column file without
                 # delimiters which the excel format should be fine for
