@@ -14,7 +14,7 @@ def deploy_go():
 
 def setup_js_env():
     with cd(env.path):
-        _venv_command('./utils/js-env-setup.sh')
+        _venv_command('npm install')
 
 
 def deploy_vumi():
