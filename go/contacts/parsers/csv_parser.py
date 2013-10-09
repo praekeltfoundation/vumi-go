@@ -41,7 +41,7 @@ class CSVFileParser(ContactFileParser):
                     unicoded_row = dict([(key, unicode(value or '', 'utf-8'))
                                             for key, value in row.items()])
                     yield unicoded_row
-        except (csv.Error,), e:
+        except csv.Error as e:
             raise ContactParserException(e)
 
     def guess_headers_and_row(self, file_path):
