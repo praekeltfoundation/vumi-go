@@ -31,6 +31,8 @@
   });
 
   var NameEditExtrasView = PopoverView.extend({
+    className: 'extras-popover',
+
     bootstrapOptions: {container: 'body'},
 
     target: function() { return this.mode.$('.name-extras'); },

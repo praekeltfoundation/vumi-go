@@ -326,31 +326,29 @@ button {
 .confirm .details table th:first-child {
   width: 100px;
 }
+.extras-popover .form-control {
+  font-size: 12px;
+}
+.extras-popover .control-label {
+  font-weight: normal;
+}
 .dialogue .actions .sidebar {
   background: #d9d8d3;
 }
-.dialogue .popover {
-  font-size: 11px;
-  width: 220px;
-}
-.dialogue .popover input {
-  font-size: 11px;
-  width: 90%;
-}
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
-  opacity: 0.5;
+  opacity: 0.75;
 }
 .dialogue #diagram ._jsPlumb_endpoint {
   z-index: 5;
-  opacity: 0.5;
+  opacity: 0.75;
 }
 .dialogue #diagram ._jsPlumb_endpoint svg circle:hover {
   cursor: move;
 }
 .dialogue #diagram ._jsPlumb_dragging {
   z-index: 3;
-  opacity: 0.5;
+  opacity: 0.75;
 }
 .dialogue #diagram ._jsPlumb_hover {
   z-index: 3;
@@ -472,17 +470,14 @@ button {
   font-size: 16px;
 }
 .dialogue #diagram .state .hint {
-  margin: 0;
+  margin: 2px;
   text-align: center;
   font-size: 10px;
   font-weight: bold;
 }
-.dialogue #diagram .state .important {
-  color: #cc3333;
-}
 .dialogue #diagram .endpoint {
   z-index: 4;
-  background: teal;
+  background: #428bca;
   width: 15px;
   height: 15px;
   -webkit-border-radius: 15px;

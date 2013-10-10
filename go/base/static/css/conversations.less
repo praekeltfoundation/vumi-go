@@ -10,6 +10,16 @@
   }
 }
 
+.extras-popover {
+  .form-control {
+    font-size: 12px;
+  }
+
+  .control-label {
+    font-weight: normal;
+  }
+}
+
 .dialogue {
   .actions {
     .sidebar {
@@ -17,25 +27,15 @@
     }
   }
 
-  .popover {
-    font-size: 11px;
-    width: 220px;
-
-    input {
-      font-size:11px;
-      width:90%;
-    }
-  }
-
   #diagram {
     ._jsPlumb_connector {
       z-index: 1;
-      opacity: 0.5;
+      opacity: 0.75;
     }
 
     ._jsPlumb_endpoint {
       z-index: 5;
-      opacity: 0.5;
+      opacity: 0.75;
     }
 
     ._jsPlumb_endpoint svg circle:hover {
@@ -44,7 +44,7 @@
 
     ._jsPlumb_dragging {
       z-index: 3;
-      opacity: 0.5;
+      opacity: 0.75;
     }
 
     ._jsPlumb_hover {
@@ -175,20 +175,16 @@
       }
 
       .hint {
-        margin: 0;
+        margin: 2px;
         text-align: center;
         font-size: 10px;
         font-weight: bold;
-      }
-
-      .important {
-        color: #cc3333;
       }
     }
 
     .endpoint {
       z-index: 4;
-      background: teal;
+      background: #428bca;
       width: 15px;
       height: 15px;
       .border-radius(15px);

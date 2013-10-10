@@ -1,21 +1,22 @@
 <div>
-    <p>
-        This question will be stored as:
-        <input
-         class='store-as'
-         type='text'
-         name=''
-         value="<%= model.get('store_as') %>"
-         placeholder='labelname'>
+  <div class="form-group">
+    <label class="control-label">This question will be stored as:</label>
 
-        <button class='btn btn-default btn-xs ok'>Ok</button>
-        <a href="#" class='cancel'>cancel</a>
+    <input
+     class="store-as form-control"
+     type="text"
+     name=""
+     value="<%= model.get("store_as") %>"
+     placeholder='labelname'>
+  </div>
 
-        <i class='glyphicon glyphicon-info-sign info' 
-           data-toggle="tooltip" 
-           data-placement="top" 
-           title=""
-           data-original-title="Vumi uses labels to store survey questions and answers .The same label can be used for multiple questions and answers. Multi language surveys are a good example: by using the same labeling you can store data from multiple surveys under the same label. Consistent labels result in cleaner data storage, enable you to form Smart Groups from your user's answers, and allow developers to write custom code based on users responses.">
-        </i>
-    </p>
+  <button class="ok btn btn-default btn-xs">Ok</button>
+  <button class="cancel btn btn-link btn-xs">cancel</button>
+
+  <i class='glyphicon glyphicon-info-sign info' 
+     data-toggle="tooltip" 
+     data-placement="top" 
+     title=""
+     data-original-title="Vumi uses labels to store survey questions and answers .The same label can be used for multiple questions and answers. Multi language surveys are a good example: by using the same labeling you can store data from multiple surveys under the same label. Consistent labels result in cleaner data storage, enable you to form Smart Groups from your user's answers, and allow developers to write custom code based on users responses.">
+  </i>
 </div>
