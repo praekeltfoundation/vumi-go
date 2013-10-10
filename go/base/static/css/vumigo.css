@@ -226,6 +226,23 @@ button {
 .alert {
   margin: 1em 0;
 }
+.composite-control {
+  width: 100%;
+  display: inline-table;
+}
+.composite-control .form-control,
+.composite-control .glyphicon,
+.composite-control .close {
+  display: table-cell;
+  padding: 0 0 0 6px;
+  vertical-align: middle;
+}
+.composite-control .glyphicon {
+  position: static;
+}
+.composite-control .close {
+  float: none;
+}
 .boxes {
   text-align: center;
 }
@@ -340,7 +357,6 @@ button {
   opacity: 0.75;
 }
 .dialogue #diagram .grid {
-  width: 1024px;
   text-align: center;
   margin: 0 auto;
 }
@@ -365,37 +381,51 @@ button {
   z-index: 2;
 }
 .dialogue #diagram .add {
-  font-family: serif;
-  padding: 24px 8px;
   width: 85px;
-  font-size: 65px;
+  line-height: normal;
+  font-family: serif;
+  font-size: 55px;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
 .dialogue #diagram .state {
-  width: 260px;
   float: left;
+  font-size: 12px;
   text-align: left;
   position: relative;
-  color: #2f3436;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
-.dialogue #diagram .state .titlebar,
 .dialogue #diagram .state label {
-  background: #b0b0b0;
+  margin: 0;
+  font-weight: normal;
+}
+.dialogue #diagram .state textarea {
+  resize: none;
+}
+.dialogue #diagram .state p {
+  text-align: left;
+}
+.dialogue #diagram .state input[type=checkbox] {
+  margin: 2px 4px 0 0;
+}
+.dialogue #diagram .state .checkbox {
+  padding-left: 0;
+}
+.dialogue #diagram .state .titlebar,
+.dialogue #diagram .state .control-label {
   height: 35px;
   line-height: 35px;
-  font-size: 11px;
+  font-size: 14px;
   padding: 0 6px;
   text-indent: 0;
-  font-weight: normal;
   text-align: left;
 }
 .dialogue #diagram .state .titlebar {
-  margin-top: -14px;
+  background: #b0b0b0;
+  margin: -10px;
   margin-bottom: 10px;
   -webkit-border-radius: 5px;
   -webkit-background-clip: padding-box;
@@ -406,22 +436,26 @@ button {
 }
 .dialogue #diagram .state .titlebar .remove {
   float: right;
-  height: 22px;
+  height: 20px;
   width: 20px;
+  padding-bottom: 2px;
   margin-top: 6px;
-  padding-bottom: 4px;
   color: #eee;
   background: #000;
 }
 .dialogue #diagram .state .titlebar:hover {
   cursor: move;
 }
+.dialogue #diagram .state .form-control {
+  font-size: 12px;
+}
+.dialogue #diagram .state .glyphicon,
+.dialogue #diagram .state .close {
+  font-size: 14px;
+}
 .dialogue #diagram .state .edit.mode .actions {
   background: inherit;
   margin: 10px 5px 0 0;
-}
-.dialogue #diagram .state .edit.mode .actions a {
-  font-size: 12px;
 }
 .dialogue #diagram .state .preview.mode .edit-switch {
   margin-left: 8px;
@@ -429,24 +463,10 @@ button {
 .dialogue #diagram .state .preview.mode .text {
   margin-left: 8px;
 }
-.dialogue #diagram .state label,
-.dialogue #diagram .state p {
-  cursor: default;
-  color: #2f3436;
-}
-.dialogue #diagram .state textarea,
-.dialogue #diagram .state select,
-.dialogue #diagram .state input {
-  width: 80%;
-  margin-left: 3px;
-  font-size: 11px;
-}
-.dialogue #diagram .state textarea {
-  resize: none;
-  max-width: 80%;
-}
-.dialogue #diagram .state p {
-  text-align: left;
+.dialogue #diagram .state .form-group,
+.dialogue #diagram .state .radio,
+.dialogue #diagram .state .checkbox {
+  margin-bottom: 4px;
 }
 .dialogue #diagram .state .close {
   font-size: 16px;
@@ -491,27 +511,6 @@ button {
   background: transparent;
   font-size: 10px;
   color: #666;
-}
-.dialogue #diagram .choice.state .edit.mode .choices {
-  font-size: 11px;
-  margin-left: 20px;
-}
-.dialogue #diagram .choice.state .edit.mode .choices li {
-  padding: 0;
-  margin: 0 0 18px 0;
-}
-.dialogue #diagram .choice.state .edit.mode .choices input {
-  min-width: 130px;
-  width: 170px;
-  margin-bottom: 0;
-}
-.dialogue #diagram .choice.state .edit.mode .choices .close {
-  margin: 4px 10px 0 0;
-}
-.dialogue #diagram .choice.state .edit.mode .new-choice {
-  float: right;
-  font-size: 11px;
-  margin-right: 43px;
 }
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;

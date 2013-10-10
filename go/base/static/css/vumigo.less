@@ -243,10 +243,7 @@ a:link, button {
 
 }
 
-
-
 .content .sidebar .extra-actions {
-
   margin-bottom: 1em;
   
   a, a.active { color: #0088cc; }
@@ -261,10 +258,6 @@ a:link, button {
     text-decoration: underline;
   }
 }
-
-
-
-
 
 .nav-stacked a:hover {
   background: none !important;
@@ -284,6 +277,24 @@ a:link, button {
   margin: 1em 0;
 }
 
+.composite-control {
+  width: 100%;
+  display: inline-table;
+
+  .form-control, .glyphicon, .close {
+    display: table-cell;
+    padding: 0 0 0 6px;
+    vertical-align: middle;
+  }
+
+  .glyphicon {
+    position: static;
+  }
+
+  .close {
+    float: none;
+  }
+}
 
 .boxes {
   text-align: center;

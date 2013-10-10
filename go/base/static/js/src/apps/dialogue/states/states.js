@@ -234,7 +234,9 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: function() { return 'box item state ' + this.typeName || ''; },
+    className: function() {
+      return 'state box item col-md-3 ' + this.typeName || '';
+    },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -409,6 +411,8 @@
     constructor: function(options) {
       DialogueStateCollection.__super__.constructor.call(this, options);
       this.grid = new DialogueStateGridView({states: this});
+
+      this.defaultMode = 'edit';
 
       if (!this.size()) {
         this.add();

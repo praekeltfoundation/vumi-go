@@ -3,35 +3,43 @@
   <button class='close remove'>&times;</button>
 </div>
 
-<input
-   type='text'
-   class='name'
-   value='<%= model.get('name') %>'
-   placeholder='for e.g. "Age"' />
+<div class="form-group">
+  <div class="composite-control">
+    <input
+     type="text"
+     class="name form-control"
+     value='<%= model.get('name') %>'
+     placeholder="for e.g. 'Age'">
 
-   <i class="glyphicon glyphicon-info-sign name-extras"></i>
+    <i class="glyphicon glyphicon-info-sign name-extras"></i>
+  </div>
+</div>
 
-<div class='main'>
+<div class="main">
+  <div class="form-group">
+    <label class="control-label">Choose the type of question</label>
 
-  <label for="id_type">Choose the type of question</label>
-
-  <select class='type' id="id_type">
-    <option value="choice">Recipients select one option from a list</option>
-    <option value="freetext">Recipients can reply with their own text</option>
-    <option value="end">Recipients are shown text and the session ends</option>
-  </select>
+    <select class="type form-control">
+      <option value="choice">Recipients select one option from a list</option>
+      <option value="freetext">Recipients can reply with their own text</option>
+      <option value="end">Recipients are shown text and the session ends</option>
+    </select>
+  </div>
 
   <% if (model.storableOnContact) { %>
-    <div class="search_enabled">
-      <input class="store-on-contact" type="checkbox" name="search" id="search"> 
-      <label for="id_search">Display this question in search results</label>
-    </div>
+  <div class="checkbox">
+    <label>
+      <input class="store-on-contact" type="checkbox"> Display this question in search results
+    </label>
+  </div>
   <% } %>
 
   <%= partials.body %>
 
-  <div class='actions pull-right'>
-    <a class='btn btn-default cancel'>Cancel</a>
-    <a class='btn btn-primary ok'>Ok</a>
+  <div class="clearfix"></div>
+
+  <div class="actions pull-right">
+    <a class="btn btn-default btn-sm cancel">Cancel</a>
+    <a class="btn btn-primary btn-sm ok">Ok</a>
   </div>
 </div>
