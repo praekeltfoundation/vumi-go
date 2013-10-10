@@ -414,8 +414,6 @@
       DialogueStateCollection.__super__.constructor.call(this, options);
       this.grid = new DialogueStateGridView({states: this});
 
-      this.defaultMode = 'edit';
-
       if (!this.size()) {
         this.add();
         this.resetStartState();
