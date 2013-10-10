@@ -164,7 +164,7 @@
         .popover(
           _({content: this.$el, html: true}).defaults(
           _(this).result('bootstrapOptions')))
-        .data('popover');
+        .data('bs.popover');
 
       return this;
     },
