@@ -129,23 +129,27 @@
 {% endblock %}
 
 {% block modals %}
-<div class="modal hide fade" id="expMessagesFrm">
-    <div class="modal-header">
-        <a class="close" data-dismiss="modal">×</a>
-        <h3>Schedule CSV Export of Messages</h3>
+<div class="modal fade" id="expMessagesFrm">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a class="close" data-dismiss="modal">×</a>
+                <h3>Schedule CSV Export of Messages</h3>
+            </div>
+            <form method="post" action="" class="form-horizontal">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p><span class="help-block">
+                      The file is potentially quite large and as a result the export 
+                      will be done in the background. When completed the results will 
+                      be sent to you as a CSV file attached to an email.
+                    </span><br/></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="_export_conversation_messages" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
+                </div>
+            </form>
+        </div>
     </div>
-    <form method="post" action="" class="form-horizontal">
-        {% csrf_token %}
-        <div class="modal-body">
-            <p><span class="help-block">
-              The file is potentially quite large and as a result the export 
-              will be done in the background. When completed the results will 
-              be sent to you as a CSV file attached to an email.
-            </span><br/></p>
-        </div>
-        <div class="modal-footer">
-            <button type="submit" name="_export_conversation_messages" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
-        </div>
-    </form>
 </div><!--/expContactFrm-->
 {% endblock %}

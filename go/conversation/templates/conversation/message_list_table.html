@@ -1,5 +1,7 @@
 {% load url from future %}
 {% load conversation_tags %}
+{% load crispy_forms_tags %}
+
 <table class="table">
     <thead>
         <tr>
@@ -20,22 +22,26 @@
             {% if message_direction == 'inbound' and conversation.has_channel_supporting_generic_sends %}
             <td>
                 <a href="#reply-{{message.message_id}}" class="btn btn-default" title="Reply" data-toggle='modal'><i class="glyphicon glyphicon-repeat"></i> Reply</a>
-                <div id="reply-{{message.message_id}}" class="modal hide fade" role="dialog">
-                    <div class="modal-header">
-                        <a class="close" data-dismiss="modal">×</a>
-                        <h3>Reply to {{contact}}</h3>
+                <div id="reply-{{message.message_id}}" class="modal fade" role="dialog">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button class="close" data-dismiss="modal">x</button>
+                                <h3>Reply to {{contact}}</h3>
+                            </div>
+                            <form method="post" action="" class="form-horizontal">
+                                {% csrf_token %}
+                                <div class="modal-body">
+                                    {% get_reply_form_for_message message as reply_form %}
+                                    {{ reply_form|crispy }}
+                                </div>
+                                <div class="modal-footer">
+                                    <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
+                                    <button type="submit" name="_send_one_off_reply" class="btn btn-primary" data-loading-text="sending...">Send Reply</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                    <form method="post" action="" class="form-horizontal">
-                        {% csrf_token %}
-                        <div class="modal-body">
-                            {% get_reply_form_for_message message as reply_form %}
-                            {{ reply_form }}
-                        </div>
-                        <div class="modal-footer">
-                            <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
-                            <button type="submit" name="_send_one_off_reply" class="btn btn-primary" data-loading-text="sending...">Send Reply</button>
-                        </div>
-                    </form>
                 </div>
             </td>
             {% endif %}

@@ -1,4 +1,5 @@
 {% extends "account/base.html" %}
+{% load go_tags %}
 
 {% block content_extraclass %}accounts details{% endblock %}
 {% block content_title %}Account{% endblock %}
@@ -53,31 +54,33 @@
 {% endblock %}
 
 {% block modals %}
-<div class="modal hide fade" id="changePassword">
-    <div class="modal-header">
-        <a class="close" data-dismiss="modal">×</a>
-        <h3>Change Password</h3>
-    </div>
-    <div class="modal-body">
-
-        <form method="POST" action="">
-
-            <input type="hidden" name="_password">
-            {% csrf_token %}
-            {% for field in password_change_form %}
-            <div class="control-group{% if field.errors %} error{% endif %}">
-                <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
-                <div class="controls">
-                    {{ field }}
-                    {% if field.errors %}
-                    <span class="help-inline">{{ field.errors }}</span>
-                    {% endif %}
-                </div>
+<div class="modal fade" id="changePassword">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a class="close" data-dismiss="modal">×</a>
+                <h3>Change Password</h3>
             </div>
-            {% endfor %}
+            <div class="modal-body">
+                <form method="POST" action="">
+                    <input type="hidden" name="_password">
+                    {% csrf_token %}
+                    {% for field in password_change_form %}
+                    <div class="form-group{% if field.errors %} error{% endif %}">
+                        <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
+                        <div class="controls">
+                            {{ field|attr_class:"form-control" }}
+                            {% if field.errors %}
+                            <span class="help-block">{{ field.errors }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
 
-            <input type="submit" class="btn btn-primary" value="Change">
-    </form>
+                    <input type="submit" class="btn btn-primary" value="Change">
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

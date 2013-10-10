@@ -108,7 +108,7 @@ describe("go.components.tables", function() {
           ].join('')));
 
           $saveModal = $([
-            '<div class="modal hide fade" id="saveModal">',
+            '<div class="modal fade" id="saveModal">',
               '<form method="post" action="">',
                 '<div class="modal-body">',
                   'Are you sure you want to save this item?',
