@@ -57,6 +57,13 @@ class MessageMetadataHelper(object):
         # TODO: Better exception.
         return self._go_metadata['user_account']
 
+    def is_paid(self):
+        """Return ``True`` if the message has been processed by the
+        ``BillingWorker``, ``False`` otherwise
+
+        """
+        return self._go_metadata.get('is_paid', False)
+
     def get_user_api(self):
         return self.vumi_api.get_user_api(self.get_account_key())
 
@@ -89,6 +96,9 @@ class MessageMetadataHelper(object):
         self._go_metadata.update({
             'user_account': user_account,
         })
+
+    def set_paid(self):
+        self._go_metadata.update({'is_paid': True})
 
     def is_optout_message(self):
         return OptOutMiddleware.is_optout_message(self.message)

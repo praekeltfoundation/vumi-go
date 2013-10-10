@@ -24,6 +24,9 @@ router_outbound_connector_mapping: {}
 
 opt_out_connector: opt_out_transport
 
+billing_inbound_connector: billing_worker_ri
+billing_outbound_connector: billing_worker_ro
+
 # NOTE: the order is important
 middleware:
   - optout_middleware: go.vumitools.middleware.OptOutMiddleware

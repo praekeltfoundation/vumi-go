@@ -130,6 +130,10 @@ class Command(BaseCommand):
         self.write_supervisor_config_file(
             'routing_table_dispatcher',
             'go.vumitools.routing.AccountRoutingTableDispatcher')
+        self.create_billing_worker_config()
+        self.write_supervisor_config_file(
+            'billing_worker',
+            'go.vumitools.routing.BillingWorker')
         self.create_go_api_worker_config()
         self.write_supervisor_config_file(
             'go_api_worker',
@@ -481,6 +485,21 @@ class Command(BaseCommand):
                     '%s_transport' % (app,) for app in applications],
                 'conversation_mappings': dict([
                     (app, '%s_transport' % (app,)) for app in applications]),
+                'redis_manager': self.dump_yaml_block(
+                    self.config['redis_manager'], 1),
+                'riak_manager': self.dump_yaml_block(
+                    self.config['riak_manager'], 1),
+            })
+            fp.write(self.auto_gen_warning)
+            fp.write(data)
+
+        self.stdout.write('Wrote %s.\n' % (fn,))
+
+    def create_billing_worker_config(self):
+        fn = self.mk_filename('billing_worker', 'yaml')
+        with self.open_file(fn, 'w') as fp:
+            templ = 'billing_worker.yaml.template'
+            data = self.render_template(templ, {
                 'redis_manager': self.dump_yaml_block(
                     self.config['redis_manager'], 1),
                 'riak_manager': self.dump_yaml_block(
