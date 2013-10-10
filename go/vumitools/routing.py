@@ -1,10 +1,11 @@
 # -*- test-case-name: go.vumitools.tests.test_routing -*-
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, gatherResults
 
 from vumi.dispatchers.endpoint_dispatchers import RoutingTableDispatcher
 from vumi.config import ConfigDict, ConfigText
 from vumi.message import TransportEvent
+from vumi.worker import BaseWorker
 from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
@@ -661,10 +662,6 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_event(event, dst_connector_name, dst_endpoint)
 
 
-from vumi.worker import BaseWorker
-from twisted.internet.defer import gatherResults
-
-
 class BillingWorkerConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
     receive_inbound_connector = ConfigText(
         "Connector that will receive inbound messages and events.",
@@ -679,6 +676,7 @@ class BillingWorker(BaseWorker, GoWorkerMixin):
     """Billing worker class"""
 
     CONFIG_CLASS = BillingWorkerConfig
+    worker_name = 'billing_worker'
 
     @inlineCallbacks
     def setup_worker(self):
