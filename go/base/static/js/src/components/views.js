@@ -51,7 +51,7 @@
   });
 
   var ConfirmView = Backbone.View.extend({
-    className: 'modal hide fade in',
+    className: 'modal fade',
 
     template: 'JST.components_confirm',
 
@@ -87,8 +87,8 @@
     },
 
     animate: function(animated) {
-      if (animated) { this.$el.addClass('fade in'); }
-      else { this.$el.removeClass('fade in'); }
+      if (animated) { this.$el.addClass('fade'); }
+      else { this.$el.removeClass('fade'); }
     },
 
     onOk: function() {
