@@ -51,7 +51,7 @@ describe("go.router.show", function() {
         });
 
         actions.$('.action').eq(0).click();
-        $('.modal [data-handler=1]').click();
+        $('.modal [data-bb-handler=confirm]').click();
         server.respond();
       });
     });

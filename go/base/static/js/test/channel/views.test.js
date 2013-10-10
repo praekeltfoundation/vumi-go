@@ -44,7 +44,7 @@ describe("go.channel.views", function() {
           });
 
           action.invoke();
-          $('.modal [data-handler=1]').click();
+          $('.modal [data-bb-handler=confirm]').click();
           server.respond();
         });
       });
