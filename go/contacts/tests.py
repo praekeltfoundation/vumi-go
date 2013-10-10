@@ -43,7 +43,12 @@ class BaseContactsTestCase(VumiGoDjangoTestCase):
         self.clear_tmp_storage()
 
     def clear_tmp_storage(self):
-        folders, files = default_storage.listdir("tmp")
+        try:
+            _folders, files = default_storage.listdir("tmp")
+        except (NotImplementedError, OSError):
+            # exceptions indicated that listdir is not supported by
+            # default storage or tmp does not yet exist.
+            files = []
         for filename in files:
             default_storage.delete(path.join("tmp", filename))
 
