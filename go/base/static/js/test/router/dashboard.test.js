@@ -38,7 +38,7 @@ describe("go.router.dashboard", function() {
         ].join(''))
       });
 
-      bootbox.animate(false);
+      bootbox.setDefaults({animate: false});
     });
 
     afterEach(function() {

@@ -17,7 +17,7 @@ describe("go.channel.views", function() {
           .attr('data-action', 'action')
       });
 
-      bootbox.animate(false);
+      bootbox.setDefaults({animate: false});
     });
 
     afterEach(function() {

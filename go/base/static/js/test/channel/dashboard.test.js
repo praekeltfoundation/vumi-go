@@ -38,7 +38,7 @@ describe("go.channel.dashboard", function() {
         ].join(''))
       });
 
-      bootbox.animate(false);
+      bootbox.setDefaults({animate: false});
     });
 
     afterEach(function() {

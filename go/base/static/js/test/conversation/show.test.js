@@ -25,7 +25,7 @@ describe("go.conversation.show", function() {
         ].join(''))
       });
 
-      bootbox.animate(false);
+      bootbox.setDefaults({animate: false});
     });
 
     afterEach(function() {

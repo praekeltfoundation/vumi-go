@@ -44,7 +44,7 @@ describe("go.components.tables", function() {
         el: $form
       });
 
-      bootbox.animate(false);
+      bootbox.setDefaults({animate: false});
     });
 
     afterEach(function() {
@@ -166,7 +166,7 @@ describe("go.components.tables", function() {
           });
 
           $edit.click();
-          $('.modal').find('[data-handler="1"]').click();
+          $('.modal').find('[data-bb-handler="confirm"]').click();
 
           assert(noElExists(table.$('[name=_edit]')));
         });
