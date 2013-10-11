@@ -30,8 +30,8 @@ module.exports = function (grunt) {
         files: ['<%= paths.tests.jsbox_apps.spec %>'],
         options: {
           reporter: 'mocha-lcov-reporter',
-          coverage: true,
-          quiet: true,
+          output: 'mochacov.lcov',
+          coverage: true
         },
       },
     },
