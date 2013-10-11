@@ -22,3 +22,5 @@ script:
   - grunt test
 after_success:
   - coveralls
+  - cat mochacov.lcov | ./node_modules/coveralls/bin/coveralls.js
+  - cat coverage/*/lcov.info | ./node_modules/coveralls/bin/coveralls.js
