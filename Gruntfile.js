@@ -48,7 +48,7 @@ module.exports = function (grunt) {
     karma: {
       dev: {
         singleRun: true,
-        reporters: ['dots'],
+        reporters: ['dots', 'coverage'],
         configFile: 'karma.conf.js'
       }
     }
