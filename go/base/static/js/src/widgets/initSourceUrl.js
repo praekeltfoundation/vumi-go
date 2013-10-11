@@ -7,12 +7,23 @@ $(function () {
 
 function SourceUrl(el, dest_id) {
     var $input = $(el);
-    var dest = $('#' + dest_id).get(0);
 
-    var $button = $('<button class="btn btn-danger" type="button">' +
-                    '<i class="glyphicon glyphicon-plus"></i> ' +
-                    'Update from URL</button>');
-    var $alert = $('<div></div>');
+    var $dest = $('#' + dest_id).get(0);
+
+    var $button = $('<button>')
+        .addClass('btn btn-primary')
+        .attr('type', 'button')
+        .append($('<i>').addClass('glyphicon glyphicon-plus'))
+        .append($('<span>').text(' Update from Url'));
+
+    var $alert = $('<div>');
+
+    $input
+        .addClass('form-control')
+        .wrap($('<div>').addClass('form-group'))
+        .parent()
+        .after($button)
+        .after($alert);
 
     $button.on('click', function() {
         var url = $input.val();
@@ -28,7 +39,7 @@ function SourceUrl(el, dest_id) {
                   csrfmiddlewaretoken: $.cookie('csrftoken')
                 },
                 success: function(r) {
-                    dest.on_source_update(r);
+                    $dest.on_source_update(r);
                     SourceUrlAlert($alert, 'Update successful.', 'success');
                 },
                 error: function(r) {
@@ -40,10 +51,6 @@ function SourceUrl(el, dest_id) {
         }
         return false;
     });
-    $input.wrap('<div class="input-group"></div>');
-    $input.after($button);
-    $input.addClass('col-md-8');
-    $input.parent().after($alert);
 }
 
 function SourceUrlAlert($alert, text, kind) {
