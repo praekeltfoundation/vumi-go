@@ -5,6 +5,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-bower-task');
   grunt.loadNpmTasks('grunt-contrib-jst');
   grunt.loadNpmTasks('grunt-mocha-test');
+  grunt.loadNpmTasks('grunt-mocha-cov');
   grunt.loadNpmTasks('grunt-karma');
 
   grunt.initConfig({
@@ -21,7 +22,18 @@ module.exports = function (grunt) {
     mochaTest: {
       jsbox_apps: {
         src: ['<%= paths.tests.jsbox_apps.spec %>'],
-      }
+        reporter: 'dot',
+      },
+    },
+    mochacov: {
+      jsbox_apps: {
+        files: ['<%= paths.tests.jsbox_apps.spec %>'],
+        options: {
+          reporter: 'mocha-lcov-reporter',
+          coverage: true,
+          quiet: true,
+        },
+      },
     },
     jst: {
       options: {
@@ -55,7 +67,8 @@ module.exports = function (grunt) {
   });
 
   grunt.registerTask('test:jsbox_apps', [
-    'mochaTest:jsbox_apps'
+    'mochaTest:jsbox_apps',
+    'mochacov:jsbox_apps'
   ]);
 
   grunt.registerTask('test:client', [
