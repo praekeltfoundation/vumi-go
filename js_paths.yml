@@ -96,9 +96,9 @@ tests:
       - 'go/apps/**/test_vumi_app.js'
   client:
     vendor:
-      - 'bower_components/chai/chai.js'
-      - 'bower_components/sinon/index.js'
-      - 'bower_components/jquery-simulate/jquery.simulate.js'
+      - 'go/base/static/vendor/chai/js/chai.js'
+      - 'go/base/static/vendor/sinon/js/index.js'
+      - 'go/base/static/vendor/jquery-simulate/js/jquery.simulate.js'
     spec:
       - 'go/base/static/js/test/testHelpers/testHelpers.js'
       - 'go/base/static/js/test/testHelpers/testHelpers.test.js'
