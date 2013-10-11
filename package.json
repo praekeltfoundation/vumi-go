@@ -2,7 +2,8 @@
   "name": "vumi-go",
   "version": "0.5.0-dev",
   "scripts": {
-    "install": "./utils/npm-post-install.sh"
+    "install": "./utils/npm-post-install.sh",
+    "blanket": {"pattern": "/go/"}
   },
   "dependencies": {
     "q": "~0.9.7",
@@ -23,7 +24,8 @@
     "grunt-karma": "~0.6.2",
     "karma-phantomjs-launcher": "~0.1.0",
     "grunt-bower-task": "~0.3.2",
-    "karma-coverage": "~0.1.0"
+    "karma-coverage": "~0.1.0",
+    "grunt-mocha-cov": "0.0.7"
   },
   "repository": {
     "type": "git",
