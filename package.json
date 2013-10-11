@@ -3,7 +3,9 @@
   "version": "0.5.0-dev",
   "scripts": {
     "install": "./utils/npm-post-install.sh",
-    "blanket": {"pattern": "/go/"}
+    "blanket": {
+      "pattern": "/go/"
+    }
   },
   "dependencies": {
     "q": "~0.9.7",
@@ -25,7 +27,8 @@
     "karma-phantomjs-launcher": "~0.1.0",
     "grunt-bower-task": "~0.3.2",
     "karma-coverage": "~0.1.0",
-    "grunt-mocha-cov": "0.0.7"
+    "grunt-mocha-cov": "0.0.7",
+    "coveralls": "~2.3.0"
   },
   "repository": {
     "type": "git",
