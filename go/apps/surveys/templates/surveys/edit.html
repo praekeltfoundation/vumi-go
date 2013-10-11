@@ -14,19 +14,17 @@
 
 {% block content_main %}
     <div class="row">
-        <div class="col-md-12">
-            <form name="conversation" id="conversation" class="indent form-horizontal" method="post" action="">
-                <fieldset>
-                    {% include "surveys/includes/contents.html" %}
-                    <div class="control-group">
-                        <label class="control-label">&nbsp;</label>
-                        <div class="controls">
-                            <input type="submit" name="_save_contents" id="_save_contents" value="Save and add question" class="btn btn-primary" />
-                            <input type="submit" name="submit" id="submit" value="Save and close &rarr;" class="btn btn-default" />
-                        </div>
-                    </div>
-                </fieldset>
+        <div class="col-md-4">
+            <form name="conversation" id="conversation" class="indent" method="post" action="">
                 {% csrf_token %}
+                {% include "surveys/includes/contents.html" %}
+                <div class="form-group">
+                    <label class="control-label">&nbsp;</label>
+                    <div>
+                        <input type="submit" name="_save_contents" id="_save_contents" value="Save and add question" class="btn btn-primary" />
+                        <input type="submit" name="submit" id="submit" value="Save and close &rarr;" class="btn btn-default" />
+                </div>
+              </div>
             </form>
         </div>
     </div>
@@ -45,4 +43,11 @@
       $('#conversation #_save_contents').click();
   });
 
+  // A horrible hack to get the vxpolls `MultipleCheckFields` to display
+  // properly with Bootstrap 3 without having to modify vxpolls. Seeing as
+  // surveys are going soon, this hack shouldn't be around for too long.
+  $('.checks div')
+    .addClass('composite-control')
+    .find('input, select')
+    .addClass('form-control');
 {% endblock %}

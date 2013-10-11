@@ -228,13 +228,15 @@ button {
 }
 .composite-control {
   width: 100%;
+  margin-bottom: 10px;
   display: inline-table;
 }
 .composite-control .form-control,
 .composite-control .glyphicon,
 .composite-control .close {
+  margin-right: 10px;
+  padding-left: 6px;
   display: table-cell;
-  padding: 0 0 0 6px;
   vertical-align: middle;
 }
 .composite-control .glyphicon {
@@ -513,6 +515,9 @@ button {
 .conversation.groups .group-table th:first-child,
 .conversation.groups .group-table td:first-child {
   width: 20px;
+}
+.surveys .checks .form-control {
+  width: 30%;
 }
 .channels.dashboard td:first-child {
   width: 30px;

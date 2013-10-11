@@ -18,14 +18,18 @@
     </div>
     {% endif %}
 
-    <form id="form-conversation" class="indent" method="post" action="">
-        {% csrf_token %}
-        {% for edit_form in edit_forms %}
-            <fieldset>
-                {{ edit_form|crispy }}
-            </fieldset>
-        {% endfor %}
-    </form>
+    <div class="row">
+        <div class="col-md-4">
+            <form id="form-conversation" class="indent" method="post" action="">
+                {% csrf_token %}
+                {% for edit_form in edit_forms %}
+                    <fieldset>
+                        {{ edit_form|crispy }}
+                    </fieldset>
+                {% endfor %}
+            </form>
+        </div>
+    </div>
 {% endblock %}
 
 {% block extramedia %}
