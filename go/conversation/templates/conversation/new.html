@@ -1,4 +1,5 @@
 {% extends "app.html" %}
+{% load crispy_forms_tags %}
 
 {% block content_title %}New Conversation{% endblock %}
 
@@ -13,11 +14,10 @@
     <fieldset>
     {% csrf_token %}
 
-    {{ conversation_form }}
+    {{ conversation_form|crispy }}
 
     <div class="col-md-4">
         <div class="box">
-            <br>
             <input type="submit" class="btn btn-primary" value="Save">
         </div>
     </div>
