@@ -23,10 +23,22 @@ class JSBoxLogsView(ConversationTemplateView):
 
 
 class EditJSBoxView(EditConversationView):
+    template_base = 'jsbox'
+
     edit_forms = (
         ('jsbox', JsboxForm),
         ('jsbox_app_config', JsboxAppConfigFormset),
     )
+
+    def get(self, request, conversation):
+        edit_forms = dict(self.make_forms_dict(conversation))
+
+        return self.render_to_response({
+            'conversation': conversation,
+            'jsbox_form': edit_forms['jsbox'],
+            'jsbox_app_config_forms': edit_forms['jsbox_app_config'],
+            'edit_forms_media': self.sum_media(edit_forms.values())
+        })
 
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):
