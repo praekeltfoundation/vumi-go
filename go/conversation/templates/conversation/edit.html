@@ -10,24 +10,26 @@
 {% endblock %}
 
 {% block content_main %}
-    {% if messages %}
-    <div class="row">
-        <div class="col-md-12">
-            {% include "base/includes/messages.html" %}
+    <div class="main-content">
+        {% if messages %}
+        <div class="row">
+            <div class="col-md-12">
+                {% include "base/includes/messages.html" %}
+            </div>
         </div>
-    </div>
-    {% endif %}
+        {% endif %}
 
-    <div class="row">
-        <div class="col-md-5">
-            <form id="form-conversation" class="indent" method="post" action="">
-                {% csrf_token %}
-                {% for edit_form in edit_forms %}
-                    <fieldset>
-                        {{ edit_form|crispy }}
-                    </fieldset>
-                {% endfor %}
-            </form>
+        <div class="row">
+            <div class="col-md-5">
+                <form id="form-conversation" class="indent" method="post" action="">
+                    {% csrf_token %}
+                    {% for edit_form in edit_forms %}
+                        <fieldset>
+                            {{ edit_form|crispy }}
+                        </fieldset>
+                    {% endfor %}
+                </form>
+            </div>
         </div>
     </div>
 {% endblock %}
