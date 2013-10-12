@@ -137,7 +137,7 @@ button {
   padding: 0 12px;
 }
 .content .actions {
-  height: 50px;
+  max-height: 50px;
   line-height: 50px;
   background: #d9d8d3;
   margin: 0 0 5px 0;
@@ -169,6 +169,9 @@ button {
 .content .actions .left,
 .content .sidebar {
   max-width: 210px;
+}
+.main-content {
+  padding: 20px;
 }
 .content .sidebar .nav-list a {
   color: #2f3436;

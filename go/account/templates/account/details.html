@@ -1,29 +1,19 @@
 {% extends "account/base.html" %}
 {% load go_tags %}
+{% load crispy_forms_tags %}
 
 {% block content_extraclass %}accounts details{% endblock %}
 {% block content_title %}Account{% endblock %}
 
 {% block content_main %}
-<div class="row">
-    <div class="col-md-8">
+<div class="row main-content">
+    <div class="col-md-4">
         <h4>Personal details</h4>
         {% include "base/includes/messages.html" %}
-        <form class="form-horizontal indent" action="" method="post">
+        <form class="indent" action="" method="post">
             <input type="hidden" name="_account">
             {% csrf_token %}
-            
-            {% for field in account_form %}
-            <div class="control-group{% if field.errors %} error{% endif %}">
-                <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
-                <div class="controls">
-                    {{ field }}
-                    {% if field.errors %}
-                    <span class="help-inline">{{ field.errors }}</span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
+            {{ account_form|crispy }}
 
             <input type="submit" class="btn btn-primary" value="Save">                
             <button class="btn btn-default" data-toggle="modal" data-target="#changePassword">Change password</button>
