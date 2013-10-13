@@ -171,7 +171,7 @@ button {
   max-width: 210px;
 }
 .main-content {
-  padding: 0 0 16px 16px;
+  padding: 0 0 22px 16px;
 }
 .content .sidebar .nav-list a {
   color: #2f3436;
@@ -276,54 +276,74 @@ button {
 }
 .popover.notifier.success {
   color: #468847;
-  background: #d6e9c6;
+  background: #dff0d8;
 }
 .popover.notifier.success.left .arrow:after {
-  border-left-color: #d6e9c6;
+  border-left-color: #dff0d8;
 }
 .popover.notifier.success.right .arrow:after {
-  border-right-color: #d6e9c6;
+  border-right-color: #dff0d8;
 }
 .popover.notifier.success.top .arrow:after {
-  border-top-color: #d6e9c6;
+  border-top-color: #dff0d8;
 }
 .popover.notifier.success.bottom .arrow:after {
-  border-bottom-color: #d6e9c6;
+  border-bottom-color: #dff0d8;
 }
 .popover.notifier.error {
-  color: #f2dede;
-  background: #eed3d7;
+  color: #b94a48;
+  background: #f2dede;
 }
 .popover.notifier.error.left .arrow:after {
-  border-left-color: #eed3d7;
+  border-left-color: #f2dede;
 }
 .popover.notifier.error.right .arrow:after {
-  border-right-color: #eed3d7;
+  border-right-color: #f2dede;
 }
 .popover.notifier.error.top .arrow:after {
-  border-top-color: #eed3d7;
+  border-top-color: #f2dede;
 }
 .popover.notifier.error.bottom .arrow:after {
-  border-bottom-color: #eed3d7;
+  border-bottom-color: #f2dede;
 }
 .popover.notifier.info {
-  color: #d9edf7;
-  background: #bce8f1;
+  color: #3a87ad;
+  background: #d9edf7;
 }
 .popover.notifier.info .close {
   line-height: 22px;
 }
 .popover.notifier.info.left .arrow:after {
-  border-left-color: #bce8f1;
+  border-left-color: #d9edf7;
 }
 .popover.notifier.info.right .arrow:after {
-  border-right-color: #bce8f1;
+  border-right-color: #d9edf7;
 }
 .popover.notifier.info.top .arrow:after {
-  border-top-color: #bce8f1;
+  border-top-color: #d9edf7;
 }
 .popover.notifier.info.bottom .arrow:after {
-  border-bottom-color: #bce8f1;
+  border-bottom-color: #d9edf7;
+}
+.registration {
+  color: #c1c1c1;
+  min-width: 0;
+  width: 720px;
+  text-align: center;
+  margin: 0 auto;
+}
+.registration .logo-large {
+  margin: 1em 0 2em 0;
+}
+.registration .registration-content {
+  display: inline-block;
+  text-align: left;
+  margin: 0 auto;
+  min-width: 420px;
+}
+.registration.login .registration-content {
+  min-width: 0;
+  width: 280px;
 }
 .confirm .details table th:first-child {
   width: 100px;
@@ -695,45 +715,42 @@ button {
 #recMatchFrm .modal-dialog {
   width: 760px;
 }
-.accounts {
-  color: #c1c1c1;
-}
-.accounts .logo-large {
-  margin: 1em 0 2em 0;
-}
-.accounts.details .actions {
+.account.details .actions {
   visibility: hidden;
 }
-.accounts.details h4 {
+.account.details h4 {
   color: #000;
   border-bottom: 1px #c9c9c9 dotted;
   padding-bottom: 1em;
   margin: 0;
 }
-.accounts.details .col-md-8 {
+.account.details .col-md-8 {
   padding-left: 1em;
 }
-.accounts.details .col-md-4 {
+.account.details .col-md-4 {
   padding-right: 1em;
 }
-.accounts.details .sidebar .nav li {
+.account.details .sidebar .nav li {
   text-indent: 0;
   border-bottom: 1px #c9c9c9 dotted;
 }
-.accounts.details .sidebar .nav a {
+.account.details .sidebar .nav a {
   padding: 1em 0;
   margin: 0;
   text-indent: 0;
   line-height: 1.5em;
   font-weight: bold;
 }
-.accounts.details .sidebar .nav a span {
+.account.details .sidebar .nav a span {
   color: #2f3436;
   font-weight: normal;
 }
 .table-form-view {
-  margin-top: 1em;
+  margin: 0.5em 0;
   overflow: hidden;
+}
+.table-form-view table {
+  margin-bottom: 0;
 }
 .table-form-view td {
   color: #2f3436;

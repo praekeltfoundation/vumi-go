@@ -1,33 +1,31 @@
 {% extends "registration/base.html" %}
 {% load url from future %}
 
-{% block auth_form %}
+{% block container_extraclass %}registration login{% endblock %}
+
+{% block registration_content %}
 <form action="" method="post">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
 
-    <div class="col-md-offset-4 col-md-4">
-        <div class="form-group">
-            <input type="text" name="{{ form.username.name }}" placeholder="Email address" class="form-control input-md">            
-        </div>
-
-        <div class="form-group">
-            <input type="password" name="{{ form.password.name }}" placeholder="{{ form.password.label }}" class="form-control input-md">            
-        </div>
-
-        <div class="form-group pull-left">
-            <button type="submit" class="btn btn-primary">Sign In</button>
-            <a class="btn btn-link" href="{% url 'auth_password_reset' %}">Forgot your password?</a>
-        </div>
-      </div>
+    <div class="form-group">
+        <input type="text" name="{{ form.username.name }}" placeholder="Email address" class="form-control input-md">            
     </div>
 
+    <div class="form-group">
+        <input type="password" name="{{ form.password.name }}" placeholder="{{ form.password.label }}" class="form-control input-md">            
+    </div>
+
+    <div class="form-group pull-left">
+        <button type="submit" class="btn btn-primary">Sign In</button>
+        <a class="btn btn-link" href="{% url 'auth_password_reset' %}">Forgot your password?</a>
+    </div>
+  </div>
+
     {% if form.errors %}
-    <div class="col-md-offset-4 col-md-4">
         <div class="alert alert-danger">
             <strong>Whoops!</strong> The email address or password that you've provided is incorrect.
         </div>
-    </div>
     {% endif %}
 </form>
 {% endblock %}

@@ -206,7 +206,7 @@ a:link, button {
 } // end content
 
 .main-content {
-  padding: 0 0 16px 16px;
+  padding: 0 0 22px 16px;
 }
 
 .content .sidebar .nav-list {
@@ -346,24 +346,25 @@ a:link, button {
       }
     }
 
-    &.success { .type(#468847; #d6e9c6); }
-    &.error { .type(#f2dede; #eed3d7); }
+    &.success { .type(#468847; #dff0d8); }
+    &.error { .type(#b94a48; #f2dede); }
 
     &.info {
       .close {
         line-height: 22px;
       }
 
-      .type(#d9edf7; #bce8f1);
+      .type(#3a87ad; #d9edf7);
     }
   }
 }
 
+@import "registration.less";
 @import "conversations.less";
 @import "channels.less";
 @import "campaigns.less";
 @import "routing.less";
 @import "contacts.less";
-@import "accounts.less";
+@import "account.less";
 @import "tables.less";
 @import "error.less";
