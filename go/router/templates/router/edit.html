@@ -1,4 +1,5 @@
 {% extends "app.html" %}
+{% load crispy_forms_tags %}
 
 {% block content_title %}Edit {{ router.name }}{% endblock %}
 
@@ -17,14 +18,17 @@
     </div>
     {% endif %}
 
-    <form id="form-router" class="indent" method="post" action="">
-        {% csrf_token %}
-        {% for edit_form in edit_forms %}
-            <fieldset>
-                {{ edit_form }}
-            </fieldset>
-        {% endfor %}
-    </form>
+    <div class="row">
+        <div class="col-md-4">
+            <form id="form-router" class="indent" method="post" action="">
+                {% for edit_form in edit_forms %}
+                    <fieldset>
+                        {{ edit_form|crispy }}
+                    </fieldset>
+                {% endfor %}
+            </form>
+        </div>
+    </div>
 {% endblock %}
 
 {% block extramedia %}
