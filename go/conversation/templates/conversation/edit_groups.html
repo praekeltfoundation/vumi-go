@@ -4,8 +4,11 @@
 {% block content_title %}Contact Groups for {{conversation.name}}{% endblock %}
 
 {% block content_actions_right %}
-    <div class="pull-right">
-        <input type="text" placeholder="Find people..." class="input-lg search-query search">
+    <div class="pull-right form-inline">
+        <div class="form-group">
+            <input type="text" placeholder="Find people..." class="search form-control">
+        </div>
+
         <button class="btn btn-primary save">Save</button>
     </div>
 {% endblock %}

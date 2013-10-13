@@ -10,27 +10,28 @@
 {% endblock %}
 
 {% block content_main %}
-
-{% if message %}
-<div class="row">
-    <div class="col-md-12">
-        {% include "base/includes/messages.html" %}
-    </div>
-</div>
-{% endif %}
-
-<form name="conversation_action" class="indent" id="conversation_action" method="post" action="">
-    {% csrf_token %}
-    <div class="row">
+<div class="main-content row">
+    {% if message %}
         <div class="col-md-12">
-            <div class="box shadow survey-box survey-questions">
-                {{ form|crispy_forms }}
-            </div>
+            {% include "base/includes/messages.html" %}
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-4">
+            <form name="conversation_action" class="indent" id="conversation_action" method="post" action="">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="box shadow survey-box survey-questions">
+                            {{ form|crispy }}
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
-</form>
-
-
+</div>
 {% endblock %}
 
 {% block extramedia %}
