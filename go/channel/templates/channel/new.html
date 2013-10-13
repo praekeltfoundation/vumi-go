@@ -1,63 +1,58 @@
 {% extends "app.html" %}
+{% load go_tags %}
 
 {% block content_title %}New Channel{% endblock %}
 
 {% block content_extraclass %}channels new{% endblock %}
 
 {% block content_main %}
-<div class="row">
-    <div class="col-md-12">
-        {% include "base/includes/messages.html" %}
+<div class="main-content">
+    <div class="row">
+        <div class="col-md-12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+
+    <div class="configuration row">
+        <div class="col-md-4">
+            <form id="form-channels" class="indent" method="post" action="">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label class="control-label" for="id_{{ new_channel_form.country.name }}">
+                        {{ new_channel_form.country.label }}
+                    </label>
+
+                    {{ new_channel_form.country|attr_class:"form-control" }}
+
+                </div>
+
+                <div class="channel form-group">
+                    <label class="control-label" for="id_{{ new_channel_form.channel.name }}">
+                      {{ new_channel_form.channel.label }}
+                    </label>
+                    
+                    {% for country, channels in new_channel_form.channel_options.items %}
+                        <select class="form-control" name="{{ new_channel_form.channel.name }}"
+                            data-relation-key="{{ country }}">
+                            {% for channel, tags in channels.items %}
+                            <optgroup label="{{ channel.1 }}">
+                              {% for tag in tags %}
+                              <option value="{{ tag.0 }}">
+                                {{ tag.1 }}
+                              </option>
+                              {% endfor %}
+                            {% endfor %}
+                            </optgroup>
+                        </select>
+                    {% endfor %}
+                </div>
+
+                <button data-action="save" class="btn btn-primary" type="submit" value="Save">Save</button>
+            </form>
+        </div>
     </div>
 </div>
-
-<form id="form-channels" class="indent" method="post" action="">
-    {% csrf_token %}
-
-    <fieldset class="configuration_new row boxes">
-
-        <div class="col-md-4">
-            <div class="box">
-                <label for="id_{{ new_channel_form.country.name }}">
-                    {{ new_channel_form.country.label }}
-                </label>
-
-                {{ new_channel_form.country }}
-
-            </div>
-        </div>
-
-        <div class="col-md-4 channel">
-            <div class="box">
-                <label for="id_{{ new_channel_form.channel.name }}">
-                  {{ new_channel_form.channel.label }}
-                </label>
-                
-                {% for country, channels in new_channel_form.channel_options.items %}
-                    <select name="{{ new_channel_form.channel.name }}"
-                        data-relation-key="{{ country }}">
-                        {% for channel, tags in channels.items %}
-                        <optgroup label="{{ channel.1 }}">
-                          {% for tag in tags %}
-                          <option value="{{ tag.0 }}">
-                            {{ tag.1 }}
-                          </option>
-                          {% endfor %}
-                        {% endfor %}
-                        </optgroup>
-                    </select>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="box">
-                <br>
-                <input type="submit" class="btn btn-primary" value="Save">
-            </div>
-        </div>
-    </fieldset>
-</form>
 {% endblock %}
 
 
@@ -69,6 +64,7 @@
         $('.channel select').hide();
         $('.channel select[data-relation-key="' + v + '"]').show();
     });
+
     // trigger change in order to show the first select box.
     $('select[name=country]').trigger('change');
 
