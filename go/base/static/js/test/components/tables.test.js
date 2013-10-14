@@ -44,7 +44,7 @@ describe("go.components.tables", function() {
         el: $form
       });
 
-      bootbox.animate(false);
+      bootbox.setDefaults({animate: false});
     });
 
     afterEach(function() {
@@ -108,13 +108,13 @@ describe("go.components.tables", function() {
           ].join('')));
 
           $saveModal = $([
-            '<div class="modal hide fade" id="saveModal">',
+            '<div class="modal fade" id="saveModal">',
               '<form method="post" action="">',
                 '<div class="modal-body">',
                   'Are you sure you want to save this item?',
                 '</div>',
                 '<div class="modal-footer">',
-                  '<a class="btn" data-dismiss="modal" href="#">Cancel</a>',
+                  '<a class="btn btn-default" data-dismiss="modal" href="#">Cancel</a>',
                   '<button type="submit">OK</button>',
                 '</div>',
               '</form>',
@@ -166,7 +166,7 @@ describe("go.components.tables", function() {
           });
 
           $edit.click();
-          $('.modal').find('[data-handler="1"]').click();
+          $('.modal').find('[data-bb-handler="confirm"]').click();
 
           assert(noElExists(table.$('[name=_edit]')));
         });

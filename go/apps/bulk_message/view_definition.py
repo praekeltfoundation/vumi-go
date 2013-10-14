@@ -1,11 +1,10 @@
-from bootstrap.forms import BootstrapForm
 from django import forms
 
 from go.conversation.view_definition import ConversationViewDefinitionBase
 from go.base.widgets import BulkMessageWidget
 
 
-class MessageForm(BootstrapForm):
+class MessageForm(forms.Form):
     message = forms.CharField(widget=BulkMessageWidget)
     dedupe = forms.BooleanField(required=False)
 

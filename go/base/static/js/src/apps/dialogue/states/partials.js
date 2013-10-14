@@ -16,7 +16,7 @@
   });
 
   var TextEditView = DialogueStatePartialView.extend({
-    className: 'text',
+    className: 'text form-control',
     tagName: 'textarea',
 
     jst: function(data) { return data.model.get('text'); },

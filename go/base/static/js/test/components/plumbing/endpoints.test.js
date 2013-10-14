@@ -288,7 +288,7 @@ describe("go.components.plumbing.endpoints", function() {
         function() {
           assert.deepEqual(
             positioners.left.call(endpoint, 0.5),
-            {left: -10, top: 155});
+            {left: -10, top: 145});
         });
       });
 
@@ -297,7 +297,7 @@ describe("go.components.plumbing.endpoints", function() {
         function() {
           assert.deepEqual(
             positioners.right.call(endpoint, 0.5),
-            {left: 210, top: 155});
+            {left: 190, top: 145});
         });
       });
 
@@ -306,7 +306,7 @@ describe("go.components.plumbing.endpoints", function() {
         function() {
           assert.deepEqual(
             positioners.top.call(endpoint, 0.5),
-            {left: 100, top: -5});
+            {left: 90, top: -5});
         });
       });
 
@@ -315,7 +315,7 @@ describe("go.components.plumbing.endpoints", function() {
         function() {
           assert.deepEqual(
             positioners.bottom.call(endpoint, 0.5),
-            {left: 100, top: 315});
+            {left: 90, top: 295});
         });
       });
     });
@@ -329,7 +329,7 @@ describe("go.components.plumbing.endpoints", function() {
 
         assert.deepEqual(
           endpoint.$el.position(),
-          {left: -10, top: 59});
+          {left: -10, top: 55});
 
         endpoint
           .reposition(0.1)
@@ -337,7 +337,7 @@ describe("go.components.plumbing.endpoints", function() {
 
         assert.deepEqual(
           endpoint.$el.position(),
-          {left: -10, top: 27});
+          {left: -10, top: 25});
       });
     });
   });
