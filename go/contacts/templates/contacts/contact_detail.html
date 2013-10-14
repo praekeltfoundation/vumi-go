@@ -1,5 +1,6 @@
 {% extends "contacts/base.html" %}
 {% load url from future %}
+{% load crispy_forms_tags %}
 
 {% block content_actions_left %}
     <button class="btn btn-primary" data-toggle="modal" data-target="#uplContacts">Import contacts</button>
@@ -8,66 +9,49 @@
 {% block content_actions_right %}
     {% if contact %}
     <div class="pull-left">
-        <button class="btn" data-toggle="modal" data-target="#delContact">Delete</button>
+        <button class="btn btn-default" data-toggle="modal" data-target="#delContact">Delete</button>
     </div>
     {% endif %}
 {% endblock %}
 
 {% block content_main_list %}
-    <form class="form-horizontal details" method="post" action="">
-        {% csrf_token %}
-            <section class='profile'>
-                <h4>Profile details</h4>
-                <fieldset>
-                    {% for field in form.visible_fields %}
-                    <div class="control-group{% if field.errors %} error{% endif %}">
-                        <label class="control-label" for="id_{{ field.name }}">
-                            {{ field.label }}
-                        </label>
-                        <div class="controls">
-                            {{ field }}
-                            <span class="help-inline">
-                                {% if field.errors %}
-                                    {{ field.errors|join:" " }}
-                                {% endif %}
-                                {% if field.help_text %}
-                                    ({{ field.help_text }})
-                                {% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </fieldset>
-            </section>
+    <div class="row">
+        <div class="col-md-4">
+            <form class="form-horizontal details" method="post" action="">
+                {% csrf_token %}
+                    <section class='profile'>
+                        <h4>Profile details</h4>
+                        {{ form|crispy }}
+                    </section>
 
-            <hr>
+                    <hr>
 
-            {% if contact_extra_items %}
-              <section class="extras">
-                  <h4>Extra details</h4>
-                  <table class="table">
-                      <thead>
-                          <tr>
-                              <th>Name</td>
-                              <th>Value</td>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          {% for field, value in contact_extra_items %}
-                          <tr>
-                              <td>{{ field }}</td>
-                              <td>{{ value }}</td>
-                          </tr>
-                          {% endfor %}
-                      </tbody>
-                </table>
-              </section>
-            {% endif %}
+                    {% if contact_extra_items %}
+                      <section class="extras">
+                          <h4>Extra details</h4>
+                          <table class="table">
+                              <thead>
+                                  <tr>
+                                      <th>Name</td>
+                                      <th>Value</td>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  {% for field, value in contact_extra_items %}
+                                  <tr>
+                                      <td>{{ field }}</td>
+                                      <td>{{ value }}</td>
+                                  </tr>
+                                  {% endfor %}
+                              </tbody>
+                        </table>
+                      </section>
+                    {% endif %}
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save changes</button>
-            </div>
-    </form>
+                    <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save changes</button>
+            </form>
+        </div>
+    </div>
 {% endblock %}
 
 {% block modals %}

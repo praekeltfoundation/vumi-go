@@ -1,7 +1,7 @@
 import json
 
 from django.http import HttpResponse
-from bootstrap.forms import BootstrapForm
+from django.forms import Form
 
 from go.api.go_api import client
 from go.api.go_api.client import GoApiError
@@ -55,7 +55,7 @@ class UserDataView(ConversationTemplateView):
         return HttpResponse(csv_data, content_type='application/csv')
 
 
-class SendDialogueForm(BootstrapForm):
+class SendDialogueForm(Form):
     # TODO: Something better than this?
     pass
 

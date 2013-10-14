@@ -83,6 +83,7 @@
   var setUp = function() {
     $('body')
       .append($('<div>')
+        .width(1280)
         .attr('class', 'dialogue')
         .append($('<input>')
           .attr('type', 'checkbox')

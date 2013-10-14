@@ -1,24 +1,26 @@
 {% extends "app.html" %}
+{% load crispy_forms_tags %}
 
 {% block content_title %}New Router{% endblock %}
 
 {% block content_main %}
-<div class="row">
-    <div class="span12">
-        {% include "base/includes/messages.html" %}
-    </div>
-</div>
-
-<form id="form-router" class="indent" method="post" action="">
-    {% csrf_token %}
-
-    {{ router_form }}
-
-    <div class="span4">
-        <div class="box">
-            <br>
-            <input type="submit" class="btn btn-primary" value="Save">
+<div class="main-content">
+    <div class="row">
+        <div class="col-md-12">
+            {% include "base/includes/messages.html" %}
         </div>
     </div>
-</form>
+
+    <div class="row">
+        <div class="col-md-4">
+            <form id="form-router" class="indent" method="post" action="">
+                {% csrf_token %}
+
+                {{ router_form|crispy }}
+
+                <input type="submit" class="btn btn-primary" value="Save">
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

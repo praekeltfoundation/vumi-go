@@ -1,0 +1,80 @@
+{% extends "conversation/edit.html" %}
+{% load go_tags %}
+
+{% block content_main %}
+    <div class="main-container">
+        <form id="form-conversation" class="indent" method="post" action="">
+            {% csrf_token %}
+
+            <fieldset>
+                <legend>Code</legend>
+
+                <div class="row">
+                    <div class="form-group col-md-12">
+                        <label for="id_{{ jsbox_form.javascript.name }}">
+                            {{ jsbox_form.javascript.label }}
+                        </label>
+
+                        {{ jsbox_form.javascript|attr_class:"form-control" }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-group col-md-6">
+                        <label for="id_{{ jsbox_form.source_url.name }}">
+                            {{ jsbox_form.source_url.label }}
+                        </label>
+
+                        {{ jsbox_form.source_url|attr_class:"form-control" }}
+
+                        <div class="help-block">
+                            {{ jsbox_form.source_url.help_text|safe }}
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Configuration</legend>
+
+                {% for config_form in jsbox_app_config_forms %}
+                <div "form-group">
+                    <div class="row">
+                        <div class="form-group col-md-2">
+                            <label for="id_{{ config_form.key.name }}">
+                                {{ config_form.key.label }}
+                            </label>
+
+                            {{ config_form.key|attr_class:"form-control" }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="form-group col-md-12">
+                            <label for="id_{{ config_form.value.name }}">
+                                {{ config_form.value.label }}
+                            </label>
+
+                            {{ config_form.value|attr_class:"form-control" }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="form-group col-md-6">
+                            <label for="id_{{ config_form.source_url.name }}">
+                                {{ config_form.source_url.label }}
+                            </label>
+
+                            {{ config_form.source_url|attr_class:"form-control" }}
+
+                            <div class="help-block">
+                                {{ jsbox_form.source_url.help_text|safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </fieldset>
+        </form>
+    </div>
+{% endblock %}

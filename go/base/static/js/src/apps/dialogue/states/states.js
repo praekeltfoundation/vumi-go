@@ -31,6 +31,8 @@
   });
 
   var NameEditExtrasView = PopoverView.extend({
+    className: 'extras-popover',
+
     bootstrapOptions: {container: 'body'},
 
     target: function() { return this.mode.$('.name-extras'); },
@@ -234,7 +236,9 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: function() { return 'box item state ' + this.typeName || ''; },
+    className: function() {
+      return 'state box item col-md-3 ' + this.typeName || '';
+    },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,

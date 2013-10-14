@@ -1,38 +1,27 @@
 {% extends "account/base.html" %}
+{% load go_tags %}
+{% load crispy_forms_tags %}
 
 {% block content_extraclass %}accounts details{% endblock %}
 {% block content_title %}Account{% endblock %}
 
 {% block content_main %}
-<div class="row-fluid">
-    <div class="span8">
+<div class="row main-content">
+    <div class="col-md-4">
         <h4>Personal details</h4>
         {% include "base/includes/messages.html" %}
-        <form class="form-horizontal indent" action="" method="post">
+        <form class="indent" action="" method="post">
             <input type="hidden" name="_account">
             {% csrf_token %}
-            
-            {% for field in account_form %}
-            <div class="control-group{% if field.errors %} error{% endif %}">
-                <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
-                <div class="controls">
-                    {{ field }}
-                    {% if field.errors %}
-                    <span class="help-inline">{{ field.errors }}</span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
+            {{ account_form|crispy }}
 
-            <div class="form-actions">
-                <input type="submit" class="btn btn-primary" value="Save">                
-                <button class="btn" data-toggle="modal" data-target="#changePassword">Change password</button>
-            </div>
+            <input type="submit" class="btn btn-primary" value="Save">                
+            <button class="btn btn-default" data-toggle="modal" data-target="#changePassword">Change password</button>
         </form>
     </div>
 
     {% comment %} TODO
-    <div class="span4 sidebar">
+    <div class="col-md-4 sidebar">
         <h4>Admin settings</h4>
         <ul class="nav nav-pills nav-stacked">
             <li>
@@ -55,33 +44,33 @@
 {% endblock %}
 
 {% block modals %}
-<div class="modal hide fade" id="changePassword">
-    <div class="modal-header">
-        <a class="close" data-dismiss="modal">×</a>
-        <h3>Change Password</h3>
-    </div>
-    <div class="modal-body">
-
-        <form method="POST" action="">
-
-            <input type="hidden" name="_password">
-            {% csrf_token %}
-            {% for field in password_change_form %}
-            <div class="control-group{% if field.errors %} error{% endif %}">
-                <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
-                <div class="controls">
-                    {{ field }}
-                    {% if field.errors %}
-                    <span class="help-inline">{{ field.errors }}</span>
-                    {% endif %}
-                </div>
+<div class="modal fade" id="changePassword">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a class="close" data-dismiss="modal">×</a>
+                <h3>Change Password</h3>
             </div>
-            {% endfor %}
-            <div class="form-actions">
-                <input type="submit" class="btn btn-primary" value="Change">
+            <div class="modal-body">
+                <form method="POST" action="">
+                    <input type="hidden" name="_password">
+                    {% csrf_token %}
+                    {% for field in password_change_form %}
+                    <div class="form-group{% if field.errors %} error{% endif %}">
+                        <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
+                        <div class="controls">
+                            {{ field|attr_class:"form-control" }}
+                            {% if field.errors %}
+                            <span class="help-block">{{ field.errors }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <input type="submit" class="btn btn-primary" value="Change">
+                </form>
             </div>
-            
-        </form>
+        </div>
     </div>
 </div>
 {% endblock %}

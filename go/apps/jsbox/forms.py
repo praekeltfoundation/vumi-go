@@ -1,7 +1,6 @@
 from django import forms
 from django.forms.formsets import BaseFormSet
 
-from bootstrap.forms import BootstrapForm
 from go.base.widgets import CodeField, SourceUrlField
 
 
@@ -13,7 +12,7 @@ SOURCE_URL_HELP_TEXT = (
     '</a>.')
 
 
-class JsboxForm(BootstrapForm):
+class JsboxForm(forms.Form):
     javascript = CodeField(required=False)
     source_url = SourceUrlField(code_field='javascript',
                                 help_text=SOURCE_URL_HELP_TEXT,
@@ -30,7 +29,7 @@ class JsboxForm(BootstrapForm):
         }
 
 
-class JsboxAppConfigForm(BootstrapForm):
+class JsboxAppConfigForm(forms.Form):
     key = forms.CharField()
     value = CodeField(required=False)
     source_url = SourceUrlField(code_field='value',

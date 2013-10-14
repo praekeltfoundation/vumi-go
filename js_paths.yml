@@ -90,6 +90,13 @@ client:
     go:
       - 'go/base/static/css/vumigo.css'
 
+  fonts:
+    vendor:
+      src:
+        - 'go/base/static/vendor/bootstrap/fonts/*'
+      dest:
+        - 'go/base/static/fonts/'
+
 tests:
   jsbox_apps:
     spec:
