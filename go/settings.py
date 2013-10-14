@@ -172,7 +172,6 @@ INSTALLED_APPS = (
 
     'vxpolls.djdashboard',
     'registration',
-    'bootstrap',
     'raven.contrib.django',
     'debug_toolbar',
     'pipeline',

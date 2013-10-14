@@ -1,11 +1,10 @@
 from django.forms.formsets import formset_factory
-
-from bootstrap.forms import BootstrapMixin, Fieldset
+from crispy_forms.layout import Fieldset
 
 from vxpolls.content import forms
 
 
-class SurveyPollForm(BootstrapMixin, forms.PollForm):
+class SurveyPollForm(forms.PollForm):
     class Meta:
         layout = (
             Fieldset('Miscellaneous'),
@@ -17,11 +16,11 @@ class SurveyPollForm(BootstrapMixin, forms.PollForm):
         )
 
 
-class SurveyQuestionForm(BootstrapMixin, forms.QuestionForm):
+class SurveyQuestionForm(forms.QuestionForm):
     pass
 
 
-class SurveyCompletedResponseForm(BootstrapMixin, forms.CompletedResponseForm):
+class SurveyCompletedResponseForm(forms.CompletedResponseForm):
     pass
 
 
