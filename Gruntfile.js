@@ -56,10 +56,10 @@ module.exports = function (grunt) {
     exec: {
       'fonts': {
         cmd: [
-          'mkdir -p `dirname <%= paths.client.fonts.vendor.dest %>` && ',
-          'cp ',
-          '<%= paths.client.fonts.vendor.src %> ',
-          '<%= paths.client.fonts.vendor.dest %>'
+          'mkdir -p `dirname <%= paths.client.fonts.vendor.dest %>`',
+          ' && ',
+          'cp <%= paths.client.fonts.vendor.src %> ',
+          '   <%= paths.client.fonts.vendor.dest %>'
         ].join('')
       }
     },
