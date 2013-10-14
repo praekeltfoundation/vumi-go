@@ -59,7 +59,6 @@ module.exports = function (grunt) {
   ]);
 
   grunt.registerTask('test:client', [
-    'bower',
     'jst:templates',
     'karma:dev'
   ]);
