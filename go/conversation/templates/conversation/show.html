@@ -82,7 +82,7 @@
                     {% with is_disabled=action.is_disabled %}
                         {% if is_disabled %}
                             <li>
-                                <a href="#" class="btn btn-default disabled" title="This action is disabled" data-content="{{ is_disabled }}">{{ action.action_display_name }}</a>
+                                <a href="#" class="btn btn-default disabled" title="{{ is_disabled }}">{{ action.action_display_name }}</a>
                             </li>
                         {% else %}
                             <li><a href="{% conversation_action conversation action.action_name %}" class="btn btn-default">{{ action.action_display_name }}</a></li>
@@ -106,6 +106,5 @@
         el: '.content .actions .right'
     });
 
-    $('.content .sub-actions .disabled').popover({placement: 'left'});
-    $('.content .sub-actions .disabled').on('click', function() { return false; });
+    $('.content .sub-actions .disabled').tooltip({placement: 'left'});
 {% endblock %}

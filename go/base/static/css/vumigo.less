@@ -10,6 +10,11 @@ a:link, button {
   .transition(color .1s, background .1s);
 }
 
+.btn.disabled {
+  // hack to allow tooltips to work with disabled buttons 
+  pointer-events: auto;
+}
+
 .main-container {
   min-width: 650px;
   max-width: none;

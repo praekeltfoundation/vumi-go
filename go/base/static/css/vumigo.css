@@ -10,6 +10,9 @@ button {
   -ms-transition: color 0.1s, background 0.1s;
   transition: color 0.1s, background 0.1s;
 }
+.btn.disabled {
+  pointer-events: auto;
+}
 .main-container {
   min-width: 650px;
   max-width: none;
