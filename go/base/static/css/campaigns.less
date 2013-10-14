@@ -24,7 +24,6 @@
   }
 
   .configuration {
-
     margin:18px 0 0 0;
     display:none;
 
@@ -33,6 +32,14 @@
       margin:0;
       list-style-type:none; 
     }
+
+    .boxes {
+      .box {
+        label {
+          font-weight: normal;
+        }
+      }
+    }
   }
 }
 
@@ -40,7 +47,6 @@
 
   .sub-details, .sub-messages, .sub-contacts {
     border-bottom: 1px #c9c9c9 solid;
-    margin:0 18px;
     padding:18px 0;
   }
 
@@ -90,33 +96,6 @@
     // offsets the cancel button a bit.
     a:first-child {
       margin-right:20px;
-    }
-  }
-
-  label {
-      color:#000;
-      font-weight:bold;
-
-      a:link, a:visited {
-        color:#000;
-      }
-      a:hover {
-        text-decoration:none;
-      }
-  }
-
-
-  form {
-    .boxes {
-      text-align:center;
-    }
-
-    .title {
-      text-transform:uppercase;
-
-      .tooltip {
-        text-transform:none;
-      }
     }
   }
 }

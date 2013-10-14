@@ -1,12 +1,20 @@
 .confirm {
   .details {
-    margin-left: 24px;
-
     table {
       th:first-child {
         width: 100px;
       }
     }
+  }
+}
+
+.extras-popover {
+  .form-control {
+    font-size: 12px;
+  }
+
+  .control-label {
+    font-weight: normal;
   }
 }
 
@@ -17,25 +25,15 @@
     }
   }
 
-  .popover {
-    font-size: 11px;
-    width: 220px;
-
-    input {
-      font-size:11px;
-      width:90%;
-    }
-  }
-
   #diagram {
     ._jsPlumb_connector {
       z-index: 1;
-      opacity: 0.5;
+      opacity: 0.75;
     }
 
     ._jsPlumb_endpoint {
       z-index: 5;
-      opacity: 0.5;
+      opacity: 0.75;
     }
 
     ._jsPlumb_endpoint svg circle:hover {
@@ -44,7 +42,7 @@
 
     ._jsPlumb_dragging {
       z-index: 3;
-      opacity: 0.5;
+      opacity: 0.75;
     }
 
     ._jsPlumb_hover {
@@ -53,7 +51,6 @@
     }
 
     .grid {
-      width: 1024px;
       text-align: center;
       margin: 0 auto;
 
@@ -77,43 +74,62 @@
     }
 
     .add {
-      font-family: serif;
-      padding: 24px 8px;
       width: 85px;
-      font-size: 65px;
+      line-height: normal;
+      font-family: serif;
+      font-size: 55px;
       .user-select(none);
     }
 
     .state {
-      width: 260px;
       float: left;
+      font-size: 12px;
       text-align: left;
       position: relative;
-      color: #2f3436;
       .user-select(none);
 
-      .titlebar, label {
-        background: #b0b0b0;
+      label {
+        margin: 0;
+        font-weight: normal;
+      }
+
+      textarea {
+        resize: none;
+      }
+
+      p {
+        text-align: left;
+      }
+
+      input[type=checkbox] {
+        margin: 2px 4px 0 0;
+      }
+
+      .checkbox {
+        padding-left: 0;
+      }
+
+      .titlebar, .control-label {
         height: 35px;
         line-height: 35px;
-        font-size: 11px;
+        font-size: 14px;
         padding: 0 6px;
         text-indent: 0;
-        font-weight: normal;
         text-align: left;
       }
 
       .titlebar {
-        margin-top: -14px;
+        background: #b0b0b0;
+        margin: -10px;
         margin-bottom: 10px;
         .border-radius(5px);
 
         .remove {
           float: right;
-          height: 22px;
+          height: 20px;
           width: 20px;
+          padding-bottom: 2px;          
           margin-top: 6px;
-          padding-bottom: 4px;          
           color: #eee;
           background: #000;
         }
@@ -123,15 +139,18 @@
         cursor: move;
       }
 
+      .form-control {
+        font-size: 12px;
+      }
+
+      .glyphicon, .close {
+        font-size: 14px;
+      }
+
       .edit.mode {
         .actions {
-
           background: inherit;
           margin: 10px 5px 0 0;
-
-          a {
-            font-size: 12px;
-          }
         }
       }
 
@@ -145,27 +164,8 @@
         }
       }
 
-      label, p {
-        cursor: default;
-        color: #2f3436;
-      }
-
-      textarea, select, input {
-        width:80%;
-        margin-left: 3px;
-        font-size: 11px;
-      }
-
-      textarea {
-        resize: none;
-        max-width: 80%;
-
-      }
-
-      
-
-      p {
-        text-align: left;
+      .form-group, .radio, .checkbox {
+        margin-bottom: 4px;
       }
 
       .close {
@@ -173,20 +173,16 @@
       }
 
       .hint {
-        margin: 0;
+        margin: 2px;
         text-align: center;
         font-size: 10px;
         font-weight: bold;
-      }
-
-      .important {
-        color: #cc3333;
       }
     }
 
     .endpoint {
       z-index: 4;
-      background: teal;
+      background: #428bca;
       width: 15px;
       height: 15px;
       .border-radius(15px);
@@ -218,40 +214,13 @@
       }
     }
 
-
-
-    
-
     .choice.state {
       .edit.mode {
-
         .choices {
-
-          font-size: 11px;
-          margin-left: 20px;
-
-
-          li { 
-            padding: 0; 
-            margin: 0 0 18px 0;
+          .choice {
+            .composite-control {
+            }
           }
-          
-          input {
-            min-width: 130px;
-            width: 170px;
-            margin-bottom: 0;
-          }
-
-          .close {
-            margin: 4px 10px 0 0;
-          }
-        }
-
-        .new-choice {
-          float: right;
-          font-size: 11px;
-          margin-right: 43px;
-
         }
       }
 
@@ -269,6 +238,14 @@
   .group-table {
     th:first-child, td:first-child {
       width: 20px;
+    }
+  }
+}
+
+.surveys {
+  .checks {
+    .form-control {
+      width: 30%;
     }
   }
 }

@@ -107,8 +107,7 @@ describe("go.components.views", function() {
     });
 
     describe("when the 'ok' button is clicked", function() {
-      beforeEach(function(done) {
-        confirm.$el.on('shown', function() { done(); });
+      beforeEach(function() {
         confirm.render();
       });
 
@@ -118,14 +117,13 @@ describe("go.components.views", function() {
       });
 
       it("should hide the modal", function(done) {
-        confirm.$el.on('hidden', function() { done(); });
+        confirm.$el.on('hidden.bs.modal', function() { done(); });
         confirm.$('.ok').click();
       });
     });
 
     describe("when the 'cancel' button is clicked", function() {
-      beforeEach(function(done) {
-        confirm.$el.on('shown', function() { done(); });
+      beforeEach(function() {
         confirm.render();
       });
 
@@ -135,7 +133,8 @@ describe("go.components.views", function() {
       });
 
       it("should hide the modal", function(done) {
-        confirm.$el.on('hidden', function() { done(); });
+        confirm.$el.on('hidden.bs.modal', function() { done(); });
+
         confirm.$('.cancel').click();
       });
     });

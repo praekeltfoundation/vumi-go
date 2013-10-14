@@ -1,4 +1,6 @@
 {% extends "wizard_views/wizard_base.html" %}
+{% load go_tags %}
+{% load crispy_forms_tags %}
 
 {% block content_extraclass %}{{ block.super }} details{% endblock %}
 
@@ -10,45 +12,47 @@
 
     {# TODO: Form errors #}
 
-    {{ conversation_form }}
-
-
-    <div class="box">
-        <label for="id_{{ wizard_form.channel_kind.name }}">
-            {{ wizard_form.channel_kind.label }}
-        </label>
-        {{ wizard_form.channel_kind }}
+    <div class="col-md-3">
+        {{ conversation_form|crispy }}
     </div>
 
+    <div class="clearfix"></div>
 
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="id_{{ wizard_form.channel_kind.name }}">
+                {{ wizard_form.channel_kind.label }}
+            </label>
+            {{ wizard_form.channel_kind }}
+        </div>
+    </div>
 
-    <div class="configuration">
+    <div class="clearfix"></div>
 
-
-
+    <div class="configuration col-md-12">
         <label>
             How would you like to reach and interact with users?
         </label>
 
-        <fieldset class="configuration_new row-fluid boxes">
-            <div class="span4">
-                <div class="box">
-                    <label for="id_{{ channel_form.country.name }}">
+        <fieldset class="configuration_new row boxes">
+            <div class="col-md-4">
+                <div class="box form-group">
+                    <label class="control-label" for="id_{{ channel_form.country.name }}">
                         {{ channel_form.country.label }}
                     </label>
 
-                    {{ channel_form.country }}
+                    {{ channel_form.country|attr_class:"form-control" }}
                 </div>
             </div>
 
-            <div class="span4">
-                <div class="box">
-                    <label for="id_{{ channel_form.channel.name }}">
-                      {{ channel_form.channel.label }}
+            <div class="col-md-4">
+                <div class="box form-group">
+                    <label class-"control-label" for="id_{{ channel_form.channel.name }}">
+                        {{ channel_form.channel.label }}
                     </label>
 
                     {% for country, channels in channel_form.channel_options.items %}
-                        <select name="{{ channel_form.channel.name }}"
+                        <select class="form-control" name="{{ channel_form.channel.name }}"
                             data-relation-key="{{ country }}">
                             {% for channel, tags in channels.items %}
                             <optgroup label="{{ channel.1 }}">
@@ -64,46 +68,42 @@
                 </div>
             </div>
 
-            <div class="span4">
-                <div class="box">
-                    <label for="id_{{ wizard_form.keyword.name }}">
-                      {{ wizard_form.keyword.label }}
+            <div class="col-md-4">
+                <div class="box form-group">
+                    <label class-"control-label" for="id_{{ wizard_form.keyword.name }}">
+                        {{ wizard_form.keyword.label }}
                     </label>
-                    {{ wizard_form.keyword }}
+                    {{ wizard_form.keyword|attr_class:"form-control" }}
                 </div>
             </div>
         </fieldset>
 
-
-
-        <fieldset class="configuration_existing row-fluid boxes">
-            <div class="span4">
-                <div class="box">
-                    <label for="id_{{ router_form.existing_router.name }}">
+        <fieldset class="configuration_existing row boxes">
+            <div class="col-md-4">
+                <div class="box form-group">
+                    <label class="control-label" for="id_{{ router_form.existing_router.name }}">
                         {{ router_form.existing_router.label }}
                     </label>
 
-                    {{ router_form.existing_router }}
+                    {{ router_form.existing_router|attr_class:"form-control" }}
                 </div>
             </div>
 
-            <div class="span4">
-                <div class="box">
-                    <label for="id_{{ router_form.new_keyword.name }}">
+            <div class="col-md-4">
+                <div class="box form-group">
+                    <label class="control-label" for="id_{{ router_form.new_keyword.name }}">
                       {{ router_form.new_keyword.label }}
                     </label>
-                    {{ router_form.new_keyword }}
+                    {{ router_form.new_keyword|attr_class:"form-control" }}
                 </div>
             </div>
 
-            <div class="span4">
-                <div class="box existing_keywords">
+            <div class="col-md-4">
+                <div class="box existing_keywords form-group">
                     <label>
                       Your existing keywords
                     </label>
 
-
-                    
                     {% for k, v in router_form.router_keywords.items %}
                     <p data-key="{{ k }}" class="hide">
                         {% for keyword in v %}
@@ -115,7 +115,6 @@
                 </div>
             </div>
         </fieldset>
-
     </div>
 </form>
 {% endblock %}
@@ -150,8 +149,6 @@
     // configuration view for it.
     $('input[name=channel_kind]:checked').trigger('change');
 
-
-
     $('select[name=existing_router]').on('change', function() {
         var v = $(this).find(':checked').val();
         $('.existing_keywords p').hide();
@@ -159,6 +156,4 @@
     });
     // trigger change in order to show the first select box.
     $('select[name=existing_router]').trigger('change');
-
-
 {% endblock %}

@@ -1,8 +1,8 @@
 {% extends "registration/base.html" %}
 {% load url from future %}
 
-{% block auth_form %}
-<p>
+{% block registration_content %}
+<p class="text-center">
     <strong>You've been logged out.</strong>
     <br>
     You will need to <a href="{% url 'auth_login' %}">sign in</a> again if you 

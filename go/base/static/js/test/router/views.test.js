@@ -17,7 +17,7 @@ describe("go.router.views", function() {
           .attr('data-action', 'action')
       });
 
-      bootbox.animate(false);
+      bootbox.setDefaults({animate: false});
     });
 
     afterEach(function() {
@@ -44,7 +44,7 @@ describe("go.router.views", function() {
           });
 
           action.invoke();
-          $('.modal [data-handler=1]').click();
+          $('.modal [data-bb-handler=confirm]').click();
           server.respond();
         });
       });
