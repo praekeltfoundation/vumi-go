@@ -66,12 +66,12 @@
         {% if message_page.has_previous %}
         <li>
             <a href="?direction={{message_direction}}&amp;p={{message_page.previous_page_number}}&amp;q={{query}}&amp;token={{token}}">
-                Prev
+                &larr;
             </a>
         </li>
         {% else %}
         <li class="disabled">
-            <a href="#">Prev</a>
+            <a href="#">&larr;</a>
         </li>
         {% endif %}
         {% for page_number in message_page_range %}
@@ -82,12 +82,12 @@
         {% if message_page.has_next %}
         <li>
             <a href="?direction={{message_direction}}&amp;p={{message_page.next_page_number}}&amp;q={{query}}&amp;token={{token}}">
-                Next
+                &rarr;
             </a>
         </li>
         {% else %}
         <li class="disabled">
-            <a href="#">Next</a>
+            <a href="#">&rarr;</a>
         </li>
         {% endif %}
     </ul>
