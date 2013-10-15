@@ -64,10 +64,7 @@ class DictRowConnectionPool(txpostgres.ConnectionPool):
         ``False`` otherwise
 
         """
-        for c in self.connections:
-            if not c.closed:
-                return False
-        return True
+        return all(c.closed for c in self.connections)
 
 
 class DummyRequest(test_web.DummyRequest):
