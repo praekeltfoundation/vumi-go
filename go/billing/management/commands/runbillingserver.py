@@ -7,7 +7,7 @@ from twisted.internet.endpoints import serverFromString
 from django.core.management.base import BaseCommand
 
 from go.billing import settings as app_settings
-from go.billing.utils import RealDictConnectionPool
+from go.billing.utils import DictRowConnectionPool
 from go.billing import api
 
 
@@ -37,7 +37,7 @@ class Command(BaseCommand):
 
         log.startLogging(sys.stdout)
         connection_string = app_settings.get_connection_string()
-        connection_pool = RealDictConnectionPool(
+        connection_pool = DictRowConnectionPool(
             None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
 
         self.stdout.write("Connecting to database %s..." %

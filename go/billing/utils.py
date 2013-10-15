@@ -31,7 +31,7 @@ def real_dict_connect(*args, **kwargs):
     return psycopg2.connect(*args, **kwargs)
 
 
-class RealDictConnection(txpostgres.Connection):
+class DictRowConnection(txpostgres.Connection):
     """Extend the txpostgres ``Connection`` and override the
     ``cursorFactory``
 
@@ -50,13 +50,13 @@ class RealDictConnection(txpostgres.Connection):
         return True
 
 
-class RealDictConnectionPool(txpostgres.ConnectionPool):
+class DictRowConnectionPool(txpostgres.ConnectionPool):
     """Extend the txpostgres ``ConnectionPool`` and override the
     ``connectionFactory``
 
     """
 
-    connectionFactory = RealDictConnection
+    connectionFactory = DictRowConnection
 
     @property
     def closed(self):
