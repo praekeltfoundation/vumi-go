@@ -61,8 +61,8 @@
 </table>
 
 {% if message_page.paginator.count %}
-<div class="pagination pagination-centered">
-    <ul>
+<div class="text-center">
+    <ul class="pagination">
         {% if message_page.has_previous %}
         <li>
             <a href="?direction={{message_direction}}&amp;p={{message_page.previous_page_number}}&amp;q={{query}}&amp;token={{token}}">
