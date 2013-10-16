@@ -130,10 +130,10 @@ class Command(BaseCommand):
         self.write_supervisor_config_file(
             'routing_table_dispatcher',
             'go.vumitools.routing.AccountRoutingTableDispatcher')
-        self.create_billing_worker_config()
+        self.create_billing_dispatcher_config()
         self.write_supervisor_config_file(
-            'billing_worker',
-            'go.vumitools.routing.BillingWorker')
+            'billing_dispatcher',
+            'go.vumitools.routing.BillingDispatcher')
         self.create_go_api_worker_config()
         self.write_supervisor_config_file(
             'go_api_worker',
@@ -495,10 +495,10 @@ class Command(BaseCommand):
 
         self.stdout.write('Wrote %s.\n' % (fn,))
 
-    def create_billing_worker_config(self):
-        fn = self.mk_filename('billing_worker', 'yaml')
+    def create_billing_dispatcher_config(self):
+        fn = self.mk_filename('billing_dispatcher', 'yaml')
         with self.open_file(fn, 'w') as fp:
-            templ = 'billing_worker.yaml.template'
+            templ = 'billing_dispatcher.yaml.template'
             data = self.render_template(templ, {
                 'redis_manager': self.dump_yaml_block(
                     self.config['redis_manager'], 1),

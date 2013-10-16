@@ -1,11 +1,11 @@
 # -*- test-case-name: go.vumitools.tests.test_routing -*-
 
-from twisted.internet.defer import inlineCallbacks, returnValue, gatherResults
+from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.dispatchers.endpoint_dispatchers import RoutingTableDispatcher
+from vumi.dispatchers.endpoint_dispatchers import Dispatcher,\
+    RoutingTableDispatcher
 from vumi.config import ConfigDict, ConfigText
 from vumi.message import TransportEvent
-from vumi.worker import BaseWorker
 from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
@@ -155,10 +155,10 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         static=True, required=True)
     billing_inbound_connector = ConfigText(
         "Connector to publish inbound messages on.",
-        static=True, required=True)
+        static=True, required=False)
     billing_outbound_connector = ConfigText(
         "Connector to publish outbound messages on.",
-        static=True, required=True)
+        static=True, required=False)
     user_account_key = ConfigText(
         "Key of the user account the message is from.")
 
@@ -662,37 +662,33 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_event(event, dst_connector_name, dst_endpoint)
 
 
-class BillingWorkerConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
-    receive_inbound_connector = ConfigText(
-        "Connector that will receive inbound messages and events.",
-        required=True, static=True)
+class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
 
-    receive_outbound_connector = ConfigText(
-        "Connector that will receive outbound messages.",
-        required=True, static=True)
+    def post_validate(self):
+        if len(self.receive_inbound_connectors) != 1:
+            self.raise_config_error("There should be exactly one connector "
+                                    "that receives inbound messages.")
+
+        if len(self.receive_outbound_connectors) != 1:
+            self.raise_config_error("There should be exactly one connector "
+                                    "that receives outbound messages.")
 
 
-class BillingWorker(BaseWorker, GoWorkerMixin):
-    """Billing worker class"""
+class BillingDispatcher(Dispatcher, GoWorkerMixin):
+    """Billing dispatcher class"""
 
-    CONFIG_CLASS = BillingWorkerConfig
-    worker_name = 'billing_worker'
+    CONFIG_CLASS = BillingDispatcherConfig
+    worker_name = 'billing_dispatcher'
 
     @inlineCallbacks
-    def setup_worker(self):
+    def setup_dispatcher(self):
         yield self._go_setup_worker()
         self.unpause_connectors()
 
     @inlineCallbacks
-    def teardown_worker(self):
+    def teardown_dispatcher(self):
         self.pause_connectors()
         yield self._go_teardown_worker()
-
-    def get_configured_ri_connector(self):
-        return self.get_static_config().receive_inbound_connector
-
-    def get_configured_ro_connector(self):
-        return self.get_static_config().receive_outbound_connector
 
     def process_inbound(self, config, msg, connector_name):
         log.debug("Processing inbound: %r" % (msg,))
@@ -711,46 +707,3 @@ class BillingWorker(BaseWorker, GoWorkerMixin):
         connector_name = self.get_configured_ri_connector()
         endpoint_name = msg.get_routing_endpoint()
         self.publish_outbound(msg, connector_name, endpoint_name)
-
-    def _mkhandler(self, handler_func, connector_name):
-        def errback(f):
-            log.error("Error routing message for %s" % (connector_name,))
-            log.error(f)
-
-        def handler(msg):
-            d = self.get_config(msg)
-            d.addCallback(handler_func, msg, connector_name)
-            d.addErrback(errback)
-            return d
-        return handler
-
-    def setup_connectors(self):
-        def add_ri_handlers(connector, connector_name):
-            connector.set_default_inbound_handler(
-                self._mkhandler(self.process_inbound, connector_name))
-            return connector
-
-        def add_ro_handlers(connector, connector_name):
-            connector.set_default_outbound_handler(
-                self._mkhandler(self.process_outbound, connector_name))
-            return connector
-
-        deferreds = []
-
-        connector_name = self.get_configured_ri_connector()
-        d = self.setup_ri_connector(connector_name)
-        d.addCallback(add_ri_handlers, connector_name)
-        deferreds.append(d)
-
-        connector_name = self.get_configured_ro_connector()
-        d = self.setup_ro_connector(connector_name)
-        d.addCallback(add_ro_handlers, connector_name)
-        deferreds.append(d)
-
-        return gatherResults(deferreds)
-
-    def publish_inbound(self, msg, connector_name, endpoint):
-        return self.connectors[connector_name].publish_inbound(msg, endpoint)
-
-    def publish_outbound(self, msg, connector_name, endpoint):
-        return self.connectors[connector_name].publish_outbound(msg, endpoint)
