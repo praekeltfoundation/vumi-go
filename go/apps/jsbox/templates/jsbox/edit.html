@@ -11,7 +11,7 @@
 
                 <div class="row">
                     <div class="form-group col-md-12">
-                        <label for="id_{{ jsbox_form.javascript.name }}">
+                        <label for="{{ jsbox_form.javascript.auto_id }}">
                             {{ jsbox_form.javascript.label }}
                         </label>
 
@@ -21,7 +21,7 @@
 
                 <div class="row">
                     <div class="form-group col-md-6">
-                        <label for="id_{{ jsbox_form.source_url.name }}">
+                        <label for="{{ jsbox_form.source_url.auto_id }}">
                             {{ jsbox_form.source_url.label }}
                         </label>
 
@@ -41,7 +41,7 @@
                 <div "form-group">
                     <div class="row">
                         <div class="form-group col-md-2">
-                            <label for="id_{{ config_form.key.name }}">
+                            <label for="{{ config_form.key.auto_id }}">
                                 {{ config_form.key.label }}
                             </label>
 
@@ -51,7 +51,7 @@
 
                     <div class="row">
                         <div class="form-group col-md-12">
-                            <label for="id_{{ config_form.value.name }}">
+                            <label for="{{ config_form.value.auto_id }}">
                                 {{ config_form.value.label }}
                             </label>
 
