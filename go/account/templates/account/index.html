@@ -25,7 +25,7 @@
 <h2>Manage Profile</h2><br>
 
 <div class="row">
-    <div class="span12">
+    <div class="col-md-12">
         {% include "base/includes/messages.html" %}
     </div>
 </div>
@@ -43,9 +43,7 @@
     <div class="tab-pane active" id="info">
         <form class="form-horizontal" action="" method="post">
             {{account_form}}
-            <div class="form-actions">
-                <input type="submit" class="btn btn-primary" data-loading-text="saving..." name="_account" value="Save changes">
-            </div>
+            <input type="submit" class="btn btn-primary" data-loading-text="saving..." name="_account" value="Save changes">
             {% csrf_token %}
         </form>
     </div>
@@ -56,7 +54,7 @@
         <p>Adding social networks will let you message your followers and fans from Vumi</p>
         <br>
 
-        <div class="well span3" style="height: 100px">
+        <div class="well col-md-3" style="height: 100px">
 
             <h4>Add your Facebook profile</h4>
             <p>This will allow you to post messages to your wall.</p>
@@ -77,7 +75,7 @@
                         <fb:login-button>Login with Facebook</fb:login-button>
  -->
         </div>
-        <div class="well span3" style="height: 100px">
+        <div class="well col-md-3" style="height: 100px">
 
             <h4>Add your Twitter profile</h4>
 
@@ -100,7 +98,7 @@
         <p>Adding instant messaging services will let you send instant chat messages to friends and contacts.</p>
         <br>
 
-        <form class="well span5">
+        <form class="well col-md-5">
             <h4>GTalk ID</h4>
             <p>
                 Shortly we will allow you to provide your own Jabber / GTalk account
@@ -108,7 +106,7 @@
             </p>
         </form>
 
-        <form class="well span5">
+        <form class="well col-md-5">
             <h4>Facebook Chat</h4>
             <p>
                 Shortly we will allow you to connect your Facebook account
@@ -128,15 +126,15 @@
 
                     <div class="control-group">
                       <label class="control-label" for="input01">From Address</label>
-                      <div class="controls input-prepend">
-                        <span class="add-on"><i class="icon-envelope"></i></span>
+                      <div class="controls input-group">
+                        <span class="input-group-addon"><i class="glyphicon glyphicon-envelope"></i></span>
                         <input type="text" class="input-xlarge" id="input01" value="gustav@praekelt.com">
                       </div>
                     </div>
                     <div class="control-group">
                       <label class="control-label" for="input02">Reply-to Address</label>
-                      <div class="controls input-prepend">
-                        <span class="add-on"><i class="icon-envelope"></i></span>
+                      <div class="controls input-group">
+                        <span class="input-group-addon"><i class="glyphicon glyphicon-envelope"></i></span>
                         <input type="text" class="input-xlarge" id="input02" value="gustav@praekelt.com">
                       </div>
                     </div>
@@ -148,9 +146,7 @@
                     </div>
 
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
-                    </div>
+                    <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
                   </fieldset>
                 </form>
 
@@ -192,7 +188,7 @@
 
     <div class="tab-pane" id="contact">
 
-        <div class="span6">
+        <div class="col-md-6">
             <form method="post" action="">
                 <h1>Contact Us</h1>
                 <br>
@@ -217,7 +213,7 @@
                     {% endfor %}
                     <div class="btn-toolbar">
                         <div class="btn-group"><input type="submit" class="btn btn-primary" name="_email" value="Send Email &rarr;"></div>
-                        <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+                        <div class="btn-group"><input type="reset" class="btn btn-default" value="Cancel"></div>
                     </div>
                 </fieldset>
                 {% csrf_token %}

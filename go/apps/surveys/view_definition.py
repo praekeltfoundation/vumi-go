@@ -1,4 +1,4 @@
-from bootstrap.forms import BootstrapForm
+from django.forms import Form
 from django.conf import settings
 from django.contrib import messages
 
@@ -104,6 +104,6 @@ class ConversationViewDefinition(ConversationViewDefinitionBase):
     action_forms = {
         # TODO: These are both work-arounds for not being able to directly
         #       trigger POSTs via conversation action buttons
-        'send_survey': BootstrapForm,
-        'download_user_data': BootstrapForm,
+        'send_survey': Form,
+        'download_user_data': Form,
     }

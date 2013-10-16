@@ -1,10 +1,12 @@
 $(function () {
     var $textareas = $('textarea[data-widget=codemirror]');
-    $textareas.each(function(i, el) {
-        var cm = CodeMirror.fromTextArea(el, go.configs[$(el).attr('id')]);
+    $textareas.each(function() {
+        var $el = $(this);
+        var cm = CodeMirror.fromTextArea(this, go.configs[$el.attr('id')]);
+
         // This is invoked by another widget called `sourceUrl`        
-        el.on_source_update = function(src) {
-            cm.setValue(src);
-        };
+        $el.on('source:update', function(e) {
+            cm.setValue(e.src);
+        });
     });
 });

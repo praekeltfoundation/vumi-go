@@ -3,8 +3,7 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var maybeByName = go.utils.maybeByName,
-      GridView = go.components.grid.GridView,
+  var GridView = go.components.grid.GridView,
       ConfirmView = go.components.views.ConfirmView,
       PopoverView = go.components.views.PopoverView,
       TemplateView = go.components.views.TemplateView;
@@ -32,6 +31,8 @@
   });
 
   var NameEditExtrasView = PopoverView.extend({
+    className: 'extras-popover',
+
     bootstrapOptions: {container: 'body'},
 
     target: function() { return this.mode.$('.name-extras'); },
@@ -235,7 +236,9 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: function() { return 'box item state ' + this.typeName || ''; },
+    className: function() {
+      return 'state box item col-md-3 ' + this.typeName || '';
+    },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -339,20 +342,17 @@
       DialogueStateGridView.__super__.initialize.call(this, options);
 
       this.states = options.states;
-      this.states.eachItem(
-        function(id, state) { this.addState(id, state, {sort: false}); },
-        this);
+
+      this.states.eachItem(function(id, state) {
+        this.addState(id, state, {sort: false});
+      }, this);
+
       this.items.sort();
 
-      var $add = $('<button>')
-        .addClass('add btn btn-primary')
-        .text('+');
-
-      var $addContainer = $('<div>')
-        .addClass('item add-container')
-        .append($add);
-
-      this.add('add-btn', $addContainer, {index: Infinity});
+      this.add(
+        'add-btn',
+        $(JST.apps_dialogue_inlineAdd()),
+        {index: Infinity});
 
       this.listenTo(this.states, 'add', this.addState);
       this.listenTo(this.states, 'remove', this.remove);

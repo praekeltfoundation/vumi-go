@@ -1,8 +1,7 @@
-from bootstrap.forms import BootstrapForm
 from django import forms
 
 
-class ContactForm(BootstrapForm):
+class ContactForm(forms.Form):
     name = forms.CharField(required=False)
     surname = forms.CharField(required=False)
 
@@ -32,22 +31,22 @@ class ContactForm(BootstrapForm):
         return cleaned_data
 
 
-class ContactGroupForm(BootstrapForm):
-    name = forms.CharField(label="Create a Group")
+class ContactGroupForm(forms.Form):
+    name = forms.CharField(label="Group name")
 
 
-class SmartGroupForm(BootstrapForm):
+class SmartGroupForm(forms.Form):
     name = forms.CharField()
     query = forms.CharField()
 
 
-class UploadContactsForm(BootstrapForm):
+class UploadContactsForm(forms.Form):
     file = forms.FileField(label="File with Contact data",
         help_text="This can either be a double-quoted UTF-8 encoded CSV file "
                     "or an Excel spreadsheet")
 
 
-class SelectContactGroupForm(BootstrapForm):
+class SelectContactGroupForm(forms.Form):
     # contact_group is a special magic field that we add in __init__
 
     def __init__(self, *args, **kw):
