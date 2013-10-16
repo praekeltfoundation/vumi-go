@@ -12,7 +12,7 @@ class TokenForm(forms.Form):
         help_text='The URL to forward messages to via HTTP POST.',
         required=False)
     push_event_url = forms.CharField(
-        help_text='The URL to forward events to via HTPT POST.',
+        help_text='The URL to forward events to via HTTP POST.',
         required=False)
 
     @staticmethod
