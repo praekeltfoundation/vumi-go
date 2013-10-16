@@ -17,7 +17,6 @@ class TokenForm(forms.Form):
 
     @staticmethod
     def initial_from_config(data):
-        print 'data', data
         data.setdefault('api_tokens', [])
         return {
             'api_tokens': (data['api_tokens'][0]
