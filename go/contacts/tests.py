@@ -40,6 +40,17 @@ class BaseContactsTestCase(VumiGoDjangoTestCase):
         self.setup_api()
         self.setup_user_api()
         self.setup_client()
+        self.clear_tmp_storage()
+
+    def clear_tmp_storage(self):
+        try:
+            _folders, files = default_storage.listdir("tmp")
+        except (NotImplementedError, OSError):
+            # exceptions indicated that listdir is not supported by
+            # default storage or tmp does not yet exist.
+            files = []
+        for filename in files:
+            default_storage.delete(path.join("tmp", filename))
 
     def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890',
                   **kwargs):
@@ -273,6 +284,29 @@ class ContactsTestCase(BaseContactsTestCase):
             'normalize-6': '',
             'normalize-7': '',
         })
+        group = self.contact_store.get_group(group.key)
+        self.assertEqual(len(group.backlinks.contacts()), 2)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('successfully' in mail.outbox[0].subject)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+    def test_uploading_single_colum(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                                  'fixtures',
+                                  'sample-single-column-contacts.csv'))
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(group.key))
+
+        self.specify_columns(group.key, columns={
+            'column-0': 'msisdn',
+            'normalize-0': '',
+        })
+
         group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 2)
         self.assertEqual(len(mail.outbox), 1)

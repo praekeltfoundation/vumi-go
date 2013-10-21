@@ -6,19 +6,11 @@
 
 {% block content_title %}Messages from {{ inbound_uniques_count }} unique people{% endblock %}
 
-{% block content_breadcrumbs %}
-    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
-        <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="input-medium search-query">
-            <input type="hidden" name="direction" value="{{message_direction}}"/>
-            <button type="submit" class="btn">Search</button>
-    </form>
-{% endblock %}
-
 {% block content_actions_right %}
     <div class="pull-left">
         <span class="table-form-view-buttons">
             <!-- TODO:
-            <button class="btn" disabled="disabled">Delete</button>
+            <button class="btn btn-default" disabled="disabled">Delete</button>
             -->
         </span>
 
@@ -27,15 +19,24 @@
         <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound">Download Received Stats</a>
         <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
         -->
-        <button class="btn" data-toggle="modal" href="#expMessagesFrm">Export</button>
+        <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export</a>
     </div>
+
+    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
+        <input type="hidden" name="direction" value="{{message_direction}}">
+
+        <div class="form-group">
+            <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-default">Search</button>
+    </form>
 
 {% endblock %}
 
 {% block content_main %}
 
-    <div class="row-fluid">
-        <div class="span3 sidebar">
+    <div class="row">
+        <div class="col-md-3 sidebar">
 
             <ul class="nav nav-list">
                 <li>
@@ -44,7 +45,7 @@
             </ul>
 
         </div>
-        <div class="span9">
+        <div class="col-md-9">
 
             {% include "base/includes/messages.html" %}
 
@@ -129,23 +130,27 @@
 {% endblock %}
 
 {% block modals %}
-<div class="modal hide fade" id="expMessagesFrm">
-    <div class="modal-header">
-        <a class="close" data-dismiss="modal">×</a>
-        <h3>Schedule CSV Export of Messages</h3>
+<div class="modal fade" id="expMessagesFrm">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a class="close" data-dismiss="modal">×</a>
+                <h3>Schedule CSV Export of Messages</h3>
+            </div>
+            <form method="post" action="" class="form-horizontal">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p><span class="help-block">
+                      The file is potentially quite large and as a result the export 
+                      will be done in the background. When completed the results will 
+                      be sent to you as a CSV file attached to an email.
+                    </span><br/></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="_export_conversation_messages" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
+                </div>
+            </form>
+        </div>
     </div>
-    <form method="post" action="" class="form-horizontal">
-        {% csrf_token %}
-        <div class="modal-body">
-            <p><span class="help-block">
-              The file is potentially quite large and as a result the export 
-              will be done in the background. When completed the results will 
-              be sent to you as a CSV file attached to an email.
-            </span><br/></p>
-        </div>
-        <div class="modal-footer">
-            <button type="submit" name="_export_conversation_messages" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
-        </div>
-    </form>
 </div><!--/expContactFrm-->
 {% endblock %}
