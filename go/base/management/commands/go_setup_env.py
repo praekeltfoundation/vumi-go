@@ -133,7 +133,7 @@ class Command(BaseCommand):
         self.create_billing_dispatcher_config()
         self.write_supervisor_config_file(
             'billing_dispatcher',
-            'go.vumitools.routing.BillingDispatcher')
+            'go.vumitools.billing_worker.BillingDispatcher')
         self.create_go_api_worker_config()
         self.write_supervisor_config_file(
             'go_api_worker',
