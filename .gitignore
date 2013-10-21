@@ -31,3 +31,4 @@ distribute-0.6.10.tar.gz
 /test_results.xml
 /pep8.txt
 /docs/_build/
+/.codeintel/
