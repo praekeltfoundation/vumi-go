@@ -702,7 +702,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def teardown_dispatcher(self):
-        self.pause_connectors()
+        yield self.pause_connectors()
         yield self._go_teardown_worker()
 
     def process_inbound(self, config, msg, connector_name):
