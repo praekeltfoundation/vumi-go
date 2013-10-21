@@ -7,7 +7,7 @@ from twisted.trial import unittest
 
 from go.billing import settings as app_settings
 from go.billing import api
-from go.billing.utils import DummySite, RealDictConnectionPool
+from go.billing.utils import DummySite, DictRowConnectionPool
 
 
 class UserTestCase(unittest.TestCase):
@@ -16,7 +16,7 @@ class UserTestCase(unittest.TestCase):
     @defer.inlineCallbacks
     def setUp(self):
         connection_string = app_settings.get_connection_string()
-        connection_pool = RealDictConnectionPool(
+        connection_pool = DictRowConnectionPool(
             None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
 
         self.connection_pool = yield connection_pool.start()
@@ -68,7 +68,7 @@ class AccountTestCase(unittest.TestCase):
     @defer.inlineCallbacks
     def setUp(self):
         connection_string = app_settings.get_connection_string()
-        connection_pool = RealDictConnectionPool(
+        connection_pool = DictRowConnectionPool(
             None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
 
         self.connection_pool = yield connection_pool.start()
@@ -160,7 +160,7 @@ class CostTestCase(unittest.TestCase):
     @defer.inlineCallbacks
     def setUp(self):
         connection_string = app_settings.get_connection_string()
-        connection_pool = RealDictConnectionPool(
+        connection_pool = DictRowConnectionPool(
             None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
 
         self.connection_pool = yield connection_pool.start()
@@ -280,7 +280,7 @@ class TransactionTestCase(unittest.TestCase):
     @defer.inlineCallbacks
     def setUp(self):
         connection_string = app_settings.get_connection_string()
-        connection_pool = RealDictConnectionPool(
+        connection_pool = DictRowConnectionPool(
             None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
 
         self.connection_pool = yield connection_pool.start()
