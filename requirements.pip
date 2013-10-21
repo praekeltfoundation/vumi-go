@@ -5,7 +5,7 @@ gunicorn==0.15.0
 pep8==0.6.1
 pyflakes==0.4.0
 supervisor==3.0a10
-coverage==3.4
+coverage==3.7
 South==0.7.3
 psycopg2==2.4
 Fabric==1.2.2
