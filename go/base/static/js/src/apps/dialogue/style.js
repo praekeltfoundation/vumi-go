@@ -7,7 +7,7 @@
     var plumbDefaults = jsPlumb.Defaults;
 
     var colors = {
-      normal: '#0bcac3',
+      normal: '#428bca',
       hover: '#b41e31'
     };
 

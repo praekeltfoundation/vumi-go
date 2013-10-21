@@ -6,12 +6,15 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-jst');
   grunt.loadNpmTasks('grunt-mocha-test');
   grunt.loadNpmTasks('grunt-karma');
+  grunt.loadNpmTasks('grunt-exec');
 
   grunt.initConfig({
     paths: require('./js_paths.yml'),
     bower: {
       install: {
         options: {
+          layout: 'byComponent',
+          cleanTargetDir: true,
           targetDir: 'go/base/static/vendor'
         }
       }
@@ -49,7 +52,17 @@ module.exports = function (grunt) {
         reporters: ['dots'],
         configFile: 'karma.conf.js'
       }
-    }
+    },
+    exec: {
+      'fonts': {
+        cmd: [
+          'mkdir -p `dirname <%= paths.client.fonts.vendor.dest %>`',
+          ' && ',
+          'cp <%= paths.client.fonts.vendor.src %> ',
+          '   <%= paths.client.fonts.vendor.dest %>'
+        ].join('')
+      }
+    },
   });
 
   grunt.registerTask('test:jsbox_apps', [
@@ -57,9 +70,13 @@ module.exports = function (grunt) {
   ]);
 
   grunt.registerTask('test:client', [
-    'bower',
     'jst:templates',
     'karma:dev'
+  ]);
+
+  grunt.registerTask('vendor', [
+    'bower',
+    'exec:fonts'
   ]);
 
   grunt.registerTask('test', [

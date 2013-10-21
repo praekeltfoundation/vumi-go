@@ -10,93 +10,122 @@ a:link, button {
   .transition(color .1s, background .1s);
 }
 
+.btn.disabled {
+  // hack to allow tooltips to work with disabled buttons 
+  pointer-events: auto;
+}
 
 .main-container {
-  // prevent wrapping.
   min-width: 650px;
-  padding: 0 25px;
+  max-width: none;
+  padding: 5px 25px;
 }
 
 .footer {
   color: #aaa;
   margin: 1em;
+  text-align: center;
 }
 
-
 .main-nav {
+  @border: 1px #212527 solid;
+
   margin: 0;
+  min-height: 0;
+
   font-size: 15px;
+  background: none;
+  border: none;
 
-  .brand {
-    position: relative;
-    width: 60px;
-    border: 0 !important;
-  }
+  .nav {
+    background: transparent !important;
 
-  .logo {
-    position: absolute;
-    top: 20px;
-    left: -5px;
-  }
+    li { 
+      height: 39px;
+      padding: 0 15px;
+    }
 
-  li { 
-    height: 39px;
-    padding: 0 15px;
-    border-right: 1px #212527 solid;
-  }
-  ul li:first-child {
-    // this is the logo
-    padding: 0;
-  }
-  ul:nth-child(2) li:first-child {
-    border-left: 1px #212527 solid;
-  }
-  li.active a { background: transparent !important; }
+    a {
+      color: #0bcac3 !important;
+      text-shadow: none !important;
+      outline: none;
 
-  a {
-    color: #0bcac3 !important;
-    text-shadow: none !important;
-    outline: none;
-  }
-  a:hover {
-    color: #fff !important;
+      padding-top: 10px;
+      padding-bottom: 10px;
 
-    .caret {
-      border-top-color: #fff !important;
-      border-bottom-color: #fff !important;
+      &:hover {
+        background: transparent;
+        color: #fff !important;
+      }
     }
   }
 
-  .caret {
-      border-top-color: #0bcac3 !important;
-      border-bottom-color: #0bcac3 !important;
+  .navbar-nav {
+    li {
+      border-right: @border;
+    }
+
+    .navbar-brand {
+      border: none;
+      padding: 0;
+      width: 60px;
+      position: relative;
+
+      .logo {
+        position: absolute;
+        top: 20px;
+        left: -20px;
+      }
+    }
   }
 
-
-  .dropdown.open > a {
-    background: transparent !important;
-    color: #fff !important;
-  }
-
-  .dropdown-menu {
-    background: #2f3436;
-
+  .dropdown {
     li {
       padding: 0;
       height: auto;
-      border: 0 !important;
     }
-    a:hover {
-      background: transparent;
+
+    .dropdown-toggle {
+      line-height: normal;
+      background: transparent !important;
+      border-left: @border !important;
+      border-right: @border !important;
+
+      .focused {
+        color: #fff !important;
+
+        .caret {
+          border-top-color: #fff;
+          border-bottom-color: #fff;
+        }
+      }
+
+      &:hover {
+        .focused();
+      }
+
+      .caret {
+        border-top-color: #0bcac3;
+        border-bottom-color: #0bcac3;
+      }
+    }
+
+    &.open {
+      .dropdown-toggle {
+        .dropdown-toggle.focused();
+      }
+    }
+
+    .dropdown-menu {
+      background: #2f3436;
+      border: none;
+      
+      &:after {
+        border-top-color: @border;
+        border-bottom-color: @border;
+      }
     }
   }
-
-  .dropdown-menu:after {
-    border-top-color: #212527 !important;
-    border-bottom-color: #212527 !important;
-  }
-
-  
 }
 
 .content {
@@ -130,16 +159,11 @@ a:link, button {
     .breadcrumbs {
       text-align: right;
       padding: 0 12px;
-
-        .navbar-search {
-          margin: 0;
-        }
-
     }
   }
 
   .actions {
-    height: 50px;
+    max-height: 50px;
     line-height: 50px;
     background: #d9d8d3;
     margin: 0 0 5px 0;
@@ -148,7 +172,7 @@ a:link, button {
       background: #d2d0c7; 
       .box-sizing(content-box);
       border-left: 5px #15191a solid;
-      margin-left: -5px !important;
+      margin-left: -20px !important;
       height: 100%;
 
       .btn {
@@ -169,7 +193,7 @@ a:link, button {
   }
 
 
-  // this cannot be applied to a row-fluid or span element.
+  // this cannot be applied to a row or span element.
   // it's unfortunate, but that's the way the cookie crumbles.
   // you'll get visual leaks if you try and indent one of the 
   // above.
@@ -186,7 +210,9 @@ a:link, button {
 
 } // end content
 
-
+.main-content {
+  padding: 0 0 22px 16px;
+}
 
 .content .sidebar .nav-list {
 
@@ -203,7 +229,7 @@ a:link, button {
     border-left: 5px #6f0f1c solid;
     text-shadow: none;
     font-weight: bold;
-    margin-left: -20px;
+    margin-left: -5px;
   }
   a.active:hover {
     color: #fff;
@@ -222,10 +248,7 @@ a:link, button {
 
 }
 
-
-
 .content .sidebar .extra-actions {
-
   margin-bottom: 1em;
   
   a, a.active { color: #0088cc; }
@@ -240,10 +263,6 @@ a:link, button {
     text-decoration: underline;
   }
 }
-
-
-
-
 
 .nav-stacked a:hover {
   background: none !important;
@@ -263,30 +282,39 @@ a:link, button {
   margin: 1em 0;
 }
 
+.composite-control {
+  width: 100%;
+  margin-bottom: 10px;
+  display: inline-table;
+
+  .form-control, .glyphicon, .close {
+    margin-right: 10px;
+    padding-left: 6px;
+    display: table-cell;
+    vertical-align: middle;
+  }
+
+  .glyphicon {
+    position: static;
+  }
+
+  .close {
+    float: none;
+  }
+}
 
 .boxes {
-  text-align:center;
+  text-align: center;
 
   .box {
     background:#d2d0c7;
-    color:#000;
-    font-size:16px;
-    padding:15px 0;
-    text-align:center;
+
+    min-height: 78px;
+    padding: 10px 10px;
     .border-radius(5px);
-    margin-bottom:1em;
-    min-height:70px;
 
-    label {
-      text-align:left;
-      text-indent:10%;
-    }
-
-    input, select {
-      width:auto;
-      max-width:100%;
-      min-width:80%;
-    }
+    font-size: 16px;
+    font-weight: normal;
   }
 }
 
@@ -336,11 +364,12 @@ a:link, button {
   }
 }
 
+@import "registration.less";
 @import "conversations.less";
 @import "channels.less";
 @import "campaigns.less";
 @import "routing.less";
 @import "contacts.less";
-@import "accounts.less";
+@import "account.less";
 @import "tables.less";
 @import "error.less";

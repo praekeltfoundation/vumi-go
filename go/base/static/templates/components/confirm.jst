@@ -1,17 +1,21 @@
-<div class="modal-header">
-  <%= self.content %>
-</div>
-
-<div class="modal-footer">
-  <% if (self.optional) { %>
-    <div class="pull-left">
-        <label>
-          <input class='dont-show' type='checkbox'>
-          Don't show this message again.
-        </label>
+<div class="modal-dialog">
+  <div class="modal-content">
+    <div class="modal-body">
+      <%= self.content %>
     </div>
-  <% } %>
 
-  <button class="cancel btn">Cancel</button>
-  <button class="ok btn btn-primary">OK</button>
+    <div class="modal-footer">
+      <% if (self.optional) { %>
+        <div class="checkbox pull-left">
+          <label>
+            <input class='dont-show' type='checkbox'>
+            Don't show this message again.
+          </label>
+        </div>
+      <% } %>
+
+      <button class="cancel btn">Cancel</button>
+      <button class="ok btn btn-primary">OK</button>
+    </div>
+  </div>
 </div>

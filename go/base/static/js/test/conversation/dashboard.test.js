@@ -38,7 +38,7 @@ describe("go.conversation.dashboard", function() {
         ].join(''))
       });
 
-      bootbox.animate(false);
+      bootbox.setDefaults({animate: false});
     });
 
     afterEach(function() {
@@ -64,7 +64,7 @@ describe("go.conversation.dashboard", function() {
         });
 
         dashboard.$('.action').eq(0).click();
-        $('.modal [data-handler=1]').click();
+        $('.modal [data-bb-handler=confirm]').click();
         server.respond();
       });
     });

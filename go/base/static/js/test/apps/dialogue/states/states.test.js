@@ -473,8 +473,7 @@ describe("go.apps.dialogue.states", function() {
         diagram.render();
       });
 
-      it("should allow the state to be sorted",
-      function() {
+      it("should allow the state to be sorted", function() {
         assert.deepEqual(
           states.keys(),
           ['state1','state2','state3','state4']);

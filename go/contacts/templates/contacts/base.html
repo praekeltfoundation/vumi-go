@@ -1,8 +1,6 @@
 {% extends "app.html" %}
 {% load url from future %}
 
-
-
 {% block content_extraclass %}contacts{% endblock %}
 
 {% block content_title %}
@@ -10,25 +8,25 @@
 {% endblock %}
 
 {% block content_breadcrumbs %}
-    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
-        <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find people..." class="input-large search-query">
-        <button type="submit" id="search-filter-btn" class="btn">Search</button>
-    </form>
 {% endblock %}
 
 {% block content_actions_left %}
 {% endblock %}
 
 {% block content_actions_right %}
+    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
+        <div class="form-group">
+            <input type="text" id="search-filter-input" class="form-control" name="q" value="{{query|default:''}}" placeholder="Find people...">
+        <button type="submit" id="search-filter-btn" class="btn btn-default">Search</button>
+    </form>
 {% endblock %}
 
 
 {% block content_main %}
-    <div class="row-fluid">
-        <div class="span3 sidebar">
-
+    <div class="row">
+        <div class="col-md-3 sidebar">
             <div class="nav nav-list extra-actions">
-                <a href="{% url 'contacts:new_person' %}">New contact...</a>
+                <a class="btn btn-link" href="{% url 'contacts:new_person' %}">New contact...</a>
             </div>
 
             <ul class="nav nav-list">
@@ -38,7 +36,7 @@
             </ul>
 
         </div>
-        <div class="span9">
+        <div class="col-md-9 main-content">
             {% include "base/includes/messages.html" %}
             {% block content_main_list %}
             {% endblock %}

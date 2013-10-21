@@ -1,34 +1,94 @@
+{% load go_tags %}
+{% load crispy_forms_tags %}
+
 {% for form in questions_formset %}
+<div class="fieldset">
     <legend>Question {{forloop.counter}}:</legend>
-    {% for field in form.visible_fields %}
-    <div class="control-group" {% if field.erros %}error{% endif %}>
-        <label class="control-label" for="{{field.auto_id}}">{{field.label}}</label>
-        <div class="controls">
-            {{field}}
-            {% if field.errors %}
-                <span class="help-inline">{{field.errors}}</span>
-            {% endif %}
-        </div>
+
+    <div class="form-group">
+        <label class="control-label" for="{{form.copy.auto_id}}">
+            {{form.copy.label}}
+        </label>
+
+        {{form.copy|attr_class:"form-control"}}
+
+        {% if form.copy.errors %}
+        <span class="text-danger">{{form.copy.errors}}</span>
+        {% endif %}
     </div>
-    {% endfor %}
+
+    <div class="checks form-group">
+        <label class="control-label" for="{{form.checks.auto_id}}">
+            {{form.checks.label}}
+        </label>
+
+        {{form.checks}}
+
+        {% if form.copy.errors %}
+        <span class="text-danger">{{form.copy.errors}}</span>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label class="control-label" for="{{form.label.auto_id}}">
+            {{form.label.label}}
+        </label>
+
+        {{form.label|attr_class:"form-control"}}
+
+        {% if form.label.errors %}
+        <span class="text-danger">{{form.copy.errors}}</span>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label class="control-label" for="{{form.valid_responses.auto_id}}">
+            {{form.valid_responses.label}}
+        </label>
+
+        {{form.valid_responses|attr_class:"form-control"}}
+
+        {% if form.valid_responses.errors %}
+        <span class="text-danger">{{form.copy.errors}}</span>
+        {% endif %}
+    </div>
+</div>
 {% endfor %}
 
 {% for form in completed_response_formset %}
+<div class="fieldset">
     <legend>Closing Response {{forloop.counter}}:</legend>
-    {% for field in form.visible_fields %}
-    <div class="control-group" {% if field.erros %}error{% endif %}>
-        <label class="control-label" for="{{field.auto_id}}">{{field.label}}</label>
-        <div class="controls">
-            {{field}}
-            {% if field.errors %}
-                <span class="help-inline">{{field.errors}}</span>
-            {% endif %}
-        </div>
+
+    <div class="form-group">
+        <label class="control-label" for="{{form.copy.auto_id}}">
+            {{form.copy.label}}
+        </label>
+
+        {{form.copy|attr_class:"form-control"}}
+
+        {% if form.copy.errors %}
+        <span class="text-danger">{{form.copy.errors}}</span>
+        {% endif %}
     </div>
-    {% endfor %}
+
+    <div class="checks form-group">
+        <label class="control-label" for="{{form.checks.auto_id}}">
+            {{form.checks.label}}
+        </label>
+
+        {{form.checks}}
+
+        {% if form.copy.errors %}
+        <span class="text-danger">{{form.copy.errors}}</span>
+        {% endif %}
+    </div>
+</div>
 {% endfor %}
 
-{{ poll_form }}
+<div class="fieldset">
+    {{ completed_response_formset.management_form|crispy }}
+</div>
 
-{{ completed_response_formset.management_form }}
-{{ questions_formset.management_form }}
+<div class="fieldset">
+    {{ questions_formset.management_form|crispy }}
+</div>

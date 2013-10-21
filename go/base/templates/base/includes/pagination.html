@@ -1,6 +1,6 @@
 {% if page.has_other_pages %}
-<div class="pagination pagination-centered">
-    <ul>
+<div class="text-center">
+    <ul class="pagination list-unstyled list-inline">
         <li {% if page.has_previous %}{%else%}class="disabled"{%endif%}>
             {% if page.has_previous %}
                 <a href="?p={{page.previous_page_number}}&amp;{{pagination_params}}">&larr;</a>

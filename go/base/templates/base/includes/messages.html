@@ -10,12 +10,10 @@
             {{message}}
         </div>
         {% if error_form.errors %}
-        <div class="control-group error">
+        <div class="form-group error">
             {% for field in error_form.visible_fields %}
                 {% for error in field.errors %}
-                    <div class="controls">
-                        <span class="help-inline">{{field.label}}: {{error}}</span>
-                    </div>
+                    <span class="text-danger">{{field.label}}: {{error}}</span>
                 {% endfor %}
             {% endfor %}
         </div>

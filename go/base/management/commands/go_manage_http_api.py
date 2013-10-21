@@ -90,6 +90,7 @@ class Command(BaseCommand):
         tokens = md.setdefault('api_tokens', [])
         try:
             tokens.remove(token)
+            self.save_api_config(conversation, md)
             self.stdout.write('Removed token %s\n' % (token,))
         except ValueError:
             raise CommandError('Token does not exist')

@@ -5,12 +5,14 @@
 {% block content_title %}{{ channel.tag }}{% endblock %}
 
 {% block content_actions_right %}
+<div class="pull-right">
     {% include "channel/includes/actions.html" with channel=channel %}
+</div>
 {% endblock %}
 
 {% block content_main %}
-<div class="row-fluid indent">
-    <div class="span7">
+<div class="row main-content">
+    <div class="col-md-7">
 
         <div class="sub-details">
             <p>
