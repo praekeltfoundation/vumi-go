@@ -28,8 +28,7 @@
     "grunt-bower-task": "~0.3.2",
     "grunt-exec": "~0.4.2",
     "karma-coverage": "~0.1.0",
-    "grunt-mocha-cov": "0.0.7",
-    "coveralls": "~2.3.0"
+    "grunt-mocha-cov": "0.0.7"
   },
   "repository": {
     "type": "git",
