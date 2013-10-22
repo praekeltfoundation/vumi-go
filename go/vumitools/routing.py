@@ -309,7 +309,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         returnValue(self.CONFIG_CLASS(config_dict))
 
     def connector_type(self, connector_name):
-        if connector_name in self.application_connectors:
+        if connector_name in self.billing_connectors:
+            return self.BILLING
+        elif connector_name in self.application_connectors:
             return self.CONVERSATION
         elif connector_name in self.router_connectors:
             return self.ROUTER
@@ -317,8 +319,6 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             return self.TRANSPORT_TAG
         elif connector_name == self.opt_out_connector:
             return self.OPT_OUT
-        elif connector_name in self.billing_connectors:
-            return self.BILLING
         else:
             raise InvalidConnectorError(
                 "Connector %r is not a valid connector name"
@@ -507,6 +507,57 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
+    def publish_inbound_to_billing(self, config, msg):
+        """Publish an inbound message to the billing worker."""
+        target = (str(GoConnector.for_billing(self.INBOUND)), 'default')
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            msg, target, self.INBOUND)
+
+        yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
+
+    @inlineCallbacks
+    def publish_inbound_from_billing(self, config, msg):
+        """Publish an inbound message to its intended destination
+        after billing.
+
+        """
+        msg_mdh = self.get_metadata_helper(msg)
+        src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
+        target = self.find_target(config, msg, src_conn)
+        if target is None:
+            log.debug("No target found for message from '%s': %s" % (
+                src_conn, msg))
+
+            return
+
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            msg, target, self.INBOUND)
+
+        yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
+
+    @inlineCallbacks
+    def publish_outbound_to_billing(self, config, msg):
+        """Publish an outbound message to the billing worker."""
+        target = (str(GoConnector.for_billing(self.OUTBOUND)), 'default')
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            msg, target, self.OUTBOUND)
+
+        yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
+
+    @inlineCallbacks
+    def publish_outbound_from_billing(self, config, msg):
+        """Publish an outbound message to its intended destination
+        after billing.
+
+        """
+        msg_mdh = self.get_metadata_helper(msg)
+        dst_conn = GoConnector.for_transport_tag(*msg_mdh.tag)
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            msg, [str(dst_conn), 'default'], self.OUTBOUND)
+
+        yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
+
+    @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
         """Process an inbound message.
 
@@ -528,21 +579,24 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         connector_type = self.connector_type(connector_name)
         src_conn = self.acquire_source(msg, connector_type, self.INBOUND)
 
-        if (connector_type == self.TRANSPORT_TAG
-                and msg_mdh.is_optout_message()):
-            yield self.publish_inbound_optout(config, msg)
+        if connector_type == self.TRANSPORT_TAG:
+            if msg_mdh.is_optout_message():
+                yield self.publish_inbound_optout(config, msg)
+                return
+
+            if self.billing_inbound_connector and not msg_mdh.is_paid():
+                yield self.publish_inbound_to_billing(config, msg)
+                return
+
+        if connector_type == self.BILLING:
+            yield self.publish_inbound_from_billing(config, msg)
             return
 
-        if (self.billing_inbound_connector
-                and connector_type == self.TRANSPORT_TAG
-                and not msg_mdh.is_paid()):
-            target = (str(GoConnector.for_billing(self.INBOUND)), 'default')
-        else:
-            target = self.find_target(config, msg, src_conn)
-            if target is None:
-                log.debug("No target found for message from '%s': %s" % (
-                    connector_name, msg))
-                return
+        target = self.find_target(config, msg, src_conn)
+        if target is None:
+            log.debug("No target found for message from '%s': %s" % (
+                connector_name, msg))
+            return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.INBOUND)
@@ -575,15 +629,25 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             yield self.publish_outbound_optout(config, msg)
             return
 
-        if (self.billing_outbound_connector
-                and connector_type == self.CONVERSATION
-                and not msg_mdh.is_paid()):
-            target = (str(GoConnector.for_billing(self.OUTBOUND)), 'default')
-        else:
-            target = self.find_target(config, msg, src_conn)
-            if target is None:
-                log.debug("No target found for message from '%s': %s" % (
-                    connector_name, msg))
+        if connector_type == self.BILLING:
+            yield self.publish_outbound_from_billing(config, msg)
+            return
+
+        if connector_type == self.CONVERSATION or \
+                connector_type == self.ROUTER:
+            msg_mdh.reset_paid()
+
+        target = self.find_target(config, msg, src_conn)
+        if target is None:
+            log.debug("No target found for message from '%s': %s" % (
+                connector_name, msg))
+            return
+
+        if self.billing_outbound_connector:
+            target_conn = GoConnector.parse(target[0])
+            if target_conn.ctype == target_conn.TRANSPORT_TAG\
+                    and not msg_mdh.is_paid():
+                yield self.publish_outbound_to_billing(config, msg)
                 return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(

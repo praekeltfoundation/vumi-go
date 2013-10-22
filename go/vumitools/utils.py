@@ -100,6 +100,9 @@ class MessageMetadataHelper(object):
     def set_paid(self):
         self._go_metadata.update({'is_paid': True})
 
+    def reset_paid(self):
+        self._go_metadata.update({'is_paid': False})
+
     def is_optout_message(self):
         return OptOutMiddleware.is_optout_message(self.message)
 

@@ -26,13 +26,13 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def setup_dispatcher(self):
+        yield super(BillingDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
-        self.unpause_connectors()
 
     @inlineCallbacks
     def teardown_dispatcher(self):
-        yield self.pause_connectors()
         yield self._go_teardown_worker()
+        yield super(BillingDispatcher, self).teardown_dispatcher()
 
     def process_inbound(self, config, msg, connector_name):
         log.debug("Processing inbound: %r" % (msg,))
