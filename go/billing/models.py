@@ -59,7 +59,7 @@ class MessageCost(models.Model):
 
     markup_percent = models.DecimalField(
         max_digits=10, decimal_places=2, default=0.0,
-        help_text=_("The markup percentage."))
+        help_text=_("The markup percentage. e.g. 20.0 for twenty percent"))
 
     @property
     def resulting_price(self):
