@@ -2,6 +2,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go.vumitools.routing import (
     AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
+from go.vumitools.billing_worker import BillingDispatcher
 from go.vumitools.tests.utils import GoTestCase, AppWorkerTestCase
 from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.routing_table import RoutingTable
@@ -209,10 +210,11 @@ class TestRoutingMetadata(GoTestCase):
         ], 'se2')
 
 
-class TestRoutingTableDispatcher(AppWorkerTestCase):
+class RoutingTableDispatcherTestCase(AppWorkerTestCase):
+    """Base class for ``AccountRoutingTableDispatcher`` test cases"""
+
     @inlineCallbacks
-    def setUp(self):
-        yield super(TestRoutingTableDispatcher, self).setUp()
+    def setup_routing_table_dispatcher_test(self):
         self.dispatcher = yield self.get_dispatcher()
         self.vumi_api = self.dispatcher.vumi_api
 
@@ -258,10 +260,10 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     def get_dispatcher(self, **config_extras):
         config = {
             "receive_inbound_connectors": [
-                "sphex", "router_ro",
+                "sphex", "router_ro"
             ],
             "receive_outbound_connectors": [
-                "app1", "app2", "router_ri", "optout",
+                "app1", "app2", "router_ri", "optout"
             ],
             "metrics_prefix": "foo",
             "application_connector_mapping": {
@@ -274,15 +276,32 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             "router_outbound_connector_mapping": {
                 "router": "router_ri",
             },
-            "opt_out_connector": "optout",
+            "opt_out_connector": "optout"
         }
         config.update(config_extras)
         dispatcher = yield self.get_worker(
             self.mk_config(config), AccountRoutingTableDispatcher)
         returnValue(dispatcher)
 
+    @inlineCallbacks
+    def get_billing_dispatcher(self, **config_extras):
+        config = {
+            "receive_inbound_connectors": [
+                "billing_dispatcher_ri"
+            ],
+            "receive_outbound_connectors": [
+                "billing_dispatcher_ro"
+            ],
+            "metrics_prefix": "bar"
+        }
+        config.update(config_extras)
+        billing_dispatcher = yield self.get_worker(
+            self.mk_config(config), BillingDispatcher)
+        returnValue(billing_dispatcher)
+
     def with_md(self, msg, user_account=None, conv=None, router=None,
-                endpoint=None, tag=None, hops=None, outbound_hops_from=None):
+                endpoint=None, tag=None, hops=None, outbound_hops_from=None,
+                is_paid=False):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_api, msg)
         if user_account is not None:
@@ -300,6 +319,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         msg.set_routing_endpoint(endpoint)
         if tag is not None:
             md.set_tag(tag)
+        if is_paid:
+            md.set_paid()
         if hops is not None:
             rmeta = RoutingMetadata(msg)
             for src, dst in zip(hops[:-1], hops[1:]):
@@ -328,6 +349,14 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.vumi_api.mdb.add_outbound_message(msg)
         ack = self.mkmsg_ack(user_message_id=msg['message_id'])
         returnValue((msg, ack))
+
+
+class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestRoutingTableDispatcher, self).setUp()
+        yield self.setup_routing_table_dispatcher_test()
 
     @inlineCallbacks
     def test_inbound_message_from_transport_to_app1(self):
@@ -565,3 +594,47 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             ['TRANSPORT_TAG:pool1:1234', 'default'],
         ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+
+class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestRoutingTableDispatcherWithBilling, self).setUp()
+        yield self.setup_routing_table_dispatcher_test()
+
+    @inlineCallbacks
+    def get_dispatcher(self, **config_extras):
+        config = {
+            "receive_inbound_connectors": [
+                "sphex", "router_ro", "billing_dispatcher_ro"
+            ],
+            "receive_outbound_connectors": [
+                "app1", "app2", "router_ri", "optout",
+                "billing_dispatcher_ri"
+            ],
+            "billing_inbound_connector": "billing_dispatcher_ri",
+            "billing_outbound_connector": "billing_dispatcher_ro"
+        }
+        config.update(config_extras)
+        dispatcher = yield super(TestRoutingTableDispatcherWithBilling, self)\
+            .get_dispatcher(**config)
+        returnValue(dispatcher)
+
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_app1(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound', 'app1.inbound',
+                               'billing_dispatcher_ri.inbound',
+                               'billing_dispatcher_ro.inbound')
+
+        hops = [
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ['BILLING:INBOUND', 'default'],
+            ['CONVERSATION:app1:conv1', 'default']
+        ]
+        self.with_md(msg, conv=('app1', 'conv1'), hops=hops, is_paid=True)
+        self.assertEqual([msg], self.get_dispatched_inbound('app1'))
