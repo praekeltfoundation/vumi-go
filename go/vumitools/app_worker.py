@@ -173,9 +173,10 @@ class GoWorkerMixin(object):
         log.error("Unknown vumi API command: %s(%s, %s)" % (
             method_name, args, kwargs))
 
+    @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):
-        # By default, we don't collect metrics.
-        pass
+        conv = yield user_api.get_wrapped_conversation(conversation_key)
+        yield self.collect_message_metrics(conv)
 
     @inlineCallbacks
     def reconcile_cache(self, user_api, conversation_key, delta=0.01):
