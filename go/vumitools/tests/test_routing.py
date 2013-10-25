@@ -750,7 +750,10 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         yield self.get_billing_dispatcher()
         msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
         yield self.dispatch_outbound(msg, 'app1')
-        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        self.assert_rkeys_used(
+            'app1.outbound', 'billing_dispatcher_ro.outbound',
+            'billing_dispatcher_ri.outbound', 'sphex.outbound')
+
         hops = [
             ['CONVERSATION:app1:conv1', 'default'],
             ['BILLING:OUTBOUND', 'default'],
