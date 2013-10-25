@@ -638,3 +638,180 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         ]
         self.with_md(msg, conv=('app1', 'conv1'), hops=hops, is_paid=True)
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_app2(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "9012"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound', 'app2.inbound',
+                               'billing_dispatcher_ri.inbound',
+                               'billing_dispatcher_ro.inbound')
+
+        hops = [
+            ['TRANSPORT_TAG:pool1:9012', 'default'],
+            ['BILLING:INBOUND', 'default'],
+            ['CONVERSATION:app2:conv2', 'default'],
+        ]
+        self.with_md(msg, conv=('app2', 'conv2'), hops=hops, is_paid=True)
+        self.assertEqual([msg], self.get_dispatched_inbound('app2'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_custom_endpoint(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "5678"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound', 'app1.inbound',
+                               'billing_dispatcher_ri.inbound',
+                               'billing_dispatcher_ro.inbound')
+
+        hops = [
+            ['TRANSPORT_TAG:pool1:5678', 'default'],
+            ['BILLING:INBOUND', 'default'],
+            ['CONVERSATION:app1:conv1', 'other'],
+        ]
+        self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
+                     hops=hops, is_paid=True)
+
+        self.assertEqual([msg], self.get_dispatched_inbound('app1'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_optout(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        tag = ("pool1", "1234")
+        msg = self.with_md(self.mkmsg_in(), tag=tag)
+        msg['helper_metadata']['optout'] = {'optout': True}
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
+        hops = [
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ['OPT_OUT', 'default'],
+        ]
+        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.assertEqual([msg], self.get_dispatched_inbound('optout'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_router(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
+                           is_paid=True)
+
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
+        hops = [
+            ['ROUTER:router:router1:OUTBOUND', 'default'],
+            ['CONVERSATION:app1:conv1', 'default'],
+        ]
+        self.with_md(msg, conv=("app1", "conv1"), hops=hops)
+        self.assertEqual([msg], self.get_dispatched_inbound('app1'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_router_to_custom_endpoint(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
+                           endpoint='other', is_paid=True)
+
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_rkeys_used('router_ro.inbound', 'app2.inbound')
+        hops = [
+            ['ROUTER:router:router1:OUTBOUND', 'other'],
+            ['CONVERSATION:app2:conv2', 'yet-another'],
+        ]
+        self.with_md(msg, conv=("app2", "conv2"), endpoint='yet-another',
+                     hops=hops)
+
+        self.assertEqual([msg], self.get_dispatched_inbound('app2'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_optout_to_transport(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        tag = ("pool1", "1234")
+        msg, reply = yield self.mk_msg_reply(tag=tag)
+        yield self.dispatch_outbound(reply, 'optout')
+        self.assert_rkeys_used('optout.outbound', 'sphex.outbound')
+        hops = [
+            ['OPT_OUT', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+        ]
+        self.with_md(reply, tag=tag, user_account=self.user_account_key,
+                     hops=hops)
+
+        self.assertEqual([reply], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_conversation_in_app1(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        hops = [
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['BILLING:OUTBOUND', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default']
+        ]
+        self.with_md(msg, tag=("pool1", "1234"), hops=hops, is_paid=True)
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_conversation_in_app2(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), conv=('app2', 'conv2'))
+        yield self.dispatch_outbound(msg, 'app2')
+        self.assert_rkeys_used('app2.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "9012"),
+                     hops=[
+                         ['CONVERSATION:app2:conv2', 'default'],
+                         ['TRANSPORT_TAG:pool1:9012', 'default'],
+                     ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_conversation_via_custom_endpoint(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'),
+                           endpoint='other')
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
+                     hops=[
+                         ['CONVERSATION:app1:conv1', 'other'],
+                         ['TRANSPORT_TAG:pool1:5678', 'default'],
+                     ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_router(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'))
+        yield self.dispatch_outbound(msg, 'router_ri')
+        self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "1234"),
+                     hops=[
+                         ['ROUTER:router:router1:INBOUND', 'default'],
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
+                     ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_router_via_custom_endpoint(self):
+        yield self.get_dispatcher()
+        yield self.get_billing_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
+                           endpoint='other')
+
+        yield self.dispatch_outbound(msg, 'router_ri')
+        self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
+                     hops=[
+                         ['ROUTER:router:router1:INBOUND', 'other'],
+                         ['TRANSPORT_TAG:pool1:5678', 'default'],
+                     ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
