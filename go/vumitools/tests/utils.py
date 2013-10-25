@@ -197,12 +197,14 @@ class GoWorkerTestMixin(GoPersistenceMixin):
         return values
 
     def store_outbound_msg(self, msg, conv=None, batch_id=None):
+        assert False
         if batch_id is None and conv is not None:
             batch_id = conv.batch.key
         return self.user_api.api.mdb.add_outbound_message(
             msg, batch_id=batch_id)
 
     def store_inbound_msg(self, msg, conv=None, batch_id=None):
+        assert False
         if batch_id is None and conv is not None:
             batch_id = conv.batch.key
         return self.user_api.api.mdb.add_inbound_message(

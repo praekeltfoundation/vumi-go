@@ -3,6 +3,7 @@ from twisted.internet.defer import inlineCallbacks
 from go.vumitools.tests.utils import RouterWorkerTestCase
 from go.vumitools.routing import RoutingMetadata
 from go.routers.keyword.vumi_app import KeywordRouter
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class TestKeywordRouter(RouterWorkerTestCase):
@@ -18,6 +19,7 @@ class TestKeywordRouter(RouterWorkerTestCase):
         user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_account_key = user_account.key
         self.user_api = self.vumi_api.get_user_api(self.user_account_key)
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     @inlineCallbacks
     def assert_routed_inbound(self, msg, router, expected_endpoint):
@@ -76,13 +78,15 @@ class TestKeywordRouter(RouterWorkerTestCase):
     def test_no_messages_processed_while_stopped(self):
         router = yield self.setup_router({}, started=False)
 
-        yield self.dispatch_inbound_to_router(self.mkmsg_in(), router)
+        yield self.dispatch_inbound_to_router(
+            self.msg_helper.make_inbound("foo"), router)
         self.assertEqual([], self.get_dispatched_inbound('ro_conn'))
 
-        yield self.dispatch_event_to_router(self.mkmsg_ack(), router)
+        yield self.dispatch_event_to_router(self.msg_helper.make_ack(), router)
         self.assertEqual([], self.get_dispatched_events('ro_conn'))
 
-        yield self.dispatch_outbound_to_router(self.mkmsg_out(), router)
+        yield self.dispatch_outbound_to_router(
+            self.msg_helper.make_outbound("foo"), router)
         self.assertEqual([], self.get_dispatched_outbound('ri_conn'))
         [nack] = self.get_dispatched_events('ro_conn')
         self.assertEqual(nack['event_type'], 'nack')
@@ -91,9 +95,9 @@ class TestKeywordRouter(RouterWorkerTestCase):
     def test_inbound_no_config(self):
         router = yield self.setup_router({})
         yield self.assert_routed_inbound(
-            self.mkmsg_in("foo bar"), router, 'default')
+            self.msg_helper.make_inbound("foo bar"), router, 'default')
         yield self.assert_routed_inbound(
-            self.mkmsg_in("baz quux"), router, 'default')
+            self.msg_helper.make_inbound("baz quux"), router, 'default')
 
     @inlineCallbacks
     def test_inbound_keyword(self):
@@ -104,25 +108,25 @@ class TestKeywordRouter(RouterWorkerTestCase):
             },
         })
         yield self.assert_routed_inbound(
-            self.mkmsg_in("foo bar"), router, 'app1')
+            self.msg_helper.make_inbound("foo bar"), router, 'app1')
         yield self.assert_routed_inbound(
-            self.mkmsg_in("baz quux"), router, 'default')
+            self.msg_helper.make_inbound("baz quux"), router, 'default')
         yield self.assert_routed_inbound(
-            self.mkmsg_in(" FoO bar"), router, 'app1')
+            self.msg_helper.make_inbound(" FoO bar"), router, 'app1')
         yield self.assert_routed_inbound(
-            self.mkmsg_in(" aBc123 baz"), router, 'app2')
+            self.msg_helper.make_inbound(" aBc123 baz"), router, 'app2')
 
     @inlineCallbacks
     def test_outbound_no_config(self):
         router = yield self.setup_router({})
         yield self.assert_routed_outbound(
-            self.mkmsg_in("foo bar"), router, 'default')
+            self.msg_helper.make_outbound("foo bar"), router, 'default')
         yield self.assert_routed_outbound(
-            self.mkmsg_in("baz quux"), router, 'default')
+            self.msg_helper.make_outbound("baz quux"), router, 'default')
         yield self.assert_routed_outbound(
-            self.mkmsg_in("foo bar"), router, 'app1')
+            self.msg_helper.make_outbound("foo bar"), router, 'app1')
         yield self.assert_routed_outbound(
-            self.mkmsg_in("baz quux"), router, 'app1')
+            self.msg_helper.make_outbound("baz quux"), router, 'app1')
 
     @inlineCallbacks
     def test_outbound(self):
@@ -132,13 +136,13 @@ class TestKeywordRouter(RouterWorkerTestCase):
             },
         })
         yield self.assert_routed_outbound(
-            self.mkmsg_in("foo bar"), router, 'default')
+            self.msg_helper.make_outbound("foo bar"), router, 'default')
         yield self.assert_routed_outbound(
-            self.mkmsg_in("baz quux"), router, 'default')
+            self.msg_helper.make_outbound("baz quux"), router, 'default')
         yield self.assert_routed_outbound(
-            self.mkmsg_in("foo bar"), router, 'app1')
+            self.msg_helper.make_outbound("foo bar"), router, 'app1')
         yield self.assert_routed_outbound(
-            self.mkmsg_in("baz quux"), router, 'app1')
+            self.msg_helper.make_outbound("baz quux"), router, 'app1')
 
     @inlineCallbacks
     def test_event_default_to_default(self):
@@ -147,7 +151,7 @@ class TestKeywordRouter(RouterWorkerTestCase):
                 'foo': 'app1',
             },
         })
-        ack = self.mkmsg_ack()
+        ack = self.msg_helper.make_ack()
         self.add_router_md_to_msg(ack, router, 'default')
         self.set_event_hops(ack, [
             [['app1', 'default'], ['kwr1', 'default']],
@@ -162,7 +166,7 @@ class TestKeywordRouter(RouterWorkerTestCase):
                 'foo': 'app1',
             },
         })
-        ack = self.mkmsg_ack()
+        ack = self.msg_helper.make_ack()
         self.add_router_md_to_msg(ack, router, 'foo')
         self.set_event_hops(ack, [
             [['app1', 'default'], ['kwr1', 'default']],
@@ -177,7 +181,7 @@ class TestKeywordRouter(RouterWorkerTestCase):
                 'foo': 'app1',
             },
         })
-        ack = self.mkmsg_ack()
+        ack = self.msg_helper.make_ack()
         self.add_router_md_to_msg(ack, router, 'default')
         self.set_event_hops(ack, [
             [['app1', 'default'], ['kwr1', 'foo']],
@@ -192,7 +196,7 @@ class TestKeywordRouter(RouterWorkerTestCase):
                 'foo': 'app1',
             },
         })
-        ack = self.mkmsg_ack()
+        ack = self.msg_helper.make_ack()
         self.add_router_md_to_msg(ack, router, 'foo')
         self.set_event_hops(ack, [
             [['app1', 'default'], ['kwr1', 'bar']],
