@@ -12,7 +12,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'go',
-        'USER': 'postgres',
+        'USER': 'go',
         'PASSWORD': '',
         'HOST': '',
         'PORT': '',

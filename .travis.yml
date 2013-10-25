@@ -19,7 +19,8 @@ install:
   - "pip install coveralls --use-mirrors"
   - "npm install"
 before_script:
-  - "psql -c 'create database go;' -U postgres"
+  - "psql -c 'create user go;' -U postgres"
+  - "psql -c 'create database go owner go;' -U postgres"
   - "export PYTHONPATH=."
   - "django-admin.py syncdb --migrate --noinput --settings=go.testsettings"
 script:
@@ -27,5 +28,6 @@ script:
   - grunt test
 after_script:
   - "psql -c 'drop database go;' -U postgres"
+  - "psql -c 'drop user go;' -U postgres"
 after_success:
   - coveralls
