@@ -46,7 +46,7 @@ class BaseResource(resource.Resource):
         return user_api.get_wrapped_conversation(conversation_key)
 
 
-class OutgoingMessageResource(BaseResource):
+class OutgoingMessageStreamResource(BaseResource):
 
     message_class = None
     proxy_buffering = False
@@ -104,7 +104,7 @@ class InvalidAggregate(errors.VumiError):
     pass
 
 
-class OutgoingEventResource(OutgoingMessageResource):
+class OutgoingEventStreamResource(OutgoingMessageStreamResource):
 
     message_class = TransportEvent
     routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
@@ -304,8 +304,8 @@ class OutgoingConversationResource(BaseConversationResource):
     def getDeferredChild(self, path, request):
 
         class_map = {
-            'events.json': OutgoingEventResource,
-            'messages.json': OutgoingMessageResource,
+            'events.json': OutgoingEventStreamResource,
+            'messages.json': OutgoingMessageStreamResource,
         }
         stream_class = class_map.get(path)
 

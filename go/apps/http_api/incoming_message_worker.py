@@ -24,14 +24,14 @@ class IncomingMessageWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         default='/health/', static=True)
 
 
-class ImcomingHTTPWorker(GoApplicationWorker):
+class IncomingHTTPWorker(GoApplicationWorker):
 
     worker_name = 'incoming_message_worker'
     CONFIG_CLASS = IncomingMessageWorkerConfig
 
     @inlineCallbacks
     def setup_application(self):
-        yield super(ImcomingHTTPWorker, self).setup_application()
+        yield super(IncomingHTTPWorker, self).setup_application()
         config = self.get_static_config()
         self.web_path = config.web_path
         self.web_port = config.web_port
@@ -52,5 +52,5 @@ class ImcomingHTTPWorker(GoApplicationWorker):
 
     @inlineCallbacks
     def teardown_application(self):
-        yield super(ImcomingHTTPWorker, self).teardown_application()
+        yield super(IncomingHTTPWorker, self).teardown_application()
         yield self.webserver.loseConnection()
