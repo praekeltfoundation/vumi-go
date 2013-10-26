@@ -29,6 +29,7 @@ channels.
    sample-applications.rst
    sandbox-resources.rst
    code-examples.rst
+   http_api.rst
 
 Indices and tables
 ==================

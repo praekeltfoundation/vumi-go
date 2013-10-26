@@ -96,12 +96,10 @@ def new_channel(request):
 
 def channel_or_404(user_api, channel_key):
     # TODO: Replace this with a real thing when we have channel models.
-    pool, _, tag = channel_key.partition(':')
-    tags = user_api.list_endpoints()
-    if (pool, tag) not in tags:
-        raise Http404
-
-    return user_api.get_channel((pool, tag))
+    for channel in user_api.active_channels():
+        if channel.key == channel_key:
+            return channel
+    raise Http404
 
 
 @login_required

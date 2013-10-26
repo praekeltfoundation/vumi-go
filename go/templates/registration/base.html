@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 
+{% block container_extraclass %}registration{% endblock %}
+
 {% block content %}
-<div class="row-fluid accounts">
-    <div class="span6 offset3 text-center">
-        <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo-large">
-        {% block auth_form %}
-        {% endblock %}
-    </div>
+<div class="row">
+    <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo-large">
+</div>
+
+<div class="registration-content row">
+    {% block registration_content %}
+    {% endblock %}
 </div>
 {% endblock %}

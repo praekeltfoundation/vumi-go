@@ -27,6 +27,7 @@ class SendSurveyAction(ConversationAction):
 class DownloadUserDataAction(ConversationAction):
     action_name = 'download_user_data'
     action_display_name = 'Download User Data'
+    action_display_verb = 'Send CSV via e-mail'
 
     def perform_action(self, action_data):
         return export_vxpolls_data.delay(self._conv.user_account.key,

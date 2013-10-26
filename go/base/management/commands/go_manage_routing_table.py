@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
-from go.vumitools.account import RoutingTableHelper
+from go.vumitools.routing_table import GoConnector, RoutingTable
 
 
 class Command(BaseCommand):
@@ -19,16 +19,6 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Display the current routing table'),
-        make_option('--no-migration',
-            dest='no-migration',
-            action='store_true',
-            default=False,
-            help='Avoid triggering a migration (only applies to --show)'),
-        make_option('--delete',
-            dest='delete',
-            action='store_true',
-            default=False,
-            help='Delete the routing table (setting it to None)'),
         make_option('--clear',
             dest='clear',
             action='store_true',
@@ -49,7 +39,7 @@ class Command(BaseCommand):
     ]
     option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
 
-    CONFLICTING_OPTIONS = ['show', 'delete', 'clear', 'add', 'remove']
+    CONFLICTING_OPTIONS = ['show', 'clear', 'add', 'remove']
 
     def handle(self, *args, **options):
         options = options.copy()
@@ -74,8 +64,6 @@ class Command(BaseCommand):
 
         if options['show']:
             return self.handle_show(user_api, options)
-        elif options['delete']:
-            return self.handle_delete(user_api, options)
         elif options['clear']:
             return self.handle_clear(user_api, options)
         elif options['add']:
@@ -85,20 +73,11 @@ class Command(BaseCommand):
         raise NotImplementedError('Unknown command.')
 
     def handle_show(self, user_api, options):
-        if options['no-migration']:
-            self.print_routing_table(user_api.get_user_account().routing_table)
-        else:
-            self.print_routing_table(user_api.get_routing_table())
-
-    def handle_delete(self, user_api, options):
-        account = user_api.get_user_account()
-        account.routing_table = None
-        account.save()
-        self.stdout.write("Routing table deleted.\n")
+        self.print_routing_table(user_api.get_routing_table())
 
     def handle_clear(self, user_api, options):
         account = user_api.get_user_account()
-        account.routing_table = {}
+        account.routing_table = RoutingTable()
         account.save()
         self.stdout.write("Routing table cleared.\n")
 
@@ -106,8 +85,7 @@ class Command(BaseCommand):
         account = user_api.get_user_account()
         if account.routing_table is None:
             raise CommandError("No routing table found.")
-        rt_helper = RoutingTableHelper(account.routing_table)
-        rt_helper.add_entry(*options['add'])
+        account.routing_table.add_entry(*options['add'])
         try:
             user_api.validate_routing_table(account)
         except Exception as e:
@@ -120,16 +98,15 @@ class Command(BaseCommand):
         account = user_api.get_user_account()
         if account.routing_table is None:
             raise CommandError("No routing table found.")
-        rt_helper = RoutingTableHelper(account.routing_table)
-        target = rt_helper.lookup_target(src_conn, src_endpoint)
+        target = account.routing_table.lookup_target(src_conn, src_endpoint)
         if target is None:
             raise CommandError("No routing entry found for (%s, %s)." % (
                 src_conn, src_endpoint))
-        elif target != [dst_conn, dst_endpoint]:
+        elif target != [GoConnector.parse(dst_conn), dst_endpoint]:
             raise CommandError(
                 "Existing entry (%s, %s) does not match (%s, %s)." % (
                     target[0], target[1], dst_conn, dst_endpoint))
-        rt_helper.remove_entry(src_conn, src_endpoint)
+        account.routing_table.remove_entry(src_conn, src_endpoint)
         try:
             user_api.validate_routing_table(account)
         except Exception as e:
@@ -147,7 +124,7 @@ class Command(BaseCommand):
             return
 
         self.stdout.write("Routing table:\n")
-        for source, values in routing_table.iteritems():
+        for source, values in routing_table._routing_table.iteritems():
             self.stdout.write("  %s\n" % (source,))
             for endpoint, dest in values.iteritems():
                 self.stdout.write("      %s  ->  %s - %s\n" % (

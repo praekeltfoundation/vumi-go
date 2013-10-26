@@ -26,7 +26,7 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         super(RoutingScreenTestCase, self).tearDown()
         self.mock_rpc.tearDown()
 
-    def make_routing_table(self, tags=(), conversations=(), routing=()):
+    def make_routing_table(self, channels=(), conversations=(), routing=()):
         routing_table = {
             u'campaign_id': self.user_api.user_account_key,
             u'channels': [],
@@ -35,8 +35,9 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
             u'routing_entries': [],
         }
 
-        for tag in tags:
-            routing_table[u'channels'].append(ChannelType.format_channel(tag))
+        for channel in channels:
+            routing_table[u'channels'].append(
+                ChannelType.format_channel(channel))
 
         for conv in conversations:
             routing_table[u'conversations'].append(
@@ -89,7 +90,7 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         conv = self.create_conversation()
         tag = (u'pool', u'tag')
         routing_table = self.make_routing_table(
-            tags=[tag], conversations=[conv],
+            channels=[self.user_api.get_channel(tag)], conversations=[conv],
             routing=[(conv, tag), (tag, conv)])
 
         self.mock_rpc.set_response(result=routing_table)

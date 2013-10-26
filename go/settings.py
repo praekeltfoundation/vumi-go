@@ -160,6 +160,7 @@ INSTALLED_APPS = (
     'django_nose',
     'djcelery',
     'djcelery_email',
+    'crispy_forms',
     'go.base',
     'go.conversation',
     'go.router',
@@ -171,7 +172,6 @@ INSTALLED_APPS = (
 
     'vxpolls.djdashboard',
     'registration',
-    'bootstrap',
     'raven.contrib.django',
     'debug_toolbar',
     'pipeline',
@@ -206,20 +206,36 @@ SESSION_ENGINE = 'go.api.go_api.session'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '(%(levelname)s) %(message)s'
+        },
+    },
     'handlers': {
         'mail_admins': {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
-        }
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
     },
     'loggers': {
         'django.request': {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': True,
-        }
-    }
+        },
+        'go': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
 }
+
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
@@ -394,3 +410,5 @@ PIPELINE_JS = {
         'output_filename': 'export/go.js'
     },
 }
+
+CRISPY_TEMPLATE_PACK = 'bootstrap3'

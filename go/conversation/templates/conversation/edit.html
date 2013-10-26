@@ -1,4 +1,5 @@
 {% extends "app.html" %}
+{% load crispy_forms_tags %}
 
 {% block content_title %}Edit {{ conversation.name }}{% endblock %}
 
@@ -9,22 +10,28 @@
 {% endblock %}
 
 {% block content_main %}
-    {% if messages %}
-    <div class="row-fluid">
-        <div class="span12">
-            {% include "base/includes/messages.html" %}
+    <div class="main-content">
+        {% if messages %}
+        <div class="row">
+            <div class="col-md-12">
+                {% include "base/includes/messages.html" %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-4">
+                <form id="form-conversation" class="indent" method="post" action="">
+                    {% csrf_token %}
+                    {% for edit_form in edit_forms %}
+                        <fieldset>
+                            {{ edit_form|crispy }}
+                        </fieldset>
+                    {% endfor %}
+                </form>
+            </div>
         </div>
     </div>
-    {% endif %}
-
-    <form id="form-conversation" class="indent" method="post" action="">
-        {% csrf_token %}
-        {% for edit_form in edit_forms %}
-            <fieldset>
-                {{ edit_form }}
-            </fieldset>
-        {% endfor %}
-    </form>
 {% endblock %}
 
 {% block extramedia %}

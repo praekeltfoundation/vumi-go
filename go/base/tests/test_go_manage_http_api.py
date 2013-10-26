@@ -63,6 +63,8 @@ class GoManageHttpAPICommandTestCase(VumiGoDjangoTestCase):
         self.do_command(create_token=True)
         self.assertTrue(
             self.command.stdout.getvalue().startswith('Created token'))
+        c = self.user_api.get_wrapped_conversation(self.conversation.key)
+        self.assertNotEqual(c.config['http_api']['api_tokens'], [])
 
     def test_remove_token(self):
         self.setup_conv(config={
@@ -73,6 +75,8 @@ class GoManageHttpAPICommandTestCase(VumiGoDjangoTestCase):
         self.do_command(remove_token='token')
         self.assertTrue(
             self.command.stdout.getvalue().startswith('Removed token'))
+        c = self.user_api.get_wrapped_conversation(self.conversation.key)
+        self.assertEqual(c.config['http_api']['api_tokens'], [])
 
     def test_remove_invalid_token(self):
         self.setup_conv()

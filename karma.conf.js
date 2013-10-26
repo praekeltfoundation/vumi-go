@@ -3,6 +3,16 @@ require('js-yaml');
 module.exports = function(config) {
   var paths = require('./js_paths.yml');
 
+  var files_to_cover = [].concat(
+      paths.client.scripts.go,
+      paths.tests.client.spec
+  );
+
+  var preprocessors = {};
+  files_to_cover.forEach(function (file) {
+      preprocessors[file] = ['coverage'];
+  })
+
   config.set({
     files: [].concat(
       paths.client.styles.vendor,
@@ -14,12 +24,19 @@ module.exports = function(config) {
       paths.tests.client.spec
     ),
 
+    preprocessors: preprocessors,
+    coverageReporter: {
+      type : 'lcov',
+      dir : 'coverage/'
+    },
+
     browsers: ['PhantomJS'],
     frameworks: ['mocha'],
 
     plugins: [
       'karma-mocha',
-      'karma-phantomjs-launcher'
+      'karma-phantomjs-launcher',
+      'karma-coverage'
     ]
   });
 };

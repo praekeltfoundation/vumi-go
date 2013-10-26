@@ -5,13 +5,17 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-bower-task');
   grunt.loadNpmTasks('grunt-contrib-jst');
   grunt.loadNpmTasks('grunt-mocha-test');
+  grunt.loadNpmTasks('grunt-mocha-cov');
   grunt.loadNpmTasks('grunt-karma');
+  grunt.loadNpmTasks('grunt-exec');
 
   grunt.initConfig({
     paths: require('./js_paths.yml'),
     bower: {
       install: {
         options: {
+          layout: 'byComponent',
+          cleanTargetDir: true,
           targetDir: 'go/base/static/vendor'
         }
       }
@@ -19,7 +23,18 @@ module.exports = function (grunt) {
     mochaTest: {
       jsbox_apps: {
         src: ['<%= paths.tests.jsbox_apps.spec %>'],
-      }
+        reporter: 'dot',
+      },
+    },
+    mochacov: {
+      jsbox_apps: {
+        files: ['<%= paths.tests.jsbox_apps.spec %>'],
+        options: {
+          reporter: 'mocha-lcov-reporter',
+          output: 'mochacov.lcov',
+          coverage: true
+        },
+      },
     },
     jst: {
       options: {
@@ -46,20 +61,35 @@ module.exports = function (grunt) {
     karma: {
       dev: {
         singleRun: true,
-        reporters: ['dots'],
+        reporters: ['dots', 'coverage'],
         configFile: 'karma.conf.js'
       }
-    }
+    },
+    exec: {
+      'fonts': {
+        cmd: [
+          'mkdir -p `dirname <%= paths.client.fonts.vendor.dest %>`',
+          ' && ',
+          'cp <%= paths.client.fonts.vendor.src %> ',
+          '   <%= paths.client.fonts.vendor.dest %>'
+        ].join('')
+      }
+    },
   });
 
   grunt.registerTask('test:jsbox_apps', [
-    'mochaTest:jsbox_apps'
+    'mochaTest:jsbox_apps',
+    'mochacov:jsbox_apps'
   ]);
 
   grunt.registerTask('test:client', [
-    'bower',
     'jst:templates',
     'karma:dev'
+  ]);
+
+  grunt.registerTask('vendor', [
+    'bower',
+    'exec:fonts'
   ]);
 
   grunt.registerTask('test', [

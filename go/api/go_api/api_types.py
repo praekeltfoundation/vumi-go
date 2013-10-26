@@ -5,8 +5,6 @@
 
 from vumi.rpc import Unicode, List, Dict, Tag
 
-from go.vumitools.account.models import GoConnector
-
 
 class CampaignType(Dict):
     def __init__(self, *args, **kw):
@@ -83,7 +81,7 @@ class ConversationType(Dict):
 
     @classmethod
     def format_conversation(cls, conv):
-        conn = GoConnector.for_conversation(conv.conversation_type, conv.key)
+        conn = conv.get_connector()
         return {
             'uuid': conv.key,
             'type': conv.conversation_type,
@@ -121,12 +119,14 @@ class ChannelType(Dict):
         super(ChannelType, self).__init__(*args, **kw)
 
     @classmethod
-    def format_channel(cls, tag):
-        pool, tagname = tag
-        uuid = u":".join(tag)
-        conn = GoConnector.for_transport_tag(pool, tagname)
+    def format_channel(cls, channel):
+        # TODO: Clean up the tag-specific stuff in here.
+        pool = channel.tagpool
+        tagname = channel.tag
+        uuid = channel.key
+        conn = channel.get_connector()
         return {
-            'uuid': uuid, 'tag': tag, 'name': tagname,
+            'uuid': uuid, 'tag': (pool, tagname), 'name': tagname,
             'description': u"%s: %s" % (
                 pool.replace('_', ' ').title(), tagname),
             'endpoints': [
@@ -168,10 +168,8 @@ class RouterType(Dict):
 
     @classmethod
     def format_router(cls, router):
-        in_conn = GoConnector.for_router(
-            router.router_type, router.key, GoConnector.INBOUND)
-        out_conn = GoConnector.for_router(
-            router.router_type, router.key, GoConnector.OUTBOUND)
+        in_conn = router.get_inbound_connector()
+        out_conn = router.get_outbound_connector()
         channel_endpoints = router.extra_inbound_endpoints
         conversation_endpoints = router.extra_outbound_endpoints
         return {

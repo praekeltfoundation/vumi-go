@@ -1,35 +1,37 @@
 {% extends "app.html" %}
+{% load crispy_forms_tags %}
 
-{% block content_title %}{{ action_display_name }}{% endblock %}
+{% block content_title %}{{ action.action_display_name }}{% endblock %}
 
 {% block content_actions_right %}
 <div class="pull-right">
-    <button type="submit" name="submit" class="btn btn-primary" value="Save">Save</button>
+    <button type="submit" name="submit" class="btn btn-primary" value="Apply">{{ action.action_display_verb|default:"Save" }}</button>
 </div>
 {% endblock %}
 
 {% block content_main %}
+<div class="main-content row">
+    {% if message %}
+        <div class="col-md-12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    {% endif %}
 
-{% if message %}
-<div class="row-fluid">
-    <div class="span12">
-        {% include "base/includes/messages.html" %}
-    </div>
-</div>
-{% endif %}
-
-<form name="conversation_action" class="indent" id="conversation_action" method="post" action="">
-    {% csrf_token %}
-    <div class="row-fluid">
-        <div class="span12">
-            <div class="box shadow survey-box survey-questions">
-                {{ form }}
-            </div>
+    <div class="row">
+        <div class="col-md-4">
+            <form name="conversation_action" class="indent" id="conversation_action" method="post" action="">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="box shadow survey-box survey-questions">
+                            {{ form|crispy }}
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
-</form>
-
-
+</div>
 {% endblock %}
 
 {% block extramedia %}
@@ -39,5 +41,5 @@
 {% block ondomready %}
     $('.actions .right button').on('click', function(e) {
         $('#conversation_action').submit();
-    });    
+    });
 {% endblock %}

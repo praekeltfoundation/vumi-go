@@ -382,13 +382,14 @@ class EditConversationView(ConversationTemplateView):
     path_suffix = 'edit/'
     edit_forms = ()
 
-    def _render_forms(self, request, conversation, edit_forms):
-        def sum_media(form_list):
-            return sum((f.media for f in form_list), forms.Media())
+    @staticmethod
+    def sum_media(form_list):
+        return sum((f.media for f in form_list), forms.Media())
 
+    def _render_forms(self, request, conversation, edit_forms):
         return self.render_to_response({
                 'conversation': conversation,
-                'edit_forms_media': sum_media(edit_forms),
+                'edit_forms_media': self.sum_media(edit_forms),
                 'edit_forms': edit_forms,
                 })
 
@@ -417,6 +418,11 @@ class EditConversationView(ConversationTemplateView):
         config = conversation.get_config()
         return [self.make_form(key, edit_form, config)
                 for key, edit_form in self.edit_forms]
+
+    def make_forms_dict(self, conversation):
+        config = conversation.get_config()
+        return dict((key, self.make_form(key, edit_form, config))
+                    for key, edit_form in self.edit_forms)
 
     def process_form(self, form):
         if hasattr(form, 'to_config'):
@@ -478,7 +484,7 @@ class ConversationActionView(ConversationTemplateView):
         return self.render_to_response({
             'conversation': conversation,
             'form': form,
-            'action_display_name': self.action.action_display_name,
+            'action': self.action,
         })
 
     @check_action_is_enabled

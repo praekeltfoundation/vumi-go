@@ -1,16 +1,13 @@
 from django import forms
 
-from bootstrap.forms import BootstrapForm
 
-
-class ConversationDetailForm(BootstrapForm):
+class ConversationDetailForm(forms.Form):
     name = forms.CharField(label='Conversation name', max_length=100)
     description = forms.CharField(
         label="Conversation description", required=False)
 
 
 class NewConversationForm(ConversationDetailForm):
-
     def __init__(self, user_api, *args, **kwargs):
         super(NewConversationForm, self).__init__(*args, **kwargs)
         type_choices = [(app['namespace'], app['display_name'])
@@ -20,22 +17,23 @@ class NewConversationForm(ConversationDetailForm):
             choices=type_choices)
 
 
-class ConfirmConversationForm(BootstrapForm):
+class ConfirmConversationForm(forms.Form):
     token = forms.CharField(required=True, widget=forms.HiddenInput)
 
 
-class ConversationSearchForm(BootstrapForm):
+class ConversationSearchForm(forms.Form):
     query = forms.CharField(required=False, widget=forms.TextInput(attrs={
         'class': 'input-xlarge',
         }))
-    conversation_status = forms.ChoiceField(required=False,
+    conversation_status = forms.ChoiceField(
+        required=False,
         choices=[
             ('', 'Status ...'),
             ('running', 'Running'),
             ('finished', 'Finished'),
             ('draft', 'Draft'),
         ],
-        widget=forms.Select(attrs={'class': 'input-small'}))
+        widget=forms.Select(attrs={'class': 'input-sm'}))
 
     def __init__(self, *args, **kw):
         conversation_types = kw.pop('conversation_types')
@@ -46,10 +44,12 @@ class ConversationSearchForm(BootstrapForm):
             widget=forms.Select(attrs={'class': 'input-small'}))
 
 
-class ReplyToMessageForm(BootstrapForm):
+class ReplyToMessageForm(forms.Form):
     in_reply_to = forms.CharField(widget=forms.HiddenInput, required=True)
     # NOTE: the to_addr is only used to display in the UI, when sending the
     #       reply the 'from_addr' of the 'in_reply_to' message copied over.
     to_addr = forms.CharField(label='Send To', required=True)
-    content = forms.CharField(label='Reply Message', required=True,
+    content = forms.CharField(
+        label='Reply Message',
+        required=True,
         widget=forms.Textarea)

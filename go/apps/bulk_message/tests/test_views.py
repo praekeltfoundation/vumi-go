@@ -48,6 +48,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual([], self.get_api_commands_sent())
         self.assertContains(response, 'name="message"')
         self.assertContains(response, '<h1>Write and send bulk message</h1>')
+        self.assertContains(response, '>Send message</button>')
 
     def test_action_bulk_send_no_group(self):
         self.setup_conversation(started=True)
