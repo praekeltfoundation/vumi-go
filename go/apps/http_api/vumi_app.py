@@ -6,7 +6,7 @@ from twisted.internet.defer import inlineCallbacks, maybeDeferred
 from twisted.web import http
 
 from vumi.config import ConfigInt, ConfigText
-from vumi.utils import http_request_full
+from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.transports.httprpc import httprpc
 from vumi import log
 
@@ -139,10 +139,13 @@ class StreamingHTTPWorker(GoApplicationWorker):
         push_message_url = self.get_api_config(conversation,
                                                'push_message_url')
         if push_message_url:
-            resp = yield self.push(push_message_url, message)
-            if resp.code != http.OK:
-                log.warning('Got unexpected response code %s from %s' % (
-                    resp.code, push_message_url))
+            try:
+                resp = yield self.push(push_message_url, message)
+                if resp.code != http.OK:
+                    log.warning('Got unexpected response code %s from %s' % (
+                        resp.code, push_message_url))
+            except HttpTimeoutError, e:
+                log.err("Timeout pushing message to %s" % (push_message_url,))
         else:
             yield self.stream(MessageStream, conversation.key, message)
 
@@ -161,10 +164,13 @@ class StreamingHTTPWorker(GoApplicationWorker):
         conversation = config.get_conversation()
         push_event_url = self.get_api_config(conversation, 'push_event_url')
         if push_event_url:
-            resp = yield self.push(push_event_url, event)
-            if resp.code != http.OK:
-                log.warning('Got unexpected response code %s from %s' % (
-                    resp.code, push_event_url))
+            try:
+                resp = yield self.push(push_event_url, event)
+                if resp.code != http.OK:
+                    log.warning('Got unexpected response code %s from %s' % (
+                        resp.code, push_event_url))
+            except HttpTimeoutError, e:
+                log.err("Timeout pushing event to %s" % (push_event_url,))
         else:
             yield self.stream(EventStream, conversation.key, event)
 
