@@ -446,7 +446,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         from go.apps.http_api import vumi_app
 
         def timeout_raiser(*args, **kw):
-            print "o/"
             raise HttpTimeoutError()
         self.patch(vumi_app, 'http_request_full', timeout_raiser)
 
@@ -463,7 +462,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         with LogCatcher(message='Timeout') as lc:
             yield self.dispatch_to_conv(msg, self.conversation)
             [timeout_log] = lc.messages()
-        self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
+        self.assertTrue(self.mock_push_server.url in timeout_log)
 
     @inlineCallbacks
     def test_post_inbound_event(self):
