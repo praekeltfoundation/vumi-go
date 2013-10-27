@@ -76,6 +76,9 @@ class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         "Maximum number of clients per account. A value less than "
         "zero disables the limit",
         default=10)
+    timeout = ConfigInt(
+        "How long to wait for a response from a server when posting "
+        "messages or events", default=5, static=True)
 
 
 class StreamingHTTPWorker(GoApplicationWorker):
@@ -166,10 +169,11 @@ class StreamingHTTPWorker(GoApplicationWorker):
             yield self.stream(EventStream, conversation.key, event)
 
     def push(self, url, vumi_message):
+        config = self.get_static_config()
         data = vumi_message.to_json().encode('utf-8')
         return http_request_full(url.encode('utf-8'), data=data, headers={
             'Content-Type': 'application/json; charset=utf-8',
-        })
+        }, timeout=config.timeout)
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
