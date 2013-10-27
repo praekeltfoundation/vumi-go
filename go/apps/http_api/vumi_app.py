@@ -139,13 +139,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
         push_message_url = self.get_api_config(conversation,
                                                'push_message_url')
         if push_message_url:
-            try:
-                resp = yield self.push(push_message_url, message)
-                if resp.code != http.OK:
-                    log.warning('Got unexpected response code %s from %s' % (
-                        resp.code, push_message_url))
-            except HttpTimeoutError, e:
-                log.err("Timeout pushing message to %s" % (push_message_url,))
+            yield self.push(push_message_url, message)
         else:
             yield self.stream(MessageStream, conversation.key, message)
 
@@ -164,22 +158,25 @@ class StreamingHTTPWorker(GoApplicationWorker):
         conversation = config.get_conversation()
         push_event_url = self.get_api_config(conversation, 'push_event_url')
         if push_event_url:
-            try:
-                resp = yield self.push(push_event_url, event)
-                if resp.code != http.OK:
-                    log.warning('Got unexpected response code %s from %s' % (
-                        resp.code, push_event_url))
-            except HttpTimeoutError, e:
-                log.err("Timeout pushing event to %s" % (push_event_url,))
+            yield self.push(push_event_url, event)
         else:
             yield self.stream(EventStream, conversation.key, event)
 
+    @inlineCallbacks
     def push(self, url, vumi_message):
         config = self.get_static_config()
+        print config.timeout
         data = vumi_message.to_json().encode('utf-8')
-        return http_request_full(url.encode('utf-8'), data=data, headers={
-            'Content-Type': 'application/json; charset=utf-8',
-        }, timeout=config.timeout)
+        try:
+            resp = yield http_request_full(
+                url.encode('utf-8'), data=data, headers={
+                    'Content-Type': 'application/json; charset=utf-8',
+                }, timeout=config.timeout)
+            if resp.code != http.OK:
+                log.warning('Got unexpected response code %s from %s' % (
+                    resp.code, url))
+        except HttpTimeoutError:
+            log.warning("Timeout pushing message to %s" % (url,))
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
