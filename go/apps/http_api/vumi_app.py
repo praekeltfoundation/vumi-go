@@ -63,7 +63,7 @@ class StreamingClientManager(object):
         yield self.redis.ltrim(backlog_key, 0, self.MAX_BACKLOG_SIZE - 1)
 
 
-class OutboundHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
+class OutboundHttpWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
     """Configuration options for StreamingHTTPWorker."""
 
     web_path = ConfigText(
@@ -81,14 +81,14 @@ class OutboundHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         default=10)
 
 
-class OutboundHTTPWorker(GoApplicationWorker):
+class OutboundHttpWorker(GoApplicationWorker):
 
     worker_name = 'http_api_outbound_application'
-    CONFIG_CLASS = OutboundHTTPWorkerConfig
+    CONFIG_CLASS = OutboundHttpWorkerConfig
 
     @inlineCallbacks
     def setup_application(self):
-        yield super(OutboundHTTPWorker, self).setup_application()
+        yield super(OutboundHttpWorker, self).setup_application()
         config = self.get_static_config()
         self.web_path = config.web_path
         self.web_port = config.web_port
@@ -185,7 +185,7 @@ class OutboundHTTPWorker(GoApplicationWorker):
 
     @inlineCallbacks
     def teardown_application(self):
-        yield super(OutboundHTTPWorker, self).teardown_application()
+        yield super(OutboundHttpWorker, self).teardown_application()
         yield self.webserver.loseConnection()
 
 
