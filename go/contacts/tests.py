@@ -410,9 +410,23 @@ class ContactsTestCase(BaseContactsTestCase):
         response = self.client.post(reverse('contacts:people'), {
             'name': 'broken contacts group',
             'file': csv_file,
-        })
+        }, follow=True)
+        self.assertContains(response, "Something is wrong with the file")
+        self.assertNotContains(response, "contact_data_headers")
+
+    def test_contact_parsing_failure_bad_delimiter(self):
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                        'fixtures', 'sample-contacts-bad-delimiter.csv'))
+        response = self.client.post(reverse('contacts:people'), {
+            'name': 'broken contacts group',
+            'file': csv_file,
+        }, follow=True)
         group = newest(self.contact_store.list_groups())
         self.assertRedirects(response, group_url(group.key))
+        # We only get one column here.
+        self.assertContains(response, 'column-0')
+        self.assertNotContains(response, 'column-1')
+        # Pretend we got all three so we can explode again in the next bit.
         response = self.specify_columns(group_key=group.key, columns={
             'column-0': 'name',
             'column-1': 'surname',
