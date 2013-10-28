@@ -9,6 +9,7 @@ from vumi.persist.model import ModelMigrationError
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_migrate_conversations
 from go.vumitools.conversation.old_models import ConversationV1
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
@@ -120,6 +121,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
 
     def setup_fix_batches(self, tags=(), num_batches=1):
         mdb = self.user_api.api.mdb
+        msg_helper = GoMessageHelper()  # We can't use .store_*(), so no mdb.
         batches = [mdb.batch_start(tags=tags) for i in range(num_batches)]
 
         conv = self.mkoldconv(
@@ -129,9 +131,9 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
 
         for i, batch_id in enumerate(batches):
             conv.batches.add_key(batch_id)
-            msg1 = self.mkmsg_in(message_id=u"msg-%d" % i)
+            msg1 = msg_helper.make_inbound("in", message_id=u"msg-%d" % i)
             mdb.add_inbound_message(msg1, batch_id=batch_id)
-            msg2 = self.mkmsg_out(message_id=u"msg-%d" % i)
+            msg2 = msg_helper.make_outbound("out", message_id=u"msg-%d" % i)
             mdb.add_outbound_message(msg2, batch_id=batch_id)
 
         conv.save()
