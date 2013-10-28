@@ -5,6 +5,7 @@ from vumi_wikipedia.tests.test_wikipedia_api import (
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.wikipedia.vumi_app import WikipediaApplication
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
@@ -26,6 +27,7 @@ class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
         yield self.setup_tagpools()
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     @inlineCallbacks
     def tearDown(self):
@@ -46,7 +48,8 @@ class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
     @inlineCallbacks
     def assert_response(self, text, expected, session_event=None):
         yield self.dispatch_to_conv(
-            self.mkmsg_in(text, session_event=session_event), self.conv)
+            self.msg_helper.make_inbound(text, session_event=session_event),
+            self.conv)
         self.assertEqual(
             expected, self.get_outbound_msgs('default')[-1]['content'])
 

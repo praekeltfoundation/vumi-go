@@ -1,6 +1,8 @@
 import os
 from settings import *
 
+SECRET_KEY = "test_secret"
+
 # This needs to point at the test riak buckets.
 VUMI_API_CONFIG['riak_manager'] = {'bucket_prefix': 'test.'}
 VUMI_API_CONFIG['redis_manager'] = {

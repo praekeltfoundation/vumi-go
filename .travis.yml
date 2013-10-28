@@ -16,7 +16,7 @@ install:
   - "pip install https://github.com/praekelt/vumi-wikipedia/tarball/develop#egg=vumi-wikipedia-dev --use-mirrors"
   - "pip install -r requirements.pip --use-mirrors"
   - "pip install -r requirements-pytest.pip --use-mirrors"
-  - "pip install coveralls --use-mirrors"
+  - "pip install overalls"
   - "npm install"
 before_script:
   - "psql -c 'create user go with createdb;' -U postgres"
@@ -30,4 +30,4 @@ after_script:
   - "psql -c 'drop database go;' -U postgres"
   - "psql -c 'drop user go;' -U postgres"
 after_success:
-  - coveralls
+  - overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info

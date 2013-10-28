@@ -4,12 +4,12 @@ from mock import Mock
 
 from twisted.internet.defer import inlineCallbacks, succeed
 
-from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
 from go.apps.jsbox.outbound import GoOutboundResource
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class StubbedAppWorker(DummyAppWorker):
@@ -54,6 +54,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
     def setUp(self):
         super(TestGoOutboundResource, self).setUp()
         yield self.create_resource({})
+        self.msg_helper = GoMessageHelper()
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)
@@ -68,13 +69,8 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         self.assertFalse(self.app_worker.reply_to.called)
         self.assertFalse(self.app_worker.reply_to_group.called)
 
-    def mkmsg_in(self, **kw):
-        opts = {
-            'content': 'hello world', 'to_addr': '12345', 'from_addr': '67890',
-            'transport_name': 'dummy_transport', 'transport_type': 'dummy',
-        }
-        opts.update(kw)
-        msg = TransportUserMessage(**opts)
+    def make_inbound(self, content, **kw):
+        msg = self.msg_helper.make_inbound(content, **kw)
         self.app_worker.add_inbound_message(msg)
         return msg
 
@@ -86,7 +82,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_reply_to(self):
-        msg = self.mkmsg_in(content='Hello', helper_metadata={'orig': 'data'})
+        msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
         msg_reply = msg.reply('Reply!')
         self.app_worker.conversation.set_go_helper_metadata = (
             self.dummy_metadata_adder)
@@ -102,7 +98,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_reply_to_with_null_content(self):
-        msg = self.mkmsg_in(content='Hello')
+        msg = self.make_inbound('Hello')
         msg_reply = msg.reply(None, continue_session=False)
         self.app_worker.conversation.set_go_helper_metadata = (
             lambda md: md)
@@ -137,7 +133,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_reply_to_group(self):
-        msg = self.mkmsg_in(content='Hello', helper_metadata={'orig': 'data'})
+        msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
         msg_reply = msg.reply('Reply!')
         self.app_worker.conversation.set_go_helper_metadata = (
             self.dummy_metadata_adder)

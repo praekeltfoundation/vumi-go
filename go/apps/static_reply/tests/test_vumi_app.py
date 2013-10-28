@@ -4,6 +4,7 @@ from twisted.internet.defer import inlineCallbacks
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.static_reply.vumi_app import StaticReplyApplication
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class TestStaticReplyApplication(AppWorkerTestCase):
@@ -21,13 +22,14 @@ class TestStaticReplyApplication(AppWorkerTestCase):
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     @inlineCallbacks
     def test_receive_message(self):
         conv = yield self.create_conversation(config={
             'reply_text': 'Your message is important to us.',
         }, started=True)
-        yield self.dispatch_to_conv(self.mkmsg_in(), conv)
+        yield self.dispatch_to_conv(self.msg_helper.make_inbound("foo"), conv)
         [reply] = yield self.get_dispatched_messages()
         self.assertEqual('Your message is important to us.', reply['content'])
         self.assertEqual(u'close', reply['session_event'])
@@ -35,5 +37,5 @@ class TestStaticReplyApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_receive_message_no_reply(self):
         conv = yield self.create_conversation(config={}, started=True)
-        yield self.dispatch_to_conv(self.mkmsg_in(), conv)
+        yield self.dispatch_to_conv(self.msg_helper.make_inbound("foo"), conv)
         self.assertEqual([], (yield self.get_dispatched_messages()))

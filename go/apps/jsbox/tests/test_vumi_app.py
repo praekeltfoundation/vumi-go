@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import pkg_resources
-import uuid
 
 import mock
 
@@ -14,6 +13,7 @@ from go.apps.jsbox.vumi_app import JsBoxApplication, ConversationConfigResource
 from vumi.application.sandbox import JsSandbox, SandboxCommand
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import LogCatcher
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class JsBoxApplicationTestCase(AppWorkerTestCase):
@@ -44,6 +44,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         yield self.setup_tagpools()
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
@@ -108,14 +109,14 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation = yield self.setup_conversation(
             config=self.mk_conv_config('on_inbound_message'))
         yield self.start_conversation(conversation)
-        msg = self.mkmsg_in()
+        msg = self.msg_helper.make_inbound("inbound")
         yield self.dispatch_to_conv(msg, conversation)
 
     @inlineCallbacks
     def test_user_message_no_javascript(self):
         conversation = yield self.setup_conversation(config={})
         yield self.start_conversation(conversation)
-        msg = self.mkmsg_in()
+        msg = self.msg_helper.make_inbound("inbound")
         with LogCatcher() as lc:
             yield self.dispatch_to_conv(msg, conversation)
             self.assertTrue("No JS for conversation: %s" % (conversation.key,)
@@ -126,15 +127,14 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation = yield self.setup_conversation(
             config=self.mk_conv_config('on_inbound_message'))
         yield self.start_conversation(conversation)
-        msg = self.mkmsg_in()
-        conversation.set_go_helper_metadata(msg['helper_metadata'])
+        msg = self.msg_helper.make_inbound("inbound", conv=conversation)
         config = yield self.app.get_config(msg)
         self.assertEqual(config.sandbox_id, self.user_account.key)
 
     def test_delivery_class_inference(self):
         def check_inference_for(transport_type, expected_delivery_class):
-            msg = self.mkmsg_in()
-            msg['transport_type'] = transport_type
+            msg = self.msg_helper.make_inbound(
+                "inbound", transport_type=transport_type)
             self.assertEqual(
                 self.app.infer_delivery_class(msg),
                 expected_delivery_class)
@@ -151,11 +151,9 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation = yield self.setup_conversation(
             config=self.mk_conv_config('on_inbound_event'))
         yield self.start_conversation(conversation)
-        msg = self.mkmsg_in()
-        conversation.set_go_helper_metadata(msg['helper_metadata'])
-        yield self.store_outbound_msg(msg, conversation)
-        event = self.mkmsg_ack(user_message_id=msg['message_id'])
-        conversation.set_go_helper_metadata(event['helper_metadata'])
+        msg = yield self.msg_helper.make_stored_outbound(
+            conversation, "outbound")
+        event = self.msg_helper.make_ack(msg, conv=conversation)
         yield self.dispatch_event(event)
 
     @inlineCallbacks
@@ -213,8 +211,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     def test_process_command_send_message_in_reply_to(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
-        yield self.store_inbound_msg(msg)
+        msg = yield self.msg_helper.make_stored_inbound(conversation, "foo")
         yield self.dispatch_command(
             "send_message",
             user_account_key=self.user_account.key,

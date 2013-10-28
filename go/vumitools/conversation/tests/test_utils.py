@@ -2,11 +2,11 @@ from datetime import datetime, timedelta
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.message import TransportMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.opt_out import OptOutStore
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class ConversationWrapperTestCase(AppWorkerTestCase):
@@ -31,6 +31,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
         self.conv = yield self.create_conversation(
             conversation_type=u'dummy')
+        self.msg_helper = GoMessageHelper(self.mdb)
 
     @inlineCallbacks
     def setup_tags(self, name=u'longcode', count=4, metadata=None):
@@ -58,17 +59,14 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def store_inbound(self, batch_key, count=10, addr_template='from-{0}',
                       content_template='hello world {0}',
-                      start_timestamp=None, time_multiplier=10,
-                      helper_metadata=None):
+                      start_timestamp=None, time_multiplier=10, **kw):
         inbound = []
         now = start_timestamp or datetime.now().replace(
             hour=23, minute=59, second=59, microsecond=999)
         for i in range(count):
-            msg_in = self.mkmsg_in(from_addr=addr_template.format(i),
-                                   message_id=TransportMessage.generate_id(),
-                                   content=content_template.format(i),
-                                   helper_metadata=helper_metadata)
-            msg_in['timestamp'] = now - timedelta(hours=i * time_multiplier)
+            msg_in = self.msg_helper.make_inbound(
+                content_template.format(i), from_addr=addr_template.format(i),
+                timestamp=(now - timedelta(hours=i * time_multiplier)), **kw)
             yield self.mdb.add_inbound_message(msg_in, batch_id=batch_key)
             inbound.append(msg_in)
         returnValue(inbound)
@@ -76,17 +74,14 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def store_outbound(self, batch_key, count=10, addr_template='to-{0}',
                        content_template='hello world {0}',
-                       start_timestamp=None, time_multiplier=10,
-                       helper_metadata=None):
+                       start_timestamp=None, time_multiplier=10, **kw):
         outbound = []
         now = start_timestamp or datetime.now().replace(
             hour=23, minute=59, second=59, microsecond=999)
         for i in range(count):
-            msg_out = self.mkmsg_out(to_addr=addr_template.format(i),
-                                     message_id=TransportMessage.generate_id(),
-                                     content=content_template.format(i),
-                                     helper_metadata=helper_metadata)
-            msg_out['timestamp'] = now - timedelta(hours=i * time_multiplier)
+            msg_out = self.msg_helper.make_outbound(
+                content_template.format(i), to_addr=addr_template.format(i),
+                timestamp=(now - timedelta(hours=i * time_multiplier)), **kw)
             yield self.mdb.add_outbound_message(msg_out, batch_id=batch_key)
             outbound.append(msg_out)
         returnValue(outbound)
@@ -97,9 +92,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         messages = outbound[0:count]
         events = []
         for message in messages:
-            event_maker = getattr(self, 'mkmsg_%s' % (event_type,))
-            event = event_maker(user_message_id=message['message_id'],
-                                **kwargs)
+            event_maker = getattr(self.msg_helper, 'make_%s' % (event_type,))
+            event = event_maker(message, **kwargs)
             yield self.mdb.add_event(event)
             events.append(event)
         returnValue(events)
@@ -287,12 +281,12 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         outbound = yield self.store_outbound(self.conv.batch.key, count=10)
         yield self.store_event(outbound, 'ack', count=8)
         yield self.store_event(outbound, 'nack', count=2)
-        yield self.store_event(outbound, 'delivery', count=4,
-                               status='delivered')
-        yield self.store_event(outbound, 'delivery', count=1,
-                               status='failed')
-        yield self.store_event(outbound, 'delivery', count=1,
-                               status='pending')
+        yield self.store_event(outbound, 'delivery_report', count=4,
+                               delivery_status='delivered')
+        yield self.store_event(outbound, 'delivery_report', count=1,
+                               delivery_status='failed')
+        yield self.store_event(outbound, 'delivery_report', count=1,
+                               delivery_status='pending')
         self.assertEqual((yield self.conv.get_progress_status()), {
             'sent': 10,
             'ack': 8,

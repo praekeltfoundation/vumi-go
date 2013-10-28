@@ -1,16 +1,9 @@
 from django.conf.urls.defaults import patterns, url
 
-#from registration.backends.default.urls import urlpatterns as authpatterns
-from registration.views import register
-
-from go.account.forms import RegistrationForm
 from go.account import views
 
 urlpatterns = patterns('',
-    url(r'^register/$', register, {
-        'backend': 'registration.backends.default.DefaultBackend',
-        'form_class': RegistrationForm,
-        },
+    url(r'^register/$', views.GoRegistrationView,
         name='registration_register'),
     url(r'^details/$', views.details, name='details'),
     url(r'^users/$', views.user_list, name='user_list'),
@@ -19,4 +12,3 @@ urlpatterns = patterns('',
         name='user_detail'),
     url(r'^billing/$', views.billing, name='billing'),
 )
-#urlpatterns += authpatterns
