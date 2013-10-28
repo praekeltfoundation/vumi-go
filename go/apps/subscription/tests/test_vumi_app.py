@@ -6,6 +6,7 @@ from twisted.internet.defer import inlineCallbacks
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.subscription.vumi_app import SubscriptionApplication
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class TestSubscriptionApplication(AppWorkerTestCase):
@@ -48,6 +49,7 @@ class TestSubscriptionApplication(AppWorkerTestCase):
                     mkhandler('stop', 'bar', 'unsubscribe', 'Unsubscribed.'),
                 ]})
         yield self.start_conversation(self.conv)
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     @inlineCallbacks
     def assert_subscription(self, contact, campaign_name, value):
@@ -56,9 +58,9 @@ class TestSubscriptionApplication(AppWorkerTestCase):
             contact.key)
         self.assertEqual(contact.subscription[campaign_name], value)
 
-    def dispatch_from(self, contact, *args, **kw):
+    def dispatch_from(self, contact, content, **kw):
         kw['from_addr'] = contact.msisdn
-        msg = self.mkmsg_in(*args, **kw)
+        msg = self.msg_helper.make_inbound(content, **kw)
         return self.dispatch_to_conv(msg, self.conv)
 
     def set_subscription(self, contact, subscribed, unsubscribed):

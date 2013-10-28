@@ -4,11 +4,10 @@ from datetime import datetime, timedelta
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.message import TransportUserMessage
-
 from go.vumitools.tests.utils import GoTestCase
 from go.vumitools.account import AccountStore
 from go.vumitools.opt_out.models import OptOutStore
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class TestOptOutStore(GoTestCase):
@@ -22,16 +21,7 @@ class TestOptOutStore(GoTestCase):
         self.account_store = AccountStore(self.manager)
         self.account = yield self.mk_user(self, u'user')
         self.opt_out_store = OptOutStore.from_user_account(self.account)
-
-    def mkmsg_in(self, **kw):
-        # TODO: replace all these copies of mkmsg_in with a single helper
-        opts = {
-            'content': 'hello world', 'to_addr': '12345', 'from_addr': '67890',
-            'transport_name': 'dummy_transport', 'transport_type': 'dummy',
-        }
-        opts.update(kw)
-        msg = TransportUserMessage(**opts)
-        return msg
+        self.msg_helper = GoMessageHelper()
 
     def test_setup_proxies(self):
         self.assertTrue(hasattr(self.opt_out_store, 'opt_outs'))
@@ -43,7 +33,7 @@ class TestOptOutStore(GoTestCase):
 
     @inlineCallbacks
     def test_new_opt_out(self):
-        msg = self.mkmsg_in(content="STOP")
+        msg = self.msg_helper.make_inbound("STOP")
         opt_out = yield self.opt_out_store.new_opt_out(
             "msisdn", "+1234", msg)
         # check opt out is correct
@@ -59,7 +49,7 @@ class TestOptOutStore(GoTestCase):
 
     @inlineCallbacks
     def test_get_opt_out(self):
-        msg = self.mkmsg_in()
+        msg = self.msg_helper.make_inbound("inbound")
         opt_out = yield self.opt_out_store.get_opt_out("msisdn", "+1234")
         self.assertEqual(opt_out, None)
         yield self.opt_out_store.new_opt_out("msisdn", "+1234", msg)
@@ -70,7 +60,7 @@ class TestOptOutStore(GoTestCase):
     def test_delete_opt_out(self):
         store = self.opt_out_store
         yield store.new_opt_out(
-            "msisdn", "+1234", self.mkmsg_in())
+            "msisdn", "+1234", self.msg_helper.make_inbound("inbound"))
         self.assertNotEqual((yield store.get_opt_out("msisdn", "+1234")),
                             None)
         yield store.delete_opt_out("msisdn", "+1234")
@@ -86,7 +76,7 @@ class TestOptOutStore(GoTestCase):
         addrs = [("msisdn", str(i)) for i in range(5)]
         for addr_type, addr in addrs:
             yield self.opt_out_store.new_opt_out(
-                addr_type, addr, self.mkmsg_in())
+                addr_type, addr, self.msg_helper.make_inbound("inbound"))
         keys = sorted((yield self.opt_out_store.list_opt_outs()))
         expected_keys = sorted(self.opt_out_store.opt_out_id(addr_type, addr)
                                for addr_type, addr in addrs)
@@ -102,7 +92,7 @@ class TestOptOutStore(GoTestCase):
         addrs = [("msisdn", str(i)) for i in range(5)]
         for addr_type, addr in addrs:
             yield self.opt_out_store.new_opt_out(
-                addr_type, addr, self.mkmsg_in())
+                addr_type, addr, self.msg_helper.make_inbound("inbound"))
         self.assertEqual(
             sorted((yield self.opt_out_store.opt_outs_for_addresses(
                 "msisdn", ["0", "2", "3"]))),
