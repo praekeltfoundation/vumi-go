@@ -6,7 +6,7 @@ from twisted.internet.defer import inlineCallbacks, maybeDeferred
 from twisted.web import http
 
 from vumi.config import ConfigInt, ConfigText
-from vumi.utils import http_request_full
+from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.transports.httprpc import httprpc
 from vumi import log
 
@@ -76,6 +76,9 @@ class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         "Maximum number of clients per account. A value less than "
         "zero disables the limit",
         default=10)
+    timeout = ConfigInt(
+        "How long to wait for a response from a server when posting "
+        "messages or events", default=5, static=True)
 
 
 class StreamingHTTPWorker(GoApplicationWorker):
@@ -136,10 +139,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
         push_message_url = self.get_api_config(conversation,
                                                'push_message_url')
         if push_message_url:
-            resp = yield self.push(push_message_url, message)
-            if resp.code != http.OK:
-                log.warning('Got unexpected response code %s from %s' % (
-                    resp.code, push_message_url))
+            yield self.push(push_message_url, message)
         else:
             yield self.stream(MessageStream, conversation.key, message)
 
@@ -158,18 +158,25 @@ class StreamingHTTPWorker(GoApplicationWorker):
         conversation = config.get_conversation()
         push_event_url = self.get_api_config(conversation, 'push_event_url')
         if push_event_url:
-            resp = yield self.push(push_event_url, event)
-            if resp.code != http.OK:
-                log.warning('Got unexpected response code %s from %s' % (
-                    resp.code, push_event_url))
+            yield self.push(push_event_url, event)
         else:
             yield self.stream(EventStream, conversation.key, event)
 
+    @inlineCallbacks
     def push(self, url, vumi_message):
+        config = self.get_static_config()
+        print config.timeout
         data = vumi_message.to_json().encode('utf-8')
-        return http_request_full(url.encode('utf-8'), data=data, headers={
-            'Content-Type': 'application/json; charset=utf-8',
-        })
+        try:
+            resp = yield http_request_full(
+                url.encode('utf-8'), data=data, headers={
+                    'Content-Type': 'application/json; charset=utf-8',
+                }, timeout=config.timeout)
+            if resp.code != http.OK:
+                log.warning('Got unexpected response code %s from %s' % (
+                    resp.code, url))
+        except HttpTimeoutError:
+            log.warning("Timeout pushing message to %s" % (url,))
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
