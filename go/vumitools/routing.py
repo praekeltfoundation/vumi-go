@@ -647,6 +647,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             target_conn = GoConnector.parse(target[0])
             if target_conn.ctype == target_conn.TRANSPORT_TAG\
                     and not msg_mdh.is_paid():
+                if not msg_mdh.tag:
+                    msg_mdh.set_tag([target_conn.tagpool, target_conn.tagname])
                 yield self.publish_outbound_to_billing(config, msg)
                 return
 
