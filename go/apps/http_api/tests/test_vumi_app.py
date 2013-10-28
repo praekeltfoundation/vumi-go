@@ -457,7 +457,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         self._patch_http_request_full()
-        msg = self.mkmsg_in(content='in 1', message_id='1')
+        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         with LogCatcher(message='Timeout') as lc:
             yield self.dispatch_to_conv(msg, self.conversation)
             [timeout_log] = lc.messages()
@@ -472,7 +472,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         msg1 = yield self.msg_helper.make_stored_outbound(
-            self.conversation, 'in 1', message_id='1')
+            self.conversation, 'out 1', message_id='1')
         ack1 = self.msg_helper.make_ack(msg1)
         event_d = self.dispatch_event_to_conv(ack1, self.conversation)
 
@@ -491,9 +491,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg1 = self.mkmsg_out(content='in 1', message_id='1')
-        self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
-        yield self.store_outbound_msg(msg1, self.conversation)
+        msg1 = yield self.msg_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
 
         self._patch_http_request_full()
