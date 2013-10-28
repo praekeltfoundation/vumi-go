@@ -1,4 +1,3 @@
-{% load url from future %}
 <form id="conversation-next" name="conversation-next" class="form-inline" method="post" action="{{ next_url }}">
     {% csrf_token %}
     <input type="submit" class="btn btn-primary" value="Next &rarr;">

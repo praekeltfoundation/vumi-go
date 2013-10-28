@@ -2,7 +2,7 @@ import getpass
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.management.commands import createsuperuser
+from django.core.validators import validate_email
 from django.contrib.auth.models import User
 from django.core import exceptions
 
@@ -36,7 +36,7 @@ class Command(BaseCommand):
                     self.stderr.write('Please provide %s:' % (key,))
 
         try:
-            createsuperuser.is_valid_email(options['email-address'])
+            validate_email(options['email-address'])
             email_address = options['email-address']
             password = options['password']
             name = options['name']

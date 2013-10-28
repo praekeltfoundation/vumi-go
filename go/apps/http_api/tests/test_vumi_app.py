@@ -6,9 +6,9 @@ from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
-from vumi.utils import http_request_full
+from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.message import TransportUserMessage, TransportEvent
-from vumi.tests.utils import MockHttpServer
+from vumi.tests.utils import MockHttpServer, LogCatcher
 from vumi.transports.vumi_bridge.client import StreamingClient
 from vumi.config import ConfigContext
 
@@ -441,6 +441,28 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         posted_msg = TransportUserMessage.from_json(posted_json_data)
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
 
+    def _patch_http_request_full(self):
+        from go.apps.http_api import vumi_app
+
+        def timeout_raiser(*args, **kw):
+            raise HttpTimeoutError()
+        self.patch(vumi_app, 'http_request_full', timeout_raiser)
+
+    @inlineCallbacks
+    def test_post_inbound_message_timeout(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        self.conversation.config['http_api'].update({
+            'push_message_url': self.mock_push_server.url,
+        })
+        yield self.conversation.save()
+
+        self._patch_http_request_full()
+        msg = self.mkmsg_in(content='in 1', message_id='1')
+        with LogCatcher(message='Timeout') as lc:
+            yield self.dispatch_to_conv(msg, self.conversation)
+            [timeout_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in timeout_log)
+
     @inlineCallbacks
     def test_post_inbound_event(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
@@ -460,6 +482,25 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield event_d
 
         self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
+
+    @inlineCallbacks
+    def test_post_inbound_event_timeout(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        self.conversation.config['http_api'].update({
+            'push_event_url': self.mock_push_server.url,
+        })
+        yield self.conversation.save()
+
+        msg1 = self.mkmsg_out(content='in 1', message_id='1')
+        self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
+        yield self.store_outbound_msg(msg1, self.conversation)
+        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
+
+        self._patch_http_request_full()
+        with LogCatcher(message='Timeout') as lc:
+            yield self.dispatch_event_to_conv(ack1, self.conversation)
+            [timeout_log] = lc.messages()
+        self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
 
     @inlineCallbacks
     def test_bad_urls(self):
