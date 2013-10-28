@@ -9,11 +9,19 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 
+from registration.views import RegistrationView
+
 from go.account.forms import (EmailForm, AccountForm, UserAccountForm,
-    UserProfileForm)
+    UserProfileForm, RegistrationForm)
 from go.account.tasks import update_account_details
 from go.base.models import UserProfile
 from go.token.django_token_manager import DjangoTokenManager
+
+
+class GoRegistrationView(RegistrationView):
+    """Go sub-class of django-registration's RegistrationView."""
+
+    form_class = RegistrationForm
 
 
 @login_required
