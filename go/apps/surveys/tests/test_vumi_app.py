@@ -12,6 +12,7 @@ from vumi.message import TransportUserMessage
 from go.apps.surveys.vumi_app import SurveyApplication
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class TestSurveyApplication(AppWorkerTestCase):
@@ -78,6 +79,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.conversation = yield self.create_conversation()
         self.conversation.add_group(self.group)
         yield self.conversation.save()
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     @inlineCallbacks
     def create_group(self, name):
@@ -301,8 +303,8 @@ class TestSurveyApplication(AppWorkerTestCase):
     def test_process_command_send_message_in_reply_to(self):
         yield self.start_conversation(self.conversation)
         batch_id = self.conversation.batch.key
-        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
-        yield self.store_inbound_msg(msg)
+        msg = yield self.msg_helper.make_stored_inbound(
+            self.conversation, "foo")
         command = VumiApiCommand.command(
             'worker', 'send_message',
             user_account_key=self.user_account.key,
@@ -330,8 +332,9 @@ class TestSurveyApplication(AppWorkerTestCase):
         config = yield self.pm.get_config(poll_id)
         self.assertEqual(config, {})  # incomplete or empty
 
-        msg = self.mkmsg_in()
-        msg['helper_metadata']['poll_id'] = poll_id
+        msg = self.msg_helper.make_inbound("foo", helper_metadata={
+            "poll_id": poll_id,
+        })
         yield self.dispatch_to_conv(msg, self.conversation)
         [reply] = yield self.wait_for_dispatched_messages(1)
         self.assertTrue('Service Unavailable' in reply['content'])

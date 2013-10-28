@@ -15,10 +15,10 @@ install:
   - "pip install https://github.com/praekelt/vumi-wikipedia/tarball/develop#egg=vumi-wikipedia-dev --use-mirrors"
   - "pip install -r requirements.pip --use-mirrors"
   - "pip install -r requirements-pytest.pip --use-mirrors"
-  - "pip install coveralls --use-mirrors"
+  - "pip install overalls"
   - "npm install"
 script:
   - VUMITEST_REDIS_DB=1 ./run-tests.sh
   - grunt test
 after_success:
-  - coveralls
+  - overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info

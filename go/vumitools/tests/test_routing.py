@@ -1,5 +1,7 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vumi.tests.helpers import MessageHelper
+
 from go.vumitools.routing import (
     AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
 from go.vumitools.billing_worker import BillingDispatcher
@@ -255,6 +257,9 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
         yield self.user_api.acquire_specific_tag(tag1)
         yield self.user_api.acquire_specific_tag(tag2)
         yield self.user_api.acquire_specific_tag(tag3)
+        # We use vumi's MessageHelper here rather than our own GoMessageHelper
+        # because we want to handle all the Go metadata stuff ourselves.
+        self.msg_helper = MessageHelper()
 
     @inlineCallbacks
     def get_dispatcher(self, **config_extras):
@@ -337,7 +342,7 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def mk_msg_reply(self, **kw):
         "Create and store an outbound message, then create a reply for it."
-        msg = self.with_md(self.mkmsg_in(), **kw)
+        msg = self.with_md(self.msg_helper.make_inbound("foo"), **kw)
         yield self.vumi_api.mdb.add_inbound_message(msg)
         reply = msg.reply(content="Reply")
         returnValue((msg, reply))
@@ -345,9 +350,9 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def mk_msg_ack(self, **kw):
         "Create and store an outbound message, then create an ack for it."
-        msg = self.with_md(self.mkmsg_out(), **kw)
+        msg = self.with_md(self.msg_helper.make_outbound("foo"), **kw)
         yield self.vumi_api.mdb.add_outbound_message(msg)
-        ack = self.mkmsg_ack(user_message_id=msg['message_id'])
+        ack = self.msg_helper.make_ack(msg)
         returnValue((msg, ack))
 
 
@@ -361,7 +366,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_inbound_message_from_transport_to_app1(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
         self.with_md(msg, conv=('app1', 'conv1'),
@@ -374,7 +380,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_inbound_message_from_transport_to_app2(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "9012"))
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "9012"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app2.inbound')
         self.with_md(msg, conv=('app2', 'conv2'),
@@ -387,7 +394,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_inbound_message_from_transport_to_custom_endpoint(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "5678"))
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "5678"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
         self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
@@ -401,7 +409,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_transport_to_optout(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
-        msg = self.with_md(self.mkmsg_in(), tag=tag)
+        msg = self.with_md(self.msg_helper.make_inbound("foo"), tag=tag)
         msg['helper_metadata']['optout'] = {'optout': True}
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
@@ -415,7 +423,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_inbound_message_from_router(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'))
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), router=('router', 'router1'))
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
         self.with_md(msg, conv=("app1", "conv1"),
@@ -428,8 +437,9 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_inbound_message_from_router_to_custom_endpoint(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
-                           endpoint='other')
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), router=('router', 'router1'),
+            endpoint='other')
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app2.inbound')
         self.with_md(msg, conv=("app2", "conv2"), endpoint='yet-another',
@@ -456,7 +466,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_from_conversation_in_app1(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "1234"),
@@ -469,7 +480,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_from_conversation_in_app2(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), conv=('app2', 'conv2'))
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app2', 'conv2'))
         yield self.dispatch_outbound(msg, 'app2')
         self.assert_rkeys_used('app2.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "9012"),
@@ -482,8 +494,9 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_from_conversation_via_custom_endpoint(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'),
-                           endpoint='other')
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'),
+            endpoint='other')
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
@@ -496,7 +509,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_from_router(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'))
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), router=('router', 'router1'))
         yield self.dispatch_outbound(msg, 'router_ri')
         self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "1234"),
@@ -509,8 +523,9 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_from_router_via_custom_endpoint(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
-                           endpoint='other')
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), router=('router', 'router1'),
+            endpoint='other')
         yield self.dispatch_outbound(msg, 'router_ri')
         self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
@@ -582,7 +597,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             'transport_name': 'sphex',
             'transport_type': 'sms',
         })
-        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
         msg['transport_name'] = None
         msg['transport_type'] = None
         yield self.dispatch_outbound(msg, 'app1')

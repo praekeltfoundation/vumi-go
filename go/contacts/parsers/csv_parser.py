@@ -1,5 +1,4 @@
 import csv
-import re
 
 from go.contacts.parsers import ContactFileParser, ContactParserException
 
@@ -7,6 +6,7 @@ from django.utils.datastructures import SortedDict
 
 
 class CSVFileParser(ContactFileParser):
+    DELIMITERS = ",|\t"
 
     @classmethod
     def _sniff(cls, csvfile):
@@ -14,14 +14,17 @@ class CSVFileParser(ContactFileParser):
         csvfile.seek(0)
 
         try:
-            dialect = csv.Sniffer().sniff(sample)
+            dialect = csv.Sniffer().sniff(sample, delimiters=cls.DELIMITERS)
         except csv.Error as e:
-            if re.search(",|\t", sample) is None:
-                # probably indicates a single column file without
-                # delimiters which the excel format should be fine for
-                dialect = csv.excel
-            else:
-                raise ContactParserException(e)
+            for delimiter in cls.DELIMITERS:
+                if delimiter in sample:
+                    # We have a recognised delimiter, so our error must be
+                    # something else.
+                    raise ContactParserException(e)
+            # If we get here, it's because we didn't find a recognised
+            # delimiter. This probably means we have a single-column file and
+            # the excel dialect should be fine for that.
+            dialect = csv.excel
 
         return dialect
 
