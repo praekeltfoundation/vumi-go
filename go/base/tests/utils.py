@@ -5,10 +5,10 @@ import uuid
 from django.conf import settings, UserSettingsHolder
 from django.utils.functional import wraps
 from django.test import TestCase
-from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.test.client import Client
 from django.core.management.base import CommandError
+from django.contrib.auth import get_user_model
 
 from twisted.python.monkey import MonkeyPatcher
 
@@ -71,11 +71,11 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         vumi_config.update(self._persist_config)
         self.patch_settings(VUMI_API_CONFIG=vumi_config)
         base_models.post_save.disconnect(
-            sender=base_models.User,
+            sender=get_user_model(),
             dispatch_uid='go.base.models.create_user_profile')
         base_models.post_save.connect(
             self.create_user_profile,
-            sender=base_models.User,
+            sender=get_user_model(),
             dispatch_uid='VumiGoDjangoTestCase.create_user_profile')
 
         # We might need an AMQP connection at some point.
@@ -87,11 +87,11 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
     def tearDown(self):
         base_utils.connection = self._old_connection
         base_models.post_save.disconnect(
-            sender=base_models.User,
+            sender=settings.AUTH_USER_MODEL,
             dispatch_uid='VumiGoDjangoTestCase.create_user_profile')
         base_models.post_save.connect(
             base_models.create_user_profile,
-            sender=base_models.User,
+            sender=settings.AUTH_USER_MODEL,
             dispatch_uid='go.base.models.create_user_profile')
         for patch in reversed(self._settings_patches):
             patch.disable()
@@ -107,7 +107,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
     def setup_client(self):
         self.client = Client()
-        self.client.login(username='username', password='password')
+        self.client.login(username='user@domain.com', password='password')
 
     def patch_settings(self, **kwargs):
         patch = override_settings(**kwargs)
@@ -122,7 +122,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
                     user=instance, user_account=uuid.uuid4())
             return
         if created:
-            account = self.mk_user(self.api, unicode(instance.username))
+            account = self.mk_user(self.api, unicode(instance.get_username()))
             base_models.UserProfile.objects.create(
                 user=instance, user_account=account.key)
         user_api = base_models.vumi_api_for_user(instance)
@@ -145,12 +145,12 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         self.router_store = self.user_api.router_store
 
     def mk_django_user(self):
-        user = User.objects.create_user(
-            'username', 'user@domain.com', 'password')
+        user = get_user_model().objects.create_user(
+            'user@domain.com', 'password')
         user.first_name = "Test"
         user.last_name = "User"
         user.save()
-        return User.objects.get(username='username')
+        return get_user_model().objects.get(email='user@domain.com')
 
     def create_conversation(self, started=False, **kwargs):
         params = {
