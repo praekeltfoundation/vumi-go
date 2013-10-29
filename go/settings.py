@@ -373,6 +373,7 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 
 # AUTH CONFIGURATION
 AUTH_PROFILE_MODULE = 'base.UserProfile'
+AUTH_USER_MODEL = 'base.GoUser'
 LOGIN_REDIRECT_URL = '/'
 # django-registration tokens expire after a week
 ACCOUNT_ACTIVATION_DAYS = 7

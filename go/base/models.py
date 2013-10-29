@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models.signals import post_save
-from django.contrib.auth.models import User
+from django.contrib.auth.models import (
+    AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.conf import settings
 
 from vumi.persist.riak_manager import RiakManager
@@ -13,18 +14,56 @@ def get_account_store():
             settings.VUMI_API_CONFIG['riak_manager']))
 
 
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        account = get_account_store().new_user(unicode(instance.username))
-        UserProfile.objects.create(user=instance, user_account=account.key)
-    user_api = vumi_api_for_user(instance)
-    # Enable search for the contact & group stores
-    user_api.contact_store.contacts.enable_search()
-    user_api.contact_store.groups.enable_search()
+class GoUserManager(BaseUserManager):
+    def create_user(self, email, password=None):
+        if not email:
+            raise ValueError('Users must have an email address')
+
+        user = self.model(
+            email=self.normalize_email(email),
+            is_staff=False, is_active=True,
+        )
+
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password):
+        user = self.create_user(email,
+            password=password,
+        )
+        user.is_admin = True
+        user.is_staff = True
+        user.save(using=self._db)
+        return user
 
 
-post_save.connect(create_user_profile, sender=User,
-    dispatch_uid='go.base.models.create_user_profile')
+class GoUser(AbstractBaseUser, PermissionsMixin):
+    objects = GoUserManager()
+
+    email = models.EmailField(max_length=254, unique=True)
+    first_name = models.CharField(max_length=254)
+    last_name = models.CharField(max_length=254)
+
+    is_staff = models.BooleanField('staff status', default=False,
+        help_text='Designates whether the user can log into this admin '
+                    'site.')
+    is_active = models.BooleanField('active', default=True,
+        help_text='Designates whether this user should be treated as '
+                    'active. Unselect this instead of deleting accounts.')
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+
+    def get_full_name(self):
+        full_name = '%s %s' % (self.first_name, self.last_name)
+        return full_name.strip()
+
+    def get_short_name(self):
+        return self.first_name
+
+    def get_profile(self):
+        return self.userprofile
 
 
 class UserOrganisation(models.Model):
@@ -37,7 +76,7 @@ class UserOrganisation(models.Model):
 
 class UserProfile(models.Model):
     """A profile for a user"""
-    user = models.OneToOneField('auth.User')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL)
     user_account = models.CharField(max_length=100)
     organisation = models.ForeignKey(UserOrganisation, blank=True, null=True)
     is_admin = models.BooleanField(default=False)
@@ -47,3 +86,18 @@ class UserProfile(models.Model):
 
     def get_user_account(self):
         return get_account_store().get_user(self.user_account)
+
+
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        username = instance.get_username()
+        account = get_account_store().new_user(unicode(username))
+        UserProfile.objects.create(user=instance, user_account=account.key)
+    user_api = vumi_api_for_user(instance)
+    # Enable search for the contact & group stores
+    user_api.contact_store.contacts.enable_search()
+    user_api.contact_store.groups.enable_search()
+
+
+post_save.connect(create_user_profile, sender=GoUser,
+    dispatch_uid='go.base.models.create_user_profile')
