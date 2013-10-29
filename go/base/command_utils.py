@@ -1,7 +1,7 @@
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
 from go.base.utils import vumi_api_for_user
 
@@ -29,11 +29,12 @@ class BaseGoAccountCommand(BaseCommand):
                 if opt.action == 'append_const' and opt.dest == 'command']
 
     def handle(self, *args, **options):
+        user_model = get_user_model()
         if 'email_address' not in options:
             raise CommandError("--email-address must be specified")
         try:
-            self.user = User.objects.get(email=options['email_address'])
-        except User.DoesNotExist, e:
+            self.user = user_model.objects.get(email=options['email_address'])
+        except user_model.DoesNotExist, e:
             raise CommandError(e)
 
         self.user_api = vumi_api_for_user(self.user)
