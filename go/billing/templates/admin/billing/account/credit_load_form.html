@@ -1,0 +1,79 @@
+{% extends "admin/change_form.html" %}
+
+{% load i18n admin_static admin_modify %}
+{% load url from future %}
+{% load admin_urls %}
+
+{% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }} credit-load-form{% endblock %}
+
+{% block breadcrumbs %}
+    <div class="breadcrumbs">
+        <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+        &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
+        &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+        &rsaquo; {% trans 'Load credits' %}
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div id="content-main">
+        {% block object-tools %}{% endblock %}
+        <form action="{{ form_url }}" method="post" id="{{ opts.module_name }}_form">
+            {% csrf_token %}
+            {% block form_top %}{% endblock %}
+            <div>
+                {% if save_on_top %}{% block submit_buttons_top %}{% submit_row %}{% endblock %}{% endif %}
+                {% if errors %}
+                    <p class="errornote">
+                        {% blocktrans count counter=errors|length %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktrans %}
+                    </p>
+                    {{ formset.non_field_errors }}
+                {% endif %}
+                <div class="inline-group" id="costoverride_set-group">
+                    <div class="tabular inline-related last-related">
+                        {{ formset.management_form }}
+                        <fieldset class="module">
+                           <h2>{% trans "Selected accounts" %}</h2>
+                           <table>
+                             <thead>
+                                <tr>
+                                    <th colspan="2">{% trans "Account number" %}</th>
+                                    <th class="required">{% trans "User" %}</th>
+                                    <th class="required">{% trans "Credit amount" %}</th>
+                                </tr>
+                             </thead>
+                             <tbody>
+                                {% for form in formset %}
+                                    <tr class="form-row {% if forloop.counter|divisibleby:"2" %}row2{% else %}row1{% endif %}">
+                                        <td class="original">
+                                            {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+                                        </td>
+                                        <td class="field-account_number">
+                                            {{ form.instance.account_number }}
+                                        </td>
+                                        <td class="field-user">
+                                            {{ form.instance.user }}
+                                        </td>
+                                        <td class="field-credit_amount">
+                                            {% with field=form.credit_amount %}
+                                                {% if field.errors %}
+                                                    <ul class="errorlist">
+                                                        {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                                                    </ul>
+                                                {% endif %}
+                                                {{ field }}
+                                            {% endwith %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        </fieldset>
+                    </div>
+                </div>
+                {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+                {# JavaScript for prepopulated fields #}
+                {% prepopulated_fields_js %}
+            </div>
+        </form>
+    </div>
+{% endblock %}

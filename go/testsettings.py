@@ -10,6 +10,16 @@ VUMI_API_CONFIG['redis_manager'] = {
     'FAKE_REDIS': 'sure',
 }
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'go',
+        'USER': 'go',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
+    }
+}
 
 if os.environ.get('VUMIGO_FAST_TESTS'):
     DATABASES = {
@@ -18,6 +28,14 @@ if os.environ.get('VUMIGO_FAST_TESTS'):
             'NAME': ':memory:',
         }
     }
+
+# celery likes to eagerly close and restart database connections
+# which combines badly with tests run inside transactions. If this
+# threshold is reached (i.e. a test runs more than this many celery
+# tasks) celery will close the database connection and create a new
+# one and the test will fail in strange ways (e.g. the user the django
+# test client was logged in as will suddenly not exist).
+CELERY_DB_REUSE_MAX = 100
 
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
