@@ -493,7 +493,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         msg1 = yield self.msg_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
+        ack1 = self.msg_helper.make_ack(msg1)
 
         self._patch_http_request_full()
         with LogCatcher(message='Timeout') as lc:
