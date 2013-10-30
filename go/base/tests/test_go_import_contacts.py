@@ -21,7 +21,7 @@ class GoImportContactsCommandTestCase(VumiGoDjangoTestCase):
 
     def invoke_command(self, **kw):
         options = {
-            'email-address': self.user.username,
+            'email-address': self.user.email,
             'contacts-csv': os.path.join(
                 settings.PROJECT_ROOT, 'base', 'fixtures',
                 'sample-contacts-with-headers.csv'),

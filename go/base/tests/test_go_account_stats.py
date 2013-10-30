@@ -29,7 +29,7 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
         inactive_conv = self.create_conversation(name=u'inactive')
         inactive_conv.archive_conversation()
 
-        self.command.handle(self.django_user.username, 'list_conversations')
+        self.command.handle(self.django_user.email, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 2)
         self.assertTrue(active_conv.key in output[0])
@@ -38,7 +38,7 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
     def test_list_conversations_with_unicode(self):
         self.create_conversation(name=u'active')
         unicode_conv = self.create_conversation(name=u'Zoë destroyer of Ascii')
-        self.command.handle(self.django_user.username, 'list_conversations')
+        self.command.handle(self.django_user.email, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 2)
         self.assertTrue(unicode_conv.key in output[1])
@@ -49,7 +49,7 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
         inactive_conv = self.create_conversation(name=u'inactive')
         inactive_conv.archive_conversation()
         self.command.handle(
-            self.django_user.username, 'list_conversations', 'active')
+            self.django_user.email, 'list_conversations', 'active')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 1)
         self.assertTrue(active_conv.key in output[0])
@@ -58,7 +58,7 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
         conv = self.create_conversation(started=True, name=u'active')
         self.add_messages_to_conv(5, conv, reply=True, time_multiplier=0)
 
-        self.command.handle(self.django_user.username, 'stats', conv.key)
+        self.command.handle(self.django_user.email, 'stats', conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(output, [
             u'Conversation: active',

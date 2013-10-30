@@ -33,10 +33,10 @@ class GoStartConversationTestCase(VumiGoDjangoTestCase):
         self.assertRaisesRegexp(CommandError, 'provide --email-address',
             self.command.handle, email_address=None, conversation_key=None)
         self.assertRaisesRegexp(CommandError, 'provide --conversation-key',
-            self.command.handle, email_address=self.django_user.username,
+            self.command.handle, email_address=self.django_user.email,
             conversation_key=None)
         self.assertRaisesRegexp(CommandError, 'Conversation does not exist',
-            self.command.handle, email_address=self.django_user.username,
+            self.command.handle, email_address=self.django_user.email,
             conversation_key='foo')
 
     @patch('go.vumitools.api.SyncMessageSender')
@@ -47,7 +47,7 @@ class GoStartConversationTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv.archive_status, 'active')
         self.assertEqual(conv.get_status(), 'stopped')
         self.command.handle(
-            email_address=self.django_user.username,
+            email_address=self.django_user.email,
             conversation_key=conv.key)
         # reload b/c DB changed
         conv = self.user_api.get_wrapped_conversation(conv.key)
@@ -63,5 +63,5 @@ class GoStartConversationTestCase(VumiGoDjangoTestCase):
 
         self.assertRaisesRegexp(
             CommandError, 'Conversation already started',
-            self.command.handle, email_address=self.django_user.username,
+            self.command.handle, email_address=self.django_user.email,
             conversation_key=conv.key)

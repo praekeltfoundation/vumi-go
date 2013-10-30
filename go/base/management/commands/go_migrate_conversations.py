@@ -3,11 +3,11 @@ import textwrap
 
 from django.core.management.base import BaseCommand
 from django.db.models import Q
-from django.contrib.auth.models import User
 
 from vumi.persist.model import ModelMigrationError
 
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_users
 
 
 class Migration(object):
@@ -176,7 +176,7 @@ class FixJsboxEndpoint(Migration):
 class Command(BaseCommand):
     help = """
     Find and migrate conversations for known accounts in Vumi Go.
-    Allows for optional searching on the username.
+    Allows for optional searching on the email.
 
     Usage:
 
@@ -213,9 +213,9 @@ class Command(BaseCommand):
         self.stdout.write(msg.encode(self.encoding) + ending)
 
     def find_accounts(self, *usernames):
-        users = User.objects.all().order_by('date_joined')
+        users = get_users()
         if usernames:
-            or_statements = [Q(username__regex=un) for un in usernames]
+            or_statements = [Q(email__regex=un) for un in usernames]
             or_query = reduce(lambda x, y: x | y, or_statements)
             users = users.filter(or_query)
         if not users.exists():
@@ -252,7 +252,7 @@ class Command(BaseCommand):
                 conversations.append(conv)
         self.outln(
             u'%s %s <%s> [%s]\n  Migrating %d of %d conversations ...' % (
-            user.first_name, user.last_name, user.username,
+            user.first_name, user.last_name, user.email,
             user_api.user_account_key, len(conversations), len(all_keys)))
         for conv in conversations:
             self.outln(u'    Migrating conversation: %s [%s] ...'
