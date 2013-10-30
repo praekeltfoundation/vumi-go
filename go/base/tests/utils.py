@@ -87,11 +87,11 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
     def tearDown(self):
         base_utils.connection = self._old_connection
         base_models.post_save.disconnect(
-            sender=settings.AUTH_USER_MODEL,
+            sender=get_user_model(),
             dispatch_uid='VumiGoDjangoTestCase.create_user_profile')
         base_models.post_save.connect(
             base_models.create_user_profile,
-            sender=settings.AUTH_USER_MODEL,
+            sender=get_user_model(),
             dispatch_uid='go.base.models.create_user_profile')
         for patch in reversed(self._settings_patches):
             patch.disable()
