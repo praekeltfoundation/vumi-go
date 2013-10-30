@@ -141,6 +141,7 @@ class Command(BaseCommand):
 
         self.write_supervisord_conf()
         self.create_webui_supervisord_conf()
+        self.create_billing_api_supervisord_conf()
 
         self.write_startup_script()
 
@@ -536,6 +537,22 @@ class Command(BaseCommand):
                     self.webapp_bind,))
             cp.set(section, "stdout_logfile",
                    "./logs/%(program_name)s_%(process_num)s.log")
+            cp.set(section, "redirect_stderr", "true")
+            cp.write(fp)
+        self.stdout.write('Wrote %s.\n' % (fn,))
+
+    def create_billing_api_supervisord_conf(self):
+        program_name = 'billing_api'
+        fn = self.mk_filename(program_name, 'conf')
+        with self.open_file(fn, 'w') as fp:
+            section = "program:%s" % (program_name,)
+            fp.write(self.auto_gen_warning)
+            cp = ConfigParser()
+            cp.add_section(section)
+            cp.set(section, "command", "./go-admin.sh runbillingserver")
+            cp.set(section, "stdout_logfile",
+                   "./logs/%(program_name)s_%(process_num)s.log")
+
             cp.set(section, "redirect_stderr", "true")
             cp.write(fp)
         self.stdout.write('Wrote %s.\n' % (fn,))
