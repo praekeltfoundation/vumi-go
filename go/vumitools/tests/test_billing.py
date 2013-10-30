@@ -1,9 +1,33 @@
+import decimal
+
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go.vumitools.routing import RoutingMetadata
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.billing_worker import BillingDispatcher
 from go.vumitools.utils import MessageMetadataHelper
+
+
+class BillingApiMock(object):
+
+    def __init__(self, base_url):
+        self.base_url = base_url
+
+    def create_transaction(self, account_number, tag_pool_name,
+                           message_direction):
+        return {
+            "id": 1,
+            "account_number": account_number,
+            "tag_pool_name": tag_pool_name,
+            "message_direction": message_direction,
+            "message_cost": 80,
+            "markup_percent": decimal.Decimal('10.0'),
+            "credit_amount": -35,
+            "credit_factor": decimal.Decimal('0.4'),
+            "created": "2013-10-30T10:42:51.144745+02:00",
+            "last_modified": "2013-10-30T10:42:51.144745+02:00",
+            "status": "Completed"
+        }
 
 
 class TestBillingDispatcher(AppWorkerTestCase):
@@ -23,6 +47,8 @@ class TestBillingDispatcher(AppWorkerTestCase):
             "receive_outbound_connectors": [
                 "billing_dispatcher_ro"
             ],
+            "api_url": "http://127.0.0.1:9090/",
+            "billing_api": "go.vumitools.tests.test_billing.BillingApiMock",
             "metrics_prefix": "bar"
         }
         config.update(config_extras)

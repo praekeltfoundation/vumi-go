@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """Convenience API, mostly for working with various datastores."""
+import decimal
+import json
 
 from collections import defaultdict
+
+from urlparse import urljoin
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -17,6 +21,7 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
+from vumi.utils import http_request_full
 from vumi import log
 
 from go.vumitools.account import AccountStore
@@ -646,3 +651,32 @@ class VumiApiEvent(Message):
                    conversation_key=conversation_key,
                    event_type=event_type,
                    content=content)
+
+
+class BillingApi(object):
+    """Proxy to the billing REST API"""
+
+    def __init__(self, base_url):
+        self.base_url = base_url
+
+    @inlineCallbacks
+    def create_transaction(self, account_number, tag_pool_name,
+                           message_direction):
+        """Create a new transaction for the given ``account_number``"""
+        data = {
+            'account_number': account_number,
+            'tag_pool_name': tag_pool_name,
+            'message_direction': message_direction
+        }
+
+        url = urljoin(self.base_url, "/transactions")
+        data = json.dumps(data)
+        headers = {'Content-Type': 'application/json'}
+        log.debug("Sending billing request to %r: %r" % (url, data))
+        response = yield http_request_full(url, data, headers=headers)
+        # TODO: Check for a non 200 response.code and do something
+        log.debug("Got billing response: %r" % (response.delivered_body,))
+        result = json.loads(response.delivered_body,
+                            parse_float=decimal.Decimal)
+
+        returnValue(result)

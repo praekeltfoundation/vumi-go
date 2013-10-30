@@ -1,19 +1,21 @@
-import json
-
 from twisted.internet.defer import inlineCallbacks
 
 from vumi import log
 from vumi.dispatchers.endpoint_dispatchers import Dispatcher
-from vumi.utils import http_request_full
 from vumi.config import ConfigText
+from vumi.utils import load_class_by_string
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 
 
 class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
 
-    transaction_create_url = ConfigText(
-        "Billing API URL to create a new payment transaction",
+    api_url = ConfigText(
+        "Base URL of the billing REST API",
+        static=True, required=True)
+
+    billing_api = ConfigText(
+        "Python path to the billing api proxy class",
         static=True, required=True)
 
     def post_validate(self):
@@ -41,7 +43,10 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         yield super(BillingDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
         config = self.get_static_config()
-        self.transaction_create_url = config.transaction_create_url
+        base_url = config.api_url
+        cls_name = config.billing_api
+        cls = load_class_by_string(cls_name)
+        self.billing_api = cls(base_url)
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -50,31 +55,13 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def create_transaction_for_inbound(self, msg):
-        data = {
-            'account_number': "12345",
-            'tag_pool_name': "test_pool",
-            'message_direction': self.MESSAGE_DIRECTION_INBOUND
-        }
-
-        headers = {'Content-Type': 'application/json'}
-        response = yield http_request_full(
-            self.transaction_create_url, json.dumps(data), headers=headers)
-
-        log.debug("Billing response: %r" % (response.delivered_body,))
+        yield self.billing_api.create_transaction(
+            "12345", "test_pool", self.MESSAGE_DIRECTION_INBOUND)
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
-        data = {
-            'account_number': "12345",
-            'tag_pool_name': "test_pool",
-            'message_direction': self.MESSAGE_DIRECTION_OUTBOUND
-        }
-
-        headers = {'Content-Type': 'application/json'}
-        response = yield http_request_full(
-            self.transaction_create_url, json.dumps(data), headers=headers)
-
-        log.debug("Billing response: %r" % (response.delivered_body,))
+        yield self.billing_api.create_transaction(
+            "12345", "test_pool", self.MESSAGE_DIRECTION_OUTBOUND)
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):

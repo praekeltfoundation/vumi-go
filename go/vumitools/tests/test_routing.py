@@ -297,6 +297,8 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
             "receive_outbound_connectors": [
                 "billing_dispatcher_ro"
             ],
+            "api_url": "http://127.0.0.1:9090/",
+            "billing_api": "go.vumitools.tests.test_billing.BillingApiMock",
             "metrics_prefix": "bar"
         }
         config.update(config_extras)
