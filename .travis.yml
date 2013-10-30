@@ -4,6 +4,8 @@ python:
   - "2.7"
 node_js:
   - "0.10"
+env:
+  - VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres
 services:
   - riak
   - postgresql
@@ -24,7 +26,7 @@ before_script:
   - "export PYTHONPATH=."
   - "django-admin.py syncdb --migrate --noinput --settings=go.testsettings"
 script:
-  - VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres ./run-tests.sh
+  - ./run-tests.sh
   - grunt test
 after_script:
   - "psql -c 'drop database go;' -U postgres"
