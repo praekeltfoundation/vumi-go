@@ -49,6 +49,14 @@ class CSVParserTestCase(ParserTestCase):
             'msisdn': '+27761234561',
             })
 
+    def test_guess_headers_and_row_one_column_with_plus(self):
+        csv_file = self.fixture('sample-contacts-one-column-with-plus.csv')
+        data = self.parser.guess_headers_and_row(csv_file)
+        has_headers, known_headers, sample_row = data
+        self.assertTrue(has_headers)
+        self.assertEqual(known_headers, self.parser.DEFAULT_HEADERS)
+        self.assertEqual(sample_row, {'msisdn': '+27761234561'})
+
     def test_contacts_parsing(self):
         csv_file = self.fixture('sample-contacts-with-headers.csv')
         fp = default_storage.open(csv_file, 'rU')
