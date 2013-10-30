@@ -349,6 +349,7 @@ class AuthorizedResource(resource.Resource):
 
     def __init__(self, worker, resource_class):
         resource.Resource.__init__(self)
+        self.resource_class = resource_class
         self.worker = worker
 
     def render(self, request):
@@ -363,8 +364,6 @@ class AuthorizedResource(resource.Resource):
             p = portal.Portal(realm, [checker])
 
             factory = BasicCredentialFactory("Conversation Realm")
-            protected_resource = HTTPAuthSessionWrapper(p, [factory])
-
-            return protected_resource
+            return HTTPAuthSessionWrapper(p, [factory])
         else:
             return resource.NoResource()
