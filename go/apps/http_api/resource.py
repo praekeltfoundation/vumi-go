@@ -280,8 +280,8 @@ class BaseConversationResource(resource.Resource):
 class OutgoingConversationResource(BaseConversationResource):
 
     def __init__(self, worker, conversation_key):
-        super(BaseConversationResource, self).__init__(worker,
-                                                       conversation_key)
+        super(OutgoingConversationResource, self).__init__(worker,
+                                                           conversation_key)
         self.redis = worker.redis
 
     def key(self, *args):
@@ -328,9 +328,6 @@ class OutgoingConversationResource(BaseConversationResource):
 
 class IncomingConversationResource(BaseConversationResource):
 
-    resource_class = IncomingMessageResource
-
-    @inlineCallbacks
     def getDeferredChild(self, path, request):
 
         class_map = {
@@ -342,7 +339,7 @@ class IncomingConversationResource(BaseConversationResource):
             instance = resource.NoResource()
         else:
             instance = resource_class(self.worker, self.conversation_key)
-        returnValue(instance)
+        return instance
 
 
 class AuthorizedResource(resource.Resource):
