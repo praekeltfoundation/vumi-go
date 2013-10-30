@@ -19,7 +19,7 @@ install:
   - "pip install overalls"
   - "npm install"
 before_script:
-  - "psql -c 'create user go with createdb with password "go";' -U postgres"
+  - "psql -c 'create user go with createdb with password \"go\";' -U postgres"
   - "psql -c 'create database go owner go;' -U postgres"
   - "export PYTHONPATH=."
   - "django-admin.py syncdb --migrate --noinput --settings=go.testsettings"
