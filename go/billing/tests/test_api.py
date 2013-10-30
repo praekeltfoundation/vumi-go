@@ -10,6 +10,18 @@ from go.billing import api
 from go.billing.utils import DummySite, DictRowConnectionPool
 
 
+DB_SUPPORTED = False
+try:
+    app_settings.get_connection_string()
+    DB_SUPPORTED = True
+except ValueError:
+    pass
+
+skipif_unsupported_db = pytest.mark.skipif(
+    "True" if not DB_SUPPORTED else "False",
+    reason="Billing API requires PostGreSQL")
+
+
 class UserTestCase(unittest.TestCase):
 
     @pytest.mark.django_db
@@ -27,6 +39,7 @@ class UserTestCase(unittest.TestCase):
     def tearDown(self):
         self.connection_pool.close()
 
+    @skipif_unsupported_db
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def runTest(self):
@@ -79,6 +92,7 @@ class AccountTestCase(unittest.TestCase):
     def tearDown(self):
         self.connection_pool.close()
 
+    @skipif_unsupported_db
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def runTest(self):
@@ -171,6 +185,7 @@ class CostTestCase(unittest.TestCase):
     def tearDown(self):
         self.connection_pool.close()
 
+    @skipif_unsupported_db
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def runTest(self):
@@ -291,6 +306,7 @@ class TransactionTestCase(unittest.TestCase):
     def tearDown(self):
         self.connection_pool.close()
 
+    @skipif_unsupported_db
     @pytest.mark.django_db
     @defer.inlineCallbacks
     def runTest(self):
