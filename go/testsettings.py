@@ -10,24 +10,42 @@ VUMI_API_CONFIG['redis_manager'] = {
     'FAKE_REDIS': 'sure',
 }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'go',
-        'USER': 'go',
-        'PASSWORD': '',
-        'HOST': '',
-        'PORT': '',
-    }
-}
+# Setup test database
 
-if os.environ.get('VUMIGO_FAST_TESTS'):
+VUMIGO_TEST_DB = os.environ.get('VUMIGO_TEST_DB', 'sqlite')
+
+if VUMIGO_TEST_DB == "sqlite":
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': 'go.db',
+        }
+    }
+
+elif VUMIGO_TEST_DB == "postgres":
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': 'go',
+            'USER': 'go',
+            'PASSWORD': 'go',
+            'HOST': 'localhost',
+        }
+    }
+
+elif VUMIGO_TEST_DB == "memory":
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': ':memory:',
         }
     }
+
+else:
+    raise ValueError("Invalid value %r for VUMIGO_TEST_DB"
+                     % VUMIGO_TEST_DB)
+
+del VUMIGO_TEST_DB
 
 # celery likes to eagerly close and restart database connections
 # which combines badly with tests run inside transactions. If this
