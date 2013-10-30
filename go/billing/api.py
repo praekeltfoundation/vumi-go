@@ -87,9 +87,9 @@ class UserResource(BaseResource):
         """Fetch the user with the given ``id``"""
         query = """
             SELECT id, email, first_name, last_name
-            FROM auth_user
-            WHERE id = %(id)s
-        """
+            FROM %s
+            WHERE id = %%(id)s
+        """ % app_settings.AUTH_USER_TABLE
 
         params = {'id': id}
         result = yield self._connection_pool.runQuery(query, params)
@@ -103,8 +103,8 @@ class UserResource(BaseResource):
         """Fetch all users"""
         query = """
             SELECT id, email, first_name, last_name
-            FROM auth_user
-        """
+            FROM %s
+        """ % app_settings.AUTH_USER_TABLE
 
         result = yield self._connection_pool.runQuery(query)
         defer.returnValue(result)
@@ -133,20 +133,19 @@ class UserResource(BaseResource):
                                 password):
         """Create a new user"""
         query = """
-            INSERT INTO auth_user
-                (username, first_name, last_name, email, password,
+            INSERT INTO %s
+                (email, first_name, last_name, password,
                  is_staff, is_active, is_superuser, last_login, date_joined)
             VALUES
-                (%(username)s, %(first_name)s, %(last_name)s, %(email)s,
-                 %(password)s, FALSE, TRUE, FALSE, now(), now())
+                (%%(email)s, %%(first_name)s, %%(last_name)s,
+                 %%(password)s, FALSE, TRUE, FALSE, now(), now())
             RETURNING id, email, first_name, last_name
-        """
+        """ % app_settings.AUTH_USER_TABLE
 
         params = {
-            'username': email,
+            'email': email,
             'first_name': first_name,
             'last_name': last_name,
-            'email': email,
             'password': make_password(password)
         }
 
@@ -191,10 +190,10 @@ class AccountResource(BaseResource):
             SELECT u.email, a.account_number, a.description,
                    a.credit_balance, a.alert_threshold,
                    a.alert_credit_balance
-            FROM billing_account a, auth_user u
+            FROM billing_account a, %s u
             WHERE a.user_id = u.id
-            AND a.account_number = %(account_number)s
-        """
+            AND a.account_number = %%(account_number)s
+        """ % app_settings.AUTH_USER_TABLE
 
         params = {'account_number': account_number}
         result = yield self._connection_pool.runQuery(query, params)
@@ -210,9 +209,9 @@ class AccountResource(BaseResource):
             SELECT u.email, a.account_number, a.description,
                    a.credit_balance, a.alert_threshold,
                    a.alert_credit_balance
-            FROM billing_account a, auth_user u
+            FROM billing_account a, %s u
             WHERE a.user_id = u.id
-        """
+        """ % app_settings.AUTH_USER_TABLE
 
         result = yield self._connection_pool.runQuery(query)
         defer.returnValue(result)
@@ -252,9 +251,11 @@ class AccountResource(BaseResource):
                                    description):
         """Create a new account"""
         # Find the user with the given email
-        query = """SELECT id
-                   FROM auth_user
-                   WHERE email = %(email)s"""
+        query = """
+            SELECT id
+            FROM %s
+            WHERE email = %%(email)s
+        """ % app_settings.AUTH_USER_TABLE
 
         params = {'email': email}
         cursor = yield cursor.execute(query, params)
@@ -284,10 +285,10 @@ class AccountResource(BaseResource):
             SELECT u.email, a.account_number, a.description,
                    a.credit_balance, a.alert_threshold,
                    a.alert_credit_balance
-            FROM billing_account a, auth_user u
+            FROM billing_account a, %s u
             WHERE a.user_id = u.id
-            AND a.id = %(id)s
-        """
+            AND a.id = %%(id)s
+        """ % app_settings.AUTH_USER_TABLE
 
         params = {'id': result.get('id')}
         cursor = yield cursor.execute(query, params)

@@ -9,6 +9,9 @@ ENDPOINT_DESCRIPTION_STRING = getattr(
     settings, 'BILLING_ENDPOINT_DESCRIPTION_STRING',
     "tcp:9090:interface=127.0.0.1")
 
+AUTH_USER_TABLE = getattr(
+    settings, 'AUTH_USER_MODEL', 'auth_user').replace('.', '_')
+
 
 def get_connection_string():
     """Return the database connection string"""
