@@ -117,8 +117,8 @@ class TestSubscriptionApplication(AppWorkerTestCase):
         yield self.dispatch_command(
             'collect_metrics', conversation_key=self.conv.key,
             user_account_key=self.user_account.key)
-        metrics = self.poll_metrics('%s.%s' % (self.user_account.key,
-                                               self.conv.key))
+        metrics = self.poll_metrics(
+            '%s.conversations.%s' % (self.user_account.key, self.conv.key))
         self.assertEqual({
                 u'foo.subscribed': [2],
                 u'foo.unsubscribed': [0],

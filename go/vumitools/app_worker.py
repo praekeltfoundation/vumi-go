@@ -290,13 +290,13 @@ class GoWorkerMixin(object):
         metric.set(value)
 
     def publish_conversation_metric(self, conversation, name, value, agg=None):
-        name = "%s.%s.%s" % (
+        name = "%s.conversations.%s.%s" % (
             conversation.user_account.key, conversation.key, name)
         self.publish_metric(name, value, agg)
 
     def publish_account_metric(self, user_account_key, store, name, value,
                                agg=None):
-        name = "%s.%s.%s" % (user_account_key, store, name)
+        name = "%s.stores.%s.%s" % (user_account_key, store, name)
         self.publish_metric(name, value, agg)
 
     @inlineCallbacks
