@@ -1,11 +1,46 @@
+import decimal
+import json
+
+from urlparse import urljoin
+
 from twisted.internet.defer import inlineCallbacks
 
 from vumi import log
 from vumi.dispatchers.endpoint_dispatchers import Dispatcher
 from vumi.config import ConfigText
-from vumi.utils import load_class_by_string
+from vumi.utils import load_class_by_string, http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
+
+
+class BillingApi(object):
+    """Proxy to the billing REST API"""
+
+    def __init__(self, base_url):
+        self.base_url = base_url
+
+    @inlineCallbacks
+    def create_transaction(self, account_number, tag_pool_name,
+                           tag_name, message_direction):
+        """Create a new transaction for the given ``account_number``"""
+        data = {
+            'account_number': account_number,
+            'tag_pool_name': tag_pool_name,
+            'tag_name': tag_name,
+            'message_direction': message_direction
+        }
+
+        url = urljoin(self.base_url, "/transactions")
+        data = json.dumps(data)
+        headers = {'Content-Type': 'application/json'}
+        log.debug("Sending billing request to %r: %r" % (url, data))
+        response = yield http_request_full(url, data, headers=headers)
+        # TODO: Check for a non 200 response.code and do something
+        log.debug("Got billing response: %r" % (response.delivered_body,))
+        result = json.loads(response.delivered_body,
+                            parse_float=decimal.Decimal)
+
+        returnValue(result)
 
 
 class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
