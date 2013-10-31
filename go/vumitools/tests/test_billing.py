@@ -14,11 +14,12 @@ class BillingApiMock(object):
         self.base_url = base_url
 
     def create_transaction(self, account_number, tag_pool_name,
-                           message_direction):
+                           tag_name, message_direction):
         return {
             "id": 1,
             "account_number": account_number,
             "tag_pool_name": tag_pool_name,
+            "tag_name": tag_name,
             "message_direction": message_direction,
             "message_cost": 80,
             "markup_percent": decimal.Decimal('10.0'),
@@ -110,7 +111,9 @@ class TestBillingDispatcher(AppWorkerTestCase):
     @inlineCallbacks
     def test_inbound_message(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in())
+        msg = self.with_md(self.mkmsg_in(), user_account="12345",
+                           tag=("pool1", "1234"))
+
         yield self.dispatch_inbound(msg, 'billing_dispatcher_ri')
         self.assert_rkeys_used('billing_dispatcher_ri.inbound',
                                'billing_dispatcher_ro.inbound')
@@ -122,7 +125,9 @@ class TestBillingDispatcher(AppWorkerTestCase):
     @inlineCallbacks
     def test_outbound_message(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out())
+        msg = self.with_md(self.mkmsg_out(), user_account="12345",
+                           tag=("pool1", "1234"))
+
         yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
         self.assert_rkeys_used('billing_dispatcher_ro.outbound',
                                'billing_dispatcher_ri.outbound')

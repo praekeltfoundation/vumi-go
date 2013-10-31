@@ -661,11 +661,12 @@ class BillingApi(object):
 
     @inlineCallbacks
     def create_transaction(self, account_number, tag_pool_name,
-                           message_direction):
+                           tag_name, message_direction):
         """Create a new transaction for the given ``account_number``"""
         data = {
             'account_number': account_number,
             'tag_pool_name': tag_pool_name,
+            'tag_name': tag_name,
             'message_direction': message_direction
         }
 

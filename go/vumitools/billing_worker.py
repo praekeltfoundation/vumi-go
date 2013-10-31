@@ -55,13 +55,17 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def create_transaction_for_inbound(self, msg):
+        msg_mdh = self.get_metadata_helper(msg)
         yield self.billing_api.create_transaction(
-            "12345", "test_pool", self.MESSAGE_DIRECTION_INBOUND)
+            msg_mdh.get_account_key(), msg_mdh.tag[0],
+            msg_mdh.tag[1], self.MESSAGE_DIRECTION_INBOUND)
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
+        msg_mdh = self.get_metadata_helper(msg)
         yield self.billing_api.create_transaction(
-            "12345", "test_pool", self.MESSAGE_DIRECTION_OUTBOUND)
+            msg_mdh.get_account_key(), msg_mdh.tag[0],
+            msg_mdh.tag[1], self.MESSAGE_DIRECTION_OUTBOUND)
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
