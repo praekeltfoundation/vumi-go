@@ -13,5 +13,5 @@ echo "=== Running tests..."
 export PYTHONPATH=.
 ./run-tests-pytest.sh --cov=go
 echo "=== Checking for PEP-8 violations..."
-pep8 --repeat go | grep -v '^go/base/migrations/' | tee pep8.txt
+pep8 --repeat go | grep -v '^go/\(base\|billing\)/migrations/' | tee pep8.txt
 echo "=== Done."
