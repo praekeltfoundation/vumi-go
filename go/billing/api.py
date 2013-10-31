@@ -12,6 +12,10 @@ from go.billing import settings as app_settings
 from go.billing.utils import JSONEncoder
 
 
+class BillingError(Exception):
+    """Raised when an error occurs during billing."""
+
+
 class BaseResource(Resource):
     """Base class for the APIs ``Resource``s"""
 
@@ -684,6 +688,12 @@ class TransactionResource(BaseResource):
         # Get the message cost
         result = yield self.get_cost(account_number, tag_pool_name,
                                      message_direction)
+
+        if result is None:
+            raise BillingError(
+                "Unable to determine %s message cost for account %s"
+                " and tag pool %s" % (message_direction, account_number,
+                                      tag_pool_name))
 
         message_cost = result.get('message_cost', 0)
         markup_percent = result.get('markup_percent', 0)

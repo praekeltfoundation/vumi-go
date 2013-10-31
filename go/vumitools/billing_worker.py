@@ -3,7 +3,7 @@ import json
 
 from urlparse import urljoin
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
 from vumi.dispatchers.endpoint_dispatchers import Dispatcher
@@ -11,6 +11,7 @@ from vumi.config import ConfigText
 from vumi.utils import load_class_by_string, http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
+from go.billing.api import BillingError
 
 
 class BillingApi(object):
@@ -35,8 +36,9 @@ class BillingApi(object):
         headers = {'Content-Type': 'application/json'}
         log.debug("Sending billing request to %r: %r" % (url, data))
         response = yield http_request_full(url, data, headers=headers)
-        # TODO: Check for a non 200 response.code and do something
         log.debug("Got billing response: %r" % (response.delivered_body,))
+        if response.code != 200:
+            raise BillingError(response.delivered_body)
         result = json.loads(response.delivered_body,
                             parse_float=decimal.Decimal)
 
@@ -90,6 +92,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def create_transaction_for_inbound(self, msg):
+        """Create a transaction for the given inbound message"""
         msg_mdh = self.get_metadata_helper(msg)
         yield self.billing_api.create_transaction(
             msg_mdh.get_account_key(), msg_mdh.tag[0],
@@ -97,6 +100,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
+        """Create a transaction for the given outbound message"""
         msg_mdh = self.get_metadata_helper(msg)
         yield self.billing_api.create_transaction(
             msg_mdh.get_account_key(), msg_mdh.tag[0],
@@ -104,20 +108,38 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
+        """Process an inbound message.
+
+        Any errors are logged and the message is allowed to continue on its
+        path and fulfill its destiny.
+
+        """
         log.debug("Processing inbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
-        yield self.create_transaction_for_inbound(msg)
-        msg_mdh.set_paid()
+        try:
+            yield self.create_transaction_for_inbound(msg)
+            msg_mdh.set_paid()
+        except Exception as error:
+            log.err(error.message)
         connector_name = self.get_configured_ro_connectors()[0]
         endpoint_name = msg.get_routing_endpoint()
         yield self.publish_inbound(msg, connector_name, endpoint_name)
 
     @inlineCallbacks
     def process_outbound(self, config, msg, connector_name):
+        """Process an outbound message.
+
+        Any errors are logged and the message is allowed to continue on its
+        path and fulfill its destiny.
+
+        """
         log.debug("Processing outbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
-        yield self.create_transaction_for_outbound(msg)
-        msg_mdh.set_paid()
+        try:
+            yield self.create_transaction_for_outbound(msg)
+            msg_mdh.set_paid()
+        except Exception as error:
+            log.err(error.message)
         connector_name = self.get_configured_ri_connectors()[0]
         endpoint_name = msg.get_routing_endpoint()
         yield self.publish_outbound(msg, connector_name, endpoint_name)
