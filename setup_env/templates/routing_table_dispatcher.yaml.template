@@ -7,10 +7,12 @@ riak_manager: &RIAK_MANAGER
 {{ riak_manager }}
 
 receive_inbound_connectors:
+  - billing_dispatcher_ro
 {% for transport_name in transport_names %}  - {{transport_name}}
 {% endfor %}
 
 receive_outbound_connectors:
+  - billing_dispatcher_ri
 {% for application_name in application_names %}  - {{application_name}}
 {% endfor %}
 
@@ -24,8 +26,8 @@ router_outbound_connector_mapping: {}
 
 opt_out_connector: opt_out_transport
 
-billing_inbound_connector: billing_worker_ri
-billing_outbound_connector: billing_worker_ro
+billing_inbound_connector: billing_dispatcher_ri
+billing_outbound_connector: billing_dispatcher_ro
 
 # NOTE: the order is important
 middleware:
