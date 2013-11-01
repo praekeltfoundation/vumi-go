@@ -317,10 +317,12 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
         config = yaml.safe_load(fake_file)
 
         self.assertEqual(config['receive_inbound_connectors'],
-                         ['transport1', 'transport2'])
+                         ['billing_dispatcher_ro', 'transport1',
+                          'transport2'])
 
         self.assertEqual(config['receive_outbound_connectors'],
-                         ['app1_transport', 'app2_transport'])
+                         ['billing_dispatcher_ri', 'app1_transport',
+                          'app2_transport'])
 
         self.assertEqual(config['application_connector_mapping'],
                          {'app1': 'app1_transport', 'app2': 'app2_transport'})
