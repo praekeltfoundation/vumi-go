@@ -150,3 +150,15 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         connector_name = self.get_configured_ri_connectors()[0]
         endpoint_name = None
         yield self.publish_outbound(msg, connector_name, endpoint_name)
+
+    @inlineCallbacks
+    def process_event(self, config, event, connector_name):
+        """Process an event message.
+
+        The event message is sent to the ``AccountRoutingTableDispatcher``.
+
+        """
+        log.debug("Processing event: %s" % (event,))
+        connector_name = self.get_configured_ro_connectors()[0]
+        endpoint_name = None
+        yield self.publish_event(event, connector_name, endpoint_name)
