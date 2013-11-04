@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Convenience API, mostly for working with various datastores."""
+
 from collections import defaultdict
 
 from twisted.internet.defer import inlineCallbacks, returnValue
