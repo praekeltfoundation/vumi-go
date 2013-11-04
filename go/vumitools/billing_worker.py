@@ -92,7 +92,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         yield self._go_setup_worker()
         config = self.get_static_config()
         self.receive_inbound_connector = \
-            self.get_configured_ri_connectors[0]
+            self.get_configured_ri_connectors()[0]
 
         self.receive_outbound_connector = \
             self.get_configured_ro_connectors()[0]
@@ -158,7 +158,6 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         """Process an event message.
 
         Publish the event to the ``AccountRoutingTableDispatcher``.
-
         """
         log.debug("Processing event: %s" % (event,))
         yield self.publish_event(event, self.receive_outbound_connector, None)
