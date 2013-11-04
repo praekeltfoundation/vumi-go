@@ -257,9 +257,9 @@ class OutboundHttpWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(response.code, http.OK)
 
         [metric1, metric2] = self.app.metrics._metrics
-        self.assertEqual(metric1.name, '%s%s.%s.vumi.test.v1' % (
-            self.config['metrics_prefix'], self.account.key,
-            'metrics_store'))
+        self.assertEqual(
+            metric1.name,
+            '%s.stores.%s.vumi.test.v1' % (self.account.key, 'metrics_store'))
         self.assertEqual(metric1.aggs, ('sum',))
 
     @inlineCallbacks

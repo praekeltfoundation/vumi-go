@@ -32,3 +32,5 @@ distribute-0.6.10.tar.gz
 /pep8.txt
 /docs/_build/
 /.codeintel/
+mochacov.lcov
+/coverage/
