@@ -4,12 +4,22 @@ from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import LoopingCall
 
 from vumi import log
-from vumi.service import Worker
+from vumi.worker import BaseWorker
+from vumi.config import ConfigInt
 
 from go.vumitools.api import VumiApi, VumiApiCommand
+from go.vumitools.app_worker import GoWorkerConfigMixin, GoWorkerMixin
 
 
-class GoMetricsWorker(Worker):
+class GoMetricsWorkerConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+    metrics_interval = ConfigInt(
+        "How often (in seconds) the worker should send 'collect_metric' "
+        "api commands",
+        default=300,
+        static=True)
+
+
+class GoMetricsWorker(BaseWorker, GoWorkerMixin):
     """A metrics collection worker for Go applications.
 
     This worker operates by finding all conversations that require metrics
@@ -18,30 +28,35 @@ class GoMetricsWorker(Worker):
 
     """
 
+    CONFIG_CLASS = GoMetricsWorkerConfig
     worker_name = 'go_metrics'
 
     @inlineCallbacks
-    def startWorker(self):
-        self.validate_config()
+    def setup_worker(self):
+        yield self._go_setup_worker()
+        config = self.get_static_config()
 
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield VumiApi.from_config_async({
+            'riak_manager': config.riak_manager,
+            'redis_manager': config.redis_manager,
+        })
         self.redis = self.vumi_api.redis
 
+        api_routing_config = VumiApiCommand.default_routing_config()
+        api_routing_config.update(config.api_routing or {})
         self.command_publisher = yield self.publish_to(
-            self.api_routing_config['routing_key'])
+            api_routing_config['routing_key'])
 
         self._looper = LoopingCall(self.metrics_loop_func)
-        self._looper.start(self.metrics_interval)
+        self._looper.start(config.metrics_interval)
 
-    def stopWorker(self):
+    @inlineCallbacks
+    def teardown_worker(self):
         if self._looper.running:
             self._looper.stop()
-        return self.redis.close_manager()
 
-    def validate_config(self):
-        self.metrics_interval = int(self.config.get('metrics_interval', 300))
-        self.api_routing_config = VumiApiCommand.default_routing_config()
-        self.api_routing_config.update(self.config.get('api_routing', {}))
+        yield self.redis.close_manager()
+        yield self._go_teardown_worker()
 
     @inlineCallbacks
     def metrics_loop_func(self):
@@ -57,6 +72,9 @@ class GoMetricsWorker(Worker):
                 len(conversations), len(account_keys)))
         for conversation in conversations:
             yield self.send_metrics_command(conversation)
+
+    def setup_connectors(self):
+        pass
 
     def find_account_keys(self):
         return self.redis.smembers('metrics_accounts')
