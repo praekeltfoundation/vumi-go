@@ -519,7 +519,6 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     def publish_inbound_from_billing(self, config, msg):
         """Publish an inbound message to its intended destination
         after billing.
-
         """
         msg_mdh = self.get_metadata_helper(msg)
         src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
@@ -548,7 +547,6 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     def publish_outbound_from_billing(self, config, msg):
         """Publish an outbound message to its intended destination
         after billing.
-
         """
         msg_mdh = self.get_metadata_helper(msg)
         dst_conn = GoConnector.for_transport_tag(*msg_mdh.tag)

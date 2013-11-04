@@ -27,7 +27,6 @@ class BillingApi(object):
 
         If the HTTP response code is anything other than 200,
         raise a BillingError exception.
-
         """
         url = urljoin(self.base_url, path)
         if query:
@@ -122,7 +121,6 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
         Any errors are logged and the message is allowed to continue on its
         path and fulfill its destiny.
-
         """
         log.debug("Processing inbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
@@ -141,7 +139,6 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
         Any errors are logged and the message is allowed to continue on its
         path and fulfill its destiny.
-
         """
         log.debug("Processing outbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
