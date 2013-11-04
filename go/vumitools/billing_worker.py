@@ -138,7 +138,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         except Exception as error:
             log.err(error.message)
         connector_name = self.get_configured_ro_connectors()[0]
-        endpoint_name = msg.get_routing_endpoint()
+        endpoint_name = None
         yield self.publish_inbound(msg, connector_name, endpoint_name)
 
     @inlineCallbacks
@@ -157,5 +157,5 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         except Exception as error:
             log.err(error.message)
         connector_name = self.get_configured_ri_connectors()[0]
-        endpoint_name = msg.get_routing_endpoint()
+        endpoint_name = None
         yield self.publish_outbound(msg, connector_name, endpoint_name)
