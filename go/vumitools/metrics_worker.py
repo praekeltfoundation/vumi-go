@@ -67,7 +67,7 @@ class GoMetricsWorker(Worker):
 
     def send_metrics_command(self, conversation):
         # TODO better way of finding worker_name
-        worker_name = '%s_application' % conversation.conversation_type
+        worker_name = '%s_application' % (conversation.conversation_type,)
 
         cmd = VumiApiCommand.command(
             worker_name,
