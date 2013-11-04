@@ -91,6 +91,12 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         yield super(BillingDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
         config = self.get_static_config()
+        self.receive_inbound_connector = \
+            self.get_configured_ri_connectors[0]
+
+        self.receive_outbound_connector = \
+            self.get_configured_ro_connectors()[0]
+
         self.api_url = config.api_url
         self.billing_api = BillingApi(self.api_url)
 
@@ -129,9 +135,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             msg_mdh.set_paid()
         except Exception as error:
             log.err(error.message)
-        connector_name = self.get_configured_ro_connectors()[0]
-        endpoint_name = None
-        yield self.publish_inbound(msg, connector_name, endpoint_name)
+        yield self.publish_inbound(msg, self.receive_outbound_connector, None)
 
     @inlineCallbacks
     def process_outbound(self, config, msg, connector_name):
@@ -147,18 +151,14 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             msg_mdh.set_paid()
         except Exception as error:
             log.err(error.message)
-        connector_name = self.get_configured_ri_connectors()[0]
-        endpoint_name = None
-        yield self.publish_outbound(msg, connector_name, endpoint_name)
+        yield self.publish_outbound(msg, self.receive_inbound_connector, None)
 
     @inlineCallbacks
     def process_event(self, config, event, connector_name):
         """Process an event message.
 
-        The event message is sent to the ``AccountRoutingTableDispatcher``.
+        Publish the event to the ``AccountRoutingTableDispatcher``.
 
         """
         log.debug("Processing event: %s" % (event,))
-        connector_name = self.get_configured_ro_connectors()[0]
-        endpoint_name = None
-        yield self.publish_event(event, connector_name, endpoint_name)
+        yield self.publish_event(event, self.receive_outbound_connector, None)
