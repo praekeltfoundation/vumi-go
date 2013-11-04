@@ -84,11 +84,11 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         return user_api.running_conversations()
 
     def send_metrics_command(self, conversation):
-        # TODO better way of finding worker_name
-        worker_name = '%s_application' % (conversation.conversation_type,)
+        user_api = self.vumi_api.get_user_api(conversation.user_account.key)
+        conversation = user_api.wrap_conversation(conversation)
 
         cmd = VumiApiCommand.command(
-            worker_name,
+            conversation.worker_name,
             'collect_metrics',
             conversation_key=conversation.key,
             user_account_key=conversation.user_account.key)

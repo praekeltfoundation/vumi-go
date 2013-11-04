@@ -441,6 +441,11 @@ class ConversationWrapper(object):
 
         returnValue(sorted(aggregates.items()))
 
+    @property
+    def worker_name(self):
+        # TODO better way of working out worker_name
+        return '%s_application' % (self.conversation_type,)
+
     def dispatch_command(self, command, *args, **kwargs):
         """
         Send a command to the GoApplication worker listening to this
@@ -451,9 +456,8 @@ class ConversationWrapper(object):
         :params command:
             The name of the command to call
         """
-        # TODO better way of working out worker_name
-        worker_name = '%s_application' % (self.conversation_type,)
-        return self.api.send_command(worker_name, command, *args, **kwargs)
+        return self.api.send_command(
+            self.worker_name, command, *args, **kwargs)
 
     def get_absolute_url(self):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
