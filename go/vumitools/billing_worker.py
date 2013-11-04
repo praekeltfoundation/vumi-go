@@ -1,5 +1,6 @@
 import decimal
 import json
+import urllib
 
 from urlparse import urljoin
 
@@ -21,6 +22,31 @@ class BillingApi(object):
         self.base_url = base_url
 
     @inlineCallbacks
+    def _call_api(self, path, query=None, data=None, method='GET'):
+        """Perform the actual HTTP call to the billing API.
+
+        If the HTTP response code is anything other than 200,
+        raise a BillingError exception.
+
+        """
+        url = urljoin(self.base_url, path)
+        if query:
+            url = "%s?%s" % (url, urllib.urlencode(query))
+        data = json.dumps(data)
+        headers = {'Content-Type': 'application/json'}
+        log.debug("Sending billing request to %r: %r" % (url, data))
+        response = yield http_request_full(url, data, headers=headers,
+                                           method=method)
+
+        log.debug("Got billing response: %r" % (response.delivered_body,))
+        if response.code != 200:
+            raise BillingError(response.delivered_body)
+        result = json.loads(response.delivered_body,
+                            parse_float=decimal.Decimal)
+
+        returnValue(result)
+
+    @inlineCallbacks
     def create_transaction(self, account_number, tag_pool_name,
                            tag_name, message_direction):
         """Create a new transaction for the given ``account_number``"""
@@ -31,17 +57,7 @@ class BillingApi(object):
             'message_direction': message_direction
         }
 
-        url = urljoin(self.base_url, "/transactions")
-        data = json.dumps(data)
-        headers = {'Content-Type': 'application/json'}
-        log.debug("Sending billing request to %r: %r" % (url, data))
-        response = yield http_request_full(url, data, headers=headers)
-        log.debug("Got billing response: %r" % (response.delivered_body,))
-        if response.code != 200:
-            raise BillingError(response.delivered_body)
-        result = json.loads(response.delivered_body,
-                            parse_float=decimal.Decimal)
-
+        result = yield self._call_api("/transactions", data, method='POST')
         returnValue(result)
 
 
