@@ -13,7 +13,8 @@ from go.vumitools.app_worker import GoWorkerConfigMixin, GoWorkerMixin
 
 class GoMetricsWorkerConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
     metrics_interval = ConfigInt(
-        "How often the worker should send 'collect_metric' commands",
+        "How often (in seconds) the worker should send 'collect_metric' "
+        "api commands",
         default=300,
         static=True)
 
