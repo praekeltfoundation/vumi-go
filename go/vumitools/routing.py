@@ -516,19 +516,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
-    def publish_inbound_from_billing(self, config, msg):
+    def publish_inbound_from_billing(self, config, msg, target):
         """Publish an inbound message to its intended destination
         after billing.
         """
-        msg_mdh = self.get_metadata_helper(msg)
-        src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
-        target = self.find_target(config, msg, src_conn)
-        if target is None:
-            log.debug("No target found for message from '%s': %s" % (
-                src_conn, msg))
-
-            return
-
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.INBOUND)
 
@@ -563,12 +554,14 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         * transports (these might be opt-out messages)
         * routers
+        * billing worker
 
         And may go to:
 
         * routers
         * conversations
         * the opt-out worker
+        * billing worker
         """
         log.debug("Processing inbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
@@ -587,13 +580,16 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 return
 
         if connector_type == self.BILLING:
-            yield self.publish_inbound_from_billing(config, msg)
-            return
+            src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
             log.debug("No target found for message from '%s': %s" % (
                 connector_name, msg))
+            return
+
+        if connector_type == self.BILLING:
+            yield self.publish_inbound_from_billing(config, msg, target)
             return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
@@ -610,11 +606,13 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         * conversations
         * routers
         * the opt-out worker
+        * billing worker
 
         And may go to:
 
         * routers
         * transports
+        * billing worker
         """
         log.debug("Processing outbound: %s" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
