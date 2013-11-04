@@ -66,8 +66,12 @@ class GoMetricsWorker(Worker):
         return user_api.running_conversations()
 
     def send_metrics_command(self, conversation):
+        # TODO better way of finding worker_name
+        worker_name = '%s_application' % conversation.conversation_type
+
         cmd = VumiApiCommand.command(
-            conversation.conversation_type, 'collect_metrics',
+            worker_name,
+            'collect_metrics',
             conversation_key=conversation.key,
             user_account_key=conversation.user_account.key)
         return self.command_publisher.publish_message(cmd)

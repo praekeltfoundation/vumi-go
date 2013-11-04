@@ -451,7 +451,8 @@ class ConversationWrapper(object):
         :params command:
             The name of the command to call
         """
-        worker_name = '%s_application' % (self.conversation_type,)
+        # TODO better way of working out worker_name
+        worker_name = '%s_application' % self.conversation_type
         return self.api.send_command(worker_name, command, *args, **kwargs)
 
     def get_absolute_url(self):
