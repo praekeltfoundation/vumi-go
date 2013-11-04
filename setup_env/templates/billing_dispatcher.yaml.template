@@ -13,7 +13,6 @@ receive_outbound_connectors:
   - billing_dispatcher_ro
 
 api_url: http://127.0.0.1:9090/
-billing_api: go.vumitools.billing_worker.BillingApi
 
 # NOTE: the order is important
 middleware:

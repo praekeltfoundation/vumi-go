@@ -9,7 +9,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi import log
 from vumi.dispatchers.endpoint_dispatchers import Dispatcher
 from vumi.config import ConfigText
-from vumi.utils import load_class_by_string, http_request_full
+from vumi.utils import http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.billing.api import BillingError
@@ -67,10 +67,6 @@ class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
         "Base URL of the billing REST API",
         static=True, required=True)
 
-    billing_api = ConfigText(
-        "Python path to the billing api proxy class",
-        static=True, required=True)
-
     def post_validate(self):
         if len(self.receive_inbound_connectors) != 1:
             self.raise_config_error("There should be exactly one connector "
@@ -96,10 +92,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         yield super(BillingDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
         config = self.get_static_config()
-        base_url = config.api_url
-        cls_name = config.billing_api
-        cls = load_class_by_string(cls_name)
-        self.billing_api = cls(base_url)
+        self.api_url = config.api_url
+        self.billing_api = BillingApi(self.api_url)
 
     @inlineCallbacks
     def teardown_dispatcher(self):

@@ -49,12 +49,12 @@ class TestBillingDispatcher(AppWorkerTestCase):
                 "billing_dispatcher_ro"
             ],
             "api_url": "http://127.0.0.1:9090/",
-            "billing_api": "go.vumitools.tests.test_billing.BillingApiMock",
             "metrics_prefix": "bar"
         }
         config.update(config_extras)
         billing_dispatcher = yield self.get_worker(
             self.mk_config(config), BillingDispatcher)
+        billing_dispatcher.billing_api = BillingApiMock(config["api_url"])
         returnValue(billing_dispatcher)
 
     def with_md(self, msg, user_account=None, conv=None, router=None,
