@@ -100,6 +100,8 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
 
         yield worker.send_metrics_command(conv1)
         [cmd] = self._get_dispatched('vumi.api')
+
+        self.assertEqual(cmd['worker_name'], 'my_conv_application')
         self.assertEqual(cmd.payload['kwargs']['conversation_key'], conv1.key)
         self.assertEqual(cmd.payload['kwargs']['user_account_key'], akey)
 
