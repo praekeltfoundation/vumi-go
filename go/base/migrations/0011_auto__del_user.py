@@ -7,6 +7,11 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        if 'auth.User' not in orm:
+            # this covers the case where Django has created a fresh
+            # database without auth_user table because it's noticed
+            # we're using a custom user model.
+            return
         
         # Deleting model 'User'
         db.delete_table(u'auth_user')
