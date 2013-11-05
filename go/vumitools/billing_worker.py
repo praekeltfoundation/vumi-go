@@ -56,7 +56,9 @@ class BillingApi(object):
             'message_direction': message_direction
         }
 
-        result = yield self._call_api("/transactions", data, method='POST')
+        result = yield self._call_api("/transactions", data=data,
+                                      method='POST')
+
         returnValue(result)
 
 

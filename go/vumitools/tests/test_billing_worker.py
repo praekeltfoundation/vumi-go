@@ -1,10 +1,19 @@
+import json
 import decimal
 
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.trial.unittest import TestCase
+from twisted.web.client import Agent, Request, Response
+
+from vumi.utils import mkheaders, StringProducer
 
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.billing_worker import BillingDispatcher
+from go.vumitools import billing_worker
+from go.vumitools.billing_worker import BillingApi, BillingDispatcher
 from go.vumitools.utils import MessageMetadataHelper
+
+from go.billing.api import BillingError
+from go.billing.utils import JSONEncoder
 
 
 class BillingApiMock(object):
@@ -28,6 +37,108 @@ class BillingApiMock(object):
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
             "status": "Completed"
         }
+
+
+class HttpRequestMock(object):
+
+    def __init__(self, response=None):
+        self.request = None
+        self.response = response
+
+    def _mk_request(self, uri, method='POST', headers={}, data=None):
+        return Request(method, uri, mkheaders(headers),
+                       StringProducer(data) if data else None)
+
+    def dummy_http_request_full(self, url, data=None, headers={},
+                                method='POST', timeout=None,
+                                data_limit=None, context_factory=None,
+                                agent_class=Agent):
+        self.request = self._mk_request(url, method, headers, data)
+        return self.response
+
+
+class TestBillingApi(TestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestBillingApi, self).setUp()
+        self.api_url = "http://localhost:9090/"
+        self.billing_api = BillingApi(self.api_url)
+
+    def _mk_response(self, code=200, phrase='OK', headers={},
+                     delivered_body='{}'):
+        response = Response(('HTTP', 1, 1), code, phrase,
+                            mkheaders(headers), None)
+
+        response.delivered_body = delivered_body
+        return response
+
+    @inlineCallbacks
+    def test_create_transaction_request(self):
+        hrm = HttpRequestMock(self._mk_response())
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'tag_pool_name': "pool1",
+            'tag_name': "1234",
+            'message_direction': "Inbound"
+        }
+        yield self.billing_api.create_transaction(**kwargs)
+        self.assertEqual(hrm.request.uri, "%stransactions" % (self.api_url,))
+        self.assertEqual(hrm.request.bodyProducer.body,
+                         json.dumps(kwargs, cls=JSONEncoder))
+
+    @inlineCallbacks
+    def test_create_transaction_response(self):
+        delivered_body = {
+            "id": 1,
+            "account_number": "test-account",
+            "tag_pool_name": "pool1",
+            "tag_name": "1234",
+            "message_direction": "Inbound",
+            "message_cost": 80,
+            "markup_percent": decimal.Decimal('10.0'),
+            "credit_amount": -35,
+            "credit_factor": decimal.Decimal('0.4'),
+            "created": "2013-10-30T10:42:51.144745+02:00",
+            "last_modified": "2013-10-30T10:42:51.144745+02:00",
+            "status": "Completed"
+        }
+        response = self._mk_response(
+            delivered_body=json.dumps(delivered_body, cls=JSONEncoder))
+
+        hrm = HttpRequestMock(response)
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'tag_pool_name': "pool1",
+            'tag_name': "1234",
+            'message_direction': "Inbound"
+        }
+        result = yield self.billing_api.create_transaction(**kwargs)
+        self.assertEqual(result, delivered_body)
+
+    @inlineCallbacks
+    def test_create_transaction_error(self):
+        response = self._mk_response(code=500, phrase="Internal Server Error",
+                                     delivered_body="")
+
+        hrm = HttpRequestMock(response)
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'tag_pool_name': "pool1",
+            'tag_name': "1234",
+            'message_direction': "Inbound"
+        }
+        d = self.billing_api.create_transaction(**kwargs)
+        yield self.assertFailure(d, BillingError)
 
 
 class TestBillingDispatcher(AppWorkerTestCase):
