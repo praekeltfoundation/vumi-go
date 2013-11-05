@@ -241,9 +241,6 @@ LOGGING = {
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
-SOUTH_MIGRATION_MODULES = {
-    'auth': 'go.base.auth_migrations',
-}
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
