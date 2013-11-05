@@ -26,6 +26,10 @@ class JSONEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, obj)
 
 
+def parse_float(num_str):
+    return decimal.Decimal(num_str).quantize(decimal.Decimal('.01'))
+
+
 def real_dict_connect(*args, **kwargs):
     kwargs['connection_factory'] = psycopg2.extras.RealDictConnection
     return psycopg2.connect(*args, **kwargs)

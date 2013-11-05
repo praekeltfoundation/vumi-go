@@ -1,4 +1,3 @@
-import decimal
 import json
 import urllib
 
@@ -12,7 +11,9 @@ from vumi.config import ConfigText
 from vumi.utils import http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
+
 from go.billing.api import BillingError
+from go.billing.utils import JSONEncoder, parse_float
 
 
 class BillingApi(object):
@@ -31,7 +32,7 @@ class BillingApi(object):
         url = urljoin(self.base_url, path)
         if query:
             url = "%s?%s" % (url, urllib.urlencode(query))
-        data = json.dumps(data)
+        data = json.dumps(data, cls=JSONEncoder)
         headers = {'Content-Type': 'application/json'}
         log.debug("Sending billing request to %r: %r" % (url, data))
         response = yield http_request_full(url, data, headers=headers,
@@ -40,9 +41,7 @@ class BillingApi(object):
         log.debug("Got billing response: %r" % (response.delivered_body,))
         if response.code != 200:
             raise BillingError(response.delivered_body)
-        result = json.loads(response.delivered_body,
-                            parse_float=decimal.Decimal)
-
+        result = json.loads(response.delivered_body, parse_float=parse_float)
         returnValue(result)
 
     @inlineCallbacks

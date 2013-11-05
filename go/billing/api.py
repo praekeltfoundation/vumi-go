@@ -1,5 +1,4 @@
 import json
-import decimal
 
 from twisted.python import log
 from twisted.internet import defer
@@ -9,7 +8,7 @@ from twisted.web.server import NOT_DONE_YET
 from django.contrib.auth.hashers import make_password
 
 from go.billing import settings as app_settings
-from go.billing.utils import JSONEncoder
+from go.billing.utils import JSONEncoder, parse_float
 
 
 class BillingError(Exception):
@@ -60,8 +59,7 @@ class BaseResource(Resource):
         """
         content_type = request.getHeader('Content-Type')
         if request.method == 'POST' and content_type == 'application/json':
-            return json.loads(request.content.read(),
-                              parse_float=decimal.Decimal)
+            return json.loads(request.content.read(), parse_float=parse_float)
 
         return None
 
