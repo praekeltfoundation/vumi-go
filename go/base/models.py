@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_syncdb
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.translation import ugettext_lazy as _
@@ -105,3 +105,12 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 post_save.connect(create_user_profile, sender=GoUser,
     dispatch_uid='go.base.models.create_user_profile')
+
+# disconnect post_syncdb signals so that syncdb doesn't attempt to call
+# create_permissions or create_superuser before South migrations have had
+# chanceto run.
+import django.contrib.auth.management as _auth_management
+post_syncdb.disconnect(
+    dispatch_uid="django.contrib.auth.management.create_permissions")
+post_syncdb.disconnect(
+    dispatch_uid="django.contrib.auth.management.create_superuser")
