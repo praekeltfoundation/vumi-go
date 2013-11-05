@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
+from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
 
@@ -16,27 +17,24 @@ def get_account_store():
 
 
 class GoUserManager(BaseUserManager):
-    def create_user(self, email, password=None):
+    def _create_user(self, email, password, **kw):
         if not email:
             raise ValueError('Users must have an email address')
-
-        user = self.model(
-            email=self.normalize_email(email),
-            is_staff=False, is_active=True,
-        )
-
+        email = self.normalize_email(email)
+        user = self.model(email=email, password=password, **kw)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
+    def create_user(self, email, password=None):
+        return self._create_user(
+            email, password,
+            is_superuser=False, is_staff=False, is_active=True)
+
     def create_superuser(self, email, password):
-        user = self.create_user(email,
-            password=password,
-        )
-        user.is_admin = True
-        user.is_staff = True
-        user.save(using=self._db)
-        return user
+        return self._create_user(
+            email, password,
+            is_superuser=True, is_staff=True, is_active=True)
 
 
 class GoUser(AbstractBaseUser, PermissionsMixin):
@@ -56,6 +54,10 @@ class GoUser(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
+
+    class Meta:
+        verbose_name = _('user')
+        verbose_name_plural = _('users')
 
     def get_full_name(self):
         full_name = '%s %s' % (self.first_name, self.last_name)
