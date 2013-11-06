@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, DatabaseError
 from django.db.models.signals import post_save, post_syncdb
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
@@ -107,10 +107,29 @@ post_save.connect(create_user_profile, sender=GoUser,
     dispatch_uid='go.base.models.create_user_profile')
 
 
-def disconnect_auth_post_syncdb():
+def create_permissions_for_tests(*args, **kw):
+    from django.contrib.auth.models import ContentType, Permission
+    try:
+        Permission.objects.exists()
+    except DatabaseError, e:
+        if e.args == ("no such table: auth_permission",):
+            return
+        raise
+    for model in ('user', 'permission', 'group'):
+            ct, _ = ContentType.objects.get_or_create(
+                model=model, app_label='auth')
+            for perm_name in ('add', 'change', 'delete'):
+                codename = '%s_%s' % (model, perm_name)
+                name = 'Can %s %s' % (perm_name, model)
+                Permission.objects.get_or_create(
+                    content_type=ct, codename=codename, name=name)
+
+
+def fix_auth_post_syncdb():
     """Disconnects post_syncdb signals so that syncdb doesn't attempt to call
        create_permissions or create_superuser before South migrations have had
-       chance to run.
+       chance to run. Connects a new post_syncdb hook that creates permissions
+       during tests.
        """
     # ensure signals have had a chance to be connected
     __import__('django.contrib.auth.management')
@@ -118,6 +137,8 @@ def disconnect_auth_post_syncdb():
         dispatch_uid="django.contrib.auth.management.create_permissions")
     post_syncdb.disconnect(
         dispatch_uid="django.contrib.auth.management.create_superuser")
+    post_syncdb.connect(
+        create_permissions_for_tests,
+        dispatch_uid="go.base.models.create_permissions_for_tests")
 
-
-disconnect_auth_post_syncdb()
+fix_auth_post_syncdb()
