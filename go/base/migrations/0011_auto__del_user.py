@@ -6,6 +6,10 @@ from django.db import models
 
 class Migration(SchemaMigration):
 
+    depends_on = (
+        ("billing", "0002_auto__chg_field_account_user"),
+    )
+
     def forwards(self, orm):
         
         # Deleting model 'User'

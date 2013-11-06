@@ -6,6 +6,10 @@ from django.db import models
 
 class Migration(SchemaMigration):
 
+    depends_on = (
+        ("base", "0009_migrate_user_to_gouser"),
+    )
+
     def forwards(self, orm):
         
         # Changing field 'Account.user'
