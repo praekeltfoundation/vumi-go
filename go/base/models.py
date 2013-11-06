@@ -106,11 +106,18 @@ def create_user_profile(sender, instance, created, **kwargs):
 post_save.connect(create_user_profile, sender=GoUser,
     dispatch_uid='go.base.models.create_user_profile')
 
-# disconnect post_syncdb signals so that syncdb doesn't attempt to call
-# create_permissions or create_superuser before South migrations have had
-# chanceto run.
-import django.contrib.auth.management as _auth_management
-post_syncdb.disconnect(
-    dispatch_uid="django.contrib.auth.management.create_permissions")
-post_syncdb.disconnect(
-    dispatch_uid="django.contrib.auth.management.create_superuser")
+
+def disconnect_auth_post_syncdb():
+    """Disconnects post_syncdb signals so that syncdb doesn't attempt to call
+       create_permissions or create_superuser before South migrations have had
+       chance to run.
+       """
+    # ensure signals have had a chance to be connected
+    __import__('django.contrib.auth.management')
+    post_syncdb.disconnect(
+        dispatch_uid="django.contrib.auth.management.create_permissions")
+    post_syncdb.disconnect(
+        dispatch_uid="django.contrib.auth.management.create_superuser")
+
+
+disconnect_auth_post_syncdb()
