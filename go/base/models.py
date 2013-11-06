@@ -111,10 +111,11 @@ def create_permissions_for_tests(*args, **kw):
     from django.contrib.auth.models import ContentType, Permission
     try:
         Permission.objects.exists()
-    except DatabaseError, e:
-        if e.args == ("no such table: auth_permission",):
-            return
-        raise
+    except DatabaseError:
+        # skip creating permissions if the auth_permissions does
+        # not exist (because this is a real syncdb and
+        # not one called during tests)
+        return
     for model in ('user', 'permission', 'group'):
             ct, _ = ContentType.objects.get_or_create(
                 model=model, app_label='auth')
