@@ -55,7 +55,7 @@ class DjangoMetric(GoMetric):
     def make_name(self, metric_name):
         return "django.%s" % (metric_name,)
 
-    def oneshot(self, connection=None, value=None):
+    def oneshot(self, value=None, connection=None):
         """
         Does a once-off publish for the metric using an `AmqpConnection`.
         """

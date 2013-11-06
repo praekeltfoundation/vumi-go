@@ -123,7 +123,7 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
     def test_oneshot_with_explicitly_given_connection(self):
         self.metric.set_value(23)
         self.assertEqual(self.msgs, [])
-        self.metric.oneshot(self.make_connection())
+        self.metric.oneshot(connection=self.make_connection())
 
         [msg] = self.msgs
         self.assertEqual(
