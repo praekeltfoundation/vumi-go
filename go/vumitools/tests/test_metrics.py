@@ -131,9 +131,8 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
             [('go.django.luke', ('last',), [(1985, 23)])])
 
     def test_oneshot_with_explicitly_given_value(self):
-        self.metric.set_value(22)
         self.assertEqual(self.msgs, [])
-        self.metric.oneshot()
+        self.metric.oneshot(22)
 
         [msg] = self.msgs
         self.assertEqual(
