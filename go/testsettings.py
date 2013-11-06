@@ -12,7 +12,7 @@ VUMI_API_CONFIG['redis_manager'] = {
 
 # Setup test database
 
-VUMIGO_TEST_DB = os.environ.get('VUMIGO_TEST_DB', 'sqlite')
+VUMIGO_TEST_DB = os.environ.get('VUMIGO_TEST_DB', 'memory')
 
 if VUMIGO_TEST_DB == "sqlite":
     DATABASES = {
