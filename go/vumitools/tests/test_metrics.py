@@ -232,7 +232,7 @@ class TestAccountMetric(TxMetricTestBase):
     @inlineCallbacks
     def setUp(self):
         yield super(TestAccountMetric, self).setUp()
-        self.metric = AccountMetric(self.user, 'store-1', 'susan')
+        self.metric = AccountMetric(self.user.key, 'store-1', 'susan')
 
     def test_name_construction(self):
         self.assertEqual(

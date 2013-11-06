@@ -101,13 +101,11 @@ class ConversationMetric(TxMetric):
 
 
 class AccountMetric(TxMetric):
-    def __init__(self, account, store_name, metric_name, aggregators=None):
-        name = self.make_name(account,
-            store_name, metric_name)
+    def __init__(self, account_key, store_name, metric_name, aggregators=None):
+        name = self.make_name(account_key, store_name, metric_name)
         super(AccountMetric, self).__init__(name, aggregators)
-        self.account = account
 
     @classmethod
-    def make_name(self, account, store_name, metric_name):
+    def make_name(self, account_key, store_name, metric_name):
         return "campaigns.%s.stores.%s.%s" % (
-            account.key, store_name, metric_name)
+            account_key, store_name, metric_name)
