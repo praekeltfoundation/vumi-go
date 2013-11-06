@@ -67,6 +67,18 @@ class Migration(SchemaMigration):
         ))
         db.create_unique(u'auth_user_user_permissions', ['user_id', 'permission_id'])
 
+        if not db.dry_run:
+            self.create_permissions(orm)
+
+    def create_permissions(self, orm):
+        for model in ('user', 'permission', 'group'):
+            ct, _ = orm['contenttypes.ContentType'].objects.get_or_create(
+                model=model, app_label='auth')
+            for perm_name in ('add', 'change', 'delete'):
+                codename = '%s_%s' % (model, perm_name)
+                name = 'Can %s %s' % (perm_name, model)
+                orm['auth.permission'].objects.get_or_create(
+                    content_type=ct, codename=codename, name=name)
 
     def backwards(self, orm):
         
