@@ -173,7 +173,6 @@ class OutboundHttpWorker(GoApplicationWorker):
     @inlineCallbacks
     def push(self, url, vumi_message):
         config = self.get_static_config()
-        print config.timeout
         data = vumi_message.to_json().encode('utf-8')
         try:
             resp = yield http_request_full(
@@ -192,8 +191,8 @@ class OutboundHttpWorker(GoApplicationWorker):
 
     @inlineCallbacks
     def teardown_application(self):
-        yield super(OutboundHttpWorker, self).teardown_application()
         yield self.webserver.loseConnection()
+        yield super(OutboundHttpWorker, self).teardown_application()
 
 
 class InboundHttpWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
@@ -234,9 +233,9 @@ class InboundHttpWorker(GoApplicationWorker):
         return conversation.config.get('http_api', {}).get(key)
 
     def get_health_response(self):
-        return str("Um, something here")
+        return str("hai!")
 
     @inlineCallbacks
     def teardown_application(self):
-        yield super(InboundHttpWorker, self).teardown_application()
         yield self.webserver.loseConnection()
+        yield super(InboundHttpWorker, self).teardown_application()

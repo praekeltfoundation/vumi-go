@@ -546,6 +546,8 @@ class InboundHttpWorkerTestCase(AppWorkerTestCase):
                 self.account.key, 'token-1'))],
         }
 
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+
     @inlineCallbacks
     def test_send_to(self):
         msg = {
@@ -580,10 +582,8 @@ class InboundHttpWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_in_reply_to(self):
-        inbound_msg = self.mkmsg_in(content='in 1', message_id='1')
-        self.conversation.set_go_helper_metadata(
-            inbound_msg['helper_metadata'])
-        yield self.store_inbound_msg(inbound_msg, self.conversation)
+        inbound_msg = yield self.msg_helper.make_stored_inbound(
+            self.conversation, 'in 1', message_id='1')
 
         msg = {
             'content': 'foo',

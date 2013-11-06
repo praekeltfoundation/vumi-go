@@ -48,7 +48,8 @@ class BaseResource(resource.Resource):
 
 class OutgoingMessageStreamResource(BaseResource):
 
-    message_class = None
+    message_class = TransportUserMessage
+    routing_key = '%(transport_name)s.stream.message.%(conversation_key)s'
     proxy_buffering = False
     encoding = 'utf-8'
     content_type = 'application/json; charset=%s' % (encoding,)
@@ -111,9 +112,6 @@ class OutgoingEventStreamResource(OutgoingMessageStreamResource):
 
 
 class IncomingMessageResource(BaseResource):
-
-    message_class = TransportUserMessage
-    routing_key = '%(transport_name)s.stream.message.%(conversation_key)s'
 
     def render_PUT(self, request):
         d = Deferred()
@@ -280,8 +278,7 @@ class BaseConversationResource(resource.Resource):
 class OutgoingConversationResource(BaseConversationResource):
 
     def __init__(self, worker, conversation_key):
-        super(OutgoingConversationResource, self).__init__(worker,
-                                                           conversation_key)
+        BaseConversationResource.__init__(self, worker, conversation_key)
         self.redis = worker.redis
 
     def key(self, *args):
@@ -314,16 +311,16 @@ class OutgoingConversationResource(BaseConversationResource):
 
         user_id = request.getUser()
         config = yield self.get_worker_config(user_id)
-        if (yield self.is_allowed(config, user_id)):
+        if not (yield self.is_allowed(config, user_id)):
+            returnValue(resource.ErrorPage(http.FORBIDDEN, 'Forbidden',
+                                           'Too many concurrent connections'))
 
-            # remove track when request is closed
-            finished = request.notifyFinish()
-            finished.addBoth(self.release_request, user_id)
+        # remove track when request is closed
+        finished = request.notifyFinish()
+        finished.addBoth(self.release_request, user_id)
 
-            yield self.track_request(user_id)
-            returnValue(stream_class(self.worker, self.conversation_key))
-        returnValue(resource.ErrorPage(http.FORBIDDEN, 'Forbidden',
-                                       'Too many concurrent connections'))
+        yield self.track_request(user_id)
+        returnValue(stream_class(self.worker, self.conversation_key))
 
 
 class IncomingConversationResource(BaseConversationResource):
@@ -336,10 +333,8 @@ class IncomingConversationResource(BaseConversationResource):
         }
         resource_class = class_map.get(path)
         if resource_class is None:
-            instance = resource.NoResource()
-        else:
-            instance = resource_class(self.worker, self.conversation_key)
-        return instance
+            return resource.NoResource()
+        return resource_class(self.worker, self.conversation_key)
 
 
 class AuthorizedResource(resource.Resource):
