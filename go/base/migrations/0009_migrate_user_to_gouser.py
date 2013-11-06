@@ -9,11 +9,6 @@ class Migration(DataMigration):
 
     def forwards(self, orm):
         """Migrate auth.User to go.base.GoUser."""
-        if 'auth.User' not in orm:
-            # this covers the case where Django has created a fresh
-            # database without auth_user table because it's noticed
-            # we're using a custom user model.
-            return
         old_users = orm['auth.User'].objects.all()
         for old_user in old_users:
             new_user = orm.GoUser.objects.create(
