@@ -6,10 +6,11 @@ from twisted.internet.defer import succeed, inlineCallbacks
 from vumi.worker import BaseWorker
 from vumi.blinkenlights.metrics import LAST
 
+from go.base.amqp import AmqpConnection
 from go.vumitools.metrics import (
     GoMetric, DjangoMetric, TxMetric, ConversationMetric, AccountMetric)
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
-from go.vumitools.tests.utils import GoWorkerTestCase, GoTestCase
+from go.vumitools.tests.utils import (GoWorkerTestCase, GoTestCase)
 from go.base.tests.utils import VumiGoDjangoTestCase
 
 
@@ -89,7 +90,10 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
         self.publish_patcher = patch(
             'go.base.amqp.connection.publish_metric_message')
         mock_publish = self.publish_patcher.start()
-        mock_publish.side_effect = lambda msg: self.msgs.append(msg)
+        mock_publish.side_effect = self.mock_publish
+
+    def mock_publish(self, msg):
+        self.msgs.append(msg)
 
     def tearDown(self):
         super(TestDjangoMetric, self).tearDown()
@@ -110,6 +114,31 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
         self.assertEqual(
             msg['datapoints'],
             [('go.django.luke', ('last',), [(1985, 23)])])
+
+    def make_connection(self):
+        connection = AmqpConnection()
+        connection.publish_metric_message = self.mock_publish
+        return connection
+
+    def test_oneshot_with_explicitly_given_connection(self):
+        self.metric.set_value(23)
+        self.assertEqual(self.msgs, [])
+        self.metric.oneshot(self.make_connection())
+
+        [msg] = self.msgs
+        self.assertEqual(
+            msg['datapoints'],
+            [('go.django.luke', ('last',), [(1985, 23)])])
+
+    def test_oneshot_with_explicitly_given_value(self):
+        self.metric.set_value(22)
+        self.assertEqual(self.msgs, [])
+        self.metric.oneshot()
+
+        [msg] = self.msgs
+        self.assertEqual(
+            msg['datapoints'],
+            [('go.django.luke', ('last',), [(1985, 22)])])
 
 
 class TxMetricTestBase(GoWorkerTestCase):
