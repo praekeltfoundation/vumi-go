@@ -3,7 +3,6 @@ import time
 
 from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
 
-from vumi.message import TransportUserMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
 from vumi.transports.failures import FailureMessage
 from vumi.middleware.tagger import TaggingMiddleware
@@ -12,6 +11,7 @@ from go.vumitools.tests.utils import AppWorkerTestCase, GoRouterWorkerTestMixin
 from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
     OptOutMiddleware, MetricsMiddleware, ConversationStoringMiddleware,
     RouterStoringMiddleware)
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class MiddlewareTestCase(AppWorkerTestCase):
@@ -53,16 +53,6 @@ class MiddlewareTestCase(AppWorkerTestCase):
         self._middlewares.append(mw)
         returnValue(mw)
 
-    def mk_msg(self, **kwargs):
-        defaults = {
-            'to_addr': 'to@addr.com',
-            'from_addr': 'from@addr.com',
-            'transport_name': 'dummy_endpoint',
-            'transport_type': 'dummy_transport_type',
-        }
-        defaults.update(kwargs)
-        return TransportUserMessage(**defaults)
-
 
 class NormalizeMisdnMiddlewareTestCase(MiddlewareTestCase):
 
@@ -71,9 +61,11 @@ class NormalizeMisdnMiddlewareTestCase(MiddlewareTestCase):
         yield super(NormalizeMisdnMiddlewareTestCase, self).setUp()
         self.mw = yield self.create_middleware(NormalizeMsisdnMiddleware,
             config={'country_code': '256'})
+        self.msg_helper = GoMessageHelper()
 
     def test_normalization(self):
-        msg = self.mk_msg(to_addr='8007', from_addr='256123456789')
+        msg = self.msg_helper.make_inbound(
+            "foo", to_addr='8007', from_addr='256123456789')
         msg = self.mw.handle_inbound(msg, 'dummy_endpoint')
         self.assertEqual(msg['from_addr'], '+256123456789')
 
@@ -94,11 +86,12 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
                 "transport_type": "other",
                 "msg_options": {"transport_name": "other_transport"},
                 })
+        self.msg_helper = GoMessageHelper(self.mw.vumi_api.mdb)
 
     @inlineCallbacks
     def send_keyword(self, mw, word, expected_response):
-        msg = self.mk_msg(
-            content=word, to_addr='to@domain.org', from_addr='from@domain.org')
+        msg = self.msg_helper.make_inbound(
+            word, to_addr='to@domain.org', from_addr='from@domain.org')
         TaggingMiddleware.add_tag_to_msg(msg, ("pool", "tag1"))
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         expected_response = dict(expected_response,
@@ -167,13 +160,16 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
 
 
 class MetricsMiddlewareTestCase(MiddlewareTestCase):
+    def setUp(self):
+        self.msg_helper = GoMessageHelper()
+        return super(MetricsMiddlewareTestCase, self).setUp()
 
     @inlineCallbacks
     def test_active_inbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
-        msg1 = self.mk_msg(transport_name='endpoint_0')
-        msg2 = self.mk_msg(transport_name='endpoint_1')
-        msg3 = self.mk_msg(transport_name='endpoint_1')
+        msg1 = self.msg_helper.make_inbound("foo", transport_name='endpoint_0')
+        msg2 = self.msg_helper.make_inbound("foo", transport_name='endpoint_1')
+        msg3 = self.msg_helper.make_inbound("foo", transport_name='endpoint_1')
         # The middleware inspects the message's transport_name value, not
         # the dispatcher endpoint it was received on.
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
@@ -189,7 +185,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_passive_inbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        msg1 = self.mk_msg(transport_name='endpoint_0')
+        msg1 = self.msg_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
         [metric] = mw.metric_manager['dummy_endpoint.inbound.counter'].poll()
         self.assertEqual(metric[1], 1)
@@ -197,9 +193,9 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_active_outbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
-        msg1 = self.mk_msg(transport_name='endpoint_0')
-        msg2 = self.mk_msg(transport_name='endpoint_1')
-        msg3 = self.mk_msg(transport_name='endpoint_1')
+        msg1 = self.msg_helper.make_outbound("x", transport_name='endpoint_0')
+        msg2 = self.msg_helper.make_outbound("x", transport_name='endpoint_1')
+        msg3 = self.msg_helper.make_outbound("x", transport_name='endpoint_1')
         # The middleware inspects the message's transport_name value, not
         # the dispatcher endpoint it was received on.
         yield mw.handle_outbound(msg1, 'dummy_endpoint')
@@ -215,7 +211,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_passive_outbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        msg1 = self.mk_msg(transport_name='endpoint_0')
+        msg1 = self.msg_helper.make_outbound("x", transport_name='endpoint_0')
         yield mw.handle_outbound(msg1, 'dummy_endpoint')
         [metric] = mw.metric_manager['dummy_endpoint.outbound.counter'].poll()
         self.assertEqual(metric[1], 1)
@@ -223,7 +219,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_active_response_time_inbound(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
-        msg = self.mk_msg(transport_name='endpoint_0')
+        msg = self.msg_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         key = mw.key('endpoint_0', msg['message_id'])
         timestamp = yield mw.redis.get(key)
@@ -232,7 +228,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_passive_response_time_inbound(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        msg = self.mk_msg(transport_name='endpoint_0')
+        msg = self.msg_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         key = mw.key('dummy_endpoint', msg['message_id'])
         timestamp = yield mw.redis.get(key)
@@ -241,13 +237,13 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_active_response_time_comparison_on_outbound(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
-        inbound_msg = self.mk_msg(transport_name='endpoint_0')
+        inbound_msg = self.msg_helper.make_inbound(
+            "foo", transport_name='endpoint_0')
         key = mw.key('endpoint_0', inbound_msg['message_id'])
         # Fake it to be 10 seconds in the past
         timestamp = time.time() - 10
         yield mw.redis.set(key, repr(timestamp))
-        outbound_msg = self.mk_msg(transport_name='endpoint_0',
-            in_reply_to=inbound_msg['message_id'])
+        outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
         [timer_metric] = mw.metric_manager['endpoint_0.timer'].poll()
         [timestamp, value] = timer_metric
@@ -256,13 +252,13 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_passive_response_time_comparison_on_outbound(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        inbound_msg = self.mk_msg(transport_name='endpoint_0')
+        inbound_msg = self.msg_helper.make_inbound(
+            "foo", transport_name='endpoint_0')
         key = mw.key('dummy_endpoint', inbound_msg['message_id'])
         # Fake it to be 10 seconds in the past
         timestamp = time.time() - 10
         yield mw.redis.set(key, repr(timestamp))
-        outbound_msg = self.mk_msg(transport_name='endpoint_0',
-            in_reply_to=inbound_msg['message_id'])
+        outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
         [timer_metric] = mw.metric_manager['dummy_endpoint.timer'].poll()
         [timestamp, value] = timer_metric
@@ -271,7 +267,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_ack_event(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        event = self.mkmsg_ack()
+        event = self.msg_helper.make_ack()
         mw.handle_event(event, 'dummy_endpoint')
         [count] = mw.metric_manager['dummy_endpoint.event.ack.counter'].poll()
         self.assertEqual(count[1], 1)
@@ -280,8 +276,8 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     def test_delivery_report_event(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         for status in ['delivered', 'failed']:
-            event = self.mkmsg_delivery(status=status)
-            mw.handle_event(event, 'dummy_endpoint')
+            dr = self.msg_helper.make_delivery_report(delivery_status=status)
+            mw.handle_event(dr, 'dummy_endpoint')
 
         def metric_name(status):
             return 'dummy_endpoint.event.delivery_report.%s.counter' % (
@@ -319,6 +315,7 @@ class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
         self.vumi_api = self.mw.vumi_api  # yoink!
         yield self.setup_user_api(self.vumi_api)
         self.conv = yield self.create_conversation()
+        self.msg_helper = GoMessageHelper(self.vumi_api.mdb)
 
     @inlineCallbacks
     def tearDown(self):
@@ -327,8 +324,7 @@ class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_inbound_message(self):
-        msg = self.mkmsg_in()
-        self.add_conversation_md_to_msg(msg, self.conv)
+        msg = self.msg_helper.make_inbound("inbound", conv=self.conv)
         yield self.mw.handle_inbound(msg, 'default')
         batch_id = self.conv.batch.key
         msg_ids = yield self.vumi_api.mdb.batch_inbound_keys(batch_id)
@@ -336,8 +332,7 @@ class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_outbound_message(self):
-        msg = self.mkmsg_out()
-        self.add_conversation_md_to_msg(msg, self.conv)
+        msg = self.msg_helper.make_outbound("outbound", conv=self.conv)
         yield self.mw.handle_outbound(msg, 'default')
         batch_id = self.conv.batch.key
         msg_ids = yield self.vumi_api.mdb.batch_outbound_keys(batch_id)
@@ -353,6 +348,7 @@ class RouterStoringMiddlewareTestCase(MiddlewareTestCase,
         self.vumi_api = self.mw.vumi_api  # yoink!
         yield self.setup_user_api(self.vumi_api)
         self.router = yield self.create_router()
+        self.msg_helper = GoMessageHelper(self.vumi_api.mdb)
 
     @inlineCallbacks
     def tearDown(self):
@@ -361,8 +357,7 @@ class RouterStoringMiddlewareTestCase(MiddlewareTestCase,
 
     @inlineCallbacks
     def test_inbound_message(self):
-        msg = self.mkmsg_in()
-        self.add_router_md_to_msg(msg, self.router)
+        msg = self.msg_helper.make_inbound("inbound", router=self.router)
         yield self.mw.handle_inbound(msg, 'dummy_endpoint')
         msg_ids = yield self.vumi_api.mdb.batch_inbound_keys(
             self.router.batch.key)
@@ -370,8 +365,7 @@ class RouterStoringMiddlewareTestCase(MiddlewareTestCase,
 
     @inlineCallbacks
     def test_outbound_message(self):
-        msg = self.mkmsg_out()
-        self.add_router_md_to_msg(msg, self.router)
+        msg = self.msg_helper.make_outbound("outbound", router=self.router)
         yield self.mw.handle_outbound(msg, 'dummy_endpoint')
         msg_ids = yield self.vumi_api.mdb.batch_outbound_keys(
             self.router.batch.key)

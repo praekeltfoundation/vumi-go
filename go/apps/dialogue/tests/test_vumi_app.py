@@ -14,6 +14,7 @@ from vumi.tests.utils import LogCatcher
 from go.apps.dialogue.vumi_app import DialogueApplication
 from go.apps.dialogue.tests.dummy_polls import simple_poll
 from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class DialogueApplicationTestCase(AppWorkerTestCase):
@@ -69,6 +70,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         yield self.setup_tagpools()
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
@@ -121,7 +123,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
     def test_user_message(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        msg = self.mkmsg_in()
+        msg = self.msg_helper.make_inbound("hello")
         yield self.dispatch_to_conv(msg, conversation)
         [reply] = yield self.get_dispatched_outbound()
         self.assertEqual(reply["content"],
@@ -131,15 +133,14 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
     def test_event(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        msg = self.mkmsg_in()
-        conversation.set_go_helper_metadata(msg['helper_metadata'])
-        yield self.store_outbound_msg(msg, conversation)
-        event = self.mkmsg_ack(user_message_id=msg['message_id'])
-        conversation.set_go_helper_metadata(event['helper_metadata'])
+        msg = yield self.msg_helper.make_stored_outbound(
+            conversation, "foo")
+        event = self.msg_helper.make_ack(msg, conversation)
         with LogCatcher(message="Saw") as lc:
             yield self.dispatch_event(event)
-            self.assertEqual(lc.messages(),
-                             ['Saw ack for message abc.'])
+            self.assertEqual(
+                lc.messages(),
+                ['Saw ack for message %s.' % (msg['message_id'],)])
 
     @inlineCallbacks
     def test_send_message_command(self):
@@ -181,8 +182,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
     def test_process_command_send_message_in_reply_to(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
-        yield self.store_inbound_msg(msg)
+        msg = yield self.msg_helper.make_stored_inbound(conversation, "foo")
         yield self.dispatch_command(
             "send_message",
             user_account_key=self.user_account.key,

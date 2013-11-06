@@ -1,4 +1,4 @@
-Django==1.4.2
+Django==1.5.5
 django-nose==1.0
 nose==1.1.2
 gunicorn==0.15.0
@@ -10,12 +10,12 @@ South==0.7.3
 psycopg2==2.4
 Fabric==1.2.2
 celery==2.5.3
-django-celery==2.4.2
+django-celery==2.5.5
 django-celery-email
 https://github.com/praekelt/vumi/tarball/develop#egg=vumi-dev
 https://github.com/praekelt/vxpolls/tarball/develop#egg=vxpolls-dev
 Markdown==2.1.1
-django-registration==0.8
+django-registration==1.0
 lesscpy==0.9h
 xlrd==0.8.0
 https://github.com/praekelt/vumi-wikipedia/tarball/develop#egg=vumi-wikipedia-dev
@@ -27,4 +27,5 @@ kombu==2.5.6
 librabbitmq==1.0.1
 hiredis==0.1.1
 django-pipeline==1.3.6
+txpostgres==1.1.0
 django-crispy-forms==1.4.0

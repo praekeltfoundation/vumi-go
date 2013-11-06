@@ -6,6 +6,7 @@ from twisted.internet.defer import inlineCallbacks
 
 from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class DummyApplication(GoApplicationWorker):
@@ -52,11 +53,12 @@ class TestGoApplicationWorker(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         self.conv = yield self.create_conversation()
+        self.msg_helper = GoMessageHelper(self.vumi_api.mdb)
 
     @inlineCallbacks
     def test_message_not_processed_while_stopped(self):
         self.assertEqual([], self.app.msgs)
-        msg = self.mkmsg_in()
+        msg = self.msg_helper.make_inbound("inbound")
         self.assertFalse(self.conv.running())
         yield self.dispatch_to_conv(msg, self.conv)
         self.assertEqual([], self.app.msgs)
@@ -64,7 +66,7 @@ class TestGoApplicationWorker(AppWorkerTestCase):
     @inlineCallbacks
     def test_message_processed_while_running(self):
         self.assertEqual([], self.app.msgs)
-        msg = self.mkmsg_in()
+        msg = self.msg_helper.make_inbound("inbound")
         yield self.start_conversation(self.conv)
         self.conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
         self.assertTrue(self.conv.running())
@@ -74,7 +76,7 @@ class TestGoApplicationWorker(AppWorkerTestCase):
     @inlineCallbacks
     def test_event_not_processed_while_stopped(self):
         self.assertEqual([], self.app.events)
-        event = self.mkmsg_ack()
+        event = self.msg_helper.make_ack()
         self.assertFalse(self.conv.running())
         yield self.dispatch_event_to_conv(event, self.conv)
         self.assertEqual([], self.app.events)
@@ -82,7 +84,7 @@ class TestGoApplicationWorker(AppWorkerTestCase):
     @inlineCallbacks
     def test_event_processed_while_running(self):
         self.assertEqual([], self.app.events)
-        event = self.mkmsg_ack()
+        event = self.msg_helper.make_ack()
         yield self.start_conversation(self.conv)
         self.conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
         self.assertTrue(self.conv.running())

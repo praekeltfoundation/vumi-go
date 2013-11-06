@@ -1,4 +1,3 @@
-import uuid
 import base64
 import json
 
@@ -7,15 +6,16 @@ from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
-from vumi.utils import http_request_full
+from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.message import TransportUserMessage, TransportEvent
-from vumi.tests.utils import MockHttpServer
+from vumi.tests.utils import MockHttpServer, LogCatcher
 from vumi.transports.vumi_bridge.client import StreamingClient
 from vumi.config import ConfigContext
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.resource import StreamResource, ConversationResource
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -71,6 +71,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.mock_push_server.start()
         self.push_calls = DeferredQueue()
         self._setup_wait_for_request()
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     @inlineCallbacks
     def tearDown(self):
@@ -120,8 +121,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         received_messages = []
         for msg_id in range(count):
-            sent_msg = self.mkmsg_in(content='in %s' % (msg_id,),
-                                        message_id=str(msg_id))
+            sent_msg = self.msg_helper.make_inbound(
+                'in %s' % (msg_id,), message_id=str(msg_id))
             yield self.dispatch_to_conv(sent_msg, self.conversation)
             recv_msg = yield messages.get()
             received_messages.append(recv_msg)
@@ -160,10 +161,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             TransportUserMessage, messages.put, errors.put, url,
             Headers(self.auth_headers))
 
-        msg1 = self.mkmsg_in(content='in 1', message_id='1')
+        msg1 = self.msg_helper.make_inbound('in 1', message_id='1')
         yield self.dispatch_to_conv(msg1, self.conversation)
 
-        msg2 = self.mkmsg_in(content='in 2', message_id='2')
+        msg2 = self.msg_helper.make_inbound('in 2', message_id='2')
         yield self.dispatch_to_conv(msg2, self.conversation)
 
         rm1 = yield messages.get()
@@ -188,16 +189,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                             events.put, url,
                                             Headers(self.auth_headers))
 
-        msg1 = self.mkmsg_out(content='in 1', message_id='1')
-        self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
-        yield self.store_outbound_msg(msg1, self.conversation)
-        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
+        msg1 = yield self.msg_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+        ack1 = self.msg_helper.make_ack(msg1)
         yield self.dispatch_event_to_conv(ack1, self.conversation)
 
-        msg2 = self.mkmsg_out(content='in 1', message_id='2')
-        self.conversation.set_go_helper_metadata(msg2['helper_metadata'])
-        yield self.store_outbound_msg(msg2, self.conversation)
-        ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'])
+        msg2 = yield self.msg_helper.make_stored_outbound(
+            self.conversation, 'out 2', message_id='2')
+        ack2 = self.msg_helper.make_ack(msg2)
         yield self.dispatch_event_to_conv(ack2, self.conversation)
 
         ra1 = yield events.get()
@@ -284,10 +283,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_in_reply_to(self):
-        inbound_msg = self.mkmsg_in(content='in 1', message_id='1')
-        self.conversation.set_go_helper_metadata(
-            inbound_msg['helper_metadata'])
-        yield self.store_inbound_msg(inbound_msg, self.conversation)
+        inbound_msg = yield self.msg_helper.make_stored_inbound(
+            self.conversation, 'in 1', message_id='1')
 
         msg = {
             'content': 'foo',
@@ -334,9 +331,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(response.code, http.OK)
 
         [metric1, metric2] = self.app.metrics._metrics
-        self.assertEqual(metric1.name, '%s%s.%s.vumi.test.v1' % (
-            self.config['metrics_prefix'], self.account.key,
-            'metrics_store'))
+        self.assertEqual(
+            metric1.name,
+            '%s.stores.%s.vumi.test.v1' % (self.account.key, 'metrics_store'))
         self.assertEqual(metric1.aggs, ('sum',))
 
     @inlineCallbacks
@@ -350,7 +347,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             Headers(self.auth_headers)) for _ in range(concurrency)]
 
         for i in range(concurrency):
-            msg = self.mkmsg_in(content='in %s' % (i,), message_id='%s' % (i,))
+            msg = self.msg_helper.make_inbound(
+                'in %s' % (i,), message_id=str(i))
             yield self.dispatch_to_conv(msg, self.conversation)
             received = yield queue.get()
             self.assertEqual(msg['message_id'], received['message_id'])
@@ -377,7 +375,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_backlog_on_connect(self):
         for i in range(10):
-            msg = self.mkmsg_in(content='in %s' % (i,), message_id=str(i))
+            msg = self.msg_helper.make_inbound(
+                'in %s' % (i,), message_id=str(i))
             yield self.dispatch_to_conv(msg, self.conversation)
 
         queue = DeferredQueue()
@@ -400,7 +399,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         response = yield http_request_full(health_url, method='GET')
         self.assertEqual(response.delivered_body, '0')
 
-        msg = self.mkmsg_in(content='in 1', message_id='1')
+        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         yield self.dispatch_to_conv(msg, self.conversation)
 
         queue = DeferredQueue()
@@ -431,7 +430,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg = self.mkmsg_in(content='in 1', message_id='1')
+        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         msg_d = self.dispatch_to_conv(msg, self.conversation)
 
         req = yield self.push_calls.get()
@@ -442,6 +441,28 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         posted_msg = TransportUserMessage.from_json(posted_json_data)
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
 
+    def _patch_http_request_full(self):
+        from go.apps.http_api import vumi_app
+
+        def timeout_raiser(*args, **kw):
+            raise HttpTimeoutError()
+        self.patch(vumi_app, 'http_request_full', timeout_raiser)
+
+    @inlineCallbacks
+    def test_post_inbound_message_timeout(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        self.conversation.config['http_api'].update({
+            'push_message_url': self.mock_push_server.url,
+        })
+        yield self.conversation.save()
+
+        self._patch_http_request_full()
+        msg = self.msg_helper.make_inbound('in 1', message_id='1')
+        with LogCatcher(message='Timeout') as lc:
+            yield self.dispatch_to_conv(msg, self.conversation)
+            [timeout_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in timeout_log)
+
     @inlineCallbacks
     def test_post_inbound_event(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
@@ -450,10 +471,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg1 = self.mkmsg_out(content='in 1', message_id='1')
-        self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
-        yield self.store_outbound_msg(msg1, self.conversation)
-        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
+        msg1 = yield self.msg_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+        ack1 = self.msg_helper.make_ack(msg1)
         event_d = self.dispatch_event_to_conv(ack1, self.conversation)
 
         req = yield self.push_calls.get()
@@ -462,6 +482,24 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield event_d
 
         self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
+
+    @inlineCallbacks
+    def test_post_inbound_event_timeout(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        self.conversation.config['http_api'].update({
+            'push_event_url': self.mock_push_server.url,
+        })
+        yield self.conversation.save()
+
+        msg1 = yield self.msg_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+        ack1 = self.msg_helper.make_ack(msg1)
+
+        self._patch_http_request_full()
+        with LogCatcher(message='Timeout') as lc:
+            yield self.dispatch_event_to_conv(ack1, self.conversation)
+            [timeout_log] = lc.messages()
+        self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
 
     @inlineCallbacks
     def test_bad_urls(self):
@@ -517,9 +555,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
-        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
-        self.conversation.set_go_helper_metadata(msg['helper_metadata'])
-        yield self.vumi_api.mdb.add_inbound_message(msg)
+        msg = yield self.msg_helper.make_stored_inbound(
+            self.conversation, "foo")
         yield self.dispatch_command(
             'send_message',
             user_account_key=self.account.key,

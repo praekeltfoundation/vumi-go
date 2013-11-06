@@ -5,7 +5,7 @@ from twisted.internet.defer import (
 from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
-from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
+from vumi.blinkenlights.metrics import MetricManager, Metric, LAST
 from vumi.config import IConfigData, ConfigText, ConfigDict
 from vumi.connectors import IgnoreMessage
 
@@ -282,7 +282,7 @@ class GoWorkerMixin(object):
 
     def publish_metric(self, name, value, agg=None):
         if agg is None:
-            agg = MAX
+            agg = LAST
         if name not in self.metrics:
             metric = Metric(name, [agg])
             self.metrics.register(metric)
@@ -291,13 +291,13 @@ class GoWorkerMixin(object):
         metric.set(value)
 
     def publish_conversation_metric(self, conversation, name, value, agg=None):
-        name = "%s.%s.%s" % (
+        name = "%s.conversations.%s.%s" % (
             conversation.user_account.key, conversation.key, name)
         self.publish_metric(name, value, agg)
 
     def publish_account_metric(self, user_account_key, store, name, value,
                                agg=None):
-        name = "%s.%s.%s" % (user_account_key, store, name)
+        name = "%s.stores.%s.%s" % (user_account_key, store, name)
         self.publish_metric(name, value, agg)
 
     @inlineCallbacks

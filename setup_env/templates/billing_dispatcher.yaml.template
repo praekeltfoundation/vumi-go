@@ -1,0 +1,25 @@
+worker_name: "billing_dispatcher"
+metrics_prefix: "billing_dispatcher"
+
+redis_manager: &REDIS_MANAGER
+{{ redis_manager }}
+riak_manager: &RIAK_MANAGER
+{{ riak_manager }}
+
+receive_inbound_connectors:
+  - billing_dispatcher_ri
+
+receive_outbound_connectors:
+  - billing_dispatcher_ro
+
+# NOTE: the order is important
+middleware:
+  - storing_middleware: vumi.middleware.message_storing.StoringMiddleware
+  - logging_middleware: vumi.middleware.logging.LoggingMiddleware
+
+storing_middleware:
+  redis_manager: *REDIS_MANAGER
+  riak_manager: *RIAK_MANAGER
+
+logging_middleware:
+  log_level: debug

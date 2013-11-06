@@ -1,9 +1,6 @@
-from datetime import datetime
 import uuid
 
 from django.core.urlresolvers import reverse
-
-from vumi.message import TransportUserMessage, TransportEvent
 
 from go.base.utils import get_conversation_view_definition
 from go.base.tests.utils import VumiGoDjangoTestCase
@@ -20,10 +17,6 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     TEST_CONVERSATION_TYPE = u'bulk_message'
     TEST_CONVERSATION_PARAMS = None
     TEST_CHANNEL_METADATA = None
-
-    # These are used for the mkmsg_in and mkmsg_out helper methods
-    transport_name = 'sphex'
-    transport_type = 'sms'
 
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
@@ -80,105 +73,6 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
             'name': name,
             'conversation_type': self.TEST_CONVERSATION_TYPE,
         })
-
-    def mkmsg_ack(self, user_message_id='1', sent_message_id='abc',
-                  transport_metadata=None, transport_name=None):
-        if transport_metadata is None:
-            transport_metadata = {}
-        if transport_name is None:
-            transport_name = self.transport_name
-        return TransportEvent(
-            event_type='ack',
-            user_message_id=user_message_id,
-            sent_message_id=sent_message_id,
-            transport_name=transport_name,
-            transport_metadata=transport_metadata,
-            )
-
-    def mkmsg_nack(self, user_message_id='1', transport_metadata=None,
-                    transport_name=None, nack_reason='unknown'):
-        if transport_metadata is None:
-            transport_metadata = {}
-        if transport_name is None:
-            transport_name = self.transport_name
-        return TransportEvent(
-            event_type='nack',
-            nack_reason=nack_reason,
-            user_message_id=user_message_id,
-            transport_name=transport_name,
-            transport_metadata=transport_metadata,
-            )
-
-    def mkmsg_delivery(self, status='delivered', user_message_id='abc',
-                       transport_metadata=None, transport_name=None):
-        if transport_metadata is None:
-            transport_metadata = {}
-        if transport_name is None:
-            transport_name = self.transport_name
-        return TransportEvent(
-            event_type='delivery_report',
-            transport_name=transport_name,
-            user_message_id=user_message_id,
-            delivery_status=status,
-            to_addr='+41791234567',
-            transport_metadata=transport_metadata,
-            )
-
-    def mkmsg_in(self, content='hello world', message_id='abc',
-                 to_addr='9292', from_addr='+41791234567', group=None,
-                 session_event=None, transport_type=None,
-                 helper_metadata=None, transport_metadata=None,
-                 transport_name=None):
-        if transport_type is None:
-            transport_type = self.transport_type
-        if helper_metadata is None:
-            helper_metadata = {}
-        if transport_metadata is None:
-            transport_metadata = {}
-        if transport_name is None:
-            transport_name = self.transport_name
-        return TransportUserMessage(
-            from_addr=from_addr,
-            to_addr=to_addr,
-            group=group,
-            message_id=message_id,
-            transport_name=transport_name,
-            transport_type=transport_type,
-            transport_metadata=transport_metadata,
-            helper_metadata=helper_metadata,
-            content=content,
-            session_event=session_event,
-            timestamp=datetime.now(),
-            )
-
-    def mkmsg_out(self, content='hello world', message_id='1',
-                  to_addr='+41791234567', from_addr='9292', group=None,
-                  session_event=None, in_reply_to=None,
-                  transport_type=None, transport_metadata=None,
-                  transport_name=None, helper_metadata=None,
-                  ):
-        if transport_type is None:
-            transport_type = self.transport_type
-        if transport_metadata is None:
-            transport_metadata = {}
-        if transport_name is None:
-            transport_name = self.transport_name
-        if helper_metadata is None:
-            helper_metadata = {}
-        params = dict(
-            to_addr=to_addr,
-            from_addr=from_addr,
-            group=group,
-            message_id=message_id,
-            transport_name=transport_name,
-            transport_type=transport_type,
-            transport_metadata=transport_metadata,
-            content=content,
-            session_event=session_event,
-            in_reply_to=in_reply_to,
-            helper_metadata=helper_metadata,
-            )
-        return TransportUserMessage(**params)
 
     def get_api_commands_sent(self):
         return base_utils.connection.get_commands()

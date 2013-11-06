@@ -2,8 +2,6 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
-import uuid
-
 from twisted.internet.defer import inlineCallbacks, returnValue, DeferredQueue
 from twisted.internet.task import Clock
 
@@ -14,6 +12,7 @@ from vumi.tests.utils import LogCatcher
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApiCommand
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class TestBulkMessageApplication(AppWorkerTestCase):
@@ -39,6 +38,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
         yield self.setup_tagpools()
         self._setup_wait_for_window_monitor()
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
 
     def _setup_wait_for_window_monitor(self):
         # Hackery to wait for the window manager on the app.
@@ -127,21 +127,19 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         yield self.wait_for_window_monitor()
 
         [msg1, msg2] = yield self.get_dispatched_messages()
-        yield self.store_outbound_msg(
-            TransportUserMessage(**msg1.payload), batch_id=batch_id)
-        yield self.store_outbound_msg(
-            TransportUserMessage(**msg2.payload), batch_id=batch_id)
+        yield self.msg_helper.store_outbound(
+            conversation, TransportUserMessage(**msg1.payload))
+        yield self.msg_helper.store_outbound(
+            conversation, TransportUserMessage(**msg2.payload))
 
         # We should have two in flight
         self.assertEqual(
             (yield self.app.window_manager.count_in_flight(window_id)), 2)
 
         # Create an ack and a nack for the messages
-        ack = self.mkmsg_ack(user_message_id=msg1['message_id'],
-            sent_message_id=msg1['message_id'])
+        ack = self.msg_helper.make_ack(msg1)
         yield self.dispatch_event(ack)
-        nack = self.mkmsg_nack(user_message_id=msg2['message_id'],
-            nack_reason='unknown')
+        nack = self.msg_helper.make_nack(msg2, nack_reason='unknown')
         yield self.dispatch_event(nack)
 
         yield self._amqp.kick_delivery()
@@ -166,11 +164,11 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             command_data={
-            "batch_id": batch_id,
-            "to_addr": "123456",
-            "content": "hello world",
-            "msg_options": msg_options,
-        })
+                "batch_id": batch_id,
+                "to_addr": "123456",
+                "content": "hello world",
+                "msg_options": msg_options,
+            })
 
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg.payload['to_addr'], "123456")
@@ -192,8 +190,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
         batch_id = conversation.batch.key
-        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
-        yield self.store_inbound_msg(msg)
+        msg = yield self.msg_helper.make_stored_inbound(conversation, "foo")
         command = VumiApiCommand.command(
             'worker', 'send_message',
             user_account_key=conversation.user_account.key,
@@ -220,19 +217,15 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         conv = yield self.create_conversation()
         yield self.start_conversation(conv)
 
-        mkid = TransportUserMessage.generate_id
-        yield self.store_outbound_msg(
-            self.mkmsg_out("out 1", message_id=mkid()), conv)
-        yield self.store_outbound_msg(
-            self.mkmsg_out("out 2", message_id=mkid()), conv)
-        yield self.store_inbound_msg(
-            self.mkmsg_in("in 2", message_id=mkid()), conv)
+        yield self.msg_helper.make_stored_outbound(conv, "out 1")
+        yield self.msg_helper.make_stored_outbound(conv, "out 2")
+        yield self.msg_helper.make_stored_inbound(conv, "in 2")
 
         yield self.dispatch_command(
             'collect_metrics', conversation_key=conv.key,
             user_account_key=self.user_account.key)
-        metrics = self.poll_metrics('%s.%s' % (self.user_account.key,
-                                               conv.key))
+        metrics = self.poll_metrics(
+            '%s.conversations.%s' % (self.user_account.key, conv.key))
         self.assertEqual({
                 u'messages_sent': [2],
                 u'messages_received': [1],
