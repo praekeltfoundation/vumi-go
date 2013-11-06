@@ -1,4 +1,4 @@
-from django.db import models, DatabaseError
+from django.db import connection, models, DatabaseError
 from django.db.models.signals import post_save, post_syncdb
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
@@ -109,12 +109,7 @@ post_save.connect(create_user_profile, sender=GoUser,
 
 def create_permissions_for_tests(*args, **kw):
     from django.contrib.auth.models import ContentType, Permission
-    try:
-        Permission.objects.exists()
-    except DatabaseError:
-        # skip creating permissions if the auth_permissions does
-        # not exist (because this is a real syncdb and
-        # not one called during tests)
+    if 'auth_permission' not in connection.introspection.table_names():
         return
     for model in ('user', 'permission', 'group'):
             ct, _ = ContentType.objects.get_or_create(
