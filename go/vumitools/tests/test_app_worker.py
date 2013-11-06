@@ -90,3 +90,20 @@ class TestGoApplicationWorker(AppWorkerTestCase):
         self.assertTrue(self.conv.running())
         yield self.dispatch_event_to_conv(event, self.conv)
         self.assertEqual([event], self.app.events)
+
+    @inlineCallbacks
+    def test_collect_metrics(self):
+        yield self.start_conversation(self.conv)
+
+        yield self.dispatch_command(
+            'collect_metrics',
+            conversation_key=self.conv.key,
+            user_account_key=self.user_account.key)
+
+        metrics = self.poll_metrics(
+            '%s.conversations.%s' % (self.user_account.key, self.conv.key))
+
+        self.assertEqual({
+            u'messages_sent': [0],
+            u'messages_received': [0],
+        }, metrics)
