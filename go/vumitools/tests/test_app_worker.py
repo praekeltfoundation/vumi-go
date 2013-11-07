@@ -100,10 +100,9 @@ class TestGoApplicationWorker(AppWorkerTestCase):
             conversation_key=self.conv.key,
             user_account_key=self.user_account.key)
 
-        metrics = self.poll_metrics(
-            '%s.conversations.%s' % (self.user_account.key, self.conv.key))
+        prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
 
-        self.assertEqual({
-            u'messages_sent': [0],
-            u'messages_received': [0],
-        }, metrics)
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [("%s.messages_sent" % prefix, 0),
+             ("%s.messages_received" % prefix, 0)])
