@@ -539,6 +539,24 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
 
     @inlineCallbacks
+    def test_post_inbound_event_dns_lookup_error(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        self.conversation.config['http_api'].update({
+            'push_event_url': self.mock_push_server.url,
+        })
+        yield self.conversation.save()
+
+        msg1 = yield self.msg_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+        ack1 = self.msg_helper.make_ack(msg1)
+
+        self._patch_http_request_full(DNSLookupError)
+        with LogCatcher(message='DNS lookup error') as lc:
+            yield self.dispatch_event_to_conv(ack1, self.conversation)
+            [dns_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in dns_log)
+
+    @inlineCallbacks
     def test_bad_urls(self):
         def assert_not_found(url, headers={}):
             d = http_request_full(self.url, method='GET', headers=headers)
