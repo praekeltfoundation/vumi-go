@@ -282,6 +282,27 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(response.code, http.BAD_REQUEST)
 
     @inlineCallbacks
+    def test_invalid_in_reply_to_with_missing_conversation_key(self):
+        # create a message with no (None) conversation
+        inbound_msg = self.msg_helper.make_inbound('in 1', message_id='msg-1')
+        yield self.msg_helper.mdb.add_inbound_message(inbound_msg)
+
+        msg = {
+            'content': 'foo',
+            'in_reply_to': inbound_msg['message_id'],
+        }
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        with LogCatcher(message='Invalid reply to message <Message .*>'
+                        ' which has no conversation key') as lc:
+            response = yield http_request_full(url, json.dumps(msg),
+                                               self.auth_headers, method='PUT')
+            [error_log] = lc.messages()
+
+        self.assertEqual(response.code, http.BAD_REQUEST)
+        self.assertTrue(inbound_msg['message_id'] in error_log)
+
+    @inlineCallbacks
     def test_in_reply_to(self):
         inbound_msg = yield self.msg_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
