@@ -49,6 +49,8 @@ class ResponseTimeMiddleware(object):
             metric = self.metric_from_request(request)
             metric.oneshot(response_time)
         except AttributeError, e:
+            # For cases where our request object was not processed and given a
+            # `start_time` attribute
             logger.exception(e)
         except Resolver404:
             # Ignoring the Resolver404 as that just means we've not found a
