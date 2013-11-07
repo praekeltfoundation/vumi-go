@@ -291,9 +291,10 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield self.dispatch_command(
             'collect_metrics', conversation_key=conv.key,
             user_account_key=self.user_account.key)
-        metrics = self.poll_metrics(
-            '%s.conversations.%s' % (self.user_account.key, conv.key))
-        self.assertEqual({
-                u'messages_sent': [0],
-                u'messages_received': [0],
-                }, metrics)
+
+        prefix = "campaigns.test-0-user.conversations.%s" % conv.key
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [("%s.messages_sent" % prefix, 0),
+             ("%s.messages_received" % prefix, 0)])

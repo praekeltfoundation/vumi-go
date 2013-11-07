@@ -2,13 +2,10 @@ import time
 import logging
 
 from django.core.urlresolvers import resolve, Resolver404
-from django.conf import settings
 
 from go.base.utils import vumi_api_for_user
-from go.base.amqp import connection
+from go.vumitools.metrics import DjangoMetric
 from go.api.go_api.session_manager import SessionManager
-
-from vumi.blinkenlights.metrics import AVG
 
 logger = logging.getLogger(__name__)
 
@@ -34,22 +31,26 @@ class ResponseTimeMiddleware(object):
     It sets an X-Response-Time HTTP header which can be useful for debugging
     or logging slow resources upstream.
     """
-    def __init__(self):
-        self.metrics_prefix = getattr(settings, 'METRICS_PREFIX', 'go.django.')
+    @classmethod
+    def metric_from_request(cls, request):
+        func = resolve(request.path)[0]
+        metric_name = '%s.%s.%s' % (
+            func.__module__, func.__name__, request.method)
+        return DjangoMetric(metric_name.lower())
 
     def process_request(self, request):
         request.start_time = time.time()
 
     def process_response(self, request, response):
         try:
-            stop_time = time.time()
-            func = resolve(request.path)[0]
-            metric_name = '%s.%s.%s' % (func.__module__, func.__name__,
-                                        request.method)
-            response_time = stop_time - request.start_time
-            self.publish_metric(metric_name.lower(), response_time)
+            response_time = request.start_time - time.time()
             response['X-Response-Time'] = response_time
+
+            metric = self.metric_from_request(request)
+            metric.oneshot(response_time)
         except AttributeError, e:
+            # For cases where our request object was not processed and given a
+            # `start_time` attribute
             logger.exception(e)
         except Resolver404:
             # Ignoring the Resolver404 as that just means we've not found a
@@ -58,10 +59,3 @@ class ResponseTimeMiddleware(object):
             pass
         if response:
             return response
-
-    def publish_metric(self, metric_name, value, timestamp=None,
-                        aggregators=None):
-        aggregators = aggregators or [AVG]
-        prefixed_metric_name = '%s%s' % (self.metrics_prefix, metric_name)
-        connection.publish_metric(prefixed_metric_name, aggregators,
-            value, timestamp)
