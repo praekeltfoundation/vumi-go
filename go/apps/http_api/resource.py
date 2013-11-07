@@ -173,7 +173,13 @@ class MessageStream(StreamResource):
             return
 
         reply_to_mdh = MessageMetadataHelper(self.vumi_api, reply_to)
-        if reply_to_mdh.get_conversation_key() != conversation.key:
+        try:
+            msg_conversation_key = reply_to_mdh.get_conversation_key()
+        except KeyError:
+            log.error('Invalid reply to message %r which has no conversation'
+                      'key' % (reply_to,))
+            msg_conversation_key = None
+        if msg_conversation_key != conversation.key:
             request.setResponseCode(http.BAD_REQUEST)
             request.write('Invalid in_reply_to value')
             request.finish()
