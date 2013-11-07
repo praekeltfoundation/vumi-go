@@ -3,7 +3,6 @@ from django.core.urlresolvers import reverse
 
 from go.conversation.forms import ReplyToMessageForm
 from go.base.utils import get_conversation_view_definition
-from go.vumitools.contact.models import ContactError
 
 
 register = template.Library()
