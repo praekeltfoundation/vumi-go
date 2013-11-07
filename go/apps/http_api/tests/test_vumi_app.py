@@ -532,7 +532,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             self.conversation, 'out 1', message_id='1')
         ack1 = self.msg_helper.make_ack(msg1)
 
-        self._patch_http_request_full()
+        self._patch_http_request_full(HttpTimeoutError)
         with LogCatcher(message='Timeout') as lc:
             yield self.dispatch_event_to_conv(ack1, self.conversation)
             [timeout_log] = lc.messages()
