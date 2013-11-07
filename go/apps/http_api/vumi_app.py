@@ -3,6 +3,7 @@ from collections import defaultdict
 import random
 
 from twisted.internet.defer import inlineCallbacks, maybeDeferred
+from twisted.internet.error import DNSLookupError
 from twisted.web import http
 
 from vumi.config import ConfigInt, ConfigText
@@ -177,6 +178,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
                     resp.code, url))
         except HttpTimeoutError:
             log.warning("Timeout pushing message to %s" % (url,))
+        except DNSLookupError:
+            log.warning("DNS lookup error pushing message to %s" % (url,))
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
