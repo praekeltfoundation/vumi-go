@@ -20,6 +20,7 @@ class BaseResource(Resource):
     def __init__(self, connection_pool):
         Resource.__init__(self)
         self._connection_pool = connection_pool
+        self._auth_user_table = app_settings.get_user_table()
 
     def _handle_error(self, error, request, *args, **kwargs):
         """Log the error and return an HTTP 500 response"""
@@ -89,7 +90,7 @@ class UserResource(BaseResource):
             SELECT id, email, first_name, last_name
             FROM %s
             WHERE id = %%(id)s
-        """ % app_settings.AUTH_USER_TABLE
+        """ % self._auth_user_table
 
         params = {'id': id}
         result = yield self._connection_pool.runQuery(query, params)
@@ -104,7 +105,7 @@ class UserResource(BaseResource):
         query = """
             SELECT id, email, first_name, last_name
             FROM %s
-        """ % app_settings.AUTH_USER_TABLE
+        """ % self._auth_user_table
 
         result = yield self._connection_pool.runQuery(query)
         defer.returnValue(result)
@@ -140,7 +141,7 @@ class UserResource(BaseResource):
                 (%%(email)s, %%(first_name)s, %%(last_name)s,
                  %%(password)s, FALSE, TRUE, FALSE, now(), now())
             RETURNING id, email, first_name, last_name
-        """ % app_settings.AUTH_USER_TABLE
+        """ % self._auth_user_table
 
         params = {
             'email': email,
@@ -193,7 +194,7 @@ class AccountResource(BaseResource):
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
             AND a.account_number = %%(account_number)s
-        """ % app_settings.AUTH_USER_TABLE
+        """ % self._auth_user_table
 
         params = {'account_number': account_number}
         result = yield self._connection_pool.runQuery(query, params)
@@ -211,7 +212,7 @@ class AccountResource(BaseResource):
                    a.alert_credit_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
-        """ % app_settings.AUTH_USER_TABLE
+        """ % self._auth_user_table
 
         result = yield self._connection_pool.runQuery(query)
         defer.returnValue(result)
@@ -255,7 +256,7 @@ class AccountResource(BaseResource):
             SELECT id
             FROM %s
             WHERE email = %%(email)s
-        """ % app_settings.AUTH_USER_TABLE
+        """ % self._auth_user_table
 
         params = {'email': email}
         cursor = yield cursor.execute(query, params)
@@ -288,7 +289,7 @@ class AccountResource(BaseResource):
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
             AND a.id = %%(id)s
-        """ % app_settings.AUTH_USER_TABLE
+        """ % self._auth_user_table
 
         params = {'id': result.get('id')}
         cursor = yield cursor.execute(query, params)

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 
 CREDIT_CONVERSION_FACTOR = getattr(
     settings, 'BILLING_CREDIT_CONVERSION_FACTOR', 0.4)
@@ -9,8 +10,11 @@ ENDPOINT_DESCRIPTION_STRING = getattr(
     settings, 'BILLING_ENDPOINT_DESCRIPTION_STRING',
     "tcp:9090:interface=127.0.0.1")
 
-AUTH_USER_TABLE = getattr(
-    settings, 'AUTH_USER_MODEL', 'auth_user').replace('.', '_')
+
+def get_user_table():
+    """Return the name of the table used by the user model."""
+    user_model = get_user_model()
+    return user_model._meta.db_table
 
 
 def get_connection_string():
