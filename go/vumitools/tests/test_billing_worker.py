@@ -190,6 +190,22 @@ class TestBillingDispatcher(AppWorkerTestCase):
             [msg], self.get_dispatched_inbound('billing_dispatcher_ro'))
 
     @inlineCallbacks
+    def test_inbound_message_without_user_account(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'billing_dispatcher_ri')
+        self.assertEqual(
+            [msg], self.get_dispatched_inbound('billing_dispatcher_ro'))
+
+    @inlineCallbacks
+    def test_inbound_message_without_tag(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), user_account="12345")
+        yield self.dispatch_inbound(msg, 'billing_dispatcher_ri')
+        self.assertEqual(
+            [msg], self.get_dispatched_inbound('billing_dispatcher_ro'))
+
+    @inlineCallbacks
     def test_outbound_message(self):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), user_account="12345",
@@ -197,6 +213,22 @@ class TestBillingDispatcher(AppWorkerTestCase):
 
         yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
         self.with_md(msg, is_paid=True)
+        self.assertEqual(
+            [msg], self.get_dispatched_outbound('billing_dispatcher_ri'))
+
+    @inlineCallbacks
+    def test_outbound_message_without_user_account(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), tag=("pool1", "1234"))
+        yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
+        self.assertEqual(
+            [msg], self.get_dispatched_outbound('billing_dispatcher_ri'))
+
+    @inlineCallbacks
+    def test_outbound_message_without_tag(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), user_account="12345")
+        yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
         self.assertEqual(
             [msg], self.get_dispatched_outbound('billing_dispatcher_ri'))
 
