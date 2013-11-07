@@ -280,7 +280,7 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
             "router_outbound_connector_mapping": {
                 "router": "router_ri",
             },
-            "opt_out_connector": "optout"
+            "opt_out_connector": "optout",
         }
         config.update(config_extras)
         dispatcher = yield self.get_worker(
