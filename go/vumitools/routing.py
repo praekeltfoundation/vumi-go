@@ -571,15 +571,19 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         src_conn = self.acquire_source(msg, connector_type, self.INBOUND)
 
         if connector_type == self.TRANSPORT_TAG:
-            if msg_mdh.is_optout_message():
-                yield self.publish_inbound_optout(config, msg)
-                return
-
             if self.billing_inbound_connector:
                 yield self.publish_inbound_to_billing(config, msg)
                 return
 
+            if msg_mdh.is_optout_message():
+                yield self.publish_inbound_optout(config, msg)
+                return
+
         if connector_type == self.BILLING:
+            if msg_mdh.is_optout_message():
+                yield self.publish_inbound_optout(config, msg)
+                return
+
             src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
 
         target = self.find_target(config, msg, src_conn)
@@ -622,10 +626,18 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         src_conn = self.acquire_source(msg, connector_type, self.OUTBOUND)
 
         if connector_type == self.OPT_OUT:
+            if self.billing_outbound_connector:
+                yield self.publish_outbound_to_billing(config, msg)
+                return
+
             yield self.publish_outbound_optout(config, msg)
             return
 
         if connector_type == self.BILLING:
+            if msg_mdh.is_optout_message():
+                yield self.publish_outbound_optout(config, msg)
+                return
+
             yield self.publish_outbound_from_billing(config, msg)
             return
 
@@ -641,8 +653,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         if self.billing_outbound_connector:
             target_conn = GoConnector.parse(target[0])
-            if target_conn.ctype == target_conn.TRANSPORT_TAG\
-                    and not msg_mdh.is_paid():
+            if target_conn.ctype == target_conn.TRANSPORT_TAG:
                 if not msg_mdh.tag:
                     msg_mdh.set_tag([target_conn.tagpool, target_conn.tagname])
                 yield self.publish_outbound_to_billing(config, msg)

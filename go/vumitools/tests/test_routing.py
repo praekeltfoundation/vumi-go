@@ -665,9 +665,26 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
         msg['helper_metadata']['optout'] = {'optout': True}
         yield self.dispatch_inbound(msg, 'sphex')
-        self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
+        self.assert_rkeys_used('sphex.inbound', 'billing_dispatcher_ri.inbound')
         hops = [
             ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ['BILLING:INBOUND', 'default'],
+        ]
+        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.assertEqual(
+            [msg], self.get_dispatched_inbound('billing_dispatcher_ri'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_billing_to_optout(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        msg['helper_metadata']['optout'] = {'optout': True}
+        yield self.dispatch_inbound(msg, 'billing_dispatcher_ro')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ro.inbound', 'optout.inbound')
+
+        hops = [
+            ['BILLING:INBOUND', 'default'],
             ['OPT_OUT', 'default'],
         ]
         self.with_md(msg, user_account=self.user_account_key, hops=hops)
@@ -694,9 +711,30 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         tag = ("pool1", "1234")
         msg, reply = yield self.mk_msg_reply(tag=tag)
         yield self.dispatch_outbound(reply, 'optout')
-        self.assert_rkeys_used('optout.outbound', 'sphex.outbound')
+        self.assert_rkeys_used(
+            'optout.outbound', 'billing_dispatcher_ro.outbound')
+
         hops = [
             ['OPT_OUT', 'default'],
+            ['BILLING:OUTBOUND', 'default'],
+        ]
+        self.with_md(reply, tag=tag, user_account=self.user_account_key,
+                     hops=hops)
+
+        self.assertEqual(
+            [reply], self.get_dispatched_outbound('billing_dispatcher_ro'))
+
+    @inlineCallbacks
+    def test_outbound_optout_from_billing_to_transport(self):
+        yield self.get_dispatcher()
+        tag = ("pool1", "1234")
+        msg, reply = yield self.mk_msg_reply(tag=tag)
+        yield self.dispatch_outbound(reply, 'billing_dispatcher_ri')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ri.outbound', 'sphex.outbound')
+
+        hops = [
+            ['BILLING:OUTBOUND', 'default'],
             ['TRANSPORT_TAG:pool1:1234', 'default'],
         ]
         self.with_md(reply, tag=tag, user_account=self.user_account_key,
