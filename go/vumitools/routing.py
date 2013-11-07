@@ -575,7 +575,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 yield self.publish_inbound_optout(config, msg)
                 return
 
-            if self.billing_inbound_connector and not msg_mdh.is_paid():
+            if self.billing_inbound_connector:
                 yield self.publish_inbound_to_billing(config, msg)
                 return
 
