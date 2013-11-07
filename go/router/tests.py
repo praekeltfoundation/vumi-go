@@ -1,10 +1,8 @@
 import urllib
 
-from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.base.tests.utils import VumiGoDjangoTestCase
-from go.base import utils as base_utils
 from go.base.utils import get_router_view_definition
 from go.vumitools.router.models import ROUTER_ARCHIVED
 
@@ -15,11 +13,8 @@ class RouterViewsTestCase(VumiGoDjangoTestCase):
     def setUp(self):
         super(RouterViewsTestCase, self).setUp()
         self.setup_api()
-        self.user = self.mk_django_user()
-        self.user_api = base_utils.vumi_api_for_user(self.user)
-
-        self.client = Client()
-        self.client.login(username=self.user.username, password='password')
+        self.setup_user_api()
+        self.setup_client()
 
     def get_view_url(self, view, router_key):
         view_def = get_router_view_definition('keyword', None)

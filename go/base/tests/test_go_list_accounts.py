@@ -20,7 +20,7 @@ class GoListAccountsCommandTestCase(VumiGoDjangoTestCase):
     def test_account_listing(self):
         self.command.handle()
         self.assertEqual(self.command.stdout.getvalue(),
-            '0. Test User <username> [%s]\n' % (
+            '0. Test User <user@domain.com> [%s]\n' % (
                 self.user.get_profile().user_account))
 
     def test_unicode_account_listing(self):
@@ -29,13 +29,13 @@ class GoListAccountsCommandTestCase(VumiGoDjangoTestCase):
         self.command.handle()
         profile = self.user.get_profile()
         self.assertEqual(self.command.stdout.getvalue(),
-            '0. T\xc3\xab\xc3\x9ft User <username> [%s]\n' % (
+            '0. T\xc3\xab\xc3\x9ft User <user@domain.com> [%s]\n' % (
                 str(profile.user_account)))
 
     def test_account_matching(self):
         self.command.handle('user')
         self.assertEqual(self.command.stdout.getvalue(),
-            '0. Test User <username> [%s]\n' % (
+            '0. Test User <user@domain.com> [%s]\n' % (
                 self.user.get_profile().user_account))
 
     def test_account_mismatching(self):

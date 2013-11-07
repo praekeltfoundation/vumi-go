@@ -1,9 +1,9 @@
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_user_by_email
 
 
 class Command(BaseCommand):
@@ -71,7 +71,7 @@ class Command(BaseCommand):
             options, ('list', 'create', 'create-smart', 'delete'))
 
         self.ask_for_options(options, ['email-address'])
-        user = User.objects.get(username=options['email-address'])
+        user = get_user_by_email(options['email-address'])
         user_api = vumi_api_for_user(user)
 
         if operation == 'list':

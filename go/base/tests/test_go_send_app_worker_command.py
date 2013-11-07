@@ -36,7 +36,7 @@ class GoSendAppWorkerCommandTestCase(VumiGoDjangoTestCase):
             'key=1', 'key=2')
 
     def test_reconcile_cache_invalid_user(self):
-        self.assertRaisesRegexp(CommandError, 'Account does not exist',
+        self.assertRaisesRegexp(CommandError, "Account 'foo' does not exist",
             self.command.handle, 'worker-name', 'reconcile_cache',
             'account_key=foo', 'conversation_key=bar')
 

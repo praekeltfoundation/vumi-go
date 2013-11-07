@@ -1,6 +1,7 @@
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User, Permission
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.core.paginator import Paginator
 
 from go.base.tests.utils import VumiGoDjangoTestCase
@@ -68,7 +69,7 @@ class UtilsTestCase(VumiGoDjangoTestCase):
         self.assertTrue(isinstance(vumi_api, VumiApi))
 
     def test_padded_queryset(self):
-        short_list = User.objects.all()[:1]
+        short_list = get_user_model().objects.all()[:1]
         padded_list = utils.padded_queryset(short_list)
         expected_list = list(short_list) + [None, None, None, None, None]
         self.assertEqual(padded_list, expected_list)

@@ -1,10 +1,11 @@
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
 from go.contacts.parsers import ContactFileParser
+
+from go.base.command_utils import get_user_by_email
 
 
 class Command(BaseCommand):
@@ -42,7 +43,7 @@ class Command(BaseCommand):
         options = options.copy()
 
         self.ask_for_options(options, ['email-address', 'contacts-csv'])
-        user = User.objects.get(username=options['email-address'])
+        user = get_user_by_email(options['email-address'])
         user_api = vumi_api_for_user(user)
         groups = [g.key for g in user_api.list_groups()]
         for group in options['groups']:
@@ -75,5 +76,4 @@ class Command(BaseCommand):
             self.stdout.write('\nDone.\n')
 
         except Exception, e:
-            raise
             raise CommandError(e)

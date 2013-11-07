@@ -165,7 +165,6 @@ class StreamingHTTPWorker(GoApplicationWorker):
     @inlineCallbacks
     def push(self, url, vumi_message):
         config = self.get_static_config()
-        print config.timeout
         data = vumi_message.to_json().encode('utf-8')
         try:
             resp = yield http_request_full(

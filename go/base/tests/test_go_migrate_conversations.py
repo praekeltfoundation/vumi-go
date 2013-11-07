@@ -93,7 +93,8 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             migration_name='migrate-models', dry_run=True)
         self.assert_no_stderr()
         self.assertEqual(len(output), 5)
-        self.assertEqual(output[0], 'Test User <username> [test-0-user]')
+        self.assertEqual(
+            output[0], 'Test User <user@domain.com> [test-0-user]')
         self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
         for conv in convs:
             # If we can load the old model, the data hasn't been migrated.
@@ -105,7 +106,8 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         output = self.handle_command(migration_name='migrate-models')
         self.assert_no_stderr()
         self.assertEqual(len(output), 5)
-        self.assertEqual(output[0], 'Test User <username> [test-0-user]')
+        self.assertEqual(
+            output[0], 'Test User <user@domain.com> [test-0-user]')
         self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
         self.assert_conversations_migrated(convs, output)
         for conv in convs:
@@ -163,7 +165,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         output = self.handle_command(migration_name=migration_name)
         self.assert_no_stderr()
         self.assertEqual(output[:2], [
-            'Test User <username> [test-0-user]',
+            'Test User <user@domain.com> [test-0-user]',
             '  Migrating %d of 1 conversations ...'
             % (1 if migrated else 0)
         ])
@@ -187,7 +189,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         output = self.handle_command(migration_name='fix-batches')
         self.assert_no_stderr()
         self.assertEqual(output[:2], [
-            'Test User <username> [test-0-user]',
+            'Test User <user@domain.com> [test-0-user]',
             '  Migrating 0 of 1 conversations ...',
         ])
         self.assert_conversations_migrated([], output)
@@ -220,7 +222,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(sorted(old_conv.extra_endpoints), [])
         output = self.handle_command(migration_name='fix-jsbox-endpoints')
         self.assertEqual(output, [
-            'Test User <username> [test-0-user]',
+            'Test User <user@domain.com> [test-0-user]',
             '  Migrating 1 of 1 conversations ...',
             '    Migrating conversation: %s [Dummy Jsbox] ... done.'
             % (old_conv.key),
@@ -236,6 +238,6 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             {}, u"dummy-batch")
         output = self.handle_command(migration_name='fix-jsbox-endpoints')
         self.assertEqual(output, [
-            'Test User <username> [test-0-user]',
+            'Test User <user@domain.com> [test-0-user]',
             '  Migrating 0 of 1 conversations ...',
         ])

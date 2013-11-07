@@ -1,9 +1,9 @@
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
+from django.core.management.base import BaseCommand
 
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_user_by_email
 from go.vumitools.opt_out import OptOutStore
 
 
@@ -24,11 +24,7 @@ class Command(BaseCommand):
     def handle_validated(self, *args, **options):
         email_address = options['email-address']
 
-        try:
-            user = User.objects.get(username=email_address)
-        except User.DoesNotExist, e:
-            raise CommandError(e)
-
+        user = get_user_by_email(email_address)
         user_api = vumi_api_for_user(user)
 
         self.show_opt_outs(user_api, email_address)
