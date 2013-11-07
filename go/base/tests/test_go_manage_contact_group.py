@@ -18,7 +18,7 @@ class GoManageContactGroupCommandTestCase(VumiGoDjangoTestCase):
 
     def invoke_command(self, command, **kw):
         options = {
-            'email-address': self.user.username,
+            'email-address': self.user.email,
             'list': False,
             'create': False,
             'create-smart': False,

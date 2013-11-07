@@ -1,8 +1,8 @@
 import urlparse
 
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 from django.core import mail
+from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils.unittest import skip
 
@@ -40,7 +40,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
 
         # reload from db
         self.confirm(token_url)
-        user = User.objects.get(pk=self.django_user.pk)
+        user = get_user_model().objects.get(pk=self.django_user.pk)
         self.assertEqual(user.first_name, 'foo')
         self.assertEqual(user.last_name, 'bar')
         self.assertEqual(user.email, 'foo@bar.com')
@@ -59,7 +59,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
         token_url = response.context['token_url']
         self.confirm(token_url)
         # reload from db
-        user = User.objects.get(pk=self.django_user.pk)
+        user = get_user_model().objects.get(pk=self.django_user.pk)
         self.assertTrue(user.check_password('new_password'))
 
     def test_update_msisdn_valid(self):
