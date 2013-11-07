@@ -629,8 +629,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             yield self.publish_outbound_from_billing(config, msg)
             return
 
-        if connector_type == self.CONVERSATION or \
-                connector_type == self.ROUTER:
+        if (connector_type == self.CONVERSATION or
+                connector_type == self.ROUTER):
             msg_mdh.reset_paid()
 
         target = self.find_target(config, msg, src_conn)
