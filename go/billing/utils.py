@@ -26,8 +26,15 @@ class JSONEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, obj)
 
 
-def parse_float(num_str):
-    return decimal.Decimal(num_str).quantize(decimal.Decimal('.01'))
+class JSONDecoder(json.JSONDecoder):
+    """JSONDecoder to handle ``float`` values"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs['parse_float'] = self.parse_float_str
+        super(JSONDecoder, self).__init__(*args, **kwargs)
+
+    def parse_float_str(self, num_str):
+        return decimal.Decimal(num_str).quantize(decimal.Decimal('.01'))
 
 
 def real_dict_connect(*args, **kwargs):

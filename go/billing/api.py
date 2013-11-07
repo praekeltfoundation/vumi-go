@@ -8,7 +8,7 @@ from twisted.web.server import NOT_DONE_YET
 from django.contrib.auth.hashers import make_password
 
 from go.billing import settings as app_settings
-from go.billing.utils import JSONEncoder, parse_float
+from go.billing.utils import JSONEncoder, JSONDecoder
 
 
 class BillingError(Exception):
@@ -59,7 +59,7 @@ class BaseResource(Resource):
         """
         content_type = request.getHeader('Content-Type')
         if request.method == 'POST' and content_type == 'application/json':
-            return json.loads(request.content.read(), parse_float=parse_float)
+            return json.loads(request.content.read(), cls=JSONDecoder)
 
         return None
 

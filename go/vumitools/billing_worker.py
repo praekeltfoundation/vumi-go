@@ -13,7 +13,7 @@ from vumi.utils import http_request_full
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 
 from go.billing.api import BillingError
-from go.billing.utils import JSONEncoder, parse_float
+from go.billing.utils import JSONEncoder, JSONDecoder
 
 
 class BillingApi(object):
@@ -41,10 +41,9 @@ class BillingApi(object):
         log.debug("Got billing response: %r" % (response.delivered_body,))
         if response.code != 200:
             raise BillingError(response.delivered_body)
-        result = json.loads(response.delivered_body, parse_float=parse_float)
+        result = json.loads(response.delivered_body, cls=JSONDecoder)
         returnValue(result)
 
-    @inlineCallbacks
     def create_transaction(self, account_number, tag_pool_name,
                            tag_name, message_direction):
         """Create a new transaction for the given ``account_number``"""
@@ -54,11 +53,7 @@ class BillingApi(object):
             'tag_name': tag_name,
             'message_direction': message_direction
         }
-
-        result = yield self._call_api("/transactions", data=data,
-                                      method='POST')
-
-        returnValue(result)
+        return self._call_api("/transactions", data=data, method='POST')
 
 
 class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
@@ -110,17 +105,35 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
     def create_transaction_for_inbound(self, msg):
         """Create a transaction for the given inbound message"""
         msg_mdh = self.get_metadata_helper(msg)
+        account_number = msg_mdh.get_account_key()
+        if not account_number:
+            raise BillingError(
+                "No account number found for message %r" % (msg,))
+
+        if not msg_mdh.tag:
+            raise BillingError(
+                "No tag found for message %r" % (msg,))
+
         yield self.billing_api.create_transaction(
-            msg_mdh.get_account_key(), msg_mdh.tag[0],
-            msg_mdh.tag[1], self.MESSAGE_DIRECTION_INBOUND)
+            account_number, msg_mdh.tag[0], msg_mdh.tag[1],
+            self.MESSAGE_DIRECTION_INBOUND)
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
         """Create a transaction for the given outbound message"""
         msg_mdh = self.get_metadata_helper(msg)
+        account_number = msg_mdh.get_account_key()
+        if not account_number:
+            raise BillingError(
+                "No account number found for message %r" % (msg,))
+
+        if not msg_mdh.tag:
+            raise BillingError(
+                "No tag found for message %r" % (msg,))
+
         yield self.billing_api.create_transaction(
-            msg_mdh.get_account_key(), msg_mdh.tag[0],
-            msg_mdh.tag[1], self.MESSAGE_DIRECTION_OUTBOUND)
+            account_number, msg_mdh.tag[0], msg_mdh.tag[1],
+            self.MESSAGE_DIRECTION_OUTBOUND)
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):

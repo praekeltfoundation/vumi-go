@@ -167,20 +167,11 @@ class TestBillingDispatcher(AppWorkerTestCase):
         billing_dispatcher.billing_api = BillingApiMock(config["api_url"])
         returnValue(billing_dispatcher)
 
-    def with_md(self, msg, user_account=None, conv=None, router=None,
-                tag=None, is_paid=False):
+    def with_md(self, msg, user_account=None, tag=None, is_paid=False):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_api, msg)
         if user_account is not None:
             md.set_user_account(user_account)
-        if conv is not None:
-            conv_type, conv_key = conv
-            md.set_conversation_info(conv_type, conv_key)
-            md.set_user_account(self.user_account_key)
-        if router is not None:
-            router_type, router_key = router
-            md.set_router_info(router_type, router_key)
-            md.set_user_account(self.user_account_key)
         if tag is not None:
             md.set_tag(tag)
         if is_paid:
