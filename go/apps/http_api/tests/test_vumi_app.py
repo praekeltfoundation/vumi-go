@@ -330,11 +330,12 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         self.assertEqual(response.code, http.OK)
 
-        [metric1, metric2] = self.app.metrics._metrics
+        prefix = "campaigns.test-0-user.stores.metrics_store"
+
         self.assertEqual(
-            metric1.name,
-            '%s.stores.%s.vumi.test.v1' % (self.account.key, 'metrics_store'))
-        self.assertEqual(metric1.aggs, ('sum',))
+            self.get_published_metrics(self.app),
+            [("%s.vumi.test.v1" % prefix, 1234),
+             ("%s.vumi.test.v2" % prefix, 3456)])
 
     @inlineCallbacks
     def test_concurrency_limits(self):
