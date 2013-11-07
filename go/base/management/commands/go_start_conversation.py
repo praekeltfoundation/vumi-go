@@ -1,9 +1,9 @@
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_user_by_email
 
 
 class Command(BaseCommand):
@@ -20,14 +20,8 @@ class Command(BaseCommand):
     ]
     option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
 
-    def get_user(self, username):
-        try:
-            return User.objects.get(username=username)
-        except (User.DoesNotExist,), e:
-            raise CommandError(e)
-
-    def get_user_api(self, username):
-        return vumi_api_for_user(self.get_user(username))
+    def get_user_api(self, email):
+        return vumi_api_for_user(get_user_by_email(email))
 
     def handle(self, *apps, **options):
         email_address = options['email_address']

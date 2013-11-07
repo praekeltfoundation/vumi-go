@@ -16,7 +16,7 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
     def set_metrics(self, user, enabled):
         command = go_manage_metrics.Command()
         command.handle_validated(**{
-            'email-address': user.username,
+            'email-address': user.email,
             'enable': enabled,
             'disable': not enabled,
         })

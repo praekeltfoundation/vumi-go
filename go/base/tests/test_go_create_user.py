@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_create_user
 
@@ -9,7 +9,8 @@ class GoCreateUserCommandTestCase(VumiGoDjangoTestCase):
 
     def test_user_creation(self):
         self.setup_api()
-        user_query = User.objects.filter(username='test@user.com')
+        user_model = get_user_model()
+        user_query = user_model.objects.filter(email='test@user.com')
         self.assertFalse(user_query.exists())
         command = go_create_user.Command()
         command.handle(**{
@@ -21,7 +22,6 @@ class GoCreateUserCommandTestCase(VumiGoDjangoTestCase):
 
         self.assertTrue(user_query.exists())
         user = user_query.latest('pk')
-        self.assertEqual(user.username, 'test@user.com')
         self.assertEqual(user.email, 'test@user.com')
         self.assertEqual(user.first_name, 'Name')
         self.assertEqual(user.last_name, 'Surname')
