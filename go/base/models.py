@@ -1,4 +1,4 @@
-from django.db import connection, models, DatabaseError
+from django.db import connection, models
 from django.db.models.signals import post_save, post_syncdb
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
