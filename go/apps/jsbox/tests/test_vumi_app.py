@@ -3,68 +3,39 @@ import pkg_resources
 
 import mock
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import SkipTest, TestCase
-
-from go.vumitools.tests.utils import AppWorkerTestCase
-
-from go.apps.jsbox.vumi_app import JsBoxApplication, ConversationConfigResource
 
 from vumi.application.sandbox import JsSandbox, SandboxCommand
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import LogCatcher
-from go.vumitools.tests.helpers import GoMessageHelper
+
+from go.apps.jsbox.vumi_app import JsBoxApplication, ConversationConfigResource
+from go.vumitools.tests.utils import AppWorkerTestCase
+from go.apps.tests.helpers import AppWorkerHelper
 
 
-class JsBoxApplicationTestCase(AppWorkerTestCase):
-
-    use_riak = True
-    application_class = JsBoxApplication
+class TestJsBoxApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(JsBoxApplicationTestCase, self).setUp()
+        yield super(TestJsBoxApplication, self).setUp()
         if JsSandbox.find_nodejs() is None:
             raise SkipTest("No node.js executable found.")
 
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')
+        self.app_helper = AppWorkerHelper(self, JsBoxApplication)
+        self.add_cleanup(self.app_helper.cleanup)
+
         self.config = self.mk_config({
             'args': [sandboxer_js],
             'timeout': 10,
         })
-        self.app = yield self.get_application(self.config)
+        self.app = yield self.app_helper.get_app_worker(self.config)
 
-        # Steal app's vumi_api
-        self.vumi_api = self.app.vumi_api  # YOINK!
-        self.message_store = self.vumi_api.mdb
-
-        # Create a test user account
-        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
-
-        yield self.setup_tagpools()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
-
-    @inlineCallbacks
-    def setup_conversation(self, contact_count=2,
-                           from_addr=u'+27831234567{0}',
-                           config={}, started=False):
-        user_api = self.user_api
-        group = yield user_api.contact_store.new_group(u'test group')
-
-        for i in range(contact_count):
-            yield user_api.contact_store.new_contact(
-                name=u'First', surname=u'Surname %s' % (i,),
-                msisdn=from_addr.format(i), groups=[group])
-
-        conversation = yield self.create_conversation(
-            delivery_class=u'sms', config=config)
-        if started:
-            conversation.set_status_started()
-        conversation.add_group(group)
-        yield conversation.save()
-        returnValue(conversation)
+    def setup_conversation(self, config=None):
+        return self.app_helper.create_conversation(config=(config or {}))
 
     def set_conversation_tag(self, msg, conversation):
         # TOOD: Move into AppWorkerTestCase once it's working
@@ -99,41 +70,39 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     def test_start(self):
         conversation = yield self.setup_conversation()
         with LogCatcher() as lc:
-            yield self.start_conversation(conversation)
+            yield self.app_helper.start_conversation(conversation)
             self.assertTrue("Starting javascript sandbox conversation "
                             "(key: u'%s')." % conversation.key
                             in lc.messages())
 
     @inlineCallbacks
     def test_user_message(self):
-        conversation = yield self.setup_conversation(
+        conv = yield self.setup_conversation(
             config=self.mk_conv_config('on_inbound_message'))
-        yield self.start_conversation(conversation)
-        msg = self.msg_helper.make_inbound("inbound")
-        yield self.dispatch_to_conv(msg, conversation)
+        yield self.app_helper.start_conversation(conv)
+        yield self.app_helper.make_dispatch_inbound("inbound", conv=conv)
 
     @inlineCallbacks
     def test_user_message_no_javascript(self):
-        conversation = yield self.setup_conversation(config={})
-        yield self.start_conversation(conversation)
-        msg = self.msg_helper.make_inbound("inbound")
+        conv = yield self.setup_conversation(config={})
+        yield self.app_helper.start_conversation(conv)
         with LogCatcher() as lc:
-            yield self.dispatch_to_conv(msg, conversation)
-            self.assertTrue("No JS for conversation: %s" % (conversation.key,)
+            yield self.app_helper.make_dispatch_inbound("inbound", conv=conv)
+            self.assertTrue("No JS for conversation: %s" % (conv.key,)
                             in lc.messages())
 
     @inlineCallbacks
     def test_user_message_sandbox_id(self):
         conversation = yield self.setup_conversation(
             config=self.mk_conv_config('on_inbound_message'))
-        yield self.start_conversation(conversation)
-        msg = self.msg_helper.make_inbound("inbound", conv=conversation)
+        yield self.app_helper.start_conversation(conversation)
+        msg = self.app_helper.make_inbound("inbound", conv=conversation)
         config = yield self.app.get_config(msg)
-        self.assertEqual(config.sandbox_id, self.user_account.key)
+        self.assertEqual(config.sandbox_id, conversation.user_account.key)
 
     def test_delivery_class_inference(self):
         def check_inference_for(transport_type, expected_delivery_class):
-            msg = self.msg_helper.make_inbound(
+            msg = self.app_helper.make_inbound(
                 "inbound", transport_type=transport_type)
             self.assertEqual(
                 self.app.infer_delivery_class(msg),
@@ -150,22 +119,23 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     def test_event(self):
         conversation = yield self.setup_conversation(
             config=self.mk_conv_config('on_inbound_event'))
-        yield self.start_conversation(conversation)
-        msg = yield self.msg_helper.make_stored_outbound(
+        yield self.app_helper.start_conversation(conversation)
+        msg = yield self.app_helper.make_stored_outbound(
             conversation, "outbound")
-        event = self.msg_helper.make_ack(msg, conv=conversation)
-        yield self.dispatch_event(event)
+        yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
 
     @inlineCallbacks
     def test_conversation_for_api(self):
-        conversation = yield self.setup_conversation(started=True)
+        conversation = yield self.setup_conversation()
+        conversation.set_status_started()
         dummy_api = self.mk_dummy_api(conversation)
         self.assertEqual(self.app.conversation_for_api(dummy_api),
                          conversation)
 
     @inlineCallbacks
     def test_user_api_for_api(self):
-        conversation = yield self.setup_conversation(started=True)
+        conversation = yield self.setup_conversation()
+        conversation.set_status_started()
         dummy_api = self.mk_dummy_api(conversation)
         user_api = self.app.user_api_for_api(dummy_api)
         self.assertEqual(user_api.user_account_key,
@@ -174,16 +144,16 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_send_message_command(self):
         conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
+        yield self.app_helper.start_conversation(conversation)
         msg_options = {
             'transport_name': 'sphex_transport',
             'from_addr': '666666',
             'transport_type': 'sphex',
             'helper_metadata': {'foo': {'bar': 'baz'}},
         }
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             "send_message",
-            user_account_key=self.user_account.key,
+            user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             command_data={
                 "batch_id": conversation.batch.key,
@@ -192,7 +162,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
                 "msg_options": msg_options,
             })
 
-        [msg] = yield self.get_dispatched_messages()
+        [msg] = yield self.app_helper.get_dispatched_outbound()
         self.assertEqual(msg.payload['to_addr'], "123456")
         self.assertEqual(msg.payload['from_addr'], "666666")
         self.assertEqual(msg.payload['content'], "hello world")
@@ -200,7 +170,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         self.assertEqual(msg.payload['transport_type'], "sphex")
         self.assertEqual(msg.payload['message_type'], "user_message")
         self.assertEqual(msg.payload['helper_metadata']['go'], {
-            'user_account': self.user_account.key,
+            'user_account': conversation.user_account.key,
             'conversation_type': conversation.conversation_type,
             'conversation_key': conversation.key,
         })
@@ -210,11 +180,11 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
         conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
-        msg = yield self.msg_helper.make_stored_inbound(conversation, "foo")
-        yield self.dispatch_command(
+        yield self.app_helper.start_conversation(conversation)
+        msg = yield self.app_helper.make_stored_inbound(conversation, "foo")
+        yield self.app_helper.dispatch_command(
             "send_message",
-            user_account_key=self.user_account.key,
+            user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             command_data={
                 "batch_id": conversation.batch.key,
@@ -227,7 +197,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
                     u'from_addr': u'default10080',
                 },
             })
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])

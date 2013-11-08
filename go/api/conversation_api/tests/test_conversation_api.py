@@ -1,26 +1,32 @@
 import base64
 import urllib
 
+
+from mock import Mock
 from twisted.internet.defer import inlineCallbacks, succeed
 from twisted.web import http
 
 from vumi.utils import http_request_full
+from vumi.tests.helpers import WorkerHelper
 
 from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.conversation_api.conversation_api import (
     ConversationApiWorker, ConversationConfigResource)
-
-from mock import Mock
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
 class ConversationApiTestCase(GoWorkerTestCase):
 
     use_riak = True
-    worker_class = ConversationApiWorker
 
     @inlineCallbacks
     def setUp(self):
         yield super(ConversationApiTestCase, self).setUp()
+        self.worker_helper = WorkerHelper()
+        self.add_cleanup(self.worker_helper.cleanup)
+        self.vumi_helper = VumiApiHelper(self)
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
 
         response = Mock()
         response.code = http.OK
@@ -37,44 +43,34 @@ class ConversationApiTestCase(GoWorkerTestCase):
             'web_port': 0,
             'health_path': '/health/',
         })
-        self.app = yield self.get_worker(self.config)
-        self.addr = self.app.webserver.getHost()
+        self.worker = yield self.worker_helper.get_worker(
+            ConversationApiWorker, self.config)
+        self.addr = self.worker.webserver.getHost()
         self.url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['web_path'])
 
-        # get the router to test
-        self.vumi_api = yield self.get_vumi_api()
-        self.account = yield self.mk_user(self.vumi_api, u'user')
-        self.user_api = self.vumi_api.get_user_api(self.account.key)
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        yield self.vumi_helper.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.user_helper.add_tagpool_permission(u"pool")
 
-        yield self.setup_tagpools()
-
-        config = {
-            'jsbox_app_config': {
-                'config': {
-                    'source_url': 'http://configsourcecode/',
-                }
-            },
-            'jsbox': {
-                'source_url': 'http://sourcecode/',
-            },
-            'http_api': {
-                'api_tokens': [
-                    'token-1',
-                    'token-2',
-                    'token-3',
-                ],
-                'metrics_store': 'metrics_store'
-            }
-        }
-
-        self.conversation = yield self.create_conversation(
-            conversation_type=u'jsbox', config=config)
+        self.conversation = yield self.user_helper.create_conversation(
+            u'jsbox', config={
+                'jsbox_app_config': {
+                    'config': {'source_url': 'http://configsourcecode/'},
+                },
+                'jsbox': {
+                    'source_url': 'http://sourcecode/',
+                },
+                'http_api': {
+                    'api_tokens': ['token-1', 'token-2', 'token-3'],
+                    'metrics_store': 'metrics_store'
+                },
+            })
 
         self.auth_headers = {
             'Authorization': [
                 'Basic ' + base64.b64encode(
-                    '%s:%s' % (self.account.key, 'token-1'))
+                    '%s:%s' % (self.user_helper.account_key, 'token-1'))
             ],
         }
 
@@ -130,7 +126,7 @@ class ConversationApiTestCase(GoWorkerTestCase):
         [url] = args
         self.assertEqual(args, ('http://sourcecode/',))
         self.assertEqual(kwargs, {'method': 'GET'})
-        conv = yield self.user_api.get_wrapped_conversation(
+        conv = yield self.user_helper.user_api.get_wrapped_conversation(
             self.conversation.key)
         conv_config = conv.get_config()
         self.assertEqual(conv_config['jsbox'], {

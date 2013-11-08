@@ -1,72 +1,308 @@
-from vumi.tests.helpers import MessageHelper
+from datetime import datetime, timedelta
+import uuid
 
+from twisted.internet.defer import (
+    inlineCallbacks, returnValue, Deferred, gatherResults)
+
+from vumi.tests.utils import PersistenceMixin  # For .sync_or_async()
+from vumi.tests.helpers import WorkerHelper, MessageHelper, proxyable
+
+from go.vumitools.api import VumiApi, VumiApiEvent
+from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.utils import MessageMetadataHelper
 
 
 class GoMessageHelper(object):
     def __init__(self, mdb=None, **kw):
         self._msg_helper = MessageHelper(**kw)
+        self.transport_name = self._msg_helper.transport_name
         self.mdb = mdb
 
+    @proxyable
     def add_router_metadata(self, msg, router):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(None, msg)
         md.set_router_info(router.router_type, router.key)
         md.set_user_account(router.user_account.key)
 
+    @proxyable
     def add_conversation_metadata(self, msg, conv):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(None, msg)
         md.set_conversation_info(conv.conversation_type, conv.key)
         md.set_user_account(conv.user_account.key)
 
+    @proxyable
     def _add_go_metadata(self, msg, conv, router):
         if conv is not None:
             self.add_conversation_metadata(msg, conv)
         if router is not None:
             self.add_router_metadata(msg, router)
 
+    @proxyable
     def make_inbound(self, content, conv=None, router=None, **kw):
         msg = self._msg_helper.make_inbound(content, **kw)
         self._add_go_metadata(msg, conv, router)
         return msg
 
+    @proxyable
     def make_outbound(self, content, conv=None, router=None, **kw):
         msg = self._msg_helper.make_outbound(content, **kw)
         self._add_go_metadata(msg, conv, router)
         return msg
 
+    @proxyable
     def make_ack(self, msg=None, conv=None, router=None, **kw):
         ack = self._msg_helper.make_ack(msg, **kw)
         self._add_go_metadata(ack, conv, router)
         return ack
 
+    @proxyable
     def make_nack(self, msg=None, conv=None, router=None, **kw):
         nack = self._msg_helper.make_nack(msg, **kw)
         self._add_go_metadata(nack, conv, router)
         return nack
 
+    @proxyable
     def make_delivery_report(self, msg=None, conv=None, router=None, **kw):
         dr = self._msg_helper.make_delivery_report(msg, **kw)
         self._add_go_metadata(dr, conv, router)
         return dr
 
+    @proxyable
+    def make_reply(self, msg, content, **kw):
+        return self._msg_helper.make_reply(msg, content, **kw)
+
+    @proxyable
     def store_inbound(self, conv, msg):
         if self.mdb is None:
             raise ValueError("No message store provided.")
         return self.mdb.add_inbound_message(msg, batch_id=conv.batch.key)
 
+    @proxyable
     def store_outbound(self, conv, msg):
         if self.mdb is None:
             raise ValueError("No message store provided.")
         return self.mdb.add_outbound_message(msg, batch_id=conv.batch.key)
 
+    @proxyable
     def make_stored_inbound(self, conv, content, **kw):
         msg = self.make_inbound(content, conv=conv, **kw)
         d = self.store_inbound(conv, msg)
-        return d.addCallback(lambda _: msg)
+        if isinstance(d, Deferred):
+            # We're async, return a deferred
+            return d.addCallback(lambda _: msg)
+        else:
+            return msg
 
+    @proxyable
     def make_stored_outbound(self, conv, content, **kw):
         msg = self.make_outbound(content, conv=conv, **kw)
         d = self.store_outbound(conv, msg)
-        return d.addCallback(lambda _: msg)
+        if isinstance(d, Deferred):
+            # We're async, return a Deferred.
+            return d.addCallback(lambda _: msg)
+        else:
+            return msg
+
+    @proxyable
+    def add_inbound_to_conv(self, conv, count, start_date=None,
+                            time_multiplier=10):
+        now = start_date or datetime.now().date()
+
+        messages = []
+        for i in range(count):
+            timestamp = now - timedelta(hours=i * time_multiplier)
+            messages.append(self.make_stored_inbound(
+                conv, "inbound %s" % (i,), from_addr='from-%s' % (i,),
+                timestamp=timestamp))
+        if isinstance(messages[0], Deferred):
+            # We're async, return a Deferred.
+            return gatherResults(messages)
+        else:
+            return messages
+
+    @proxyable
+    def add_replies_to_conv(self, conv, msgs):
+        messages = []
+        ds = []
+        for msg in msgs:
+            timestamp = msg['timestamp'] + timedelta(seconds=1)
+            reply = self.make_reply(msg, "reply", timestamp=timestamp)
+            messages.append(reply)
+            ds.append(self.store_outbound(conv, reply))
+
+        if isinstance(ds[0], Deferred):
+            # We're async, return a Deferred.
+            return gatherResults(ds).addCallback(lambda r: messages)
+        else:
+            return messages
+
+
+class VumiApiHelper(object):
+    # TODO: Avoid having to pass the TestCase in here. This requires a
+    #       persistence helper which we don't have yet.
+    def __init__(self, test_case, vumi_api=None):
+        self._test_case = test_case
+        self.sync_persistence = test_case.sync_persistence
+        self._users_created = 0
+        self._user_helpers = {}
+        self._vumi_api = vumi_api
+
+    def cleanup(self):
+        pass
+
+    @proxyable
+    def get_vumi_api(self):
+        assert self._vumi_api is not None, "No vumi_api provided."
+        return self._vumi_api
+
+    @proxyable
+    def set_vumi_api(self, vumi_api):
+        assert self._vumi_api is None, "Can't override existing vumi_api."
+        self._vumi_api = vumi_api
+
+    @proxyable
+    def setup_vumi_api(self):
+        if self.sync_persistence:
+            from django.conf import settings
+            self._vumi_api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
+            return
+
+        d = VumiApi.from_config_async(self._test_case.mk_config({}))
+        return d.addCallback(self.set_vumi_api)
+
+    @proxyable
+    @PersistenceMixin.sync_or_async
+    def make_user(self, username, enable_search=True):
+        key = u"test-%s-user" % (len(self._user_helpers),)
+        user = self.get_vumi_api().account_store.users(key, username=username)
+        yield user.save()
+        user_helper = UserApiHelper(self, key)
+        self._user_helpers[key] = user_helper
+        if enable_search:
+            contact_store = user_helper.user_api.contact_store
+            yield contact_store.contacts.enable_search()
+            yield contact_store.groups.enable_search()
+        returnValue(self.get_user_helper(user.key))
+
+    @proxyable
+    def get_user_helper(self, account_key):
+        return self._user_helpers[account_key]
+
+    @proxyable
+    @PersistenceMixin.sync_or_async
+    def get_or_create_user(self):
+        assert len(self._user_helpers) <= 1, "Too many users."
+        if not self._user_helpers:
+            yield self.make_user(u"testuser")
+        returnValue(self._user_helpers.values()[0])
+
+    @proxyable
+    @PersistenceMixin.sync_or_async
+    def setup_tagpool(self, pool, tags, metadata=None):
+        tags = [(pool, tag) for tag in tags]
+        yield self.get_vumi_api().tpm.declare_tags(tags)
+        if metadata:
+            yield self.get_vumi_api().tpm.set_metadata(pool, metadata)
+        returnValue(tags)
+
+
+class UserApiHelper(object):
+    def __init__(self, vumi_helper, account_key):
+        self.sync_persistence = vumi_helper.sync_persistence
+        self._vumi_helper = vumi_helper
+        self.account_key = account_key
+        self.user_api = vumi_helper.get_vumi_api().get_user_api(account_key)
+
+        # Easier access to these stores is useful.
+        self.contact_store = self.user_api.contact_store
+
+    def cleanup(self):
+        pass
+
+    @proxyable
+    def get_user_account(self):
+        return self.user_api.get_user_account()
+
+    @proxyable
+    @inlineCallbacks
+    def add_tagpool_permission(self, tagpool, max_keys=None):
+        # TODO: Move this into the API rather than the test helper.
+        permission = yield self.user_api.api.account_store.tag_permissions(
+            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
+        yield permission.save()
+        account = yield self.get_user_account()
+        account.tagpools.add(permission)
+        yield account.save()
+
+    @proxyable
+    @PersistenceMixin.sync_or_async
+    def create_conversation(self, conversation_type, started=False, **kw):
+        name = kw.pop('name', u'My Conversation')
+        description = kw.pop('description', u'')
+        config = kw.pop('config', {})
+        assert isinstance(config, dict)
+        if started:
+            kw.setdefault('status', u'running')
+        conversation = yield self.user_api.new_conversation(
+            conversation_type, name, description, config, **kw)
+        returnValue(self.user_api.wrap_conversation(conversation))
+
+    @proxyable
+    def get_conversation(self, conversation_key):
+        return self.user_api.get_wrapped_conversation(conversation_key)
+
+
+class EventHandlerHelper(object):
+    def __init__(self, test_case):
+        self._test_case = test_case
+        self.worker_helper = WorkerHelper()
+        self.vumi_helper = VumiApiHelper(test_case)
+
+    @inlineCallbacks
+    def cleanup(self):
+        yield self.vumi_helper.cleanup()
+        yield self.worker_helper.cleanup()
+
+    @inlineCallbacks
+    def setup_event_dispatcher(self, name, cls, config):
+        app_config = self._test_case.mk_config({
+            'event_handlers': {
+                name: "%s.%s" % (cls.__module__, cls.__name__),
+            },
+            name: config,
+            'transport_name': 'sphex',  # TODO: Kill this when possible.
+        })
+
+        self.event_dispatcher = yield self.worker_helper.get_worker(
+            EventDispatcher, app_config)
+        self.vumi_helper.set_vumi_api(self.event_dispatcher.vumi_api)
+
+        self.user_helper = yield self.vumi_helper.make_user(u'acct')
+        yield self.vumi_helper.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.user_helper.add_tagpool_permission(u"pool")
+        self.conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
+
+    def get_handler(self, name):
+        return self.event_dispatcher.handlers[name]
+
+    def track_event(self, event_type, handler_name, handler_config={}):
+        handler_configs = self.event_dispatcher.account_handler_configs
+        account_handlers = handler_configs.setdefault(
+            self.user_helper.account_key, [])
+
+        account_handlers.append([
+            [self.conversation.key, event_type], [
+                [handler_name, handler_config]
+            ]
+        ])
+
+    def make_event(self, event_type, content):
+        return VumiApiEvent.event(
+            self.user_helper.account_key, self.conversation.key,
+            event_type, content)
+
+    def dispatch_event(self, event):
+        return self.worker_helper.dispatch_raw('vumi.event', event)

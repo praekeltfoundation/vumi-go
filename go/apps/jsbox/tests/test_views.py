@@ -1,29 +1,40 @@
 import json
 import logging
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.jsbox.log import LogManager
+from go.apps.tests.view_helpers import AppViewHelper
+from go.base.tests.utils import VumiGoDjangoTestCase
 
 
-class JsBoxTestCase(DjangoGoApplicationTestCase):
-    TEST_CONVERSATION_TYPE = u'jsbox'
+class TestJsBoxViews(VumiGoDjangoTestCase):
+
+    use_riak = True
+
+    def setUp(self):
+        super(TestJsBoxViews, self).setUp()
+        self.app_helper = AppViewHelper(self, u'jsbox')
+        self.add_cleanup(self.app_helper.cleanup)
+        self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):
-        self.setup_conversation()
-        response = self.client.get(self.get_view_url('show'))
+        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        self.assertEqual(conversation.name, u"myconv")
+        self.assertContains(response, '<h1>myconv</h1>')
 
     def test_show_running(self):
-        self.setup_conversation(started=True)
-        response = self.client.get(self.get_view_url('show'))
+        conv_helper = self.app_helper.create_conversation(
+            name=u"myconv", started=True)
+        response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        self.assertEqual(conversation.name, u"myconv")
+        self.assertContains(response, '<h1>myconv</h1>')
 
     def setup_and_save_conversation(self, app_config):
-        self.setup_conversation()
+        conv_helper = self.app_helper.create_conversation()
         # render the form
-        response = self.client.get(self.get_view_url('edit'))
+        response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
         # create the form data
         form_data = {
@@ -39,10 +50,10 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             form_data['jsbox_app_config-%d-value' % i] = cfg["value"]
             form_data['jsbox_app_config-%d-source_url' % i] = cfg["source_url"]
         # post the form
-        response = self.client.post(self.get_view_url('edit'), form_data)
-        self.assertRedirects(response, self.get_view_url('show'))
-        conversation = self.get_wrapped_conv()
-        return conversation
+        response = self.client.post(
+            conv_helper.get_view_url('edit'), form_data)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        return conv_helper.get_conversation()
 
     def test_edit_conversation(self):
         conversation = self.setup_and_save_conversation({})
@@ -75,24 +86,26 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(list(conversation.extra_endpoints), ['foo:bar'])
 
     def test_jsbox_logs(self):
-        self.setup_conversation()
-        campaign_key = self.user_api.user_account_key
-        log_manager = LogManager(self.user_api.api.redis)
+        conv_helper = self.app_helper.create_conversation()
+        campaign_key = conv_helper.get_conversation().user_account.key
+        log_manager = LogManager(
+            self.app_helper.vumi_helper.get_vumi_api().redis)
         for i in range(10):
-            log_manager.add_log(campaign_key, self.conv_key,
+            log_manager.add_log(campaign_key, conv_helper.conversation_key,
                                 "test %d" % i, logging.INFO)
-        response = self.client.get(self.get_view_url('jsbox_logs'))
+        response = self.client.get(conv_helper.get_view_url('jsbox_logs'))
         self.assertEqual(response.status_code, 200)
         for i in range(10):
             self.assertContains(response, "INFO] test %d" % i)
 
     def test_jsbox_empty_logs(self):
-        self.setup_conversation()
-        response = self.client.get(self.get_view_url('jsbox_logs'))
+        conv_helper = self.app_helper.create_conversation()
+        response = self.client.get(conv_helper.get_view_url('jsbox_logs'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No logs yet.")
 
     def test_jsbox_logs_action(self):
-        self.setup_conversation()
-        response = self.client.get(self.get_action_view_url('view_logs'))
-        self.assertRedirects(response, self.get_view_url('jsbox_logs'))
+        conv_helper = self.app_helper.create_conversation()
+        response = self.client.get(
+            conv_helper.get_action_view_url('view_logs'))
+        self.assertRedirects(response, conv_helper.get_view_url('jsbox_logs'))

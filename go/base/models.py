@@ -17,11 +17,11 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created:
         account = get_account_store().new_user(unicode(instance.username))
         UserProfile.objects.create(user=instance, user_account=account.key)
+    # XXX: Why do we do this on every save?
     user_api = vumi_api_for_user(instance)
     # Enable search for the contact & group stores
     user_api.contact_store.contacts.enable_search()
     user_api.contact_store.groups.enable_search()
-
 
 post_save.connect(create_user_profile, sender=User,
     dispatch_uid='go.base.models.create_user_profile')

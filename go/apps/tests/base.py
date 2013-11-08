@@ -15,7 +15,6 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     TEST_CONTACT_SURNAME = u"Surname"
     TEST_CONVERSATION_NAME = u"Test Conversation"
     TEST_CONVERSATION_TYPE = u'bulk_message'
-    TEST_CONVERSATION_PARAMS = None
     TEST_CHANNEL_METADATA = None
 
     def setUp(self):
@@ -25,7 +24,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         self.setup_client()
 
     def setup_conversation(self, started=False, with_group=False,
-                           with_contact=False, with_channel=False):
+                           with_channel=False):
         params = {
             'conversation_type': self.TEST_CONVERSATION_TYPE,
             'name': self.TEST_CONVERSATION_NAME,
@@ -35,12 +34,6 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         if with_group:
             self.group = self.contact_store.new_group(self.TEST_GROUP_NAME)
             params['groups'] = [self.group]
-            if with_contact:
-                self.contact = self.contact_store.new_contact(
-                    msisdn=u"+27761234567", name=self.TEST_CONTACT_NAME,
-                    surname=self.TEST_CONTACT_SURNAME, groups=[self.group])
-        if self.TEST_CONVERSATION_PARAMS:
-            params.update(self.TEST_CONVERSATION_PARAMS)
         self.conversation = self.create_conversation(started=started, **params)
         self.conv_key = self.conversation.key
         if with_channel:

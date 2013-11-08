@@ -16,34 +16,27 @@ from vumi.config import ConfigContext
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.resource import StreamResource, ConversationResource
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.apps.tests.helpers import AppWorkerHelper
 
 
-class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
-    application_class = StreamingHTTPWorker
+class TestStreamingHTTPWorker(AppWorkerTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(StreamingHTTPWorkerTestCase, self).setUp()
+        super(TestStreamingHTTPWorker, self).setUp()
+        self.app_helper = AppWorkerHelper(self, StreamingHTTPWorker)
+        self.add_cleanup(self.app_helper.cleanup)
+
         self.config = self.mk_config({
             'health_path': '/health/',
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
         })
-        self.app = yield self.get_application(self.config)
+        self.app = yield self.app_helper.get_app_worker(self.config)
         self.addr = self.app.webserver.getHost()
         self.url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['web_path'])
-
-        # Steal app's vumi_api
-        self.vumi_api = self.app.vumi_api  # YOINK!
-
-        # Create a test user account
-        self.account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = self.vumi_api.get_user_api(self.account.key)
-
-        yield self.setup_tagpools()
 
         conv_config = {
             'http_api': {
@@ -55,14 +48,15 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                 'metrics_store': 'metrics_store',
             }
         }
-        conversation = yield self.create_conversation(config=conv_config)
-        yield self.start_conversation(conversation)
-        self.conversation = yield self.user_api.get_wrapped_conversation(
+        conversation = yield self.app_helper.create_conversation(
+            config=conv_config)
+        yield self.app_helper.start_conversation(conversation)
+        self.conversation = yield self.app_helper.get_conversation(
             conversation.key)
 
         self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
-                self.account.key, 'token-1'))],
+                conversation.user_account.key, 'token-1'))],
         }
 
         self.client = StreamingClient()
@@ -70,15 +64,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         # Mock server to test HTTP posting of inbound messages & events
         self.mock_push_server = MockHttpServer(self.handle_request)
         yield self.mock_push_server.start()
+        self.add_cleanup(self.mock_push_server.stop)
         self.push_calls = DeferredQueue()
         self._setup_wait_for_request()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield self._wait_for_requests()
-        yield self.mock_push_server.stop()
-        yield super(StreamingHTTPWorkerTestCase, self).tearDown()
+        self.add_cleanup(self._wait_for_requests)
 
     def _setup_wait_for_request(self):
         # Hackery to wait for the request to finish
@@ -122,9 +111,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         received_messages = []
         for msg_id in range(count):
-            sent_msg = self.msg_helper.make_inbound(
-                'in %s' % (msg_id,), message_id=str(msg_id))
-            yield self.dispatch_to_conv(sent_msg, self.conversation)
+            yield self.app_helper.make_dispatch_inbound(
+                'in %s' % (msg_id,), message_id=str(msg_id),
+                conv=self.conversation)
             recv_msg = yield messages.get()
             received_messages.append(recv_msg)
 
@@ -162,11 +151,11 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             TransportUserMessage, messages.put, errors.put, url,
             Headers(self.auth_headers))
 
-        msg1 = self.msg_helper.make_inbound('in 1', message_id='1')
-        yield self.dispatch_to_conv(msg1, self.conversation)
+        msg1 = yield self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
 
-        msg2 = self.msg_helper.make_inbound('in 2', message_id='2')
-        yield self.dispatch_to_conv(msg2, self.conversation)
+        msg2 = yield self.app_helper.make_dispatch_inbound(
+            'in 2', message_id='2', conv=self.conversation)
 
         rm1 = yield messages.get()
         rm2 = yield messages.get()
@@ -190,15 +179,15 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                             events.put, url,
                                             Headers(self.auth_headers))
 
-        msg1 = yield self.msg_helper.make_stored_outbound(
+        msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
-        yield self.dispatch_event_to_conv(ack1, self.conversation)
+        ack1 = yield self.app_helper.make_dispatch_ack(
+            msg1, conv=self.conversation)
 
-        msg2 = yield self.msg_helper.make_stored_outbound(
+        msg2 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 2', message_id='2')
-        ack2 = self.msg_helper.make_ack(msg2)
-        yield self.dispatch_event_to_conv(ack2, self.conversation)
+        ack2 = yield self.app_helper.make_dispatch_ack(
+            msg2, conv=self.conversation)
 
         ra1 = yield events.get()
         ra2 = yield events.get()
@@ -255,13 +244,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(response.code, http.OK)
         put_msg = json.loads(response.delivered_body)
 
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
                 'conversation_key': self.conversation.key,
                 'conversation_type': 'http_api',
-                'user_account': self.account.key,
+                'user_account': self.conversation.user_account.key,
             },
         })
         # We do not respect the message_id that's been given.
@@ -284,9 +273,11 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_invalid_in_reply_to_with_missing_conversation_key(self):
-        # create a message with no (None) conversation
-        inbound_msg = self.msg_helper.make_inbound('in 1', message_id='msg-1')
-        yield self.msg_helper.mdb.add_inbound_message(inbound_msg)
+        # create a message with no conversation
+        inbound_msg = self.app_helper.make_inbound('in 1', message_id='msg-1')
+        vumi_api = self.app_helper.vumi_helper.get_vumi_api()
+        yield vumi_api.mdb.add_inbound_message(
+            inbound_msg)
 
         msg = {
             'content': 'foo',
@@ -305,7 +296,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_in_reply_to(self):
-        inbound_msg = yield self.msg_helper.make_stored_inbound(
+        inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
         msg = {
@@ -322,13 +313,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         put_msg = json.loads(response.delivered_body)
         self.assertEqual(response.code, http.OK)
 
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
                 'conversation_key': self.conversation.key,
                 'conversation_type': 'http_api',
-                'user_account': self.account.key,
+                'user_account': self.conversation.user_account.key,
             },
         })
         # We do not respect the message_id that's been given.
@@ -355,7 +346,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         prefix = "campaigns.test-0-user.stores.metrics_store"
 
         self.assertEqual(
-            self.get_published_metrics(self.app),
+            self.app_helper.get_published_metrics(self.app),
             [("%s.vumi.test.v1" % prefix, 1234),
              ("%s.vumi.test.v2" % prefix, 3456)])
 
@@ -370,9 +361,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             Headers(self.auth_headers)) for _ in range(concurrency)]
 
         for i in range(concurrency):
-            msg = self.msg_helper.make_inbound(
-                'in %s' % (i,), message_id=str(i))
-            yield self.dispatch_to_conv(msg, self.conversation)
+            msg = yield self.app_helper.make_dispatch_inbound(
+                'in %s' % (i,), message_id=str(i), conv=self.conversation)
             received = yield queue.get()
             self.assertEqual(msg['message_id'], received['message_id'])
 
@@ -389,18 +379,18 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     def test_disabling_concurrency_limit(self):
         conv_resource = ConversationResource(self.app, self.conversation.key)
         # negative concurrency limit disables it
-        ctxt = ConfigContext(user_account=self.account.key,
+        ctxt = ConfigContext(user_account=self.conversation.user_account.key,
                              concurrency_limit=-1)
         config = yield self.app.get_config(msg=None, ctxt=ctxt)
         self.assertTrue(
-            (yield conv_resource.is_allowed(config, self.account.key)))
+            (yield conv_resource.is_allowed(
+                config, self.conversation.user_account.key)))
 
     @inlineCallbacks
     def test_backlog_on_connect(self):
         for i in range(10):
-            msg = self.msg_helper.make_inbound(
-                'in %s' % (i,), message_id=str(i))
-            yield self.dispatch_to_conv(msg, self.conversation)
+            yield self.app_helper.make_dispatch_inbound(
+                'in %s' % (i,), message_id=str(i), conv=self.conversation)
 
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
@@ -422,8 +412,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         response = yield http_request_full(health_url, method='GET')
         self.assertEqual(response.delivered_body, '0')
 
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
-        yield self.dispatch_to_conv(msg, self.conversation)
+        yield self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
 
         queue = DeferredQueue()
         stream_url = '%s/%s/messages.json' % (self.url, self.conversation.key)
@@ -453,13 +443,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
-        msg_d = self.dispatch_to_conv(msg, self.conversation)
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
 
         req = yield self.push_calls.get()
         posted_json_data = req.content.read()
         req.finish()
-        yield msg_d
+        msg = yield msg_d
 
         posted_msg = TransportUserMessage.from_json(posted_json_data)
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
@@ -480,9 +470,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         self._patch_http_request_full(HttpTimeoutError)
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         with LogCatcher(message='Timeout') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
             [timeout_log] = lc.messages()
         self.assertTrue(self.mock_push_server.url in timeout_log)
 
@@ -495,9 +485,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         self._patch_http_request_full(DNSLookupError)
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         with LogCatcher(message='DNS lookup error') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
             [dns_log] = lc.messages()
         self.assertTrue(self.mock_push_server.url in dns_log)
 
@@ -509,17 +499,17 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg1 = yield self.msg_helper.make_stored_outbound(
+        msg = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
-        event_d = self.dispatch_event_to_conv(ack1, self.conversation)
+        event_d = self.app_helper.make_dispatch_ack(
+            msg, conv=self.conversation)
 
         req = yield self.push_calls.get()
         posted_json_data = req.content.read()
         req.finish()
-        yield event_d
+        ack = yield event_d
 
-        self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
+        self.assertEqual(TransportEvent.from_json(posted_json_data), ack)
 
     @inlineCallbacks
     def test_post_inbound_event_timeout(self):
@@ -529,13 +519,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg1 = yield self.msg_helper.make_stored_outbound(
+        msg = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
 
         self._patch_http_request_full(HttpTimeoutError)
         with LogCatcher(message='Timeout') as lc:
-            yield self.dispatch_event_to_conv(ack1, self.conversation)
+            yield self.app_helper.make_dispatch_ack(
+                msg, conv=self.conversation)
             [timeout_log] = lc.messages()
         self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
 
@@ -547,13 +537,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg1 = yield self.msg_helper.make_stored_outbound(
+        msg = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
 
         self._patch_http_request_full(DNSLookupError)
         with LogCatcher(message='DNS lookup error') as lc:
-            yield self.dispatch_event_to_conv(ack1, self.conversation)
+            yield self.app_helper.make_dispatch_ack(
+                msg, conv=self.conversation)
             [dns_log] = lc.messages()
         self.assertTrue(self.mock_push_server.url in dns_log)
 
@@ -575,9 +565,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_send_message_command(self):
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             'send_message',
-            user_account_key=self.account.key,
+            user_account_key=self.conversation.user_account.key,
             conversation_key=self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
@@ -589,33 +579,29 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                             u'tag': [u'longcode', u'default10080']
                         }
                     },
-                    u'transport_name': self.transport_name,
-                    u'transport_type': self.transport_type,
                     u'from_addr': u'default10080',
                 }
             })
 
-        [msg] = yield self.get_dispatched_messages()
+        [msg] = yield self.app_helper.get_dispatched_outbound()
         self.assertEqual(msg.payload['to_addr'], "to_addr")
         self.assertEqual(msg.payload['from_addr'], "default10080")
         self.assertEqual(msg.payload['content'], "foo")
-        self.assertEqual(msg.payload['transport_name'], self.transport_name)
-        self.assertEqual(msg.payload['transport_type'], self.transport_type)
         self.assertEqual(msg.payload['message_type'], "user_message")
         self.assertEqual(
             msg.payload['helper_metadata']['go']['user_account'],
-            self.account.key)
+            self.conversation.user_account.key)
         self.assertEqual(
             msg.payload['helper_metadata']['tag']['tag'],
             ['longcode', 'default10080'])
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
-        msg = yield self.msg_helper.make_stored_inbound(
+        msg = yield self.app_helper.make_stored_inbound(
             self.conversation, "foo")
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             'send_message',
-            user_account_key=self.account.key,
+            user_account_key=self.conversation.user_account.key,
             conversation_key=self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
@@ -633,7 +619,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                     u'from_addr': u'default10080',
                 }
             })
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])

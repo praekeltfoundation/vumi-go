@@ -2,13 +2,14 @@ import urlparse
 
 from django.core.urlresolvers import reverse
 from django.core import mail
-from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils.unittest import skip
 
 from go.account.utils import send_user_account_summary
 from go.account.tasks import send_scheduled_account_summary
 from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import DjangoVumiApiHelper
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class AccountTestCase(VumiGoDjangoTestCase):
@@ -16,9 +17,11 @@ class AccountTestCase(VumiGoDjangoTestCase):
 
     def setUp(self):
         super(AccountTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
-        self.setup_client()
+        self.vumi_helper = DjangoVumiApiHelper(self)
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
 
     def confirm(self, token_url):
         url = urlparse.urlsplit(token_url)
@@ -40,7 +43,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
 
         # reload from db
         self.confirm(token_url)
-        user = get_user_model().objects.get(pk=self.django_user.pk)
+        user = self.user_helper.get_django_user()
         self.assertEqual(user.first_name, 'foo')
         self.assertEqual(user.last_name, 'bar')
         self.assertEqual(user.email, 'foo@bar.com')
@@ -59,7 +62,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
         token_url = response.context['token_url']
         self.confirm(token_url)
         # reload from db
-        user = get_user_model().objects.get(pk=self.django_user.pk)
+        user = self.user_helper.get_django_user()
         self.assertTrue(user.check_password('new_password'))
 
     def test_update_msisdn_valid(self):
@@ -75,7 +78,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
                 })
             token_url = response.context['token_url']
             self.confirm(token_url)
-            user_account = self.user_api.get_user_account()
+            user_account = self.user_helper.get_user_account()
             self.assertEqual(user_account.msisdn, '+27761234567')
 
     def test_update_msisdn_invalid(self):
@@ -92,7 +95,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
             self.assertFormError(response, 'account_form', 'msisdn',
                 'Please provide a valid phone number.')
             self.assertEqual([], mail.outbox)
-            user_account = self.user_api.get_user_account()
+            user_account = self.user_helper.get_user_account()
             self.assertEqual(user_account.msisdn, None)
 
     @staticmethod
@@ -117,7 +120,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
             'Please confirm this change by clicking on the link that was '
             'just sent to your mailbox.' in notifications)
 
-        user_account = self.user_api.get_user_account()
+        user_account = self.user_helper.get_user_account()
         self.assertFalse(user_account.confirm_start_conversation)
 
         [email] = mail.outbox
@@ -127,11 +130,11 @@ class AccountTestCase(VumiGoDjangoTestCase):
         notifications = self.extract_notification_messages(response)
         self.assertTrue('Your details are being updated' in notifications)
 
-        user_account = self.user_api.get_user_account()
+        user_account = self.user_helper.get_user_account()
         self.assertTrue(user_account.confirm_start_conversation)
 
     def test_email_summary(self):
-        user_account = self.user_api.get_user_account()
+        user_account = self.user_helper.get_user_account()
         response = self.client.post(reverse('account:details'), {
             'name': 'foo',
             'surname': 'bar',
@@ -149,7 +152,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
         notifications = self.extract_notification_messages(response)
         self.assertTrue('Your details are being updated' in notifications)
 
-        user_account = self.user_api.get_user_account()
+        user_account = self.user_helper.get_user_account()
         self.assertEqual(user_account.email_summary, 'daily')
 
     def test_require_msisdn_if_confirm_start_conversation(self):
@@ -171,9 +174,11 @@ class EmailTestCase(VumiGoDjangoTestCase):
 
     def setUp(self):
         super(EmailTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
-        self.setup_client()
+        self.vumi_helper = DjangoVumiApiHelper(self)
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
 
     def test_email_sending(self):
         response = self.client.post(reverse('account:details'), {
@@ -184,29 +189,33 @@ class EmailTestCase(VumiGoDjangoTestCase):
         self.assertRedirects(response, reverse('account:details'))
         [email] = mail.outbox
         self.assertEqual(email.subject, 'foo')
-        self.assertEqual(email.from_email, self.django_user.email)
+        self.assertEqual(
+            email.from_email, self.user_helper.get_django_user().email)
         self.assertTrue('bar' in email.body)
 
     def test_daily_account_summary(self):
-        conv = self.create_conversation(
-            started=True, conversation_type=u'bulk_message',
-            name=u'Test Conversation')
-        self.contact_store.new_contact(
+        msg_helper = GoMessageHelper(mdb=self.vumi_helper.get_vumi_api().mdb)
+        conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'Test Conversation', started=True)
+        self.user_helper.contact_store.new_contact(
             name=u'Contact', surname=u'One', msisdn=u"+27761234567")
-        self.contact_store.new_contact(
+        self.user_helper.contact_store.new_contact(
             name=u'Contact', surname=u'Two', msisdn=u"+27761234567")
 
-        self.add_messages_to_conv(5, conv, reply=True)
+        msgs = msg_helper.add_inbound_to_conv(conv, 5)
+        msg_helper.add_replies_to_conv(conv, msgs)
         # create a second conversation to test sorting
-        self.create_conversation()
+        self.user_helper.create_conversation(u'bulk_message')
+
+        django_user = self.user_helper.get_django_user()
 
         # schedule the task
-        send_user_account_summary(self.django_user)
+        send_user_account_summary(django_user)
 
         [email] = mail.outbox
         self.assertEqual(email.subject, 'Vumi Go Account Summary')
         self.assertEqual(email.from_email, settings.DEFAULT_FROM_EMAIL)
-        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertEqual(email.recipients(), [django_user.email])
         self.assertTrue('number of contacts: 2' in email.body)
         self.assertTrue('number of unique contacts by contact number: 1'
                             in email.body)
@@ -220,7 +229,7 @@ class EmailTestCase(VumiGoDjangoTestCase):
         self.assertTrue('"Group Message" Received: 5' in email.body)
 
     def test_send_scheduled_account_summary_task(self):
-        user_account = self.user_api.get_user_account()
+        user_account = self.user_helper.get_user_account()
         user_account.email_summary = u'daily'
         user_account.save()
 

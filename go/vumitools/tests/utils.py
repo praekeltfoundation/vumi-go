@@ -2,18 +2,16 @@
 
 """Utilities for go.vumitools tests."""
 
-import uuid
-
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import TestCase
 
 from vumi.persist.fields import (
     ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
 from vumi.message import TransportEvent
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
+from vumi.tests.helpers import VumiTestCase
 
-from go.vumitools.api import VumiApiCommand, VumiApi
+from go.vumitools.api import VumiApiCommand
 from go.vumitools.account import UserAccount
 from go.vumitools.contact import Contact, ContactGroup
 from go.vumitools.utils import MessageMetadataHelper
@@ -71,9 +69,9 @@ class FakeAmqpConnection(object):
 
 
 class GoPersistenceMixin(PersistenceMixin):
-    def _persist_setUp(self):
-        self._users_created = 0
-        return super(GoPersistenceMixin, self)._persist_setUp()
+    # def _persist_setUp(self):
+    #     self._users_created = 0
+    #     return super(GoPersistenceMixin, self)._persist_setUp()
 
     @PersistenceMixin.sync_or_async
     def _clear_bucket_properties(self, account_keys, manager):
@@ -109,147 +107,8 @@ class GoPersistenceMixin(PersistenceMixin):
         # indexes don't go away.
         yield self._clear_bucket_properties(accounts, manager)
 
-    def mk_config(self, config):
-        config = super(GoPersistenceMixin, self).mk_config(config)
-        return config
 
-    @PersistenceMixin.sync_or_async
-    def mk_user(self, vumi_api, username):
-        key = u"test-%s-user" % (self._users_created,)
-        self._users_created += 1
-        user = vumi_api.account_store.users(key, username=username)
-        yield user.save()
-        returnValue(user)
-
-    def get_vumi_api(self, config=None, amqp_client=None):
-        if config is None:
-            config = self.mk_config({})
-        return VumiApi.from_config_async(config, amqp_client)
-
-
-class GoWorkerTestMixin(GoPersistenceMixin):
-
-    def _worker_name(self):
-        return getattr(self.worker_class, 'worker_name', 'unnamed')
-
-    def _command_rkey(self):
-        return "%s.control" % (self._worker_name(),)
-
-    @inlineCallbacks
-    def setup_user_api(self, vumi_api, username=u'testuser'):
-        user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_account_key = user_account.key
-        self.user_api = self.vumi_api.get_user_api(self.user_account_key)
-
-    def setup_tagpools(self):
-        return self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
-
-    @inlineCallbacks
-    def setup_tagpool(self, pool, tags, transport_name=None, metadata=None,
-                      permission=True):
-        tags = [(pool, tag) for tag in tags]
-        if transport_name is None:
-            transport_name = self.transport_name
-        metadata = metadata.copy() if metadata is not None else {}
-        metadata.setdefault("transport_type", self.transport_type)
-        metadata.setdefault("transport_name", transport_name)
-        yield self.vumi_api.tpm.declare_tags(tags)
-        yield self.vumi_api.tpm.set_metadata(pool, metadata)
-        if permission:
-            yield self.add_tagpool_permission(pool)
-        returnValue(tags)
-
-    @inlineCallbacks
-    def add_tagpool_permission(self, tagpool, max_keys=None):
-        permission = yield self.user_api.api.account_store.tag_permissions(
-            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
-        yield permission.save()
-        account = yield self.user_api.get_user_account()
-        account.tagpools.add(permission)
-        yield account.save()
-
-    def dispatch_command(self, command, *args, **kw):
-        cmd = VumiApiCommand.command(
-            self._worker_name(), command, *args, **kw)
-        return self._dispatch(cmd, self._command_rkey())
-
-    def get_dispatcher_commands(self):
-        return self._amqp.get_messages('vumi', 'vumi.api')
-
-    def get_app_message_commands(self):
-        return self._amqp.get_messages('vumi', self._command_rkey())
-
-    def get_dispatched_app_events(self):
-        return self._amqp.get_messages('vumi', 'vumi.event')
-
-    def get_published_metrics(self, worker):
-        return [
-            (metric.name, value)
-            for metric, ((time, value),) in worker.metrics._oneshot_msgs]
-
-    @inlineCallbacks
-    def create_conversation(self, started=False, **kw):
-        conv_type = kw.pop('conversation_type', None)
-        if conv_type is None:
-            conv_type = self._conversation_type()
-        name = kw.pop('name', u'Subject')
-        description = kw.pop('description', u'')
-        config = kw.pop('config', {})
-        self.assertTrue(isinstance(config, dict))
-        if started:
-            kw.setdefault('status', u'running')
-        conversation = yield self.user_api.new_conversation(
-            conv_type, name, description, config, **kw)
-        returnValue(self.user_api.wrap_conversation(conversation))
-
-
-class GoAppWorkerTestMixin(GoWorkerTestMixin):
-
-    def _worker_name(self):
-        # DummyApplicationWorker has no worker_name attr.
-        return getattr(self.application_class, 'worker_name', 'unnamed')
-
-    def _conversation_type(self):
-        # This is a guess based on worker_name.
-        # We need a better way to do this.
-        return self._worker_name().rpartition('_')[0].decode('utf-8')
-
-    def add_conversation_md_to_msg(self, msg, conv, endpoint=None):
-        msg.payload.setdefault('helper_metadata', {})
-        md = MessageMetadataHelper(self.vumi_api, msg)
-        md.set_conversation_info(conv.conversation_type, conv.key)
-        md.set_user_account(self.user_account_key)
-        if endpoint is not None:
-            msg.set_routing_endpoint(endpoint)
-
-    @inlineCallbacks
-    def start_conversation(self, conversation):
-        old_cmds = len(self.get_dispatcher_commands())
-        yield conversation.start()
-        for cmd in self.get_dispatcher_commands()[old_cmds:]:
-            yield self.dispatch_command(
-                cmd.payload['command'], *cmd.payload['args'],
-                **cmd.payload['kwargs'])
-
-    @inlineCallbacks
-    def stop_conversation(self, conversation):
-        old_cmds = len(self.get_dispatcher_commands())
-        yield conversation.stop_conversation()
-        for cmd in self.get_dispatcher_commands()[old_cmds:]:
-            yield self.dispatch_command(
-                cmd.payload['command'], *cmd.payload['args'],
-                **cmd.payload['kwargs'])
-
-    def dispatch_to_conv(self, msg, conv):
-        conv.set_go_helper_metadata(msg['helper_metadata'])
-        return self.dispatch(msg)
-
-    def dispatch_event_to_conv(self, event, conv):
-        conv.set_go_helper_metadata(event['helper_metadata'])
-        return self.dispatch_event(event)
-
-
-class GoRouterWorkerTestMixin(GoWorkerTestMixin):
+class GoRouterWorkerTestMixin(GoPersistenceMixin):
 
     def _worker_name(self):
         # DummyApplicationWorker has no worker_name attr.
@@ -317,25 +176,6 @@ class GoRouterWorkerTestMixin(GoWorkerTestMixin):
         return self.dispatch_event(msg, 'ri_conn')
 
 
-class AppWorkerTestCase(GoAppWorkerTestMixin, ApplicationTestCase):
-
-    use_riak = True
-
-    def publish_event(self, **kw):
-        event = TransportEvent(**kw)
-        d = self.dispatch(event, rkey=self.rkey('event'))
-        d.addCallback(lambda _result: event)
-        return d
-
-    @inlineCallbacks
-    def get_application(self, config, *args, **kw):
-        if 'worker_name' not in config:
-            config['worker_name'] = self._worker_name()
-        worker = yield super(AppWorkerTestCase, self).get_application(
-            config, *args, **kw)
-        returnValue(worker)
-
-
 class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
 
     use_riak = True
@@ -360,7 +200,7 @@ class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
             config, self.router_class, start=start)
 
 
-class GoWorkerTestCase(GoWorkerTestMixin, VumiWorkerTestCase):
+class GoWorkerTestCase(GoPersistenceMixin, VumiWorkerTestCase):
 
     use_riak = True
 
@@ -373,22 +213,25 @@ class GoWorkerTestCase(GoWorkerTestMixin, VumiWorkerTestCase):
         yield super(GoWorkerTestCase, self).tearDown()
         yield self._persist_tearDown()
 
-    @inlineCallbacks
-    def get_worker(self, config, *args, **kw):
-        if 'worker_name' not in config:
-            config['worker_name'] = self._worker_name()
-        worker = yield super(GoWorkerTestCase, self).get_worker(
-            config, self.worker_class, *args, **kw)
-        returnValue(worker)
+    # @inlineCallbacks
+    # def get_worker(self, config, *args, **kw):
+    #     if 'worker_name' not in config:
+    #         config['worker_name'] = self._worker_name()
+    #     worker = yield super(GoWorkerTestCase, self).get_worker(
+    #         config, self.worker_class, *args, **kw)
+    #     returnValue(worker)
 
 
-class GoTestCase(GoPersistenceMixin, TestCase):
-    timeout = 5
-
+class GoTestCase(GoPersistenceMixin, VumiTestCase):
+    # TODO: Get rid of this (and its subclasses) once persistence stuff is in a
+    # helper.
     use_riak = False
 
     def setUp(self):
+        super(GoTestCase, self).setUp()
         self._persist_setUp()
+        self.add_cleanup(self._persist_tearDown)
 
-    def tearDown(self):
-        return self._persist_tearDown()
+
+class AppWorkerTestCase(GoTestCase):
+    use_riak = True

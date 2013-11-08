@@ -9,6 +9,7 @@ from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
 from go.apps.jsbox.contacts import ContactsResource, GroupsResource
+from go.vumitools.tests.helpers import VumiApiHelper
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
@@ -31,22 +32,18 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     @inlineCallbacks
     def setUp(self):
         super(TestContactsResource, self).setUp()
-        yield self._persist_setUp()
+        self._persist_setUp()
+        self.add_cleanup(self._persist_tearDown)
 
-        # We pass `self` in as the VumiApi object here, because mk_user() just
-        # grabs .account_store off it.
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.contact_store = ContactStore.from_user_account(self.account)
-        yield self.contact_store.contacts.enable_search()
+        self.vumi_helper = VumiApiHelper(self)
+        self.add_cleanup(self.vumi_helper.cleanup)
+
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u"user")
+        self.contact_store = self.user_helper.user_api.contact_store
 
         self.app_worker.user_api.contact_store = self.contact_store
         yield self.create_resource({'delivery_class': u'sms'})
-
-    def tearDown(self):
-        super(TestContactsResource, self).tearDown()
-        return self._persist_tearDown()
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)
@@ -498,23 +495,18 @@ class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
     @inlineCallbacks
     def setUp(self):
         super(TestGroupsResource, self).setUp()
-        yield self._persist_setUp()
+        self._persist_setUp()
+        self.add_cleanup(self._persist_tearDown)
 
-        # We pass `self` in as the VumiApi object here, because mk_user() just
-        # grabs .account_store off it.
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.contact_store = ContactStore.from_user_account(self.account)
-        yield self.contact_store.groups.enable_search()
-        yield self.contact_store.contacts.enable_search()
+        self.vumi_helper = VumiApiHelper(self)
+        self.add_cleanup(self.vumi_helper.cleanup)
+
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u"user")
+        self.contact_store = self.user_helper.user_api.contact_store
 
         self.app_worker.user_api.contact_store = self.contact_store
         yield self.create_resource({})
-
-    def tearDown(self):
-        super(TestGroupsResource, self).tearDown()
-        return self._persist_tearDown()
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)

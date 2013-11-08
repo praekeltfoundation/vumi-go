@@ -12,6 +12,9 @@ from vumi import log
 from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
 
 
+# TODO: None of these should be ApplicationWorker subclasses.
+
+
 class CommandDispatcher(ApplicationWorker):
     """
     An application worker that forwards commands arriving on the Vumi Api queue

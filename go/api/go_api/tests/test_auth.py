@@ -13,6 +13,7 @@ from go.api.go_api.auth import (
     GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper)
 from go.api.go_api.session_manager import SessionManager
 from go.vumitools.tests.utils import GoTestCase
+from go.vumitools.tests.helpers import VumiApiHelper
 
 import mock
 
@@ -89,7 +90,10 @@ class GoUserAuthSessionWrapperTestCase(GoTestCase):
     @inlineCallbacks
     def setUp(self):
         super(GoUserAuthSessionWrapperTestCase, self).setUp()
-        self.vumi_api = yield self.get_vumi_api()
+        self.vumi_helper = VumiApiHelper(self)
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_api = yield self.vumi_helper.get_vumi_api()
 
     def mk_request(self, user=None, password=None):
         request = DummyRequest([''])
