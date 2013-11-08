@@ -554,14 +554,14 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         * transports (these might be opt-out messages)
         * routers
-        * billing worker
+        * the billing worker
 
         And may go to:
 
         * routers
         * conversations
         * the opt-out worker
-        * billing worker
+        * the billing worker
         """
         log.debug("Processing inbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
@@ -570,21 +570,17 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         connector_type = self.connector_type(connector_name)
         src_conn = self.acquire_source(msg, connector_type, self.INBOUND)
 
-        if connector_type == self.TRANSPORT_TAG:
-            if self.billing_inbound_connector:
+        if self.billing_inbound_connector:
+            if connector_type == self.TRANSPORT_TAG:
                 yield self.publish_inbound_to_billing(config, msg)
                 return
+            if connector_type == self.BILLING:
+                # set the src_conn to the transport and keep routing
+                src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
 
-            if msg_mdh.is_optout_message():
-                yield self.publish_inbound_optout(config, msg)
-                return
-
-        if connector_type == self.BILLING:
-            if msg_mdh.is_optout_message():
-                yield self.publish_inbound_optout(config, msg)
-                return
-
-            src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
+        if msg_mdh.is_optout_message():
+            yield self.publish_inbound_optout(config, msg)
+            return
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
@@ -606,13 +602,13 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         * conversations
         * routers
         * the opt-out worker
-        * billing worker
+        * the billing worker
 
         And may go to:
 
         * routers
         * transports
-        * billing worker
+        * the billing worker
         """
         log.debug("Processing outbound: %s" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
