@@ -9,8 +9,9 @@ from vumi.blinkenlights.metrics import MetricManager
 from vumi.config import IConfigData, ConfigText, ConfigDict
 from vumi.connectors import IgnoreMessage
 
+from go.base import utils as base_utils
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
-from go.vumitools.metrics import ConversationMetric, AccountMetric
+from go.vumitools.metrics import AccountMetric
 from go.vumitools.utils import MessageMetadataHelper
 
 
@@ -162,11 +163,6 @@ class GoWorkerMixin(object):
             method_name, args, kwargs))
 
     @inlineCallbacks
-    def collect_metrics(self, user_api, conversation_key):
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
-        yield self.collect_message_metrics(conv)
-
-    @inlineCallbacks
     def reconcile_cache(self, user_api, conversation_key, delta=0.01):
         """Reconcile the cached values for the conversation.
 
@@ -268,37 +264,22 @@ class GoWorkerMixin(object):
     def publish_app_event(self, event):
         self.app_event_publisher.publish_message(event)
 
-    def publish_conversation_metric(self, conv, name, value, agg=None):
-        # NOTE: The plan is have conversation metrics specified as part of the
-        # conversation definition, so not letting them be dynamically created
-        # is intentional. This workaround will go away very soon.
-        class DynamicConversationMetric(ConversationMetric):
-            METRIC_NAME = name
-            AGGREGATORS = [agg] if agg else ConversationMetric.AGGREGATORS
-
-        metric = DynamicConversationMetric(conv)
-        metric.oneshot(self.metrics, value)
-
     def publish_account_metric(self, acc_key, store, name, value, agg=None):
         aggs = [agg] if agg is not None else None
         metric = AccountMetric(acc_key, store, name, aggs)
         metric.oneshot(self.metrics, value)
 
+    def publish_conversation_metrics(self, conv):
+        conv_type = conv.conversation_type
+        conv_def = base_utils.get_conversation_definition(conv_type, conv)
+        return gatherResults([
+            m.oneshot(self.metrics)
+            for m in conv_def.get_metrics(self.vumi_api)])
+
     @inlineCallbacks
-    def collect_message_metrics(self, conversation):
-        """Collect message count metrics.
-
-        This is a utility method for collecting common metrics. It has to be
-        called explicitly from :meth:`collect_metrics`
-        """
-        batch_id = conversation.batch.key
-        sent = yield self.vumi_api.mdb.batch_outbound_count(batch_id)
-        received = yield self.vumi_api.mdb.batch_inbound_count(batch_id)
-
-        self.publish_conversation_metric(
-            conversation, 'messages_sent', sent)
-        self.publish_conversation_metric(
-            conversation, 'messages_received', received)
+    def collect_metrics(self, user_api, conversation_key):
+        conv = yield user_api.get_conversation(conversation_key)
+        yield self.publish_conversation_metrics(conv)
 
     def add_conv_to_msg_options(self, conv, msg_options):
         helper_metadata = msg_options.setdefault('helper_metadata', {})
