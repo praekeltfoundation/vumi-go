@@ -707,7 +707,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
     @inlineCallbacks
-    def test_outbound_message_from_optout_to_transport(self):
+    def test_outbound_message_from_optout_to_billing(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
         msg, reply = yield self.mk_msg_reply(tag=tag)
@@ -724,24 +724,6 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
 
         self.assertEqual(
             [reply], self.get_dispatched_outbound('billing_dispatcher_ro'))
-
-    @inlineCallbacks
-    def test_outbound_optout_from_billing_to_transport(self):
-        yield self.get_dispatcher()
-        tag = ("pool1", "1234")
-        msg, reply = yield self.mk_msg_reply(tag=tag)
-        yield self.dispatch_outbound(reply, 'billing_dispatcher_ri')
-        self.assert_rkeys_used(
-            'billing_dispatcher_ri.outbound', 'sphex.outbound')
-
-        hops = [
-            ['BILLING:OUTBOUND', 'default'],
-            ['TRANSPORT_TAG:pool1:1234', 'default'],
-        ]
-        self.with_md(reply, tag=tag, user_account=self.user_account_key,
-                     hops=hops)
-
-        self.assertEqual([reply], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
     def test_outbound_message_from_conversation_in_app1_to_billing(self):
