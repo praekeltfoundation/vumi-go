@@ -1,5 +1,4 @@
 import time
-
 from mock import patch
 from twisted.internet.defer import succeed, inlineCallbacks
 
@@ -11,7 +10,7 @@ from go.vumitools.metrics import (
     GoMetric, DjangoMetric, TxMetric, ConversationMetric, AccountMetric,
     MessagesSentMetric, MessagesReceivedMetric)
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
-from go.vumitools.tests.utils import (GoWorkerTestCase, GoTestCase)
+from go.vumitools.tests.utils import TxMetricTestBase, GoTestCase
 from go.vumitools.tests.helpers import GoMessageHelper
 from go.base.tests.utils import VumiGoDjangoTestCase
 
@@ -52,10 +51,6 @@ class ToyWorkerConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
     pass
 
 
-class ToyConversationMetric(ConversationMetric):
-    METRIC_NAME = 'dave'
-
-
 class ToyWorker(BaseWorker, GoWorkerMixin):
     CONFIG_CLASS = ToyWorkerConfig
 
@@ -67,6 +62,10 @@ class ToyWorker(BaseWorker, GoWorkerMixin):
 
     def setup_connectors(self):
         pass
+
+
+class ToyConversationMetric(ConversationMetric):
+    METRIC_NAME = 'dave'
 
 
 class TestGoMetric(GoTestCase):
@@ -142,37 +141,11 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
             [('go.django.luke', ('last',), [(1985, 22)])])
 
 
-class TxMetricTestBase(GoWorkerTestCase):
-    worker_class = ToyWorker
-
-    @inlineCallbacks
-    def setUp(self):
-        super(TxMetricTestBase, self).setUp()
-        worker_config = self.mk_config({'metrics_prefix': 'go.'})
-
-        self.worker = yield self.get_worker(worker_config, start=True)
-        self.metrics_manager = self.worker.metrics
-        self.vumi_api = self.worker.vumi_api
-
-        self.user = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = self.vumi_api.get_user_api(self.user.key)
-
-        self.patch(time, 'time', lambda: 1985)
-
-        self.msgs = []
-        self.patch(
-            self.metrics_manager,
-            'publish_message',
-            lambda msg: self.msgs.append(msg))
-
-    def publish_metrics(self):
-        self.metrics_manager._publish_metrics()
-
-
 class TestTxMetric(TxMetricTestBase):
     @inlineCallbacks
     def setUp(self):
         yield super(TestTxMetric, self).setUp()
+        self.patch(time, 'time', lambda: 1985)
         self.metric = ToyTxMetric('some.random.metric')
 
     def test_oneshot(self):
