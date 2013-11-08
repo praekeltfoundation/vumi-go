@@ -15,7 +15,7 @@ from go.vumitools.conversation.definition import ConversationDefinitionBase
 class DummyMetric(ConversationMetric):
     METRIC_NAME = 'dummy_metric'
 
-    def get_value(self):
+    def get_value(self, vumi_api, user_api):
         return 42
 
 
@@ -116,6 +116,10 @@ class TestGoApplicationWorker(AppWorkerTestCase):
     def test_collect_metrics(self):
         yield self.start_conversation(self.conv)
 
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [])
+
         yield self.dispatch_command(
             'collect_metrics',
             conversation_key=self.conv.key,
@@ -126,3 +130,39 @@ class TestGoApplicationWorker(AppWorkerTestCase):
         self.assertEqual(
             self.get_published_metrics(self.app),
             [("%s.dummy_metric" % prefix, 42)])
+
+    @inlineCallbacks
+    def test_conversation_metric_publishing(self):
+        yield self.start_conversation(self.conv)
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [])
+
+        yield self.app.publish_conversation_metrics(
+            self.user_api,
+            self.conv.key)
+
+        prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [("%s.dummy_metric" % prefix, 42)])
+
+    @inlineCallbacks
+    def test_account_metric_publishing(self):
+        yield self.start_conversation(self.conv)
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [])
+
+        yield self.app.publish_account_metric(
+            self.user_account.key,
+            'some-store',
+            'some-metric',
+            42)
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [("campaigns.test-0-user.stores.some-store.some-metric", 42)])
