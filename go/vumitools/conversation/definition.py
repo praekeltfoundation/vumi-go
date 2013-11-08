@@ -1,3 +1,6 @@
+from go.vumitools.metrics import MessagesSentMetric, MessagesReceivedMetric
+
+
 class ConversationDefinitionBase(object):
     """Definition of conversation lifecycle and possible actions.
 
@@ -13,6 +16,10 @@ class ConversationDefinitionBase(object):
 
     actions = ()
 
+    metrics = (
+        MessagesSentMetric,
+        MessagesReceivedMetric)
+
     # set to an sub-class of go.api.go_api.action_dispatcher
     # .ConversationActionDispatcher to provide API methods
     api_dispatcher_cls = None
@@ -22,6 +29,9 @@ class ConversationDefinitionBase(object):
 
     def get_actions(self):
         return [action(self.conv) for action in self.actions]
+
+    def get_metrics(self, vumi_api):
+        return [metric(self.conv, vumi_api) for metric in self.metrics]
 
     def configured_endpoints(self, config):
         return []
