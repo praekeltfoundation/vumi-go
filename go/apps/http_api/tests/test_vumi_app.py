@@ -244,127 +244,6 @@ class OutboundHttpWorkerTestCase(AppWorkerTestCase):
             'basic realm="Conversation Realm"'])
 
     @inlineCallbacks
-    def test_send_to(self):
-        msg = {
-            'to_addr': '+2345',
-            'content': 'foo',
-            'message_id': 'evil_id',
-        }
-
-        # TaggingMiddleware.add_tag_to_msg(msg, self.tag)
-
-        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        response = yield http_request_full(url, json.dumps(msg),
-                                           self.auth_headers, method='PUT')
-
-        self.assertEqual(response.code, http.OK)
-        put_msg = json.loads(response.delivered_body)
-
-        [sent_msg] = self.get_dispatched_messages()
-        self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
-        self.assertEqual(sent_msg['helper_metadata'], {
-            'go': {
-                'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
-                'user_account': self.account.key,
-            },
-        })
-        # We do not respect the message_id that's been given.
-        self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
-        self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
-        self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
-        self.assertEqual(sent_msg['from_addr'], None)
-
-    @inlineCallbacks
-    def test_invalid_in_reply_to(self):
-        msg = {
-            'content': 'foo',
-            'in_reply_to': '1',  # this doesn't exist
-        }
-
-        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        response = yield http_request_full(url, json.dumps(msg),
-                                           self.auth_headers, method='PUT')
-        self.assertEqual(response.code, http.BAD_REQUEST)
-
-    @inlineCallbacks
-    def test_invalid_in_reply_to_with_missing_conversation_key(self):
-        # create a message with no (None) conversation
-        inbound_msg = self.msg_helper.make_inbound('in 1', message_id='msg-1')
-        yield self.msg_helper.mdb.add_inbound_message(inbound_msg)
-
-        msg = {
-            'content': 'foo',
-            'in_reply_to': inbound_msg['message_id'],
-        }
-
-        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        with LogCatcher(message='Invalid reply to message <Message .*>'
-                        ' which has no conversation key') as lc:
-            response = yield http_request_full(url, json.dumps(msg),
-                                               self.auth_headers, method='PUT')
-            [error_log] = lc.messages()
-
-        self.assertEqual(response.code, http.BAD_REQUEST)
-        self.assertTrue(inbound_msg['message_id'] in error_log)
-
-    @inlineCallbacks
-    def test_in_reply_to(self):
-        inbound_msg = yield self.msg_helper.make_stored_inbound(
-            self.conversation, 'in 1', message_id='1')
-
-        msg = {
-            'content': 'foo',
-            'in_reply_to': inbound_msg['message_id'],
-            'message_id': 'evil_id',
-            'session_event': 'evil_event',
-        }
-
-        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        response = yield http_request_full(url, json.dumps(msg),
-                                           self.auth_headers, method='PUT')
-
-        put_msg = json.loads(response.delivered_body)
-        self.assertEqual(response.code, http.OK)
-
-        [sent_msg] = self.get_dispatched_messages()
-        self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
-        self.assertEqual(sent_msg['helper_metadata'], {
-            'go': {
-                'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
-                'user_account': self.account.key,
-            },
-        })
-        # We do not respect the message_id that's been given.
-        self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
-        self.assertNotEqual(sent_msg['session_event'], msg['session_event'])
-        self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
-        self.assertEqual(sent_msg['to_addr'], inbound_msg['from_addr'])
-        self.assertEqual(sent_msg['from_addr'], '9292')
-
-    @inlineCallbacks
-    def test_metric_publishing(self):
-
-        metric_data = [
-            ("vumi.test.v1", 1234, 'SUM'),
-            ("vumi.test.v2", 3456, 'AVG'),
-        ]
-
-        url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
-        response = yield http_request_full(
-            url, json.dumps(metric_data), self.auth_headers, method='PUT')
-
-        self.assertEqual(response.code, http.OK)
-
-        prefix = "campaigns.test-0-user.stores.metrics_store"
-
-        self.assertEqual(
-            self.get_published_metrics(self.app),
-            [("%s.vumi.test.v1" % prefix, 1234),
-             ("%s.vumi.test.v2" % prefix, 3456)])
-
-    @inlineCallbacks
     def test_concurrency_limits(self):
         config = yield self.app.get_config(None)
         concurrency = config.concurrency_limit
@@ -761,3 +640,45 @@ class InboundHttpWorkerTestCase(AppWorkerTestCase):
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
         self.assertEqual(response.code, http.BAD_REQUEST)
+
+    @inlineCallbacks
+    def test_invalid_in_reply_to_with_missing_conversation_key(self):
+        # create a message with no (None) conversation
+        inbound_msg = self.msg_helper.make_inbound('in 1', message_id='msg-1')
+        yield self.msg_helper.mdb.add_inbound_message(inbound_msg)
+
+        msg = {
+            'content': 'foo',
+            'in_reply_to': inbound_msg['message_id'],
+        }
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        with LogCatcher(message='Invalid reply to message <Message .*>'
+                        ' which has no conversation key') as lc:
+            response = yield http_request_full(url, json.dumps(msg),
+                                               self.auth_headers, method='PUT')
+            [error_log] = lc.messages()
+
+        self.assertEqual(response.code, http.BAD_REQUEST)
+        self.assertTrue(inbound_msg['message_id'] in error_log)
+
+    @inlineCallbacks
+    def test_metric_publishing(self):
+
+        metric_data = [
+            ("vumi.test.v1", 1234, 'SUM'),
+            ("vumi.test.v2", 3456, 'AVG'),
+        ]
+
+        url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(
+            url, json.dumps(metric_data), self.auth_headers, method='PUT')
+
+        self.assertEqual(response.code, http.OK)
+
+        prefix = "campaigns.test-0-user.stores.metrics_store"
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [("%s.vumi.test.v1" % prefix, 1234),
+             ("%s.vumi.test.v2" % prefix, 3456)])
