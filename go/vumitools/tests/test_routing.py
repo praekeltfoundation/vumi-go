@@ -660,12 +660,13 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             [msg], self.get_dispatched_inbound('app1'))
 
     @inlineCallbacks
-    def test_inbound_message_from_transport_to_optout(self):
+    def test_inbound_optout_message_from_transport_to_billing(self):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
         msg['helper_metadata']['optout'] = {'optout': True}
         yield self.dispatch_inbound(msg, 'sphex')
-        self.assert_rkeys_used('sphex.inbound', 'billing_dispatcher_ri.inbound')
+        self.assert_rkeys_used(
+            'sphex.inbound', 'billing_dispatcher_ri.inbound')
         hops = [
             ['TRANSPORT_TAG:pool1:1234', 'default'],
             ['BILLING:INBOUND', 'default'],
