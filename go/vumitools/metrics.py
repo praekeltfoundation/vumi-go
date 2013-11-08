@@ -87,19 +87,6 @@ class TxMetric(GoMetric):
         manager.oneshot(self.metric, (yield value))
 
 
-class ConversationMetric(TxMetric):
-    METRIC_NAME = None
-
-    def __init__(self, conv):
-        super(ConversationMetric, self).__init__(self.make_name(conv))
-        self.conv = conv
-
-    @classmethod
-    def make_name(cls, conv):
-        return "campaigns.%s.conversations.%s.%s" % (
-            conv.user_account.key, conv.key, cls.METRIC_NAME)
-
-
 class AccountMetric(TxMetric):
     def __init__(self, account_key, store_name, metric_name, aggregators=None):
         name = self.make_name(account_key, store_name, metric_name)
@@ -109,3 +96,33 @@ class AccountMetric(TxMetric):
     def make_name(self, account_key, store_name, metric_name):
         return "campaigns.%s.stores.%s.%s" % (
             account_key, store_name, metric_name)
+
+
+class ConversationMetric(TxMetric):
+    METRIC_NAME = None
+
+    def __init__(self, conv, vumi_api):
+        super(ConversationMetric, self).__init__(self.make_name(conv))
+        self.vumi_api = vumi_api
+        self.conv = conv
+
+    @classmethod
+    def make_name(cls, conv):
+        return "campaigns.%s.conversations.%s.%s" % (
+            conv.user_account.key, conv.key, cls.METRIC_NAME)
+
+
+class MessagesSentMetric(ConversationMetric):
+    METRIC_NAME = 'messages_sent'
+
+    def get_value(self):
+        batch_id = self.conv.batch.key
+        return self.vumi_api.mdb.batch_outbound_count(batch_id)
+
+
+class MessagesReceivedMetric(ConversationMetric):
+    METRIC_NAME = 'messages_received'
+
+    def get_value(self):
+        batch_id = self.conv.batch.key
+        return self.vumi_api.mdb.batch_inbound_count(batch_id)

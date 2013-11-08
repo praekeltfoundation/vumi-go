@@ -8,9 +8,11 @@ from vumi.blinkenlights.metrics import LAST
 
 from go.base.amqp import AmqpConnection
 from go.vumitools.metrics import (
-    GoMetric, DjangoMetric, TxMetric, ConversationMetric, AccountMetric)
+    GoMetric, DjangoMetric, TxMetric, ConversationMetric, AccountMetric,
+    MessagesSentMetric, MessagesReceivedMetric)
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.tests.utils import (GoWorkerTestCase, GoTestCase)
+from go.vumitools.tests.helpers import GoMessageHelper
 from go.base.tests.utils import VumiGoDjangoTestCase
 
 
@@ -220,7 +222,7 @@ class TestConversationMetric(TxMetricTestBase):
         self.conv = yield self.create_conversation(
             conversation_type=u'some_conversation')
 
-        self.metric = ToyConversationMetric(self.conv)
+        self.metric = ToyConversationMetric(self.conv, self.vumi_api)
 
     def test_name_construction(self):
         self.assertEqual(
@@ -238,3 +240,43 @@ class TestAccountMetric(TxMetricTestBase):
         self.assertEqual(
             self.metric.get_full_name(),
             u'go.campaigns.test-0-user.stores.store-1.susan')
+
+
+class TestMessagesSentMetric(TxMetricTestBase):
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestMessagesSentMetric, self).setUp()
+
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+
+        self.conv = yield self.create_conversation(
+            conversation_type=u'some_conversation')
+
+        self.metric = MessagesSentMetric(self.conv, self.vumi_api)
+
+    @inlineCallbacks
+    def test_value_retrieval(self):
+        self.assertEqual((yield self.metric.get_value()), 0)
+        yield self.msg_helper.make_stored_outbound(self.conv, "out 1")
+        yield self.msg_helper.make_stored_outbound(self.conv, "out 2")
+        self.assertEqual((yield self.metric.get_value()), 2)
+
+
+class TestMessagesReceivedMetric(TxMetricTestBase):
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestMessagesReceivedMetric, self).setUp()
+
+        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+
+        self.conv = yield self.create_conversation(
+            conversation_type=u'some_conversation')
+
+        self.metric = MessagesReceivedMetric(self.conv, self.vumi_api)
+
+    @inlineCallbacks
+    def test_value_retrieval(self):
+        self.assertEqual((yield self.metric.get_value()), 0)
+        yield self.msg_helper.make_stored_inbound(self.conv, "in 1")
+        yield self.msg_helper.make_stored_inbound(self.conv, "in 2")
+        self.assertEqual((yield self.metric.get_value()), 2)
