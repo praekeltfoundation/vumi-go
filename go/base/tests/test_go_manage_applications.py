@@ -21,7 +21,7 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
     def set_permissions(self, user, enabled, application):
         command = go_manage_application.Command()
         command.handle_validated(**{
-            'email-address': user.username,
+            'email-address': user.email,
             'application-module': application,
             'enable': enabled,
             'disable': not enabled,

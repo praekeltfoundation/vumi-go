@@ -26,7 +26,7 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
                    for sc, se, dc, de in expected_entries))
 
     def handle_command(self, **options):
-        options.setdefault('email-address', self.django_user.username)
+        options.setdefault('email-address', self.django_user.email)
         options.setdefault('show', False)
         options.setdefault('clear', False)
         options.setdefault('add', ())

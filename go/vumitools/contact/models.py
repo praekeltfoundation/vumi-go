@@ -281,6 +281,14 @@ class ContactStore(PerAccountStore):
         opt_out = yield opt_out_store.get_opt_out('msisdn', contact.msisdn)
         returnValue(opt_out)
 
+    _SUPPORTED_DELIVERY_CLASSES = set([
+        'sms', 'ussd', 'gtalk', 'twitter',
+    ])
+
+    def delivery_class_supported(self, delivery_class):
+        """Return True if the delivery class is supported."""
+        return delivery_class in self._SUPPORTED_DELIVERY_CLASSES
+
     def _contact_field_for_addr(self, delivery_class, addr):
         # TODO: change when we have proper address types in vumi
         if delivery_class in ('sms', 'ussd'):

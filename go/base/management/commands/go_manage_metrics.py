@@ -1,9 +1,9 @@
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_user_by_email
 
 
 class Command(BaseCommand):
@@ -39,24 +39,20 @@ class Command(BaseCommand):
         self.handle_validated(*args, **options)
 
     def handle_validated(self, *args, **options):
-        try:
-            email_address = options['email-address']
-            enable = options['enable']
-            disable = options['disable']
+        email_address = options['email-address']
+        enable = options['enable']
+        disable = options['disable']
 
-            if (enable and disable) or not (enable or disable):
-                raise CommandError(
-                    'Please specify either --enable or --disable.')
+        if (enable and disable) or not (enable or disable):
+            raise CommandError(
+                'Please specify either --enable or --disable.')
 
-            user = User.objects.get(username=email_address)
-            user_api = vumi_api_for_user(user)
-            user_account_key = user_api.user_account_key
-            redis = user_api.api.redis
+        user = get_user_by_email(email_address)
+        user_api = vumi_api_for_user(user)
+        user_account_key = user_api.user_account_key
+        redis = user_api.api.redis
 
-            if enable:
-                redis.sadd('metrics_accounts', user_account_key)
-            elif disable:
-                redis.srem('metrics_accounts', user_account_key)
-
-        except User.DoesNotExist, e:
-            raise CommandError(e)
+        if enable:
+            redis.sadd('metrics_accounts', user_account_key)
+        elif disable:
+            redis.srem('metrics_accounts', user_account_key)

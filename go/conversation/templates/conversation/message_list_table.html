@@ -15,10 +15,16 @@
             {% get_contact_for_message request.user_api message message_direction as contact %}
             <td><i class="glyphicon glyphicon-repeat"></i> {{conversation.delivery_class}}</td>
             <td>
+                {% if contact != None %}
                 <h6><a href="{% url 'contacts:person' person_key=contact.key %}">{{contact}}</a> via {{message.transport_type}} - {{message.timestamp}}</h6>
+                {% elif message_direction == 'inbound' %}
+                <h6><i>{{message.user}}</i> via {{message.transport_type}} (unsupported) - {{message.timestamp}}</h6>
+                {% else %}
+                <h6><i>{{message.to_addr}}</i> via {{message.transport_type}} (unsupported) - {{message.timestamp}}</h6>
+                {% endif %}
                 <p>{{message.content}}</p>
             </td>
-            {% if message_direction == 'inbound' and conversation.has_channel_supporting_generic_sends %}
+            {% if message_direction == 'inbound' and contact != None and conversation.has_channel_supporting_generic_sends %}
             <td>
                 <a href="#reply-{{message.message_id}}" class="btn btn-default" title="Reply" data-toggle='modal'><i class="glyphicon glyphicon-repeat"></i> Reply</a>
                 <div id="reply-{{message.message_id}}" class="modal fade" role="dialog">

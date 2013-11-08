@@ -111,7 +111,6 @@ class GoPersistenceMixin(PersistenceMixin):
 
     def mk_config(self, config):
         config = super(GoPersistenceMixin, self).mk_config(config)
-        config.setdefault('metrics_prefix', type(self).__module__)
         return config
 
     @PersistenceMixin.sync_or_async
@@ -183,18 +182,10 @@ class GoWorkerTestMixin(GoPersistenceMixin):
     def get_dispatched_app_events(self):
         return self._amqp.get_messages('vumi', 'vumi.event')
 
-    def poll_metrics(self, assert_prefix=None, app=None):
-        if app is None:
-            app = self.app
-        values = {}
-        if assert_prefix is not None:
-            assert_prefix += '.'
-        for name, metric in app.metrics._metrics_lookup.items():
-            if assert_prefix is not None:
-                self.assertTrue(name.startswith(assert_prefix))
-                name = name[len(assert_prefix):]
-            values[name] = [v for _, v in metric.poll()]
-        return values
+    def get_published_metrics(self, worker):
+        return [
+            (metric.name, value)
+            for metric, ((time, value),) in worker.metrics._oneshot_msgs]
 
     @inlineCallbacks
     def create_conversation(self, started=False, **kw):

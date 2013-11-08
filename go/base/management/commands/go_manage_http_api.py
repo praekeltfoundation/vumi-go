@@ -2,9 +2,9 @@ from uuid import uuid4
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_user_by_email
 
 
 class Command(BaseCommand):
@@ -42,11 +42,7 @@ class Command(BaseCommand):
     allowed_conversation_types = ['http_api', 'jsbox']
 
     def handle(self, *args, **options):
-        try:
-            user = User.objects.get(email=options['email_address'])
-        except User.DoesNotExist, e:
-            raise CommandError(e)
-
+        user = get_user_by_email(options['email_address'])
         user_api = vumi_api_for_user(user)
         conversation = user_api.get_wrapped_conversation(
             options['conversation_key'])

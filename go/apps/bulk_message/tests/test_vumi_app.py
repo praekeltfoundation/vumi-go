@@ -224,12 +224,13 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         yield self.dispatch_command(
             'collect_metrics', conversation_key=conv.key,
             user_account_key=self.user_account.key)
-        metrics = self.poll_metrics(
-            '%s.conversations.%s' % (self.user_account.key, conv.key))
-        self.assertEqual({
-                u'messages_sent': [2],
-                u'messages_received': [1],
-                }, metrics)
+
+        prefix = "campaigns.test-0-user.conversations.%s" % conv.key
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [("%s.messages_sent" % prefix, 2),
+             ("%s.messages_received" % prefix, 1)])
 
     @inlineCallbacks
     def test_reconcile_cache(self):

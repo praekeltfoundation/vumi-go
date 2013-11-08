@@ -1,9 +1,9 @@
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_user_by_email
 from go.vumitools.routing_table import GoConnector, RoutingTable
 
 
@@ -56,10 +56,7 @@ class Command(BaseCommand):
             raise CommandError('Please provide exactly one of: %s' % (
                 ['--%s' % c for c in self.CONFLICTING_OPTIONS],))
 
-        try:
-            user = User.objects.get(username=options['email-address'])
-        except User.DoesNotExist, e:
-            raise CommandError(e)
+        user = get_user_by_email(options['email-address'])
         user_api = vumi_api_for_user(user)
 
         if options['show']:

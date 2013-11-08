@@ -5,25 +5,13 @@ from twisted.internet.defer import (
 from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
-from vumi.blinkenlights.metrics import MetricManager, Metric, LAST
+from vumi.blinkenlights.metrics import MetricManager
 from vumi.config import IConfigData, ConfigText, ConfigDict
 from vumi.connectors import IgnoreMessage
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
+from go.vumitools.metrics import ConversationMetric, AccountMetric
 from go.vumitools.utils import MessageMetadataHelper
-
-
-class OneShotMetricManager(MetricManager):
-    # TODO: Replace this with appropriate functionality on MetricManager and
-    # actions triggered by conversations ending.
-
-    def _clear_metrics(self):
-        self._metrics = []
-        self._metrics_lookup = {}
-
-    def _publish_metrics(self):
-        super(OneShotMetricManager, self)._publish_metrics()
-        self._clear_metrics()
 
 
 class GoApplicationConfigData(object):
@@ -48,7 +36,7 @@ class GoWorkerConfigMixin(object):
     worker_name = ConfigText(
         "Name of this worker.", required=True, static=True)
     metrics_prefix = ConfigText(
-        "Metric name prefix.", required=True, static=True)
+        "Metric name prefix.", default='go.', static=True)
     riak_manager = ConfigDict("Riak config.", static=True)
     redis_manager = ConfigDict("Redis config.", static=True)
 
@@ -105,7 +93,7 @@ class GoWorkerMixin(object):
             self.worker_name = config.worker_name
 
         self.metrics = yield self.start_publisher(
-            OneShotMetricManager, config.metrics_prefix)
+            MetricManager, config.metrics_prefix)
 
         yield self._go_setup_vumi_api(config)
         yield self._go_setup_event_publisher(config)
@@ -280,25 +268,21 @@ class GoWorkerMixin(object):
     def publish_app_event(self, event):
         self.app_event_publisher.publish_message(event)
 
-    def publish_metric(self, name, value, agg=None):
-        if agg is None:
-            agg = LAST
-        if name not in self.metrics:
-            metric = Metric(name, [agg])
-            self.metrics.register(metric)
-        else:
-            metric = self.metrics[name]
-        metric.set(value)
+    def publish_conversation_metric(self, conv, name, value, agg=None):
+        # NOTE: The plan is have conversation metrics specified as part of the
+        # conversation definition, so not letting them be dynamically created
+        # is intentional. This workaround will go away very soon.
+        class DynamicConversationMetric(ConversationMetric):
+            METRIC_NAME = name
+            AGGREGATORS = [agg] if agg else ConversationMetric.AGGREGATORS
 
-    def publish_conversation_metric(self, conversation, name, value, agg=None):
-        name = "%s.conversations.%s.%s" % (
-            conversation.user_account.key, conversation.key, name)
-        self.publish_metric(name, value, agg)
+        metric = DynamicConversationMetric(conv)
+        metric.oneshot(self.metrics, value)
 
-    def publish_account_metric(self, user_account_key, store, name, value,
-                               agg=None):
-        name = "%s.stores.%s.%s" % (user_account_key, store, name)
-        self.publish_metric(name, value, agg)
+    def publish_account_metric(self, acc_key, store, name, value, agg=None):
+        aggs = [agg] if agg is not None else None
+        metric = AccountMetric(acc_key, store, name, aggs)
+        metric.oneshot(self.metrics, value)
 
     @inlineCallbacks
     def collect_message_metrics(self, conversation):
