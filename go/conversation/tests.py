@@ -636,6 +636,36 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.add_message_to_conv(conv, reply=True)
         assert_messages(2)
 
+    def test_message_list_with_bad_transport_type_inbound(self):
+        # inbound messages could have an unsupported transport_type
+        # if the transport sent something we don't yet support
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+
+        self.add_message_to_conv(conv, transport_type="bad horse")
+
+        r_in = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'inbound'})
+
+        self.assertContains(r_in, 'from-addr', 1)
+        self.assertContains(r_in, 'bad horse (unsupported)', 1)
+
+    def test_message_list_with_bad_transport_type_outbound(self):
+        # unsent message don't have their transport type set to something
+        # that a contact can be created for
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+
+        self.add_message_to_conv(conv, reply=True, transport_type="bad horse")
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+
+        self.assertContains(r_out, 'from-addr', 1)
+        self.assertContains(r_out, 'bad horse (unsupported)', 1)
+
     def test_reply_on_inbound_messages_only(self):
         # Fake the routing setup.
         self.monkey_patch(

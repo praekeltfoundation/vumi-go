@@ -237,12 +237,13 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             messages.append((msg_in, msg_out, ack))
         return messages
 
-    def add_message_to_conv(self, conversation, reply=False, sensitive=False):
+    def add_message_to_conv(self, conversation, reply=False, sensitive=False,
+                            transport_type='sms'):
         msg = TransportUserMessage(
             to_addr='9292',
             from_addr='from-addr',
             content='hello',
-            transport_type='sms',
+            transport_type=transport_type,
             transport_name='sphex')
         if sensitive:
             msg['helper_metadata']['go'] = {'sensitive': True}

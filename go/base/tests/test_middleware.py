@@ -3,7 +3,6 @@ import json
 
 from django.test import TestCase
 from django.test.client import RequestFactory
-from django.test.utils import override_settings
 from django.http import HttpResponse
 
 from go.api.go_api.session_manager import SessionManager
@@ -42,7 +41,6 @@ class VumiUserApiMiddlewareTestCase(VumiGoDjangoTestCase):
 
 class ResponseTimeMiddlewareTestcase(TestCase):
 
-    @override_settings(METRICS_PREFIX='test.prefix.')
     def setUp(self):
         self.factory = RequestFactory()
         self.mw = ResponseTimeMiddleware()
@@ -73,7 +71,7 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         command = json.loads(args[0])
         [datapoint] = command['datapoints']
         self.assertEqual(datapoint[0],
-            'test.prefix.django.contrib.auth.views.login.get')
+            'go.django.django.contrib.auth.views.login.get')
         self.assertEqual(datapoint[1], ['avg'])
         self.assertTrue(datapoint[2])
         self.assertEqual(kwargs['routing_key'], 'vumi.metrics')
@@ -97,4 +95,4 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         command = json.loads(args[0])
         [datapoint] = command['datapoints']
         self.assertEqual(datapoint[0],
-            'test.prefix.django.contrib.auth.views.login.post')
+            'go.django.django.contrib.auth.views.login.post')

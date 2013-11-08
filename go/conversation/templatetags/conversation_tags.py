@@ -41,6 +41,8 @@ def get_contact_for_message(user_api, message, direction='inbound'):
     # retrieving a contact return something useful for debugging (i.e.
     # the `transport_type` that failed to be looked up).
     delivery_class = user_api.delivery_class_for_msg(message)
+    if not user_api.contact_store.delivery_class_supported(delivery_class):
+        return None
     user = message.user() if direction == 'inbound' else message['to_addr']
     return user_api.contact_store.contact_for_addr(
         delivery_class, unicode(user), create=True)
