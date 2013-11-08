@@ -484,6 +484,27 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
+    def tag_for_reply(self, reply):
+        """Look up the original message and return its tag.
+
+        Used to route replies from the opt-out worker back to the transport
+        the original message came from.self
+
+        Raises UnroutableMessageError if the tag cannout be determined.
+        """
+        orig_msg = yield self.find_message_for_reply(reply)
+        if orig_msg is None:
+            raise UnroutableMessageError(
+                "Could not find original message for reply from"
+                " the opt-out worker", reply)
+        orig_msg_mdh = self.get_metadata_helper(orig_msg)
+        if orig_msg_mdh.tag is None:
+            raise UnroutableMessageError(
+                "Could not find tag on original message for reply"
+                " from the opt-out worker", reply)
+        returnValue(orig_msg_mdh.tag)
+
+    @inlineCallbacks
     def publish_outbound_optout(self, config, msg):
         """Publish a reply from the opt-out worker.
 
@@ -491,17 +512,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         sending the reply out via the same tag the original
         message came in on.
         """
-        orig_msg = yield self.find_message_for_reply(msg)
-        if orig_msg is None:
-            raise UnroutableMessageError(
-                "Could not find original message for reply from"
-                " the opt-out worker", msg)
-        orig_msg_mdh = self.get_metadata_helper(orig_msg)
-        if orig_msg_mdh.tag is None:
-            raise UnroutableMessageError(
-                "Could not find tag on original message for reply"
-                " from the opt-out worker", msg)
-        dst_conn = GoConnector.for_transport_tag(*orig_msg_mdh.tag)
+        tag = yield self.tag_for_reply(msg)
+        dst_conn = GoConnector.for_transport_tag(*tag)
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, [str(dst_conn), 'default'], self.OUTBOUND)
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
@@ -516,8 +528,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
-    def publish_outbound_to_billing(self, config, msg):
+    def publish_outbound_to_billing(self, config, msg, tag):
         """Publish an outbound message to the billing worker."""
+        msg_mdh = self.get_metadata_helper(msg)
+        msg_mdh.set_tag(tag)
         target = (str(GoConnector.for_billing(self.OUTBOUND)), 'default')
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.OUTBOUND)
@@ -611,15 +625,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             if connector_type in (self.CONVERSATION, self.ROUTER):
                 msg_mdh.reset_paid()
             elif connector_type == self.OPT_OUT:
-                yield self.publish_outbound_to_billing(config, msg)
+                tag = yield self.tag_for_reply(msg)
+                yield self.publish_outbound_to_billing(config, msg, tag)
                 return
             elif connector_type == self.BILLING:
-                # TODO: this should check where the message came from, not
-                #       what metadata it has
-                if msg_mdh.is_optout_message():
-                    yield self.publish_outbound_optout(config, msg)
-                else:
-                    yield self.publish_outbound_from_billing(config, msg)
+                yield self.publish_outbound_from_billing(config, msg)
                 return
         else:
             if connector_type == self.OPT_OUT:
@@ -635,8 +645,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if self.billing_outbound_connector:
             target_conn = GoConnector.parse(target[0])
             if target_conn.ctype == target_conn.TRANSPORT_TAG:
-                msg_mdh.set_tag([target_conn.tagpool, target_conn.tagname])
-                yield self.publish_outbound_to_billing(config, msg)
+                tag = [target_conn.tagpool, target_conn.tagname]
+                yield self.publish_outbound_to_billing(config, msg, tag)
                 return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
