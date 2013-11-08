@@ -592,10 +592,6 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 connector_name, msg))
             return
 
-        if connector_type == self.BILLING:
-            yield self.publish_inbound_from_billing(config, msg, target)
-            return
-
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.INBOUND)
 
