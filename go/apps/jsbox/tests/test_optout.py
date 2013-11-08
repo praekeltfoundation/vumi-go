@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from mock import Mock
+
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.tests.test_sandbox import (
@@ -8,6 +9,10 @@ from vumi.application.tests.test_sandbox import (
 
 from go.apps.jsbox.optout import OptoutResource
 from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.account import AccountStore
+from go.vumitools.contact import ContactStore
+from go.vumitools.opt_out import OptOutStore
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class StubbedAppWorker(DummyAppWorker):
@@ -29,9 +34,63 @@ class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
         super(OptoutResourceTestCase, self).setUp()
         yield self._persist_setUp()
 
+        self.msg_helper = GoMessageHelper()
+
+        # We pass `self` in as the VumiApi object here, because mk_user() just
+        # grabs .account_store off it.
+        self.manager = self.get_riak_manager()
+        self.account_store = AccountStore(self.manager)
+        self.account = yield self.mk_user(self, u'user')
+        self.contact_store = ContactStore.from_user_account(self.account)
+        self.optout_store = OptOutStore.from_user_account(self.account)
+        yield self.contact_store.contacts.enable_search()
+
+        yield self.create_resource({})
+
+        self.user_api = self.app_worker.user_api
+        self.user_api.contact_store = self.contact_store
+        self.user_api.optout_store = self.optout_store
+
+        self.contact1 = yield self.new_contact(
+            name=u'A',
+            surname=u'Person',
+            msisdn=u'+27123456789')
+
+        self.contact2 = yield self.new_contact(
+            name=u'B',
+            surname=u'Person',
+            msisdn=u'+27000000000')
+
     def tearDown(self):
         super(OptoutResourceTestCase, self).tearDown()
         return self._persist_tearDown()
 
-    def test_something(self):
-        True
+    def optout(self, msisdn):
+        return self.optout_store.new_opt_out(
+            'msisdn', msisdn, self.msg_helper.make_inbound('foo'))
+
+    @inlineCallbacks
+    def new_contact(self, **fields):
+        groups = fields.pop('groups', [])
+        contact = yield self.contact_store.new_contact(**fields)
+        for group in groups:
+            contact.add_to_group(group)
+        yield contact.save()
+        returnValue(contact)
+
+    @inlineCallbacks
+    def test_handle_status_optedout(self):
+        yield self.optout(self.contact1.msisdn)
+        reply = yield self.dispatch_command(
+            'status', msisdn=self.contact1.msisdn)
+
+        self.assertTrue(reply['success'])
+        self.assertTrue(reply['opted_out'])
+
+    @inlineCallbacks
+    def test_handle_status_optedin(self):
+        reply = yield self.dispatch_command(
+            'status', msisdn=self.contact1.msisdn)
+
+        self.assertTrue(reply['success'])
+        self.assertFalse(reply['opted_out'])
