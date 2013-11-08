@@ -131,9 +131,9 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
             msg['datapoints'],
             [('go.django.luke', ('last',), [(1985, 23)])])
 
-    def test_oneshot_with_explicitly_given_value(self):
+    def test_oneshot_with_value(self):
         self.assertEqual(self.msgs, [])
-        self.metric.oneshot(22)
+        self.metric.oneshot_with_value(22)
 
         [msg] = self.msgs
         self.assertEqual(
@@ -174,8 +174,8 @@ class TestTxMetric(TxMetricTestBase):
             msg['datapoints'],
             [('go.some.random.metric', ('last',), [(1985, 42)])])
 
-    def test_oneshot_for_explicitly_given_values(self):
-        self.metric.oneshot(self.metrics_manager, 9)
+    def test_oneshot_with_value(self):
+        self.metric.oneshot_with_value(self.metrics_manager, 9)
 
         self.assertEqual(self.msgs, [])
 

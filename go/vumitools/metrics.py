@@ -35,9 +35,17 @@ class GoMetric(object):
     def get_aggregators(self):
         return [Aggregator.from_name(name) for name in self.metric.aggs]
 
+    def oneshot_with_value(self, value):
+        """
+        Should do a once-off publish for the metric using the given value.
+        """
+        raise NotImplementedError(
+            "GoMetric.oneshot_with_value() needs to be overriden")
+
     def oneshot(self, *a, **kw):
         """
-        Should do a once-off publish for the metric.
+        Should do a once-off publish for the metric using `get_value()` to
+        calculate the metric's value.
         """
         raise NotImplementedError("GoMetric.oneshot() needs to be overriden")
 
@@ -55,20 +63,26 @@ class DjangoMetric(GoMetric):
     def make_name(self, metric_name):
         return "django.%s" % (metric_name,)
 
-    def oneshot(self, value=None, connection=None):
+    def oneshot_with_value(self, value, connection=None):
         """
-        Does a once-off publish for the metric using an `AmqpConnection`.
+        Does a once-off publish for the metric using an `AmqpConnection` and
+        the given metric value.
         """
+
         if connection is None:
             connection = amqp.connection
-
-        if value is None:
-            value = self.get_value()
 
         connection.publish_metric(
             self.get_full_name(),
             self.get_aggregators(),
             value)
+
+    def oneshot(self, connection=None):
+        """
+        Obtains a value using `get_value()`, then does a once-off publish for
+        the metric using an `AmqpConnection`.
+        """
+        return self.oneshot_with_value(self.get_value(), connection)
 
 
 class TxMetric(GoMetric):
@@ -76,15 +90,13 @@ class TxMetric(GoMetric):
     Base for a metric publised in *Twisted land*.
     """
 
+    def oneshot_with_value(self, manager, value):
+        manager.oneshot(self.metric, value)
+
     @inlineCallbacks
-    def oneshot(self, manager, value=None, *val_args, **val_kwargs):
-        """
-        Does a once-off publish for the metric using a `MetricManager` (as
-        opposed to relying on the manager to do periodic publishing).
-        """
-        if value is None:
-            value = self.get_value(*val_args, **val_kwargs)
-        manager.oneshot(self.metric, (yield value))
+    def oneshot(self, manager, *value_args, **value_kwargs):
+        value = yield self.get_value(*value_args, **value_kwargs)
+        self.oneshot_with_value(manager, value)
 
 
 class AccountMetric(TxMetric):
@@ -101,14 +113,18 @@ class AccountMetric(TxMetric):
 class ConversationMetric(TxMetric):
     METRIC_NAME = None
 
-    def __init__(self, conv):
-        super(ConversationMetric, self).__init__(self.make_name(conv))
+    def __init__(self, conv, metric_name=None):
+        if metric_name is None:
+            metric_name = self.METRIC_NAME
+
+        name = self.make_name(conv, metric_name)
+        super(ConversationMetric, self).__init__(name)
         self.conv = conv
 
     @classmethod
-    def make_name(cls, conv):
+    def make_name(cls, conv, metric_name):
         return "campaigns.%s.conversations.%s.%s" % (
-            conv.user_account.key, conv.key, cls.METRIC_NAME)
+            conv.user_account.key, conv.key, metric_name)
 
 
 class MessagesSentMetric(ConversationMetric):
