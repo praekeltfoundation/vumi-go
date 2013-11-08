@@ -77,13 +77,13 @@ class TxMetric(GoMetric):
     """
 
     @inlineCallbacks
-    def oneshot(self, manager, value=None):
+    def oneshot(self, manager, value=None, *val_args, **val_kwargs):
         """
         Does a once-off publish for the metric using a `MetricManager` (as
         opposed to relying on the manager to do periodic publishing).
         """
         if value is None:
-            value = self.get_value()
+            value = self.get_value(*val_args, **val_kwargs)
         manager.oneshot(self.metric, (yield value))
 
 
@@ -101,9 +101,8 @@ class AccountMetric(TxMetric):
 class ConversationMetric(TxMetric):
     METRIC_NAME = None
 
-    def __init__(self, conv, vumi_api):
+    def __init__(self, conv):
         super(ConversationMetric, self).__init__(self.make_name(conv))
-        self.vumi_api = vumi_api
         self.conv = conv
 
     @classmethod
@@ -115,14 +114,14 @@ class ConversationMetric(TxMetric):
 class MessagesSentMetric(ConversationMetric):
     METRIC_NAME = 'messages_sent'
 
-    def get_value(self):
+    def get_value(self, vumi_api, user_api):
         batch_id = self.conv.batch.key
-        return self.vumi_api.mdb.batch_outbound_count(batch_id)
+        return vumi_api.mdb.batch_outbound_count(batch_id)
 
 
 class MessagesReceivedMetric(ConversationMetric):
     METRIC_NAME = 'messages_received'
 
-    def get_value(self):
+    def get_value(self, vumi_api, user_api):
         batch_id = self.conv.batch.key
-        return self.vumi_api.mdb.batch_inbound_count(batch_id)
+        return vumi_api.mdb.batch_inbound_count(batch_id)

@@ -222,7 +222,7 @@ class TestConversationMetric(TxMetricTestBase):
         self.conv = yield self.create_conversation(
             conversation_type=u'some_conversation')
 
-        self.metric = ToyConversationMetric(self.conv, self.vumi_api)
+        self.metric = ToyConversationMetric(self.conv)
 
     def test_name_construction(self):
         self.assertEqual(
@@ -252,14 +252,18 @@ class TestMessagesSentMetric(TxMetricTestBase):
         self.conv = yield self.create_conversation(
             conversation_type=u'some_conversation')
 
-        self.metric = MessagesSentMetric(self.conv, self.vumi_api)
+        self.metric = MessagesSentMetric(self.conv)
 
     @inlineCallbacks
     def test_value_retrieval(self):
-        self.assertEqual((yield self.metric.get_value()), 0)
+        self.assertEqual(
+            (yield self.metric.get_value(self.vumi_api, self.user_api)), 0)
+
         yield self.msg_helper.make_stored_outbound(self.conv, "out 1")
         yield self.msg_helper.make_stored_outbound(self.conv, "out 2")
-        self.assertEqual((yield self.metric.get_value()), 2)
+
+        self.assertEqual(
+            (yield self.metric.get_value(self.vumi_api, self.user_api)), 2)
 
 
 class TestMessagesReceivedMetric(TxMetricTestBase):
@@ -272,11 +276,15 @@ class TestMessagesReceivedMetric(TxMetricTestBase):
         self.conv = yield self.create_conversation(
             conversation_type=u'some_conversation')
 
-        self.metric = MessagesReceivedMetric(self.conv, self.vumi_api)
+        self.metric = MessagesReceivedMetric(self.conv)
 
     @inlineCallbacks
     def test_value_retrieval(self):
-        self.assertEqual((yield self.metric.get_value()), 0)
+        self.assertEqual(
+            (yield self.metric.get_value(self.vumi_api, self.user_api)), 0)
+
         yield self.msg_helper.make_stored_inbound(self.conv, "in 1")
         yield self.msg_helper.make_stored_inbound(self.conv, "in 2")
-        self.assertEqual((yield self.metric.get_value()), 2)
+
+        self.assertEqual(
+            (yield self.metric.get_value(self.vumi_api, self.user_api)), 2)

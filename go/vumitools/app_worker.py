@@ -269,17 +269,20 @@ class GoWorkerMixin(object):
         metric = AccountMetric(acc_key, store, name, aggs)
         metric.oneshot(self.metrics, value)
 
-    def publish_conversation_metrics(self, conv):
+    @inlineCallbacks
+    def publish_conversation_metrics(self, user_api, conversation_key):
+        conv = yield user_api.get_conversation(conversation_key)
+
         conv_type = conv.conversation_type
         conv_def = base_utils.get_conversation_definition(conv_type, conv)
-        return gatherResults([
-            m.oneshot(self.metrics)
-            for m in conv_def.get_metrics(self.vumi_api)])
+
+        yield gatherResults([
+            m.oneshot(self.metrics, self.vumi_api, user_api)
+            for m in conv_def.get_metrics()])
 
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):
-        conv = yield user_api.get_conversation(conversation_key)
-        yield self.publish_conversation_metrics(conv)
+        yield self.publish_conversation_metrics(user_api, conv)
 
     def add_conv_to_msg_options(self, conv, msg_options):
         helper_metadata = msg_options.setdefault('helper_metadata', {})

@@ -30,8 +30,8 @@ class ConversationDefinitionBase(object):
     def get_actions(self):
         return [action(self.conv) for action in self.actions]
 
-    def get_metrics(self, vumi_api):
-        return [metric(self.conv, vumi_api) for metric in self.metrics]
+    def get_metrics(self):
+        return [metric(self.conv) for metric in self.metrics]
 
     def configured_endpoints(self, config):
         return []
