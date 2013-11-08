@@ -147,8 +147,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         try:
             yield self.create_transaction_for_inbound(msg)
             msg_mdh.set_paid()
-        except Exception as error:
-            log.err(error.message)
+        except Exception:
+            log.err()
         yield self.publish_inbound(msg, self.receive_outbound_connector, None)
 
     @inlineCallbacks
@@ -163,8 +163,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         try:
             yield self.create_transaction_for_outbound(msg)
             msg_mdh.set_paid()
-        except Exception as error:
-            log.err(error.message)
+        except Exception:
+            log.err()
         yield self.publish_outbound(msg, self.receive_inbound_connector, None)
 
     @inlineCallbacks
