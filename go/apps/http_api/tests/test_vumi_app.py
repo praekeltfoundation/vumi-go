@@ -584,7 +584,7 @@ class InboundHttpWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
                 'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
+                'conversation_type': 'http_api_inbound',
                 'user_account': self.account.key,
             },
         })
@@ -618,7 +618,7 @@ class InboundHttpWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
                 'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
+                'conversation_type': 'http_api_inbound',
                 'user_account': self.account.key,
             },
         })

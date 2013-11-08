@@ -331,7 +331,7 @@ class OutgoingConversationResource(BaseConversationResource):
 
 class IncomingConversationResource(BaseConversationResource):
 
-    def getDeferredChild(self, path, request):
+    def getChild(self, path, request):
 
         class_map = {
             'messages.json': IncomingMessageResource,
