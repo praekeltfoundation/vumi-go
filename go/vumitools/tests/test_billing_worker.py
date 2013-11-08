@@ -194,6 +194,13 @@ class TestBillingDispatcher(AppWorkerTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'billing_dispatcher_ri')
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors],
+            ["No account number found for message %s" %
+                (msg.get('message_id'))])
+
         self.assertEqual(
             [msg], self.get_dispatched_inbound('billing_dispatcher_ro'))
 
@@ -202,6 +209,13 @@ class TestBillingDispatcher(AppWorkerTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_in(), user_account="12345")
         yield self.dispatch_inbound(msg, 'billing_dispatcher_ri')
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors],
+            ["No tag found for message %s" %
+                (msg.get('message_id'))])
+
         self.assertEqual(
             [msg], self.get_dispatched_inbound('billing_dispatcher_ro'))
 
@@ -221,6 +235,13 @@ class TestBillingDispatcher(AppWorkerTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), tag=("pool1", "1234"))
         yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors],
+            ["No account number found for message %s" %
+                (msg.get('message_id'))])
+
         self.assertEqual(
             [msg], self.get_dispatched_outbound('billing_dispatcher_ri'))
 
@@ -229,6 +250,13 @@ class TestBillingDispatcher(AppWorkerTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), user_account="12345")
         yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors],
+            ["No tag found for message %s" %
+                (msg.get('message_id'))])
+
         self.assertEqual(
             [msg], self.get_dispatched_outbound('billing_dispatcher_ri'))
 

@@ -101,38 +101,33 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         yield self._go_teardown_worker()
         yield super(BillingDispatcher, self).teardown_dispatcher()
 
-    @inlineCallbacks
-    def create_transaction_for_inbound(self, msg):
-        """Create a transaction for the given inbound message"""
+    def validate_metadata(self, msg):
         msg_mdh = self.get_metadata_helper(msg)
-        account_number = msg_mdh.get_account_key()
-        if not account_number:
+        if not msg_mdh.has_user_account():
             raise BillingError(
-                "No account number found for message %r" % (msg,))
+                "No account number found for message %s" %
+                (msg.get('message_id'),))
 
         if not msg_mdh.tag:
             raise BillingError(
-                "No tag found for message %r" % (msg,))
+                "No tag found for message %s" % (msg.get('message_id'),))
 
+    @inlineCallbacks
+    def create_transaction_for_inbound(self, msg):
+        """Create a transaction for the given inbound message"""
+        self.validate_metadata(msg)
+        msg_mdh = self.get_metadata_helper(msg)
         yield self.billing_api.create_transaction(
-            account_number, msg_mdh.tag[0], msg_mdh.tag[1],
+            msg_mdh.get_account_key(), msg_mdh.tag[0], msg_mdh.tag[1],
             self.MESSAGE_DIRECTION_INBOUND)
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
         """Create a transaction for the given outbound message"""
+        self.validate_metadata(msg)
         msg_mdh = self.get_metadata_helper(msg)
-        account_number = msg_mdh.get_account_key()
-        if not account_number:
-            raise BillingError(
-                "No account number found for message %r" % (msg,))
-
-        if not msg_mdh.tag:
-            raise BillingError(
-                "No tag found for message %r" % (msg,))
-
         yield self.billing_api.create_transaction(
-            account_number, msg_mdh.tag[0], msg_mdh.tag[1],
+            msg_mdh.get_account_key(), msg_mdh.tag[0], msg_mdh.tag[1],
             self.MESSAGE_DIRECTION_OUTBOUND)
 
     @inlineCallbacks
@@ -147,7 +142,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         try:
             yield self.create_transaction_for_inbound(msg)
             msg_mdh.set_paid()
-        except Exception:
+        except BillingError:
             log.err()
         yield self.publish_inbound(msg, self.receive_outbound_connector, None)
 
@@ -163,7 +158,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         try:
             yield self.create_transaction_for_outbound(msg)
             msg_mdh.set_paid()
-        except Exception:
+        except BillingError:
             log.err()
         yield self.publish_outbound(msg, self.receive_inbound_connector, None)
 
