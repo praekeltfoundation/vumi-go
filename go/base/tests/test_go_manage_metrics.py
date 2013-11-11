@@ -13,32 +13,54 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
         self.user_account_key = user_api.user_account_key
         self.redis = user_api.api.redis
 
-    def set_metrics(self, user, enabled):
+    def set_metrics(self, user, disabled):
         command = go_manage_metrics.Command()
         command.handle_validated(**{
             'email-address': user.email,
-            'enable': enabled,
-            'disable': not enabled,
+            'enable': not disabled,
+            'disable': disabled,
         })
 
     def test_enable_metrics(self):
-        self.set_metrics(self.user, enabled=True)
-        self.assertEqual(set([self.user_account_key]),
-                         self.redis.smembers('metrics_accounts'))
+        self.set_metrics(self.user, disabled=True)
+        self.assertEqual(
+            set([self.user_account_key]),
+            self.redis.smembers('disabled_metrics_accounts'))
+
+        self.set_metrics(self.user, disabled=False)
+        self.assertEqual(
+            set(),
+            self.redis.smembers('disabled_metrics_accounts'))
 
     def test_disable_metrics(self):
-        self.set_metrics(self.user, enabled=True)
-        self.assertEqual(set([self.user_account_key]),
-                         self.redis.smembers('metrics_accounts'))
-        self.set_metrics(self.user, enabled=False)
-        self.assertEqual(set(), self.redis.smembers('metrics_accounts'))
+        self.assertEqual(
+            set(),
+            self.redis.smembers('disabled_metrics_accounts'))
 
-    def test_disable_metrics_when_not_enabled(self):
-        self.set_metrics(self.user, enabled=False)
-        self.assertEqual(set(), self.redis.smembers('metrics_accounts'))
+        self.set_metrics(self.user, disabled=True)
 
-    def test_enable_metrics_when_enabled(self):
-        self.set_metrics(self.user, enabled=True)
-        self.set_metrics(self.user, enabled=True)
-        self.assertEqual(set([self.user_account_key]),
-                         self.redis.smembers('metrics_accounts'))
+        self.assertEqual(
+            set([self.user_account_key]),
+            self.redis.smembers('disabled_metrics_accounts'))
+
+    def test_enable_metrics_when_not_disabled(self):
+        self.assertEqual(
+            set(),
+            self.redis.smembers('disabled_metrics_accounts'))
+
+        self.set_metrics(self.user, disabled=False)
+
+        self.assertEqual(
+            set(),
+            self.redis.smembers('disabled_metrics_accounts'))
+
+    def test_disable_metrics_when_disabled(self):
+        self.set_metrics(self.user, disabled=True)
+        self.assertEqual(
+            set([self.user_account_key]),
+            self.redis.smembers('disabled_metrics_accounts'))
+
+        self.set_metrics(self.user, disabled=True)
+        self.assertEqual(
+            set([self.user_account_key]),
+            self.redis.smembers('disabled_metrics_accounts'))

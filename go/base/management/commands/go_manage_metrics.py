@@ -7,7 +7,7 @@ from go.base.command_utils import get_user_by_email
 
 
 class Command(BaseCommand):
-    help = "Enable or disable metrics for a Vumi Go user"
+    help = "Disable or re-enable metric collection for a Vumi Go user"
 
     LOCAL_OPTIONS = [
         make_option('--email-address',
@@ -17,12 +17,12 @@ class Command(BaseCommand):
             dest='enable',
             action='store_true',
             default=False,
-            help='Give access to this application'),
+            help='Enable metric collection for the Vumi Go user'),
         make_option('--disable',
             dest='disable',
             action='store_true',
             default=False,
-            help='Revoke access to this application'),
+            help='Disable metric collection for the Vumi Go user'),
     ]
     option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
 
@@ -36,10 +36,6 @@ class Command(BaseCommand):
                 else:
                     raise CommandError('Please provide %s:' % (opt.dest,))
 
-        self.handle_validated(*args, **options)
-
-    def handle_validated(self, *args, **options):
-        email_address = options['email-address']
         enable = options['enable']
         disable = options['disable']
 
@@ -47,12 +43,21 @@ class Command(BaseCommand):
             raise CommandError(
                 'Please specify either --enable or --disable.')
 
+        self.handle_validated(*args, **options)
+
+    def handle_validated(self, *args, **options):
+        email_address = options['email-address']
+        enable = options['enable']
+        disable = options['disable']
+
         user = get_user_by_email(email_address)
         user_api = vumi_api_for_user(user)
         user_account_key = user_api.user_account_key
+
+        # TODO use riak instead of riak for this command
         redis = user_api.api.redis
 
         if enable:
-            redis.sadd('metrics_accounts', user_account_key)
+            redis.srem('disabled_metrics_accounts', user_account_key)
         elif disable:
-            redis.srem('metrics_accounts', user_account_key)
+            redis.sadd('disabled_metrics_accounts', user_account_key)
