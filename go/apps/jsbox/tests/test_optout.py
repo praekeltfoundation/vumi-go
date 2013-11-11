@@ -7,7 +7,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue, succeed
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
-from go.apps.jsbox.optout import OptoutResource, OptoutException
+from go.apps.jsbox.optout import OptoutResource
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
