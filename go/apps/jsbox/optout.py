@@ -72,19 +72,16 @@ class OptoutResource(SandboxResource):
         Returns ``None`` if it doesn't exist.
         """
 
-        try:
-            address_type = command['address_type']
-            address_value = command['address_value']
-            optout = yield self.optout_store_for_api(api).get_opt_out(
-                address_type, address_value)
-            if optout is not None:
-                returnValue(self.reply(command, success=True, opted_out=True,
-                                       created_at=optout.created_at,
-                                       message_id=optout.message))
-            else:
-                returnValue(self.reply(command, success=True, opted_out=False))
-        except (OptoutException,), e:
-            returnValue(self.reply(command, success=False, reason=e.strerror))
+        address_type = command['address_type']
+        address_value = command['address_value']
+        optout = yield self.optout_store_for_api(api).get_opt_out(
+            address_type, address_value)
+        if optout is not None:
+            returnValue(self.reply(command, success=True, opted_out=True,
+                                   created_at=optout.created_at,
+                                   message_id=optout.message))
+        else:
+            returnValue(self.reply(command, success=True, opted_out=False))
 
     @optout_authorized
     def handle_count(self, api, command):
