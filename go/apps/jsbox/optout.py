@@ -9,10 +9,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.application.sandbox import SandboxResource
 
 
-class OptoutException(Exception):
-    pass
-
-
 def optout_authorized(func):
     @inlineCallbacks
     def wrapper(self, api, command):
