@@ -35,7 +35,8 @@ def ensure_params(*keys):
                                       reason='Missing key: %s' % (key,))
 
                 value = command[key]
-                # value is not allowed to be `False`, `None` or an empty string.
+                # value is not allowed to be `False`, `None` or an empty
+                # string.
                 if not value:
                     return self.reply(
                         command, success=False,
