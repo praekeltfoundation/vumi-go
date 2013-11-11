@@ -181,7 +181,7 @@ class SequentialSendApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def process_command_stop(self, user_account_key, conversation_key):
-        yield super(SequentialSendApplication, self).process_command_start(
+        yield super(SequentialSendApplication, self).process_command_stop(
             user_account_key, conversation_key)
 
         log.debug("Unscheduling conversation: %s" % (conversation_key,))
