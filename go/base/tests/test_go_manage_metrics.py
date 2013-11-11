@@ -87,4 +87,4 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
 
         self.assertEqual(
             self.stderr.getvalue(),
-            'No accounts have metrics disabled.\n')
+            'No accounts have metric collection disabled.\n')
