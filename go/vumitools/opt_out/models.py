@@ -61,3 +61,7 @@ class OptOutStore(PerAccountStore):
         mr.filter_not_found()
         opt_out_keys = yield mr.get_keys()
         returnValue(opt_out_keys)
+
+    def count(self):
+        return self.opt_outs.index_lookup(
+            'user_account', self.user_account_key).get_count()

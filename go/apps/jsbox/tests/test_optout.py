@@ -82,7 +82,9 @@ class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_status_optedout(self):
         yield self.optout(self.contact1.msisdn)
         reply = yield self.dispatch_command(
-            'status', msisdn=self.contact1.msisdn)
+            'status',
+            address_type=u'msisdn',
+            address_value=self.contact1.msisdn)
 
         self.assertTrue(reply['success'])
         self.assertTrue(reply['opted_out'])
@@ -90,7 +92,42 @@ class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
     @inlineCallbacks
     def test_handle_status_optedin(self):
         reply = yield self.dispatch_command(
-            'status', msisdn=self.contact1.msisdn)
+            'status',
+            address_type=u'msisdn',
+            address_value=self.contact1.msisdn)
 
+        self.assertTrue(reply['success'])
+        self.assertFalse(reply['opted_out'])
+
+    @inlineCallbacks
+    def test_handle_count(self):
+        def assert_count(count):
+            reply = yield self.dispatch_command('count')
+            self.assertTrue(reply['success'])
+            self.assertEqual(reply['count'], count)
+
+        yield assert_count(0)
+        yield self.optout(self.contact1.msisdn)
+        yield assert_count(1)
+
+    @inlineCallbacks
+    def test_handle_optout(self):
+        msg = self.msg_helper.make_inbound('stop')
+        reply = yield self.dispatch_command(
+            'optout',
+            address_type='msisdn',
+            address_value=self.contact1.msisdn,
+            message_id=msg['message_id'])
+        self.assertTrue(reply['success'])
+        self.assertTrue(reply['opted_out'])
+        self.assertEqual(reply['message_id'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_handle_cancel_optout(self):
+        yield self.optout(self.contact1.msisdn)
+        reply = yield self.dispatch_command(
+            'cancel_optout',
+            address_type='msisdn',
+            address_value=self.contact1.msisdn)
         self.assertTrue(reply['success'])
         self.assertFalse(reply['opted_out'])
