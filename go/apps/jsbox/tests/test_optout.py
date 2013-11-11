@@ -2,12 +2,12 @@
 
 from mock import Mock
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, succeed
 
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
-from go.apps.jsbox.optout import OptoutResource
+from go.apps.jsbox.optout import OptoutResource, OptoutException
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
@@ -41,6 +41,7 @@ class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
         self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         self.account = yield self.mk_user(self, u'user')
+        self.account.can_manage_optouts = True
         self.contact_store = ContactStore.from_user_account(self.account)
         self.optout_store = OptOutStore.from_user_account(self.account)
         yield self.contact_store.contacts.enable_search()
@@ -50,6 +51,8 @@ class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
         self.user_api = self.app_worker.user_api
         self.user_api.contact_store = self.contact_store
         self.user_api.optout_store = self.optout_store
+        self.user_api.get_user_account = Mock(
+            return_value=succeed(self.account))
 
         self.contact1 = yield self.new_contact(
             name=u'A',
@@ -100,6 +103,20 @@ class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
         self.assertFalse(reply['opted_out'])
 
     @inlineCallbacks
+    def test_ensure_params_missing_key(self):
+        reply = yield self.dispatch_command('status')
+        self.assertFalse(reply['success'])
+        self.assertEqual(reply['reason'],
+                         'Missing key: address_type')
+
+    @inlineCallbacks
+    def test_ensure_params_invalid_value(self):
+        reply = yield self.dispatch_command('status', address_type=None)
+        self.assertFalse(reply['success'])
+        self.assertEqual(reply['reason'],
+                         'Invalid value "None" for "address_type"')
+
+    @inlineCallbacks
     def test_handle_count(self):
         def assert_count(count):
             reply = yield self.dispatch_command('count')
@@ -131,3 +148,12 @@ class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
             address_value=self.contact1.msisdn)
         self.assertTrue(reply['success'])
         self.assertFalse(reply['opted_out'])
+
+    @inlineCallbacks
+    def test_account_can_manage_optouts(self):
+        self.account.can_manage_optouts = False
+        reply = yield self.dispatch_command('count')
+        self.assertFalse(reply['success'])
+        self.assertEqual(
+            reply['reason'],
+            'Account not allowed to manage optouts.')

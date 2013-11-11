@@ -42,6 +42,7 @@ class UserAccount(Model):
     event_handler_config = Json(default=list)
     msisdn = Unicode(max_length=255, null=True)
     confirm_start_conversation = Boolean(default=False)
+    can_manage_optouts = Boolean(default=False)
     email_summary = Unicode(max_length=255, null=True)
     tags = Json(default=[])
     routing_table = RoutingTableField(default=RoutingTable({}))
