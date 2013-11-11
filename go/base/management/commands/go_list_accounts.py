@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
-from go.base.command_utils import get_users
+from go.base.command_utils import get_users, user_details_as_string
 
 
 class Command(BaseCommand):
@@ -33,7 +33,5 @@ class Command(BaseCommand):
         if not users.exists():
             self.stderr.write('No accounts found.\n')
         for index, user in enumerate(users):
-            profile = user.get_profile()
-            output = u'%s. %s %s <%s> [%s]\n' % (index, user.first_name,
-                user.last_name, user.email, profile.user_account)
+            output = u"%s. %s\n" % (index, user_details_as_string(user))
             self.stdout.write(output.encode(self.encoding))

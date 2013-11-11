@@ -29,6 +29,15 @@ def get_users():
     return user_model.objects.all().order_by('date_joined')
 
 
+def user_details_as_string(user):
+    profile = user.get_profile()
+    return u'%s %s <%s> [%s]' % (
+        user.first_name,
+        user.last_name,
+        user.email,
+        profile.user_account)
+
+
 def make_command_opt_str(command_name):
     return '--%s' % (command_name.replace('_', '-'),)
 
