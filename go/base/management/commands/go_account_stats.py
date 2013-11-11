@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
+
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_user_by_email
 
 
 def per_date(collection):
@@ -55,16 +56,12 @@ class Command(BaseCommand):
         email_address = args[0]
         command = args[1]
 
-        try:
-            user = User.objects.get(username=email_address)
-            api = self.get_api(user)
+        user = get_user_by_email(email=email_address)
+        api = self.get_api(user)
 
-            handler = getattr(self, 'handle_%s' % (command,),
-                self.unknown_command)
-            handler(user, api, args[2:])
-
-        except User.DoesNotExist:
-            self.err(u'Account does not exist\n')
+        handler = getattr(self, 'handle_%s' % (command,),
+            self.unknown_command)
+        handler(user, api, args[2:])
 
     def get_api(self, user):
         return vumi_api_for_user(user)

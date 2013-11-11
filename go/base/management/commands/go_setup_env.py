@@ -7,7 +7,7 @@ from optparse import make_option
 import yaml
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.template import Context, Template
 
 from vumi.persist.redis_manager import RedisManager
@@ -217,15 +217,16 @@ class Command(BaseCommand):
             self.setup_routing(user, account_objects)
 
     def setup_account(self, user_info):
-        username = user_info['email']
-        if User.objects.filter(username=username).exists():
+        user_model = get_user_model()
+        email = user_info['email']
+        if user_model.objects.filter(email=email).exists():
             self.stderr.write(
                 'User %s already exists. Skipping.\n' %
-                (username,))
+                (email,))
             return None
 
-        user = User.objects.create_user(
-            username, username, user_info['password'])
+        user = user_model.objects.create_user(
+            email, email, user_info['password'])
         user.first_name = user_info.get('first_name', '')
         user.last_name = user_info.get('last_name', '')
         user.save()
@@ -239,7 +240,7 @@ class Command(BaseCommand):
         for application in user_info['applications']:
             self.assign_application(account, application)
 
-        self.stdout.write('Account %s created\n' % (username,))
+        self.stdout.write('Account %s created\n' % (email,))
         return user
 
     def assign_tagpool(self, account, pool_name, max_keys):

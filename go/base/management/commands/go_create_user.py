@@ -3,8 +3,8 @@ from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
 from django.core.validators import validate_email
-from django.contrib.auth.models import User
 from django.core import exceptions
+from django.contrib.auth import get_user_model
 
 
 class Command(BaseCommand):
@@ -41,8 +41,9 @@ class Command(BaseCommand):
             password = options['password']
             name = options['name']
             surname = options['surname']
-            user = User.objects.create_user(username=email_address,
-                                email=email_address, password=password)
+            user_model = get_user_model()
+            user = user_model.objects.create_user(
+                username=email_address, email=email_address, password=password)
             user.first_name = name
             user.last_name = surname
             user.save()

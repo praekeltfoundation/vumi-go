@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db.models import Q
-from django.contrib.auth.models import User
+
+from go.base.command_utils import get_users
 
 
 class Command(BaseCommand):
@@ -24,9 +25,9 @@ class Command(BaseCommand):
     encoding = 'utf-8'
 
     def handle(self, *usernames, **options):
-        users = User.objects.all().order_by('date_joined')
+        users = get_users()
         if usernames:
-            or_statements = [Q(username__regex=un) for un in usernames]
+            or_statements = [Q(email__regex=un) for un in usernames]
             or_query = reduce(lambda x, y: x | y, or_statements)
             users = users.filter(or_query)
         if not users.exists():
@@ -34,5 +35,5 @@ class Command(BaseCommand):
         for index, user in enumerate(users):
             profile = user.get_profile()
             output = u'%s. %s %s <%s> [%s]\n' % (index, user.first_name,
-                user.last_name, user.username, profile.user_account)
+                user.last_name, user.email, profile.user_account)
             self.stdout.write(output.encode(self.encoding))

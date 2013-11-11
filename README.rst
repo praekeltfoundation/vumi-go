@@ -3,15 +3,16 @@ Vumi Go
 
 Documentation available online at http://vumi-go.readthedocs.org/ and in the `docs` directory of the repository.
 
-|vumigo-ci|_
+|vumigo-ci|_ |vumigo-cover|_ |vumigo-waffle|_
 
 .. |vumigo-ci| image:: https://travis-ci.org/praekelt/vumi-go.png?branch=develop
 .. _vumigo-ci: https://travis-ci.org/praekelt/vumi-go
 
-|vumigo-cover|_
-
 .. |vumigo-cover| image:: https://coveralls.io/repos/praekelt/vumi-go/badge.png?branch=develop
 .. _vumigo-cover: https://coveralls.io/r/praekelt/vumi-go
+
+.. |vumigo-waffle| image:: https://badge.waffle.io/praekelt/vumi-go.png?label=ready
+.. _vumigo-waffle: https://waffle.io/praekelt/vumi-go
 
 
 Installing

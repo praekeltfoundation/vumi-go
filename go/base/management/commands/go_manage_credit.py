@@ -1,9 +1,9 @@
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
+from go.base.command_utils import get_user_by_email
 
 
 class Command(BaseCommand):
@@ -32,11 +32,7 @@ class Command(BaseCommand):
         email_address = options['email-address']
         add_credit = options['add-credit']
 
-        try:
-            user = User.objects.get(username=email_address)
-        except User.DoesNotExist, e:
-            raise CommandError(e)
-
+        user = get_user_by_email(email_address)
         user_api = vumi_api_for_user(user)
 
         if add_credit is not None:
