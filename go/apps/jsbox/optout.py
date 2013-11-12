@@ -66,6 +66,23 @@ class OptoutResource(SandboxResource):
         retrieves the opt-out entry for it.
 
         Returns ``None`` if it doesn't exist.
+
+        Command fields:
+            - ``address_type``: the type of address to check for opt-out
+              status on. At the moment only ``msisdn`` is used.
+            - ``address_value``: the value of the ``address_type`` to check.
+              At the moment this would be a normalized msisdn.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``opted_out``: set to ``true`` or ``false``
+            - ``created_at``: the timestamp of the opt-out (if opted out)
+            - ``message_id``: the message_id of the message that triggered
+              the opt-out.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
         """
 
         address_type = command['address_type']
@@ -83,6 +100,17 @@ class OptoutResource(SandboxResource):
     def handle_count(self, api, command):
         """
         Return a count of however many opt-outs there are
+
+        Command fields: None
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``count``: an Integer.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
         """
         oos = self.optout_store_for_api(api)
         d = oos.count()
@@ -96,6 +124,25 @@ class OptoutResource(SandboxResource):
     def handle_optout(self, api, command):
         """
         Opt out an address_type, address_value combination
+
+        Command fields:
+            - ``address_type``: the type of address to opt-out.
+              At the moment only ``msisdn`` is used.
+            - ``address_value``: the value of the ``address_type`` to opt-out.
+            - ``message_id`` the message_id of the message that triggered
+              the opt-out, for auditing purposes.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``opted_out``: set to ``true``
+            - ``created_at``: the timestamp of the opt-out (if opted out)
+            - ``message_id``: the message_id of the message that triggered
+              the opt-out.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
         """
         oos = self.optout_store_for_api(api)
         address_type = command['address_type']
@@ -114,6 +161,20 @@ class OptoutResource(SandboxResource):
         """
         Cancel an opt-out, effectively opting an address_type & address_value
         combination back in.
+
+        Command fields:
+            - ``address_type``: the type of address cancel the opt-out for.
+            - ``address_value``: the value of the ``address_type`` to cancel
+              the opt-out for.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``opted_out``: set to ``false``
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
         """
         oos = self.optout_store_for_api(api)
         address_type = command['address_type']
