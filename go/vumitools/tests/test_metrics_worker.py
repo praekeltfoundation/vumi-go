@@ -65,9 +65,8 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
         worker = yield self.get_metrics_worker()
         acc1 = yield self.make_account(worker, u'acc1')
         acc2 = yield self.make_account(worker, u'acc2')
-        yield self.make_account(worker, u'acc3')
-        yield worker.redis.sadd('metrics_accounts', acc1.key)
-        yield worker.redis.sadd('metrics_accounts', acc2.key)
+        acc3 = yield self.make_account(worker, u'acc3')
+        yield worker.redis.sadd('disabled_metrics_accounts', acc3.key)
 
         account_keys = yield worker.find_account_keys()
         self.assertEqual(sorted([acc1.key, acc2.key]), sorted(account_keys))
@@ -110,8 +109,6 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
         worker = yield self.get_metrics_worker()
         acc1 = yield self.make_account(worker, u'acc1')
         acc2 = yield self.make_account(worker, u'acc2')
-        yield worker.redis.sadd('metrics_accounts', acc1.key)
-        yield worker.redis.sadd('metrics_accounts', acc2.key)
         user_api1 = worker.vumi_api.get_user_api(acc1.key)
         user_api2 = worker.vumi_api.get_user_api(acc2.key)
 
