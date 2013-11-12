@@ -1,8 +1,9 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 import datetime
 from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
+
 
 class Migration(SchemaMigration):
 
@@ -11,16 +12,14 @@ class Migration(SchemaMigration):
     )
 
     def forwards(self, orm):
-        
+
         # Changing field 'Account.user'
         db.alter_column(u'billing_account', 'user_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['base.GoUser']))
 
-
     def backwards(self, orm):
-        
+
         # Changing field 'Account.user'
         db.alter_column(u'billing_account', 'user_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User']))
-
 
     models = {
         u'auth.group': {
@@ -38,7 +37,7 @@ class Migration(SchemaMigration):
         },
         u'base.gouser': {
             'Meta': {'object_name': 'GoUser'},
-            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 11, 5, 15, 13, 6, 385559)'}),
+            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
             'email': ('django.db.models.fields.EmailField', [], {'unique': 'True', 'max_length': '254'}),
             'first_name': ('django.db.models.fields.CharField', [], {'max_length': '254'}),
             'groups': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['auth.Group']", 'symmetrical': 'False', 'blank': 'True'}),
@@ -46,7 +45,7 @@ class Migration(SchemaMigration):
             'is_active': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'is_staff': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'is_superuser': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 11, 5, 15, 13, 6, 385299)'}),
+            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
             'last_name': ('django.db.models.fields.CharField', [], {'max_length': '254'}),
             'password': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'user_permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['auth.Permission']", 'symmetrical': 'False', 'blank': 'True'})
@@ -88,6 +87,7 @@ class Migration(SchemaMigration):
             'message_cost': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'message_direction': ('django.db.models.fields.CharField', [], {'max_length': '20', 'blank': 'True'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'Pending'", 'max_length': '20'}),
+            'tag_name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
             'tag_pool_name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'})
         },
         u'contenttypes.contenttype': {
