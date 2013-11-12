@@ -8,6 +8,9 @@ from go.base.command_utils import (
 
 
 class Command(BaseCommand):
+    # TODO Use riak instead of redis for maintaining the list of accounts
+    # for which metric collection should be disabled
+
     encoding = 'utf-8'
 
     help = "Disable or re-enable metric collection for a Vumi Go user"
