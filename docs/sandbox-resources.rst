@@ -86,7 +86,7 @@ operations are available. There is a limit of 10000 keys per user.
 **messagestore**
 
 Provides access to the stats in the messagestore. Specifically counts of
-messages sent, received, unique ``from_addr``s and ``to_addr``s and
+messages sent, received, unique "from_addr"s and "to_addr"s and
 calculated throughput of any conversation linked to a Vumi Go account.
 
 .. autoclass:: go.apps.jsbox.message_store.MessageStoreResource

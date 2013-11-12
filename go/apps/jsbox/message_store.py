@@ -6,12 +6,15 @@ Resource for accessing information stored in Go's message store.
 Allows for querying any conversation in a Go Account holder's account.
 """
 
+from functools import wraps
+
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.sandbox import SandboxResource
 
 
 def conversation_owner(func):
+    @wraps(func)
     @inlineCallbacks
     def wrapper(self, api, command):
         conversation_key = command.get('conversation_key')
@@ -135,7 +138,7 @@ class MessageStoreResource(SandboxResource):
     @inlineCallbacks
     def handle_count_inbound_uniques(self, conversation, api, command):
         """
-        Count from how many unique ``from_addr``s messages were received.
+        Count from how many unique "from_addr"s messages were received.
 
         If no conversation is specified then the current application's
         conversation is used.
@@ -147,7 +150,7 @@ class MessageStoreResource(SandboxResource):
 
         Success reply fields:
             - ``success``: set to ``true``
-            - ``count``: the number of unique ``from_addr``s messages
+            - ``count``: the number of unique "from_addr"s messages
               were sent.
 
         Failure reply fields:
@@ -162,7 +165,7 @@ class MessageStoreResource(SandboxResource):
     @inlineCallbacks
     def handle_count_outbound_uniques(self, conversation, api, command):
         """
-        Count to how many unique ``to_addr``s messages were sent.
+        Count to how many unique "to_addr"s messages were sent.
 
         If no conversation is specified then the current application's
         conversation is used.
@@ -174,7 +177,7 @@ class MessageStoreResource(SandboxResource):
 
         Success reply fields:
             - ``success``: set to ``true``
-            - ``count``: the number of unique ``to_addrs``s messages
+            - ``count``: the number of unique "to_addrs"s messages
               were sent.
 
         Failure reply fields:
