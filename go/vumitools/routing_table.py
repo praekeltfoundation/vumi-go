@@ -20,6 +20,7 @@ class GoConnector(object):
     ROUTER = "ROUTER"
     TRANSPORT_TAG = "TRANSPORT_TAG"
     OPT_OUT = "OPT_OUT"
+    BILLING = "BILLING"
 
     # Directions for router entries
 
@@ -39,6 +40,7 @@ class GoConnector(object):
             self.CONVERSATION: self.INBOUND,
             self.TRANSPORT_TAG: self.OUTBOUND,
             self.ROUTER: self._attrs.get('direction'),
+            self.BILLING: self._attrs.get('direction'),
         }[self.ctype]
 
     def __str__(self):
@@ -102,6 +104,14 @@ class GoConnector(object):
         return cls(cls.OPT_OUT, [], [])
 
     @classmethod
+    def for_billing(cls, direction):
+        if direction not in (cls.INBOUND, cls.OUTBOUND):
+            raise GoConnectorError(
+                "Invalid connector direction: %s" % (direction,))
+
+        return cls(cls.BILLING, ["direction"], [direction])
+
+    @classmethod
     def parse(cls, s):
         parts = s.split(":")
         ctype, parts = parts[0], parts[1:]
@@ -110,6 +120,7 @@ class GoConnector(object):
             cls.ROUTER: cls.for_router,
             cls.TRANSPORT_TAG: cls.for_transport_tag,
             cls.OPT_OUT: cls.for_opt_out,
+            cls.BILLING: cls.for_billing
         }
         if ctype not in constructors:
             raise GoConnectorError("Unknown connector type %r"
