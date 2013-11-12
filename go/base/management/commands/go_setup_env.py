@@ -130,6 +130,10 @@ class Command(BaseCommand):
         self.write_supervisor_config_file(
             'routing_table_dispatcher',
             'go.vumitools.routing.AccountRoutingTableDispatcher')
+        self.create_billing_dispatcher_config()
+        self.write_supervisor_config_file(
+            'billing_dispatcher',
+            'go.vumitools.billing_worker.BillingDispatcher')
         self.create_go_api_worker_config()
         self.write_supervisor_config_file(
             'go_api_worker',
@@ -137,6 +141,7 @@ class Command(BaseCommand):
 
         self.write_supervisord_conf()
         self.create_webui_supervisord_conf()
+        self.create_billing_api_supervisord_conf()
 
         self.write_startup_script()
 
@@ -220,8 +225,7 @@ class Command(BaseCommand):
                 (email,))
             return None
 
-        user = user_model.objects.create_user(
-            email, email, user_info['password'])
+        user = user_model.objects.create_user(email, user_info['password'])
         user.first_name = user_info.get('first_name', '')
         user.last_name = user_info.get('last_name', '')
         user.save()
@@ -492,6 +496,21 @@ class Command(BaseCommand):
 
         self.stdout.write('Wrote %s.\n' % (fn,))
 
+    def create_billing_dispatcher_config(self):
+        fn = self.mk_filename('billing_dispatcher', 'yaml')
+        with self.open_file(fn, 'w') as fp:
+            templ = 'billing_dispatcher.yaml.template'
+            data = self.render_template(templ, {
+                'redis_manager': self.dump_yaml_block(
+                    self.config['redis_manager'], 1),
+                'riak_manager': self.dump_yaml_block(
+                    self.config['riak_manager'], 1),
+            })
+            fp.write(self.auto_gen_warning)
+            fp.write(data)
+
+        self.stdout.write('Wrote %s.\n' % (fn,))
+
     def write_supervisord_conf(self):
         fn = self.mk_filename('supervisord', 'conf')
         with self.open_file(fn, 'w') as fp:
@@ -518,6 +537,22 @@ class Command(BaseCommand):
                     self.webapp_bind,))
             cp.set(section, "stdout_logfile",
                    "./logs/%(program_name)s_%(process_num)s.log")
+            cp.set(section, "redirect_stderr", "true")
+            cp.write(fp)
+        self.stdout.write('Wrote %s.\n' % (fn,))
+
+    def create_billing_api_supervisord_conf(self):
+        program_name = 'billing_api'
+        fn = self.mk_filename(program_name, 'conf')
+        with self.open_file(fn, 'w') as fp:
+            section = "program:%s" % (program_name,)
+            fp.write(self.auto_gen_warning)
+            cp = ConfigParser()
+            cp.add_section(section)
+            cp.set(section, "command", "./go-admin.sh runbillingserver")
+            cp.set(section, "stdout_logfile",
+                   "./logs/%(program_name)s_%(process_num)s.log")
+
             cp.set(section, "redirect_stderr", "true")
             cp.write(fp)
         self.stdout.write('Wrote %s.\n' % (fn,))

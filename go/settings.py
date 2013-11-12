@@ -241,6 +241,10 @@ LOGGING = {
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
+SOUTH_MIGRATION_MODULES = {
+    'auth': 'go.base.auth_migrations',
+    'registration': 'go.base.registration_migrations',
+}
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
@@ -373,6 +377,7 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 
 # AUTH CONFIGURATION
 AUTH_PROFILE_MODULE = 'base.UserProfile'
+AUTH_USER_MODEL = 'base.GoUser'
 LOGIN_REDIRECT_URL = '/'
 # django-registration tokens expire after a week
 ACCOUNT_ACTIVATION_DAYS = 7
