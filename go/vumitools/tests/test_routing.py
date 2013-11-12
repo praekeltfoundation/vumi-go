@@ -211,10 +211,11 @@ class TestRoutingMetadata(GoTestCase):
         ], 'se2')
 
 
-class TestRoutingTableDispatcher(AppWorkerTestCase):
+class RoutingTableDispatcherTestCase(AppWorkerTestCase):
+    """Base class for ``AccountRoutingTableDispatcher`` test cases"""
+
     @inlineCallbacks
-    def setUp(self):
-        yield super(TestRoutingTableDispatcher, self).setUp()
+    def setup_routing_table_dispatcher_test(self):
         self.dispatcher = yield self.get_dispatcher()
         self.vumi_api = self.dispatcher.vumi_api
 
@@ -263,10 +264,10 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     def get_dispatcher(self, **config_extras):
         config = {
             "receive_inbound_connectors": [
-                "sphex", "router_ro",
+                "sphex", "router_ro"
             ],
             "receive_outbound_connectors": [
-                "app1", "app2", "router_ri", "optout",
+                "app1", "app2", "router_ri", "optout"
             ],
             "metrics_prefix": "foo",
             "application_connector_mapping": {
@@ -287,7 +288,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         returnValue(dispatcher)
 
     def with_md(self, msg, user_account=None, conv=None, router=None,
-                endpoint=None, tag=None, hops=None, outbound_hops_from=None):
+                endpoint=None, tag=None, hops=None, outbound_hops_from=None,
+                is_paid=False):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_api, msg)
         if user_account is not None:
@@ -305,6 +307,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         msg.set_routing_endpoint(endpoint)
         if tag is not None:
             md.set_tag(tag)
+        if is_paid:
+            md.set_paid()
         if hops is not None:
             rmeta = RoutingMetadata(msg)
             for src, dst in zip(hops[:-1], hops[1:]):
@@ -333,6 +337,14 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.vumi_api.mdb.add_outbound_message(msg)
         ack = self.msg_helper.make_ack(msg)
         returnValue((msg, ack))
+
+
+class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestRoutingTableDispatcher, self).setUp()
+        yield self.setup_routing_table_dispatcher_test()
 
     @inlineCallbacks
     def test_inbound_message_from_transport_to_app1(self):
@@ -545,8 +557,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     @inlineCallbacks
     def test_event_routing_via_custom_endpoint(self):
         yield self.get_dispatcher()
-        msg, ack = yield self.mk_msg_ack(endpoint='other',
-            tag=('pool1', '5678'), user_account=self.user_account_key,
+        msg, ack = yield self.mk_msg_ack(
+            endpoint='other', tag=('pool1', '5678'),
+            user_account=self.user_account_key,
             hops=[
                 ['CONVERSATION:app1:conv1', 'other'],
                 ['TRANSPORT_TAG:pool1:5678', 'default'],
@@ -581,3 +594,219 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             ['TRANSPORT_TAG:pool1:1234', 'default'],
         ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+
+class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestRoutingTableDispatcherWithBilling, self).setUp()
+        yield self.setup_routing_table_dispatcher_test()
+
+    @inlineCallbacks
+    def get_dispatcher(self, **config_extras):
+        config = {
+            "receive_inbound_connectors": [
+                "sphex", "router_ro", "billing_dispatcher_ro"
+            ],
+            "receive_outbound_connectors": [
+                "app1", "app2", "router_ri", "optout",
+                "billing_dispatcher_ri"
+            ],
+            "billing_inbound_connector": "billing_dispatcher_ri",
+            "billing_outbound_connector": "billing_dispatcher_ro"
+        }
+        config.update(config_extras)
+        dispatcher = yield super(TestRoutingTableDispatcherWithBilling, self)\
+            .get_dispatcher(**config)
+
+        returnValue(dispatcher)
+
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_billing(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used(
+            'sphex.inbound', 'billing_dispatcher_ri.inbound')
+
+        hops = [
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ['BILLING:INBOUND', 'default']
+        ]
+        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.assertEqual(
+            [msg], self.get_dispatched_inbound('billing_dispatcher_ri'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_billing_to_app1(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.mkmsg_in(), user_account=self.user_account_key,
+            tag=("pool1", "1234"), hops=[
+                ['TRANSPORT_TAG:pool1:1234', 'default'],
+                ['BILLING:INBOUND', 'default']
+            ])
+
+        yield self.dispatch_inbound(msg, 'billing_dispatcher_ro')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ro.inbound', 'app1.inbound')
+
+        self.with_md(msg, conv=('app1', 'conv1'), hops=[
+            ['BILLING:INBOUND', 'default'],
+            ['CONVERSATION:app1:conv1', 'default'],
+        ])
+        self.assertEqual(
+            [msg], self.get_dispatched_inbound('app1'))
+
+    @inlineCallbacks
+    def test_inbound_optout_message_from_transport_to_billing(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        msg['helper_metadata']['optout'] = {'optout': True}
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used(
+            'sphex.inbound', 'billing_dispatcher_ri.inbound')
+        hops = [
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ['BILLING:INBOUND', 'default'],
+        ]
+        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.assertEqual(
+            [msg], self.get_dispatched_inbound('billing_dispatcher_ri'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_billing_to_optout(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        msg['helper_metadata']['optout'] = {'optout': True}
+        yield self.dispatch_inbound(msg, 'billing_dispatcher_ro')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ro.inbound', 'optout.inbound')
+
+        hops = [
+            ['BILLING:INBOUND', 'default'],
+            ['OPT_OUT', 'default'],
+        ]
+        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.assertEqual([msg], self.get_dispatched_inbound('optout'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_router(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
+                           is_paid=True)
+
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
+        hops = [
+            ['ROUTER:router:router1:OUTBOUND', 'default'],
+            ['CONVERSATION:app1:conv1', 'default'],
+        ]
+        self.with_md(msg, conv=("app1", "conv1"), hops=hops)
+        self.assertEqual([msg], self.get_dispatched_inbound('app1'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_optout_to_billing(self):
+        yield self.get_dispatcher()
+        tag = ("pool1", "1234")
+        msg, reply = yield self.mk_msg_reply(tag=tag)
+        yield self.dispatch_outbound(reply, 'optout')
+        self.assert_rkeys_used(
+            'optout.outbound', 'billing_dispatcher_ro.outbound')
+
+        hops = [
+            ['OPT_OUT', 'default'],
+            ['BILLING:OUTBOUND', 'default'],
+        ]
+        self.with_md(reply, tag=tag, user_account=self.user_account_key,
+                     hops=hops)
+
+        self.assertEqual(
+            [reply], self.get_dispatched_outbound('billing_dispatcher_ro'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_conversation_in_app1_to_billing(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used(
+            'app1.outbound', 'billing_dispatcher_ro.outbound')
+
+        hops = [
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['BILLING:OUTBOUND', 'default'],
+        ]
+        self.with_md(msg, tag=("pool1", "1234"), hops=hops)
+        self.assertEqual(
+            [msg], self.get_dispatched_outbound('billing_dispatcher_ro'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_billing_to_transport(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), tag=("pool1", "1234"),
+                           conv=('app1', 'conv1'), is_paid=True)
+
+        yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ri.outbound', 'sphex.outbound')
+
+        hops = [
+            ['BILLING:OUTBOUND', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default']
+        ]
+        self.with_md(msg, hops=hops)
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_router_to_billing(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'))
+        yield self.dispatch_outbound(msg, 'router_ri')
+        self.assert_rkeys_used(
+            'router_ri.outbound', 'billing_dispatcher_ro.outbound')
+
+        hops = [
+            ['ROUTER:router:router1:INBOUND', 'default'],
+            ['BILLING:OUTBOUND', 'default']
+        ]
+        self.with_md(msg, tag=("pool1", "1234"), hops=hops)
+        self.assertEqual(
+            [msg], self.get_dispatched_outbound('billing_dispatcher_ro'))
+
+    @inlineCallbacks
+    def test_router_outbound_message_from_billing_to_transport(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), tag=("pool1", "1234"),
+                           router=('router', 'router1'), is_paid=True)
+
+        yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ri.outbound', 'sphex.outbound')
+
+        hops = [
+            ['BILLING:OUTBOUND', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+        ]
+        self.with_md(msg, hops=hops)
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_event_routing_to_app1(self):
+        yield self.get_dispatcher()
+        msg, ack = yield self.mk_msg_ack(
+            tag=('pool1', '1234'), user_account=self.user_account_key,
+            hops=[
+                ['CONVERSATION:app1:conv1', 'default'],
+                ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ])
+
+        yield self.dispatch_event(ack, 'sphex')
+        self.assert_rkeys_used('sphex.event', 'app1.event')
+        self.with_md(ack, tag=('pool1', '1234'), conv=('app1', 'conv1'),
+                     hops=[
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
+                         ['CONVERSATION:app1:conv1', 'default'],
+                     ], outbound_hops_from=msg)
+
+        self.assertEqual([ack], self.get_dispatched_events('app1'))

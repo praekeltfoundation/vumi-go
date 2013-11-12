@@ -362,6 +362,7 @@ class TransactionTestCase(unittest.TestCase):
         content = {
             'account_number': "11111",
             'tag_pool_name': "test_pool2",
+            'tag_name': "12345",
             'message_direction': "Inbound"
         }
 

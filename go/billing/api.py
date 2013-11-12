@@ -1,5 +1,4 @@
 import json
-import decimal
 
 from twisted.python import log
 from twisted.internet import defer
@@ -9,7 +8,11 @@ from twisted.web.server import NOT_DONE_YET
 from django.contrib.auth.hashers import make_password
 
 from go.billing import settings as app_settings
-from go.billing.utils import JSONEncoder
+from go.billing.utils import JSONEncoder, JSONDecoder
+
+
+class BillingError(Exception):
+    """Raised when an error occurs during billing."""
 
 
 class BaseResource(Resource):
@@ -56,8 +59,7 @@ class BaseResource(Resource):
         """
         content_type = request.getHeader('Content-Type')
         if request.method == 'POST' and content_type == 'application/json':
-            return json.loads(request.content.read(),
-                              parse_float=decimal.Decimal)
+            return json.loads(request.content.read(), cls=JSONDecoder)
 
         return None
 
@@ -307,9 +309,10 @@ class AccountResource(BaseResource):
     def load_credits_interaction(self, cursor, account_number, credit_amount):
         # Create a new transaction
         query = """INSERT INTO billing_transaction
-                       (account_number, tag_pool_name, message_direction,
-                        credit_amount, status, created, last_modified)
-                   VALUES (%(account_number)s, '', '', %(credit_amount)s,
+                       (account_number, tag_pool_name, tag_name,
+                        message_direction, credit_amount, status,
+                        created, last_modified)
+                   VALUES (%(account_number)s, '', '', '', %(credit_amount)s,
                           'Completed', now(), now())"""
 
         params = {
@@ -577,10 +580,13 @@ class TransactionResource(BaseResource):
         if data:
             account_number = data.get('account_number', None)
             tag_pool_name = data.get('tag_pool_name', None)
+            tag_name = data.get('tag_name', None)
             message_direction = data.get('message_direction', None)
-            if account_number and tag_pool_name and message_direction:
+            if account_number and tag_pool_name and tag_name\
+                    and message_direction:
                 d = self.create_transaction(
-                    account_number, tag_pool_name, message_direction)
+                    account_number, tag_pool_name, tag_name,
+                    message_direction)
 
                 d.addCallbacks(self._render_to_json, self._handle_error,
                                callbackArgs=[request], errbackArgs=[request])
@@ -637,9 +643,10 @@ class TransactionResource(BaseResource):
                              items_per_page):
         """Return a paginated list of transactions"""
         query = """
-            SELECT id, account_number, tag_pool_name, message_direction,
-                   message_cost, markup_percent, credit_factor,
-                   credit_amount, status, created, last_modified
+            SELECT id, account_number, tag_pool_name, tag_name,
+                   message_direction, message_cost, markup_percent,
+                   credit_factor, credit_amount, status, created,
+                   last_modified
             FROM billing_transaction
             WHERE account_number = %(account_number)s
             ORDER BY created DESC
@@ -673,11 +680,18 @@ class TransactionResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_transaction_interaction(self, cursor, account_number,
-                                       tag_pool_name, message_direction):
+                                       tag_pool_name, tag_name,
+                                       message_direction):
         """Create a new transaction for the given ``account_number``"""
         # Get the message cost
         result = yield self.get_cost(account_number, tag_pool_name,
                                      message_direction)
+
+        if result is None:
+            raise BillingError(
+                "Unable to determine %s message cost for account %s"
+                " and tag pool %s" % (message_direction, account_number,
+                                      tag_pool_name))
 
         message_cost = result.get('message_cost', 0)
         markup_percent = result.get('markup_percent', 0)
@@ -700,21 +714,24 @@ class TransactionResource(BaseResource):
         # Create a new transaction
         query = """
             INSERT INTO billing_transaction
-                (account_number, tag_pool_name, message_direction,
+                (account_number, tag_pool_name, tag_name, message_direction,
                  message_cost, markup_percent, credit_factor,
                  credit_amount, status, created, last_modified)
             VALUES
-                (%(account_number)s, %(tag_pool_name)s, %(message_direction)s,
-                 %(message_cost)s, %(markup_percent)s, %(credit_factor)s,
-                 %(credit_amount)s, 'Completed', now(), now())
-            RETURNING id, account_number, tag_pool_name, message_direction,
-                      message_cost, markup_percent, credit_factor,
-                      credit_amount, status, created, last_modified
+                (%(account_number)s, %(tag_pool_name)s, %(tag_name)s,
+                 %(message_direction)s, %(message_cost)s, %(markup_percent)s,
+                 %(credit_factor)s, %(credit_amount)s, 'Completed', now(),
+                 now())
+            RETURNING id, account_number, tag_pool_name, tag_name,
+                      message_direction, message_cost, markup_percent,
+                      credit_factor, credit_amount, status, created,
+                      last_modified
         """
 
         params = {
             'account_number': account_number,
             'tag_pool_name': tag_pool_name,
+            'tag_name': tag_name,
             'message_direction': message_direction,
             'message_cost': message_cost,
             'markup_percent': markup_percent,
@@ -744,11 +761,11 @@ class TransactionResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, tag_pool_name,
-                           message_direction):
+                           tag_name, message_direction):
         """Create a new transaction for the given ``account_number``"""
         result = yield self._connection_pool.runInteraction(
             self.create_transaction_interaction, account_number,
-            tag_pool_name, message_direction)
+            tag_pool_name, tag_name, message_direction)
 
         defer.returnValue(result)
 

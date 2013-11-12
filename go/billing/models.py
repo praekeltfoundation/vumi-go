@@ -95,6 +95,7 @@ class Transaction(models.Model):
 
     account_number = models.CharField(max_length=100)
     tag_pool_name = models.CharField(max_length=100, blank=True)
+    tag_name = models.CharField(max_length=100, blank=True)
     message_direction = models.CharField(max_length=20, blank=True)
     message_cost = models.IntegerField(blank=True, null=True)
     markup_percent = models.DecimalField(max_digits=10, decimal_places=2,
