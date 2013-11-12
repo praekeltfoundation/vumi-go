@@ -225,8 +225,7 @@ class Command(BaseCommand):
                 (email,))
             return None
 
-        user = user_model.objects.create_user(
-            email, email, user_info['password'])
+        user = user_model.objects.create_user(email, user_info['password'])
         user.first_name = user_info.get('first_name', '')
         user.last_name = user_info.get('last_name', '')
         user.save()

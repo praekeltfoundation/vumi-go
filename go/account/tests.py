@@ -4,7 +4,6 @@ from django.core.urlresolvers import reverse
 from django.core import mail
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from django.utils.unittest import skip
 
 from go.account.utils import send_user_account_summary
 from go.account.tasks import send_scheduled_account_summary
@@ -46,18 +45,14 @@ class AccountTestCase(VumiGoDjangoTestCase):
         self.assertEqual(user.email, 'foo@bar.com')
         self.assertTrue(user.check_password('password'))
 
-    @skip("This happens in a different place now and the test needs updating.")
     def test_update_password(self):
-        response = self.client.post(reverse('account:details'), {
-            'name': 'foo',
-            'surname': 'bar',
+        self.client.post(reverse('account:details'), {
             'email_address': 'user@domain.com',
-            'existing_password': 'password',
-            'new_password': 'new_password',
-            '_account': True,
+            'old_password': 'password',
+            'new_password1': 'new_password',
+            'new_password2': 'new_password',
+            '_password': True,
             })
-        token_url = response.context['token_url']
-        self.confirm(token_url)
         # reload from db
         user = get_user_model().objects.get(pk=self.django_user.pk)
         self.assertTrue(user.check_password('new_password'))
