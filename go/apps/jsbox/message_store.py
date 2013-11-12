@@ -6,7 +6,7 @@ Resource for accessing information stored in Go's message store.
 Allows for querying any conversation in a Go Account holder's account.
 """
 
-from twisted.internet.defer import inlineCallbacks, returnValue, succeed
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.sandbox import SandboxResource
 

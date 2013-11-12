@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from mock import Mock, patch
+from mock import Mock
 
-from twisted.internet.defer import inlineCallbacks, returnValue, succeed
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
 from go.apps.jsbox.message_store import MessageStoreResource
 from go.vumitools.tests.utils import GoAppWorkerTestMixin
-from go.vumitools.account import AccountStore
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
