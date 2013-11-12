@@ -30,27 +30,6 @@ def conversation_owner(func):
     return wrapper
 
 
-def ensure_params(*keys):
-    def decorator(func):
-        def wrapper(self, api, command):
-            for key in keys:
-                if key not in command:
-                    return self.reply(command, success=False,
-                                      reason='Missing key: %s' % (key,))
-
-                value = command[key]
-                # value is not allowed to be `False`, `None` or an empty
-                # string.
-                if not value:
-                    return self.reply(
-                        command, success=False,
-                        reason='Invalid value "%s" for "%s"' % (value, key))
-
-            return func(self, api, command)
-        return wrapper
-    return decorator
-
-
 class MessageStoreResource(SandboxResource):
 
     def get_user_api(self, api):
@@ -63,6 +42,39 @@ class MessageStoreResource(SandboxResource):
     @conversation_owner
     @inlineCallbacks
     def handle_progress_status(self, conversation, api, command):
+        """
+        Accepts a conversation_key and retrieves the progress_status
+        breakdown for that conversation.
+
+        If no conversation is specified then the current application's
+        conversation is used.
+
+        Command fields:
+            - ``conversation_key``: The key of the conversation to use.
+              This is optional, if not specified the application's own
+              conversation is used.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``progress_status``: A dictionary with a break down of the
+              conversations progress status:
+
+            .. code-block:: javascript
+
+                {
+                    'ack': 1,
+                    'delivery_report': 0,
+                    'delivery_report_delivered': 0,
+                    'delivery_report_failed': 0,
+                    'delivery_report_pending': 0,
+                    'nack': 0,
+                    'sent': 1,
+                }
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+        """
         status = yield conversation.get_progress_status()
         returnValue(self.reply(command, success=True,
                                progress_status=status))
@@ -70,39 +82,167 @@ class MessageStoreResource(SandboxResource):
     @conversation_owner
     @inlineCallbacks
     def handle_count_replies(self, conversation, api, command):
+        """
+        Count how many messages were received in the conversation.
+
+        If no conversation is specified then the current application's
+        conversation is used.
+
+        Command fields:
+            - ``conversation_key``: The key of the conversation to use.
+              This is optional, if not specified the application's own
+              conversation is used.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``count``: the number of messages received
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
+        """
         count = yield conversation.count_replies()
         returnValue(self.reply(command, success=True, count=count))
 
     @conversation_owner
     @inlineCallbacks
     def handle_count_sent_messages(self, conversation, api, command):
+        """
+        Count how many messages were sent in the conversation.
+
+        If no conversation is specified then the current application's
+        conversation is used.
+
+        Command fields:
+            - ``conversation_key``: The key of the conversation to use.
+              This is optional, if not specified the application's own
+              conversation is used.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``count``: the number of messages sent
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
+        """
         count = yield conversation.count_sent_messages()
         returnValue(self.reply(command, success=True, count=count))
 
     @conversation_owner
     @inlineCallbacks
     def handle_count_inbound_uniques(self, conversation, api, command):
+        """
+        Count from how many unique ``from_addr``s messages were received.
+
+        If no conversation is specified then the current application's
+        conversation is used.
+
+        Command fields:
+            - ``conversation_key``: The key of the conversation to use.
+              This is optional, if not specified the application's own
+              conversation is used.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``count``: the number of unique ``from_addr``s messages
+              were sent.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
+        """
         count = yield conversation.count_inbound_uniques()
         returnValue(self.reply(command, success=True, count=count))
 
     @conversation_owner
     @inlineCallbacks
     def handle_count_outbound_uniques(self, conversation, api, command):
+        """
+        Count to how many unique ``to_addr``s messages were sent.
+
+        If no conversation is specified then the current application's
+        conversation is used.
+
+        Command fields:
+            - ``conversation_key``: The key of the conversation to use.
+              This is optional, if not specified the application's own
+              conversation is used.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``count``: the number of unique ``to_addrs``s messages
+              were sent.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
+        """
         count = yield conversation.count_outbound_uniques()
         returnValue(self.reply(command, success=True, count=count))
 
-    @ensure_params('sample_time')
     @conversation_owner
     @inlineCallbacks
     def handle_inbound_throughput(self, conversation, api, command):
-        sample_time = int(command['sample_time'])
+        """
+        Count how many messages a minute were received.
+
+        If no conversation is specified then the current application's
+        conversation is used.
+
+        Command fields:
+            - ``conversation_key``: The key of the conversation to use.
+              This is optional, if not specified the application's own
+              conversation is used.
+            - ``sample_time``: How far to look back to calculate the
+              throughput. Defaults to 300 seconds (5 minutes)
+
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``throughput``: how many inbound messages per minute the
+              conversation has done on average.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
+        """
+        sample_time = int(command.get('sample_time', 300))
         throughput = yield conversation.get_inbound_throughput(sample_time)
         returnValue(self.reply(command, success=True, throughput=throughput))
 
-    @ensure_params('sample_time')
     @conversation_owner
     @inlineCallbacks
     def handle_outbound_throughput(self, conversation, api, command):
-        sample_time = int(command['sample_time'])
+        """
+        Count how many messages a minute were sent.
+
+        If no conversation is specified then the current application's
+        conversation is used.
+
+        Command fields:
+            - ``conversation_key``: The key of the conversation to use.
+              This is optional, if not specified the application's own
+              conversation is used.
+            - ``sample_time``: How far to look back to calculate the
+              throughput. Defaults to 300 seconds (5 minutes)
+
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``throughput``: how many outbound messages per minute the
+              conversation has done on average.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure.
+
+        """
+        sample_time = int(command.get('sample_time', 300))
         throughput = yield conversation.get_outbound_throughput(sample_time)
         returnValue(self.reply(command, success=True, throughput=throughput))

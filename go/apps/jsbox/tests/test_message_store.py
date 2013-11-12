@@ -2,7 +2,7 @@
 
 from mock import Mock
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
@@ -52,8 +52,11 @@ class MessageStoreResourceTestCase(ResourceTestCaseBase, GoAppWorkerTestMixin):
         event = self.msg_helper.make_ack(outbound_msg)
         yield self.message_store.add_event(event)
 
-        # monkey patch for testing!
+        # monkey patch for when no conversation_key is provided
         self.app_worker.conversation_for_api = lambda *a: self.conversation
+        # monkey patch for when a conversation_key is provided and always
+        # return ``None`` which means it doesn't exist.
+        self.app_worker.user_api.get_wrapped_conversation.return_value = None
 
         yield self.create_resource({})
 
@@ -117,3 +120,10 @@ class MessageStoreResourceTestCase(ResourceTestCaseBase, GoAppWorkerTestMixin):
                                             sample_time=60)
         self.assertTrue(reply['success'])
         self.assertEqual(reply['throughput'], 1)
+
+    @inlineCallbacks
+    def test_invalid_conversation_key(self):
+        reply = yield self.dispatch_command('progress_status',
+                                            conversation_key='foo')
+        self.assertFalse(reply['success'])
+        self.assertEqual(reply['reason'], 'Invalid conversation_key')
