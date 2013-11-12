@@ -29,7 +29,7 @@ class UserAppPermission(Model):
 class UserAccount(Model):
     """A user account."""
 
-    VERSION = 3
+    VERSION = 4
     MIGRATOR = UserAccountMigrator
 
     # key is uuid
