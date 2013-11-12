@@ -21,17 +21,36 @@ class TestSubscriptionConversationDefinition(VumiGoDjangoTestCase):
     def test_metrics_retrieval(self):
         [m1, m2, m3, m4, m5, m6] = self.conv_def.get_metrics()
 
+        metric_name_prefix = (
+            "go.campaigns.%s.conversations.%s"
+            % (self.conv.user_account.key, self.conv.key))
+
+        self.assertEqual(
+            m1.get_full_name(),
+            '%s.messages_sent' % metric_name_prefix)
         self.assertTrue(isinstance(m1, MessagesSentMetric))
+
+        self.assertEqual(
+            m2.get_full_name(),
+            '%s.messages_received' % metric_name_prefix)
         self.assertTrue(isinstance(m2, MessagesReceivedMetric))
 
-        self.assertTrue(m3.get_full_name().endswith('campaign-1.subscribed'))
+        self.assertEqual(
+            m3.get_full_name(),
+            '%s.campaign-1.subscribed' % metric_name_prefix)
         self.assertTrue(isinstance(m3, SubscribedMetric))
 
-        self.assertTrue(m4.get_full_name().endswith('campaign-2.subscribed'))
+        self.assertEqual(
+            m4.get_full_name(),
+            '%s.campaign-2.subscribed' % metric_name_prefix)
         self.assertTrue(isinstance(m4, SubscribedMetric))
 
-        self.assertTrue(m5.get_full_name().endswith('campaign-1.unsubscribed'))
+        self.assertEqual(
+            m5.get_full_name(),
+            '%s.campaign-1.unsubscribed' % metric_name_prefix)
         self.assertTrue(isinstance(m5, UnsubscribedMetric))
 
-        self.assertTrue(m6.get_full_name().endswith('campaign-2.unsubscribed'))
+        self.assertEqual(
+            m6.get_full_name(),
+            '%s.campaign-2.unsubscribed' % metric_name_prefix)
         self.assertTrue(isinstance(m6, UnsubscribedMetric))
