@@ -6,6 +6,7 @@ from go.vumitools.contact import ContactStore
 
 class ToySubscriptionMetric(SubscriptionMetric):
     METRIC_NAME = 'toy-subscription-metric'
+    CONTACT_LOOKUP_KEY = 'toy-subscription-metric'
 
 
 class TestSubscriptionMetric(TxMetricTestBase):
