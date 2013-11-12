@@ -7,7 +7,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue, succeed
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
-from go.apps.jsbox.optout import OptoutResource
+from go.apps.jsbox.opt_out import OptOutResource
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
@@ -24,14 +24,14 @@ class StubbedAppWorker(DummyAppWorker):
         return self.user_api
 
 
-class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
+class OptOutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
     use_riak = True
     app_worker_cls = StubbedAppWorker
-    resource_cls = OptoutResource
+    resource_cls = OptOutResource
 
     @inlineCallbacks
     def setUp(self):
-        super(OptoutResourceTestCase, self).setUp()
+        super(OptOutResourceTestCase, self).setUp()
         yield self._persist_setUp()
 
         self.msg_helper = GoMessageHelper()
@@ -65,7 +65,7 @@ class OptoutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27000000000')
 
     def tearDown(self):
-        super(OptoutResourceTestCase, self).tearDown()
+        super(OptOutResourceTestCase, self).tearDown()
         return self._persist_tearDown()
 
     def optout(self, msisdn):

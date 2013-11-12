@@ -1,4 +1,4 @@
-# -*- test-case-name: go.apps.jsbox.tests.test_optout -*-
+# -*- test-case-name: go.apps.jsbox.tests.test_opt_out -*-
 # -*- coding: utf-8 -*-
 
 """Resource for accessing and modifying a contact's opt-out/opt-in
@@ -43,7 +43,7 @@ def ensure_params(*keys):
     return decorator
 
 
-class OptoutResource(SandboxResource):
+class OptOutResource(SandboxResource):
 
     def get_user_api(self, api):
         return self.app_worker.user_api_for_api(api)
