@@ -1,4 +1,4 @@
-# -*- test-case-name: go.apps.jsbox.tests.test_messagestore -*-
+# -*- test-case-name: go.apps.jsbox.tests.test_message_store -*-
 # -*- coding: utf-8 -*-
 
 """
@@ -19,10 +19,11 @@ def conversation_owner(func):
             conversation = self.app_worker.conversation_for_api(api)
         else:
             conversation = yield self.get_conversation(api, conversation_key)
-            if conversation is None:
-                returnValue(self.reply(
-                    command, success=False,
-                    reason='Invalid conversation_key'))
+
+        if conversation is None:
+            returnValue(self.reply(
+                command, success=False,
+                reason='Invalid conversation_key'))
 
         resp = yield func(self, conversation, api, command)
         returnValue(resp)
@@ -60,6 +61,48 @@ class MessageStoreResource(SandboxResource):
         return user_api.get_wrapped_conversation(conversation_key)
 
     @conversation_owner
+    @inlineCallbacks
     def handle_progress_status(self, conversation, api, command):
-        return self.reply(command, success=True,
-                          progress_status=conversation.get_progress_status())
+        status = yield conversation.get_progress_status()
+        returnValue(self.reply(command, success=True,
+                               progress_status=status))
+
+    @conversation_owner
+    @inlineCallbacks
+    def handle_count_replies(self, conversation, api, command):
+        count = yield conversation.count_replies()
+        returnValue(self.reply(command, success=True, count=count))
+
+    @conversation_owner
+    @inlineCallbacks
+    def handle_count_sent_messages(self, conversation, api, command):
+        count = yield conversation.count_sent_messages()
+        returnValue(self.reply(command, success=True, count=count))
+
+    @conversation_owner
+    @inlineCallbacks
+    def handle_count_inbound_uniques(self, conversation, api, command):
+        count = yield conversation.count_inbound_uniques()
+        returnValue(self.reply(command, success=True, count=count))
+
+    @conversation_owner
+    @inlineCallbacks
+    def handle_count_outbound_uniques(self, conversation, api, command):
+        count = yield conversation.count_outbound_uniques()
+        returnValue(self.reply(command, success=True, count=count))
+
+    @ensure_params('sample_time')
+    @conversation_owner
+    @inlineCallbacks
+    def handle_inbound_throughput(self, conversation, api, command):
+        sample_time = int(command['sample_time'])
+        throughput = yield conversation.get_inbound_throughput(sample_time)
+        returnValue(self.reply(command, success=True, throughput=throughput))
+
+    @ensure_params('sample_time')
+    @conversation_owner
+    @inlineCallbacks
+    def handle_outbound_throughput(self, conversation, api, command):
+        sample_time = int(command['sample_time'])
+        throughput = yield conversation.get_outbound_throughput(sample_time)
+        returnValue(self.reply(command, success=True, throughput=throughput))

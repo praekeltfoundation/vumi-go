@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from mock import Mock
+from mock import Mock, patch
 
 from twisted.internet.defer import inlineCallbacks, returnValue, succeed
 
@@ -8,7 +8,7 @@ from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
 from go.apps.jsbox.message_store import MessageStoreResource
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoAppWorkerTestMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.tests.helpers import GoMessageHelper
 
@@ -22,19 +22,10 @@ class StubbedAppWorker(DummyAppWorker):
         return self.user_api
 
 
-class MessageStoreResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
+class MessageStoreResourceTestCase(ResourceTestCaseBase, GoAppWorkerTestMixin):
     use_riak = True
     app_worker_cls = StubbedAppWorker
     resource_cls = MessageStoreResource
-
-    # get_progress_status
-    # count_replies
-    # count_sent_messages
-    # count_inbound_uniques
-    # count_outbound_uniques
-    # get_aggregate_keys
-    # get_inbound_throughput
-    # get_outbound_throughput
 
     @inlineCallbacks
     def setUp(self):
@@ -42,15 +33,21 @@ class MessageStoreResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
         yield self._persist_setUp()
 
         self.msg_helper = GoMessageHelper()
+        self.vumi_api = yield self.get_vumi_api()
+        self.message_store = self.vumi_api.mdb
+        yield self.setup_user_api(self.vumi_api)
 
-        # We pass `self` in as the VumiApi object here, because mk_user() just
-        # grabs .account_store off it.
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
+        self.conversation = yield self.create_conversation(started=True)
+
+        # monkey patch for testing!
+        self.app_worker.conversation_for_api = lambda *a: self.conversation
 
         yield self.create_resource({})
-        print self.create_conversation
+
+    def _worker_name(self):
+        """hack to get GoAppWorkerTestMixin to get a `conversation_type` when
+        calling `create_conversation()`"""
+        return 'unnamed'
 
     def tearDown(self):
         super(MessageStoreResourceTestCase, self).tearDown()
@@ -59,6 +56,43 @@ class MessageStoreResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
     @inlineCallbacks
     def test_handle_progress_status(self):
         reply = yield self.dispatch_command('progress_status')
-
         self.assertTrue(reply['success'])
-        self.assertEqual(reply['progress_status'], {})
+        self.assertTrue(isinstance(reply['progress_status'], dict))
+
+    @inlineCallbacks
+    def test_handle_count_replies(self):
+        reply = yield self.dispatch_command('count_replies')
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['count'], 0)
+
+    @inlineCallbacks
+    def test_handle_count_sent_messages(self):
+        reply = yield self.dispatch_command('count_sent_messages')
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['count'], 0)
+
+    @inlineCallbacks
+    def test_handle_count_inbound_uniques(self):
+        reply = yield self.dispatch_command('count_inbound_uniques')
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['count'], 0)
+
+    @inlineCallbacks
+    def test_handle_count_outbound_uniques(self):
+        reply = yield self.dispatch_command('count_outbound_uniques')
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['count'], 0)
+
+    @inlineCallbacks
+    def test_handle_inbound_throughput(self):
+        reply = yield self.dispatch_command('inbound_throughput',
+                                            sample_time=1)
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['throughput'], 0)
+
+    @inlineCallbacks
+    def test_handle_outbound_throughput(self):
+        reply = yield self.dispatch_command('outbound_throughput',
+                                            sample_time=1)
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['throughput'], 0)
