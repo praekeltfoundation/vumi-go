@@ -10,6 +10,7 @@ from twisted.trial.unittest import TestCase
 from vumi.persist.fields import (
     ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
 from vumi.message import TransportEvent
+from vumi.worker import BaseWorker
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
 
@@ -17,6 +18,7 @@ from go.vumitools.api import VumiApiCommand, VumiApi
 from go.vumitools.account import UserAccount
 from go.vumitools.contact import Contact, ContactGroup
 from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 
 
 def field_eq(f1, f2):
@@ -392,3 +394,45 @@ class GoTestCase(GoPersistenceMixin, TestCase):
 
     def tearDown(self):
         return self._persist_tearDown()
+
+
+class ToyWorkerConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+    pass
+
+
+class ToyWorker(BaseWorker, GoWorkerMixin):
+    CONFIG_CLASS = ToyWorkerConfig
+
+    def setup_worker(self):
+        return self._go_setup_worker()
+
+    def teardown_worker(self):
+        return self._go_teardown_worker()
+
+    def setup_connectors(self):
+        pass
+
+
+class TxMetricTestBase(GoWorkerTestCase):
+    worker_class = ToyWorker
+
+    @inlineCallbacks
+    def setUp(self):
+        super(TxMetricTestBase, self).setUp()
+        worker_config = self.mk_config({'metrics_prefix': 'go.'})
+
+        self.worker = yield self.get_worker(worker_config, start=True)
+        self.metrics_manager = self.worker.metrics
+        self.vumi_api = self.worker.vumi_api
+
+        self.user = yield self.mk_user(self.vumi_api, u'testuser')
+        self.user_api = self.vumi_api.get_user_api(self.user.key)
+
+        self.msgs = []
+        self.patch(
+            self.metrics_manager,
+            'publish_message',
+            lambda msg: self.msgs.append(msg))
+
+    def publish_metrics(self):
+        self.metrics_manager._publish_metrics()
