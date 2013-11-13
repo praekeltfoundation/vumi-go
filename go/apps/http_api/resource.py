@@ -132,6 +132,50 @@ class EventStream(StreamResource):
     routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
 
 
+class MsgOptions(object):
+    """Helper for sanitizing msg options from clients."""
+
+    WHITELIST = {}
+
+    def __init__(self, payload):
+        self.error = None
+        for key, checker in self.WHITELIST.iteritems():
+            value = payload.get(key)
+            if not checker(value):
+                self.error = (
+                    "Invalid or missing value for payload key %r" % (key,))
+                break
+            setattr(self, key, value)
+
+
+class MsgCheckHelpers(object):
+    @staticmethod
+    def is_unicode_or_none(value):
+        return (value is None) or (isinstance(value, unicode))
+
+    @staticmethod
+    def is_session_event(value):
+        return value in TransportUserMessage.SESSION_EVENTS
+
+
+class SendToOptions(MsgOptions):
+    """Payload options for messages sent with `.send_to(...)`."""
+
+    WHITELIST = {
+        'content': MsgCheckHelpers.is_unicode_or_none,
+        'to_addr': MsgCheckHelpers.is_unicode_or_none,
+    }
+
+
+class ReplyToOptions(MsgOptions):
+    """Payload options for messages sent with `.reply_to(...)`."""
+
+    WHITELIST = {
+        'content': MsgCheckHelpers.is_unicode_or_none,
+        'session_event': MsgCheckHelpers.is_session_event,
+    }
+
+
 class MessageStream(StreamResource):
 
     message_class = TransportUserMessage
@@ -156,13 +200,6 @@ class MessageStream(StreamResource):
         if load_balancer is not None:
             return {'load_balancer': copy.deepcopy(load_balancer)}
         return {}
-
-    def get_msg_options(self, payload, white_list=[]):
-        raw_payload = copy.deepcopy(payload.copy())
-        msg_options = dict((key, value)
-                           for key, value in raw_payload.items()
-                           if key in white_list)
-        return msg_options
 
     def get_conversation_tag(self, conversation):
         return (conversation.delivery_tag_pool, conversation.delivery_tag)
@@ -202,16 +239,18 @@ class MessageStream(StreamResource):
             self.client_error_response(request, 'Invalid in_reply_to value')
             return
 
-        msg_options = self.get_msg_options(payload,
-                                           ['session_event', 'content'])
-        content = msg_options.pop('content')
-        continue_session = (msg_options.pop('session_event', None)
+        msg_options = ReplyToOptions(payload)
+        if msg_options.error:
+            self.client_error_response(request, msg_options.error)
+            return
+
+        continue_session = (msg_options.session_event
                             != TransportUserMessage.SESSION_CLOSE)
         helper_metadata = conversation.set_go_helper_metadata()
         helper_metadata.update(self.get_load_balancer_metadata(payload))
 
         msg = yield self.worker.reply_to(
-            reply_to, content, continue_session,
+            reply_to, msg_options.content, continue_session,
             helper_metadata=helper_metadata)
 
         self.successful_send_response(request, msg)
@@ -221,13 +260,12 @@ class MessageStream(StreamResource):
         user_account = request.getUser()
         conversation = yield self.get_conversation(user_account)
 
-        msg_options = self.get_msg_options(payload, ['content', 'to_addr'])
-        to_addr = msg_options.pop('to_addr')
-        content = msg_options.pop('content')
-        msg_options['helper_metadata'] = conversation.set_go_helper_metadata()
+        msg_options = SendToOptions(payload)
+        helper_metadata = conversation.set_go_helper_metadata()
 
         msg = yield self.worker.send_to(
-            to_addr, content, endpoint='default', **msg_options)
+            msg_options.to_addr, msg_options.content,
+            endpoint='default', helper_metadata=helper_metadata)
 
         self.successful_send_response(request, msg)
 
