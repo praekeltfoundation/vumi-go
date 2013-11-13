@@ -45,6 +45,18 @@ class BaseResource(resource.Resource):
         user_api = self.get_user_api(user_account)
         return user_api.get_wrapped_conversation(conversation_key)
 
+    def finish_response(self, request, body, code, status=None):
+        request.setResponseCode(code, status)
+        request.write(body)
+        request.finish()
+
+    def client_error_response(self, request, reason, code=http.BAD_REQUEST):
+        msg = json.dumps({
+            "success": False,
+            "reason": reason,
+        })
+        self.finish_response(request, msg, code=code, status=reason)
+
 
 class StreamResource(BaseResource):
 
@@ -150,8 +162,7 @@ class MessageStream(StreamResource):
         try:
             payload = json.loads(request.content.read())
         except ValueError:
-            request.setResponseCode(http.BAD_REQUEST, 'Invalid Message')
-            request.finish()
+            self.client_error_response(request, 'Invalid Message')
             return
 
         in_reply_to = payload.get('in_reply_to')
@@ -167,9 +178,7 @@ class MessageStream(StreamResource):
 
         reply_to = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
         if reply_to is None:
-            request.setResponseCode(http.BAD_REQUEST)
-            request.write('Invalid in_reply_to value')
-            request.finish()
+            self.client_error_response(request, 'Invalid in_reply_to value')
             return
 
         reply_to_mdh = MessageMetadataHelper(self.vumi_api, reply_to)
@@ -180,9 +189,7 @@ class MessageStream(StreamResource):
                         ' key' % (reply_to,))
             msg_conversation_key = None
         if msg_conversation_key != conversation.key:
-            request.setResponseCode(http.BAD_REQUEST)
-            request.write('Invalid in_reply_to value')
-            request.finish()
+            self.client_error_response(request, 'Invalid in_reply_to value')
             return
 
         msg_options = self.get_msg_options(payload,
@@ -251,8 +258,7 @@ class MetricResource(BaseResource):
         try:
             metrics = self.parse_metrics(data)
         except (ValueError, InvalidAggregate, InvalidMessage):
-            request.setResponseCode(http.BAD_REQUEST, 'Invalid Message')
-            request.finish()
+            self.client_error_response(request, 'Invalid Message')
             return
 
         conversation = yield self.get_conversation(user_account)
