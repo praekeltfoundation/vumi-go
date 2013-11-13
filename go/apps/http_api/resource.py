@@ -261,6 +261,10 @@ class MessageStream(StreamResource):
         conversation = yield self.get_conversation(user_account)
 
         msg_options = SendToOptions(payload)
+        if msg_options.error:
+            self.client_error_response(request, msg_options.error)
+            return
+
         helper_metadata = conversation.set_go_helper_metadata()
 
         msg = yield self.worker.send_to(
