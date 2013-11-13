@@ -271,6 +271,37 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['from_addr'], None)
 
     @inlineCallbacks
+    def test_in_reply_to(self):
+        inbound_msg = yield self.msg_helper.make_stored_inbound(
+            self.conversation, 'in 1', message_id='1')
+
+        msg = {
+            'content': 'foo',
+            'in_reply_to': inbound_msg['message_id'],
+        }
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, json.dumps(msg),
+                                           self.auth_headers, method='PUT')
+
+        put_msg = json.loads(response.delivered_body)
+        self.assertEqual(response.code, http.OK)
+
+        [sent_msg] = self.get_dispatched_messages()
+        self.assertEqual(sent_msg['to_addr'], put_msg['to_addr'])
+        self.assertEqual(sent_msg['helper_metadata'], {
+            'go': {
+                'conversation_key': self.conversation.key,
+                'conversation_type': 'http_api',
+                'user_account': self.account.key,
+            },
+        })
+        self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
+        self.assertEqual(sent_msg['session_event'], None)
+        self.assertEqual(sent_msg['to_addr'], inbound_msg['from_addr'])
+        self.assertEqual(sent_msg['from_addr'], '9292')
+
+    @inlineCallbacks
     def test_invalid_in_reply_to(self):
         msg = {
             'content': 'foo',
@@ -304,36 +335,44 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertTrue(inbound_msg['message_id'] in error_log)
 
     @inlineCallbacks
-    def test_in_reply_to(self):
+    def test_in_reply_to_with_evil_session_event(self):
         inbound_msg = yield self.msg_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
         msg = {
             'content': 'foo',
             'in_reply_to': inbound_msg['message_id'],
-            'message_id': 'evil_id',
-            'session_event': 'evil_event',
+            'session_event': 0xBAD5E55104,
         }
 
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
 
-        put_msg = json.loads(response.delivered_body)
-        self.assertEqual(response.code, http.OK)
+        self.assertEqual(response.code, http.BAD_REQUEST)
+        self.assertEqual(self.get_dispatched_messages(), [])
 
+    @inlineCallbacks
+    def test_in_reply_to_with_evil_message_id(self):
+        inbound_msg = yield self.msg_helper.make_stored_inbound(
+            self.conversation, 'in 1', message_id='1')
+
+        msg = {
+            'content': 'foo',
+            'in_reply_to': inbound_msg['message_id'],
+            'message_id': 'evil_id'
+        }
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, json.dumps(msg),
+                                           self.auth_headers, method='PUT')
+
+        self.assertEqual(response.code, http.OK)
+        put_msg = json.loads(response.delivered_body)
         [sent_msg] = self.get_dispatched_messages()
-        self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
-        self.assertEqual(sent_msg['helper_metadata'], {
-            'go': {
-                'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
-                'user_account': self.account.key,
-            },
-        })
+
         # We do not respect the message_id that's been given.
         self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
-        self.assertNotEqual(sent_msg['session_event'], msg['session_event'])
         self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
         self.assertEqual(sent_msg['to_addr'], inbound_msg['from_addr'])
         self.assertEqual(sent_msg['from_addr'], '9292')
