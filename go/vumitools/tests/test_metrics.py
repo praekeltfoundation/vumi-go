@@ -133,7 +133,7 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
 
     def test_oneshot_with_value(self):
         self.assertEqual(self.msgs, [])
-        self.metric.oneshot_with_value(22)
+        self.metric.oneshot(value=22)
 
         [msg] = self.msgs
         self.assertEqual(
@@ -175,7 +175,7 @@ class TestTxMetric(TxMetricTestBase):
             [('go.some.random.metric', ('last',), [(1985, 42)])])
 
     def test_oneshot_with_value(self):
-        self.metric.oneshot_with_value(self.metrics_manager, 9)
+        self.metric.oneshot(self.metrics_manager, value=9)
 
         self.assertEqual(self.msgs, [])
 

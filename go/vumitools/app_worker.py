@@ -267,7 +267,7 @@ class GoWorkerMixin(object):
     def publish_account_metric(self, acc_key, store, name, value, agg=None):
         aggs = [agg] if agg is not None else None
         metric = AccountMetric(acc_key, store, name, aggs)
-        metric.oneshot_with_value(self.metrics, value)
+        metric.oneshot(self.metrics, value)
 
     @inlineCallbacks
     def publish_conversation_metrics(self, user_api, conversation_key):
@@ -277,7 +277,7 @@ class GoWorkerMixin(object):
         conv_def = base_utils.get_conversation_definition(conv_type, conv)
 
         yield gatherResults([
-            m.oneshot(self.metrics, self.vumi_api, user_api)
+            m.oneshot(self.metrics, vumi_api=self.vumi_api, user_api=user_api)
             for m in conv_def.get_metrics()])
 
     def collect_metrics(self, user_api, conversation_key):

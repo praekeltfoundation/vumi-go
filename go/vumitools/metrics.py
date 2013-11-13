@@ -1,5 +1,5 @@
 from django.conf import settings
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.blinkenlights.metrics import Metric, Aggregator
 
@@ -35,19 +35,13 @@ class GoMetric(object):
     def get_aggregators(self):
         return [Aggregator.from_name(name) for name in self.metric.aggs]
 
-    def oneshot_with_value(self, value):
+    def publish_value(self, manager_or_connection, value):
         """
-        Should do a once-off publish for the metric using the given value.
+        Should do a once-off publish for the metric using a manager or
+        connection capable of metric publishing, and a value.
         """
         raise NotImplementedError(
-            "GoMetric.oneshot_with_value() needs to be overriden")
-
-    def oneshot(self, *a, **kw):
-        """
-        Should do a once-off publish for the metric using `get_value()` to
-        calculate the metric's value.
-        """
-        raise NotImplementedError("GoMetric.oneshot() needs to be overriden")
+            "GoMetric.publish_value() needs to be overriden")
 
 
 class DjangoMetric(GoMetric):
@@ -63,26 +57,24 @@ class DjangoMetric(GoMetric):
     def make_name(self, metric_name):
         return "django.%s" % (metric_name,)
 
-    def oneshot_with_value(self, value, connection=None):
+    def publish_value(self, connection, value):
         """
         Does a once-off publish for the metric using an `AmqpConnection` and
         the given metric value.
         """
-
-        if connection is None:
-            connection = amqp.connection
-
         connection.publish_metric(
             self.get_full_name(),
             self.get_aggregators(),
             value)
 
-    def oneshot(self, connection=None):
-        """
-        Obtains a value using `get_value()`, then does a once-off publish for
-        the metric using an `AmqpConnection`.
-        """
-        return self.oneshot_with_value(self.get_value(), connection)
+    def oneshot(self, value=None, connection=None, **kw):
+        if value is None:
+            value = self.get_value(**kw)
+
+        if connection is None:
+            connection = amqp.connection
+
+        return self.publish_value(connection, value)
 
 
 class TxMetric(GoMetric):
@@ -90,13 +82,15 @@ class TxMetric(GoMetric):
     Base for a metric publised in *Twisted land*.
     """
 
-    def oneshot_with_value(self, manager, value):
+    def publish_value(self, manager, value):
         manager.oneshot(self.metric, value)
 
     @inlineCallbacks
-    def oneshot(self, manager, *value_args, **value_kwargs):
-        value = yield self.get_value(*value_args, **value_kwargs)
-        self.oneshot_with_value(manager, value)
+    def oneshot(self, manager, value=None, **kw):
+        if value is None:
+            value = yield self.get_value(**kw)
+
+        returnValue(self.publish_value(manager, value))
 
 
 class AccountMetric(TxMetric):
