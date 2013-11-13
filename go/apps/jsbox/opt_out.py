@@ -35,6 +35,8 @@ def ensure_params(*keys):
                                       reason='Missing key: %s' % (key,))
 
                 value = command[key]
+                # NOTE: This needs to be updated once we have some proper
+                #       tools for validating command input
                 # value is not allowed to be `False`, `None`, `0`
                 # or an empty string.
                 if not value:
@@ -68,8 +70,6 @@ class OptOutResource(SandboxResource):
         """
         Accepts an address_type and address_value and
         retrieves the opt-out entry for it.
-
-        Returns ``None`` if it doesn't exist.
 
         Command fields:
             - ``address_type``: the type of address to check for opt-out
@@ -139,7 +139,7 @@ class OptOutResource(SandboxResource):
         Success reply fields:
             - ``success``: set to ``true``
             - ``opted_out``: set to ``true``
-            - ``created_at``: the timestamp of the opt-out (if opted out)
+            - ``created_at``: the timestamp of the opt-out
             - ``message_id``: the message_id of the message that triggered
               the opt-out.
 
