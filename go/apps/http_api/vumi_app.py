@@ -12,8 +12,11 @@ from vumi.transports.httprpc import httprpc
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
-from go.apps.http_api.resource import (AuthorizedResource, MessageStream,
-                                       EventStream)
+from go.apps.http_api.resource import (AuthorizedResource,
+                                       OutgoingConversationResource,
+                                       IncomingConversationResource,
+                                       OutgoingMessageStreamResource,
+                                       OutgoingEventStreamResource)
 
 
 class StreamingClientManager(object):
@@ -61,7 +64,7 @@ class StreamingClientManager(object):
         yield self.redis.ltrim(backlog_key, 0, self.MAX_BACKLOG_SIZE - 1)
 
 
-class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
+class OutboundHttpWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
     """Configuration options for StreamingHTTPWorker."""
 
     web_path = ConfigText(
@@ -82,14 +85,14 @@ class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         "messages or events", default=5, static=True)
 
 
-class StreamingHTTPWorker(GoApplicationWorker):
+class OutboundHttpWorker(GoApplicationWorker):
 
-    worker_name = 'http_api_worker'
-    CONFIG_CLASS = StreamingHTTPWorkerConfig
+    worker_name = 'http_api_outbound_application'
+    CONFIG_CLASS = OutboundHttpWorkerConfig
 
     @inlineCallbacks
     def setup_application(self):
-        yield super(StreamingHTTPWorker, self).setup_application()
+        yield super(OutboundHttpWorker, self).setup_application()
         config = self.get_static_config()
         self.web_path = config.web_path
         self.web_port = config.web_port
@@ -104,7 +107,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
             self.redis.sub_manager('http_api:message_cache'))
 
         self.webserver = self.start_web_resources([
-            (AuthorizedResource(self), self.web_path),
+            (AuthorizedResource(self, OutgoingConversationResource),
+             self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),
         ], self.web_port)
 
@@ -142,7 +146,9 @@ class StreamingHTTPWorker(GoApplicationWorker):
         if push_message_url:
             yield self.push(push_message_url, message)
         else:
-            yield self.stream(MessageStream, conversation.key, message)
+            yield self.stream(OutgoingMessageStreamResource,
+                              conversation.key,
+                              message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
@@ -161,7 +167,9 @@ class StreamingHTTPWorker(GoApplicationWorker):
         if push_event_url:
             yield self.push(push_event_url, event)
         else:
-            yield self.stream(EventStream, conversation.key, event)
+            yield self.stream(OutgoingEventStreamResource,
+                              conversation.key,
+                              event)
 
     @inlineCallbacks
     def push(self, url, vumi_message):
@@ -186,5 +194,51 @@ class StreamingHTTPWorker(GoApplicationWorker):
 
     @inlineCallbacks
     def teardown_application(self):
-        yield super(StreamingHTTPWorker, self).teardown_application()
         yield self.webserver.loseConnection()
+        yield super(OutboundHttpWorker, self).teardown_application()
+
+
+class InboundHttpWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
+    """Configuration options for StreamingHTTPWorker."""
+
+    web_path = ConfigText(
+        "The path the HTTP worker should expose the API on.",
+        required=True, static=True)
+    web_port = ConfigInt(
+        "The port the HTTP worker should open for the API.",
+        required=True, static=True)
+    health_path = ConfigText(
+        "The path the resource should receive health checks on.",
+        default='/health/', static=True)
+
+
+class InboundHttpWorker(GoApplicationWorker):
+
+    worker_name = 'http_api_inbound_application'
+    CONFIG_CLASS = InboundHttpWorkerConfig
+
+    @inlineCallbacks
+    def setup_application(self):
+        yield super(InboundHttpWorker, self).setup_application()
+        config = self.get_static_config()
+        self.web_path = config.web_path
+        self.web_port = config.web_port
+        self.health_path = config.health_path
+        self.metrics_prefix = config.metrics_prefix
+
+        self.webserver = self.start_web_resources([
+            (AuthorizedResource(self, IncomingConversationResource),
+             self.web_path),
+            (httprpc.HttpRpcHealthResource(self), self.health_path),
+        ], self.web_port)
+
+    def get_api_config(self, conversation, key):
+        return conversation.config.get('http_api', {}).get(key)
+
+    def get_health_response(self):
+        return str("hai!")
+
+    @inlineCallbacks
+    def teardown_application(self):
+        yield self.webserver.loseConnection()
+        yield super(InboundHttpWorker, self).teardown_application()

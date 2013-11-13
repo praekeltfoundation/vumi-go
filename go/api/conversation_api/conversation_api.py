@@ -115,10 +115,6 @@ class ConversationApiWorkerConfig(BaseWorker.CONFIG_CLASS):
         "Riak client configuration.", default={}, static=True)
 
 
-class AccountResource(AuthorizedResource):
-    resource_class = ConversationApiResource
-
-
 class ConversationApiWorker(BaseWorker):
 
     worker_name = 'conversation_api_worker'
@@ -129,7 +125,8 @@ class ConversationApiWorker(BaseWorker):
         self.vumi_api = yield VumiApi.from_config_async(self.config)
         config = self.get_static_config()
         self.webserver = self.start_web_resources([
-            (AccountResource(self), config.web_path),
+            (AuthorizedResource(self, ConversationApiResource),
+             config.web_path),
             (httprpc.HttpRpcHealthResource(self), config.health_path)
         ], config.web_port)
 
