@@ -4,12 +4,15 @@
 """Resource for accessing and modifying a contact's opt-out/opt-in
    status from the sandbox"""
 
+from functools import wraps
+
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.sandbox import SandboxResource
 
 
 def optout_authorized(func):
+    @wraps(func)
     @inlineCallbacks
     def wrapper(self, api, command):
         if not (yield self.is_allowed(api)):
@@ -24,6 +27,7 @@ def optout_authorized(func):
 
 def ensure_params(*keys):
     def decorator(func):
+        @wraps(func)
         def wrapper(self, api, command):
             for key in keys:
                 if key not in command:
@@ -31,8 +35,8 @@ def ensure_params(*keys):
                                       reason='Missing key: %s' % (key,))
 
                 value = command[key]
-                # value is not allowed to be `False`, `None` or an empty
-                # string.
+                # value is not allowed to be `False`, `None`, `0`
+                # or an empty string.
                 if not value:
                     return self.reply(
                         command, success=False,
