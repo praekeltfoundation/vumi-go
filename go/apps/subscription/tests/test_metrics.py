@@ -6,7 +6,7 @@ from go.vumitools.contact import ContactStore
 
 class ToySubscriptionMetric(SubscriptionMetric):
     METRIC_NAME = 'toy-subscription-metric'
-    CONTACT_LOOKUP_KEY = 'toy-subscription-metric'
+    CONTACT_LOOKUP_KEY = 'toy-subscription'
 
 
 class TestSubscriptionMetric(TxMetricTestBase):
@@ -44,8 +44,8 @@ class TestSubscriptionMetric(TxMetricTestBase):
         self.assertEqual(
             (yield self.metric.get_value(self.vumi_api, self.user_api)), 0)
 
-        self.contact1.subscription['campaign-1'] = u'toy-subscription-metric'
-        self.contact2.subscription['campaign-1'] = u'toy-subscription-metric'
+        self.contact1.subscription['campaign-1'] = u'toy-subscription'
+        self.contact2.subscription['campaign-1'] = u'toy-subscription'
 
         yield self.contact1.save()
         yield self.contact2.save()
