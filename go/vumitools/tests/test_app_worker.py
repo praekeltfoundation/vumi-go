@@ -15,7 +15,7 @@ from go.vumitools.conversation.definition import ConversationDefinitionBase
 class DummyMetric(ConversationMetric):
     METRIC_NAME = 'dummy_metric'
 
-    def get_value(self, vumi_api, user_api):
+    def get_value(self, user_api):
         return 42
 
 

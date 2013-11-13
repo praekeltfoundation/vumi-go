@@ -277,7 +277,7 @@ class GoWorkerMixin(object):
         conv_def = base_utils.get_conversation_definition(conv_type, conv)
 
         yield gatherResults([
-            m.oneshot(self.metrics, vumi_api=self.vumi_api, user_api=user_api)
+            m.oneshot(self.metrics, user_api=user_api)
             for m in conv_def.get_metrics()])
 
     def collect_metrics(self, user_api, conversation_key):

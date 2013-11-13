@@ -230,13 +230,13 @@ class TestMessagesSentMetric(TxMetricTestBase):
     @inlineCallbacks
     def test_value_retrieval(self):
         self.assertEqual(
-            (yield self.metric.get_value(self.vumi_api, self.user_api)), 0)
+            (yield self.metric.get_value(self.user_api)), 0)
 
         yield self.msg_helper.make_stored_outbound(self.conv, "out 1")
         yield self.msg_helper.make_stored_outbound(self.conv, "out 2")
 
         self.assertEqual(
-            (yield self.metric.get_value(self.vumi_api, self.user_api)), 2)
+            (yield self.metric.get_value(self.user_api)), 2)
 
 
 class TestMessagesReceivedMetric(TxMetricTestBase):
@@ -254,10 +254,10 @@ class TestMessagesReceivedMetric(TxMetricTestBase):
     @inlineCallbacks
     def test_value_retrieval(self):
         self.assertEqual(
-            (yield self.metric.get_value(self.vumi_api, self.user_api)), 0)
+            (yield self.metric.get_value(self.user_api)), 0)
 
         yield self.msg_helper.make_stored_inbound(self.conv, "in 1")
         yield self.msg_helper.make_stored_inbound(self.conv, "in 2")
 
         self.assertEqual(
-            (yield self.metric.get_value(self.vumi_api, self.user_api)), 2)
+            (yield self.metric.get_value(self.user_api)), 2)

@@ -124,14 +124,14 @@ class ConversationMetric(TxMetric):
 class MessagesSentMetric(ConversationMetric):
     METRIC_NAME = 'messages_sent'
 
-    def get_value(self, vumi_api, user_api):
+    def get_value(self, user_api):
         batch_id = self.conv.batch.key
-        return vumi_api.mdb.batch_outbound_count(batch_id)
+        return user_api.api.mdb.batch_outbound_count(batch_id)
 
 
 class MessagesReceivedMetric(ConversationMetric):
     METRIC_NAME = 'messages_received'
 
-    def get_value(self, vumi_api, user_api):
+    def get_value(self, user_api):
         batch_id = self.conv.batch.key
-        return vumi_api.mdb.batch_inbound_count(batch_id)
+        return user_api.api.mdb.batch_inbound_count(batch_id)

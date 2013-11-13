@@ -13,7 +13,7 @@ class SubscriptionMetric(ConversationMetric):
     def make_metric_name(cls, campaign_name):
         return "%s.%s" % (campaign_name, cls.METRIC_NAME)
 
-    def get_value(self, vumi_app, user_api):
+    def get_value(self, user_api):
         contacts = user_api.contact_store.contacts
         search = contacts.raw_search(
             "subscription-%s:%s" %

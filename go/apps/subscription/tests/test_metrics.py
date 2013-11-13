@@ -42,7 +42,7 @@ class TestSubscriptionMetric(TxMetricTestBase):
     @inlineCallbacks
     def test_value_retrieval(self):
         self.assertEqual(
-            (yield self.metric.get_value(self.vumi_api, self.user_api)), 0)
+            (yield self.metric.get_value(self.user_api)), 0)
 
         self.contact1.subscription['campaign-1'] = u'toy-subscription'
         self.contact2.subscription['campaign-1'] = u'toy-subscription'
@@ -51,4 +51,4 @@ class TestSubscriptionMetric(TxMetricTestBase):
         yield self.contact2.save()
 
         self.assertEqual(
-            (yield self.metric.get_value(self.vumi_api, self.user_api)), 2)
+            (yield self.metric.get_value(self.user_api)), 2)
