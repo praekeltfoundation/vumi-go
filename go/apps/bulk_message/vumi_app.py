@@ -114,11 +114,6 @@ class BulkMessageApplication(GoApplicationWorker):
             yield self.window_manager.remove_key(window_id, flight_key)
 
     @inlineCallbacks
-    def collect_metrics(self, user_api, conversation_key):
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
-        yield self.collect_message_metrics(conv)
-
-    @inlineCallbacks
     def process_command_initial_action_hack(self, user_account_key,
                                             conversation_key, **kwargs):
         # HACK: This lets us do whatever we used to do when we got a `start'

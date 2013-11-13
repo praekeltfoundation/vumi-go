@@ -61,26 +61,3 @@ class SubscriptionApplication(GoApplicationWorker):
 
     def consume_delivery_report(self, event):
         return self.vumi_api.mdb.add_event(event)
-
-    @inlineCallbacks
-    def collect_metrics(self, user_api, conversation_key):
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
-        contact_proxy = user_api.contact_store.contacts
-
-        campaign_names = set()
-        for handler in conv.get_config().get('handlers', []):
-            campaign_names.add(handler['campaign_name'])
-
-        for campaign_name in campaign_names:
-            self.publish_conversation_metric(
-                conv, '.'.join([campaign_name, "subscribed"]),
-                (yield contact_proxy.raw_search(
-                    "subscription-%s:subscribed" % (
-                        campaign_name,)).get_count()))
-            self.publish_conversation_metric(
-                conv, '.'.join([campaign_name, "unsubscribed"]),
-                (yield contact_proxy.raw_search(
-                    "subscription-%s:unsubscribed" % (
-                        campaign_name,)).get_count()))
-
-        yield self.collect_message_metrics(conv)
