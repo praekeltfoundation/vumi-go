@@ -131,6 +131,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         receiver.disconnect()
         returnValue((receiver, received_messages))
 
+    def assert_bad_request(self, response, reason):
+        self.assertEqual(response.code, http.BAD_REQUEST)
+        data = json.loads(response.delivered_body)
+        self.assertEqual(data, {
+            "success": False,
+            "reason": reason,
+        })
+
     @inlineCallbacks
     def test_proxy_buffering_headers_off(self):
         receiver, received_messages = yield self.pull_message()
@@ -311,7 +319,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
-        self.assertEqual(response.code, http.BAD_REQUEST)
+        self.assert_bad_request(response, 'Invalid in_reply_to value')
 
     @inlineCallbacks
     def test_invalid_in_reply_to_with_missing_conversation_key(self):
@@ -331,7 +339,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                                self.auth_headers, method='PUT')
             [error_log] = lc.messages()
 
-        self.assertEqual(response.code, http.BAD_REQUEST)
+        self.assert_bad_request(response, "Invalid in_reply_to value")
         self.assertTrue(inbound_msg['message_id'] in error_log)
 
     @inlineCallbacks
@@ -349,7 +357,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
 
-        self.assertEqual(response.code, http.BAD_REQUEST)
+        self.assert_bad_request(
+            response,
+            "Invalid or missing value for payload key 'session_event'")
         self.assertEqual(self.get_dispatched_messages(), [])
 
     @inlineCallbacks
