@@ -107,7 +107,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
     def setup_client(self):
         self.client = Client()
-        self.client.login(username='username', password='password')
+        self.client.login(username='user@domain.com', password='password')
 
     def patch_settings(self, **kwargs):
         patch = override_settings(**kwargs)
@@ -146,11 +146,11 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
     def mk_django_user(self):
         user = get_user_model().objects.create_user(
-            'username', 'user@domain.com', 'password')
+            'user@domain.com', 'password')
         user.first_name = "Test"
         user.last_name = "User"
         user.save()
-        return get_user_model().objects.get(username='username')
+        return get_user_model().objects.get(email='user@domain.com')
 
     def create_conversation(self, started=False, **kwargs):
         params = {
