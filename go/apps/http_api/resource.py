@@ -57,6 +57,16 @@ class BaseResource(resource.Resource):
         })
         self.finish_response(request, msg, code=code, status=reason)
 
+    def success_response(self, request, reason, code=http.OK):
+        msg = json.dumps({
+            "success": True,
+            "reason": reason,
+        })
+        self.finish_response(request, msg, code=code, status=reason)
+
+    def successful_send_response(self, request, msg, code=http.OK):
+        self.finish_response(request, msg.to_json(), code=code)
+
 
 class StreamResource(BaseResource):
 
@@ -204,9 +214,7 @@ class MessageStream(StreamResource):
             reply_to, content, continue_session,
             helper_metadata=helper_metadata)
 
-        request.setResponseCode(http.OK)
-        request.write(msg.to_json())
-        request.finish()
+        self.successful_send_response(request, msg)
 
     @inlineCallbacks
     def handle_PUT_send_to(self, request, payload):
@@ -221,9 +229,7 @@ class MessageStream(StreamResource):
         msg = yield self.worker.send_to(
             to_addr, content, endpoint='default', **msg_options)
 
-        request.setResponseCode(http.OK)
-        request.write(msg.to_json())
-        request.finish()
+        self.successful_send_response(request, msg)
 
 
 class MetricResource(BaseResource):
@@ -268,7 +274,7 @@ class MetricResource(BaseResource):
             self.worker.publish_account_metric(user_account, store, name,
                                                value, agg_class)
 
-        request.finish()
+        self.success_response(request, 'Metrics published')
 
 
 class ConversationResource(resource.Resource):
