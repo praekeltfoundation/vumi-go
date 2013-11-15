@@ -23,7 +23,10 @@ class GoMetric(object):
         This is for constructing the full, prefixed metric name in
         *Django land* if a manager is not available.
         """
-        return settings.GO_METRICS_PREFIX + self.metric.name
+        return settings.GO_METRICS_PREFIX + self.get_name()
+
+    def get_name(self):
+        return self.metric.name
 
     def get_value(self):
         """
@@ -119,6 +122,44 @@ class ConversationMetric(TxMetric):
     def make_name(cls, conv, metric_name):
         return "campaigns.%s.conversations.%s.%s" % (
             conv.user_account.key, conv.key, metric_name)
+
+
+class MetricSet(object):
+    def __init__(self, metrics=None):
+        self.metrics = []
+        self.metrics_by_name = {}
+        self.extend(metrics or [])
+
+    def __iter__(self):
+        for metric in self.metrics:
+            yield metric
+
+    def __getitem__(self, name):
+        return self.get(name)
+
+    def values(self):
+        return self.metrics
+
+    def get(self, name):
+        return self.metrics_by_name.get(name)
+
+    def append(self, metric):
+        self.metrics.append(metric)
+        self.metrics_by_name[metric.get_name()] = metric
+
+    def extend(self, metrics):
+        for m in metrics:
+            self.append(m)
+
+
+class ConversationMetricSet(MetricSet):
+    def __init__(self, conv, metrics=None):
+        self.conv = conv
+        super(ConversationMetricSet, self).__init__(metrics)
+
+    def get(self, metric_name):
+        name = ConversationMetric.make_name(self.conv, metric_name)
+        return super(ConversationMetricSet, self).get(name)
 
 
 class MessagesSentMetric(ConversationMetric):
