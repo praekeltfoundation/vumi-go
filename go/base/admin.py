@@ -8,7 +8,8 @@ from go.base.forms import GoUserCreationForm, GoUserChangeForm
 
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
-    fields = ('organisation', 'is_admin')
+    fields = ('organisation', 'is_admin', 'user_account')
+    readonly_fields = ('user_account',)
     can_delete = False
 
 
