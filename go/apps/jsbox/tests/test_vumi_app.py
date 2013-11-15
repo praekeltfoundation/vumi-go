@@ -4,35 +4,33 @@ import pkg_resources
 import mock
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import SkipTest, TestCase
+from twisted.trial.unittest import SkipTest
 
 from vumi.application.sandbox import JsSandbox, SandboxCommand
 from vumi.middleware.tagger import TaggingMiddleware
+from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
 from go.apps.jsbox.vumi_app import JsBoxApplication, ConversationConfigResource
-from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.tests.helpers import AppWorkerHelper
 
 
-class TestJsBoxApplication(AppWorkerTestCase):
+class TestJsBoxApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(TestJsBoxApplication, self).setUp()
         if JsSandbox.find_nodejs() is None:
             raise SkipTest("No node.js executable found.")
 
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')
-        self.app_helper = AppWorkerHelper(self, JsBoxApplication)
+        self.app_helper = AppWorkerHelper(JsBoxApplication)
         self.add_cleanup(self.app_helper.cleanup)
 
-        self.config = self.mk_config({
+        self.app = yield self.app_helper.get_app_worker({
             'args': [sandboxer_js],
             'timeout': 10,
         })
-        self.app = yield self.app_helper.get_app_worker(self.config)
 
     def setup_conversation(self, config=None):
         return self.app_helper.create_conversation(config=(config or {}))
@@ -203,7 +201,7 @@ class TestJsBoxApplication(AppWorkerTestCase):
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
 
 
-class TestConversationConfigResource(TestCase):
+class TestConversationConfigResource(VumiTestCase):
     def setUp(self):
         self.conversation = mock.Mock()
         self.app_worker = mock.Mock()

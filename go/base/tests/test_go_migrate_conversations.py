@@ -6,18 +6,22 @@ from datetime import datetime
 
 from vumi.persist.model import ModelMigrationError
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_migrate_conversations
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.conversation.old_models import ConversationV1
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
-class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
+class TestGoMigrateConversationsCommand(GoDjangoTestCase):
 
     def setUp(self):
-        super(GoMigrateConversationsCommandTestCase, self).setUp()
-        self.old_conv_model = self.user_api.conversation_store.manager.proxy(
-            ConversationV1)
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_api = self.vumi_helper.make_django_user().user_api
+
+        conv_store = self.user_api.conversation_store
+        self.old_conv_model = conv_store.manager.proxy(ConversationV1)
 
         self.command = go_migrate_conversations.Command()
         self.command.stdout = StringIO()

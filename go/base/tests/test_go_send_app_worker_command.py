@@ -3,32 +3,22 @@ from StringIO import StringIO
 
 from django.core.management.base import CommandError
 
-from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_send_app_worker_command
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class DummyMessageSender(object):
-    def __init__(self):
-        self.outbox = []
-
-    def send_command(self, command):
-        self.outbox.append(command)
-
-
-class GoSendAppWorkerCommandTestCase(VumiGoDjangoTestCase):
-    use_riak = True
+class TestGoSendAppWorkerCommand(GoDjangoTestCase):
 
     def setUp(self):
-        super(GoSendAppWorkerCommandTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
-        self.account_key = self.user_api.user_account_key
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
 
         self.command = go_send_app_worker_command.Command()
-        self.command.sender_class = DummyMessageSender
-        self.command.allowed_commands = ['good_command']
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
+        self.command.allowed_commands = ['good_command']
 
     def test_invalid_command(self):
         self.assertRaisesRegexp(CommandError, 'Unknown command bad_command',
@@ -41,22 +31,25 @@ class GoSendAppWorkerCommandTestCase(VumiGoDjangoTestCase):
             'account_key=foo', 'conversation_key=bar')
 
     def test_reconcile_cache_invalid_conversation(self):
-        self.assertRaisesRegexp(CommandError, 'Conversation does not exist',
-            self.command.handle, 'worker-name', 'reconcile_cache',
-            'account_key=%s' % self.account_key, 'conversation_key=bar')
+        self.assertRaisesRegexp(
+            CommandError, 'Conversation does not exist', self.command.handle,
+            'worker-name', 'reconcile_cache',
+            'account_key=%s' % self.user_helper.account_key,
+            'conversation_key=bar')
 
     def test_reconcile_cache(self):
-        conv = self.create_conversation()
-        self.command.handle('worker-name', 'reconcile_cache',
-            'account_key=%s' % (self.account_key,),
+        conv = self.user_helper.create_conversation(u'bulk_message')
+        self.command.handle(
+            'worker-name', 'reconcile_cache',
+            'account_key=%s' % (self.user_helper.account_key,),
             'conversation_key=%s' % (conv.key,))
         self.assertEqual(self.command.stderr.getvalue(), '')
         self.assertEqual(self.command.stdout.getvalue(), '')
-        [cmd] = self.command.sender.outbox
+        [cmd] = self.vumi_helper.amqp_connection.get_commands()
         self.assertEqual(cmd['worker_name'], 'worker-name')
         self.assertEqual(cmd['command'], 'reconcile_cache')
         self.assertEqual(cmd['args'], [])
         self.assertEqual(cmd['kwargs'], {
-            'user_account_key': self.account_key,
+            'user_account_key': self.user_helper.account_key,
             'conversation_key': conv.key,
         })

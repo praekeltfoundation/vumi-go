@@ -1,58 +1,90 @@
 import uuid
+from StringIO import StringIO
 
-from django.conf import settings, UserSettingsHolder
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.management.base import CommandError
+from django.test import TestCase
 from django.test.client import Client
-from django.utils.functional import wraps
+from django.test.utils import override_settings
 
 from twisted.python.monkey import MonkeyPatcher
 
+from vumi.blinkenlights.metrics import MetricMessage
 from vumi.tests.helpers import WorkerHelper, generate_proxies, proxyable
 
+from go.base import amqp
 from go.base import models as base_models
 from go.base import utils as base_utils
 from go.vumitools.tests.helpers import VumiApiHelper
-from go.vumitools.tests.utils import FakeAmqpConnection
 
 
-class override_settings(object):
+class GoDjangoTestCase(TestCase):
+
+    _cleanup_funcs = None
+
+    def tearDown(self):
+        # Run any cleanup code we've registered with .add_cleanup().
+        if self._cleanup_funcs is not None:
+            for cleanup, args, kw in reversed(self._cleanup_funcs):
+                cleanup(*args, **kw)
+
+    def add_cleanup(self, func, *args, **kw):
+        if self._cleanup_funcs is None:
+            self._cleanup_funcs = []
+        self._cleanup_funcs.append((func, args, kw))
+
+
+class FakeAmqpConnection(object):
+    """Wrapper around an AMQP client that forwards messages.
+
+    Command and metric messages are stored for later inspection.
     """
-    Acts as either a decorator, or a context manager.  If it's a decorator it
-    takes a function and returns a wrapped function.  If it's a contextmanager
-    it's used with the ``with`` statement.  In either event entering/exiting
-    are called before and after, respectively, the function/block is executed.
-    """
-    def __init__(self, **kwargs):
-        self.options = kwargs
-        self.wrapped = settings._wrapped
+    def __init__(self, amqp_client):
+        self._amqp = amqp_client
+        self._connected = False
+        self.commands = []
+        self.metrics = []
 
-    def __enter__(self):
-        self.enable()
+    def is_connected(self):
+        return self._connected
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.disable()
+    def connect(self, dsn=None):
+        self._connected = True
 
-    def __call__(self, func):
-        @wraps(func)
-        def inner(*args, **kwargs):
-            with self:
-                return func(*args, **kwargs)
-        return inner
+    def publish(self, message, exchange, routing_key):
+        self._amqp.publish_raw(exchange, routing_key, message)
 
-    def enable(self):
-        override = UserSettingsHolder(settings._wrapped)
-        for key, new_value in self.options.items():
-            setattr(override, key, new_value)
-        settings._wrapped = override
+    def publish_command_message(self, command):
+        self.commands.append(command)
+        self.publish(command.to_json(), 'vumi', 'vumi.api')
 
-    def disable(self):
-        settings._wrapped = self.wrapped
+    def publish_metric_message(self, metric):
+        self.metrics.append(metric)
+        self.publish(metric.to_json(), 'vumi', 'vumi.metrics')
+
+    def get_commands(self):
+        commands, self.commands = self.commands, []
+        return commands
+
+    def get_metrics(self):
+        metrics, self.metrics = self.metrics, []
+        return metrics
+
+    def publish_metric(self, metric_name, aggregators, value, timestamp=None):
+        metric_msg = MetricMessage()
+        metric_msg.append((metric_name,
+            tuple(sorted(agg.name for agg in aggregators)),
+            [(timestamp, value)]))
+        return self.publish_metric_message(metric_msg)
 
 
 class DjangoVumiApiHelper(object):
-    def __init__(self, test_case, worker_helper=None):
-        self._test_case = test_case
-        self._vumi_helper = VumiApiHelper(test_case)
+    is_sync = True  # For when we're being treated like a VumiApiHelper.
+
+    def __init__(self, worker_helper=None, use_riak=True):
+        self.use_riak = use_riak
+        self._vumi_helper = VumiApiHelper(is_sync=True, use_riak=use_riak)
         if worker_helper is None:
             worker_helper = WorkerHelper()
         self._worker_helper = worker_helper
@@ -71,13 +103,12 @@ class DjangoVumiApiHelper(object):
             patch.restore()
 
     def replace_django_bits(self):
-        # Need some hackery to make things fit together here.
+        # TODO: Find a nicer way to give everything the same fake redis.
+        pcfg = self._vumi_helper._persistence_helper._config_overrides
+        pcfg['redis_manager']['FAKE_REDIS'] = self.get_redis_manager()
+
         vumi_config = settings.VUMI_API_CONFIG.copy()
-        persist_config = self._test_case._persist_config
-        persist_config['riak_manager'] = vumi_config['riak_manager']
-        persist_config['redis_manager']['FAKE_REDIS'] = (
-            self._test_case.get_redis_manager())
-        vumi_config.update(persist_config)
+        vumi_config.update(pcfg)
         self.patch_settings(VUMI_API_CONFIG=vumi_config)
 
         has_listeners = lambda: base_models.post_save.has_listeners(
@@ -97,7 +128,9 @@ class DjangoVumiApiHelper(object):
         # We might need an AMQP connection at some point.
         broker = self._worker_helper.broker
         broker.exchange_declare('vumi', 'direct')
-        self.monkey_patch(base_utils, 'connection', FakeAmqpConnection(broker))
+        self.amqp_connection = FakeAmqpConnection(broker)
+        self.monkey_patch(base_utils, 'connection', self.amqp_connection)
+        self.monkey_patch(amqp, 'connection', self.amqp_connection)
 
     def restore_django_bits(self):
         base_models.post_save.disconnect(
@@ -130,7 +163,7 @@ class DjangoVumiApiHelper(object):
     @proxyable
     def make_django_user(self):
         user = get_user_model().objects.create_user(
-            'username', 'user@domain.com', 'password')
+            username='username', email='user@domain.com', password='password')
         user.first_name = "Test"
         user.last_name = "User"
         user.save()
@@ -141,7 +174,7 @@ class DjangoVumiApiHelper(object):
         if not created:
             return
 
-        if not self._test_case.use_riak:
+        if not self.use_riak:
             # Just create the account key, no actual user.
             base_models.UserProfile.objects.create(
                 user=instance, user_account=uuid.uuid4())
@@ -155,3 +188,46 @@ class DjangoVumiApiHelper(object):
         # wrapping it because we only need the one thing.
         user_helper.get_django_user = lambda: (
             get_user_model().objects.get(pk=instance.pk))
+
+
+class GoAccountCommandTestCase(GoDjangoTestCase):
+    """TestCase subclass for testing management commands.
+
+    This isn't a helper because everything it does requires asserting, which
+    requires a TestCase object to call assertion methods on.
+    """
+
+    def setup_command(self, command_class):
+        self.command_class = command_class
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.command = self.command_class()
+        self.command.stdout = StringIO()
+        self.command.stderr = StringIO()
+
+    def call_command(self, *command, **options):
+        # Make sure we have options for the command(s) specified
+        for cmd_name in command:
+            self.assertTrue(
+                cmd_name in self.command.list_commands(),
+                "Command '%s' has no command line option" % (cmd_name,))
+        # Make sure we have options for any option keys specified
+        opt_dests = set(opt.dest for opt in self.command.option_list)
+        for opt_dest in options:
+            self.assertTrue(
+                opt_dest in opt_dests,
+                "Option key '%s' has no command line option" % (opt_dest,))
+        # Call the command handler
+        email_address = self.user_helper.get_django_user().email
+        return self.command.handle(
+            email_address=email_address, command=command, **options)
+
+    def assert_command_error(self, regexp, *command, **options):
+        self.assertRaisesRegexp(
+            CommandError, regexp, self.call_command, *command, **options)
+
+    def assert_command_output(self, expected_output, *command, **options):
+        self.call_command(*command, **options)
+        self.assertEqual(expected_output, self.command.stdout.getvalue())

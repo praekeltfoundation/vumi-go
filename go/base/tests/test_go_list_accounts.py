@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.base.management.commands import go_list_accounts
 from StringIO import StringIO
 
+from go.base.management.commands import go_list_accounts
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
-class GoListAccountsCommandTestCase(VumiGoDjangoTestCase):
 
-    use_riak = True
+class GoListAccountsCommandTestCase(GoDjangoTestCase):
 
     def setUp(self):
-        super(GoListAccountsCommandTestCase, self).setUp()
-        self.setup_api()
-        self.user = self.mk_django_user()
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.contact_store = self.user_helper.user_api.contact_store
 
         self.command = go_list_accounts.Command()
         self.command.stdout = StringIO()
@@ -21,22 +22,22 @@ class GoListAccountsCommandTestCase(VumiGoDjangoTestCase):
         self.command.handle()
         self.assertEqual(self.command.stdout.getvalue(),
             '0. Test User <user@domain.com> [%s]\n' % (
-                self.user.get_profile().user_account))
+                self.user_helper.account_key,))
 
     def test_unicode_account_listing(self):
-        self.user.first_name = u"Tëßt"
-        self.user.save()
+        django_user = self.user_helper.get_django_user()
+        django_user.first_name = u"Tëßt"
+        django_user.save()
         self.command.handle()
-        profile = self.user.get_profile()
         self.assertEqual(self.command.stdout.getvalue(),
             '0. T\xc3\xab\xc3\x9ft User <user@domain.com> [%s]\n' % (
-                str(profile.user_account)))
+                str(self.user_helper.account_key,)))
 
     def test_account_matching(self):
         self.command.handle('user')
         self.assertEqual(self.command.stdout.getvalue(),
             '0. Test User <user@domain.com> [%s]\n' % (
-                self.user.get_profile().user_account))
+                self.user_helper.account_key,))
 
     def test_account_mismatching(self):
         self.command.handle('foo')

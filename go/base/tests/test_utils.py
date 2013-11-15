@@ -1,15 +1,14 @@
 """Test for go.base.utils."""
 
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.errors import UnknownConversationType, UnknownRouterType
+from go.base.tests.helpers import GoDjangoTestCase
 from go.base.utils import (
     get_conversation_pkg, get_conversation_definition,
-    get_conversation_view_definition,
-    get_router_pkg, get_router_definition,
+    get_conversation_view_definition, get_router_pkg, get_router_definition,
     get_router_view_definition)
+from go.errors import UnknownConversationType, UnknownRouterType
 
 
-class ConversationDefinitionHelpersTestCase(VumiGoDjangoTestCase):
+class ConversationDefinitionHelpersTestCase(GoDjangoTestCase):
     def test_get_conversation_pkg(self):
         pkg = get_conversation_pkg('bulk_message', ['definition'])
         self.assertEqual(pkg.__name__, 'go.apps.bulk_message')
@@ -50,7 +49,7 @@ class ConversationDefinitionHelpersTestCase(VumiGoDjangoTestCase):
         self.assertEqual(view_def._conv_def.conversation_type, 'wikipedia_sms')
 
 
-class RouterDefinitionHelpersTestCase(VumiGoDjangoTestCase):
+class RouterDefinitionHelpersTestCase(GoDjangoTestCase):
     def test_get_router_pkg(self):
         pkg = get_router_pkg('keyword', ['definition'])
         self.assertEqual(pkg.__name__, 'go.routers.keyword')

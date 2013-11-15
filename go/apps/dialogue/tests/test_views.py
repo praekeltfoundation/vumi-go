@@ -1,18 +1,15 @@
 import json
 
-from go.vumitools.tests.utils import VumiApiCommand
 from go.api.go_api.tests.utils import MockRpc
-from go.apps.tests.view_helpers import AppViewHelper
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.api import VumiApiCommand
 
 
-class TestDialogueViews(VumiGoDjangoTestCase):
-
-    use_riak = True
+class TestDialogueViews(GoDjangoTestCase):
 
     def setUp(self):
-        super(TestDialogueViews, self).setUp()
-        self.app_helper = AppViewHelper(self, u'dialogue')
+        self.app_helper = AppViewsHelper(u'dialogue')
         self.add_cleanup(self.app_helper.cleanup)
         self.client = self.app_helper.get_client()
         self.mock_rpc = MockRpc()

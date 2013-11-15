@@ -8,12 +8,12 @@ from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
 
 
-class ApplicationHelper(object):
-    def __init__(self, conversation_type, vumi_helper):
+class RouterHelper(object):
+    def __init__(self, router_type, vumi_helper):
         self.is_sync = vumi_helper.is_sync
-        self._conversation_type = conversation_type
+        self._router_type = router_type
         self.vumi_helper = vumi_helper
-        self.conversation_wrapper = None
+        self.router_wrapper = None
 
     def cleanup(self):
         pass
@@ -48,23 +48,13 @@ class ApplicationHelper(object):
 
     @proxyable
     @maybe_async
-    def create_conversation(self, started=False, channel=None, **conv_kw):
+    def create_router(self, started=False, **router_kw):
         user_helper = yield self.vumi_helper.get_or_create_user()
-        conversation = yield user_helper.create_conversation(
-            self._conversation_type, started=started, **conv_kw)
-        if channel is not None:
-            user_account = user_helper.get_user_account()
-            rt = user_account.routing_table
-            rt.add_entry(
-                conversation.get_connector(), 'default',
-                channel.get_connector(), 'default')
-            rt.add_entry(
-                channel.get_connector(), 'default',
-                conversation.get_connector(), 'default')
-            yield user_account.save()
-        if self.conversation_wrapper is not None:
-            conversation = self.conversation_wrapper(conversation)
-        returnValue(conversation)
+        router = yield user_helper.create_router(
+            self._router_type, started=started, **router_kw)
+        if self.router_wrapper is not None:
+            router = self.router_wrapper(router)
+        returnValue(router)
 
     @proxyable
     @maybe_async
@@ -78,13 +68,13 @@ class ApplicationHelper(object):
 
     @proxyable
     @maybe_async
-    def get_conversation(self, conversation_key):
+    def get_router(self, router_key):
         user_helper = yield self.vumi_helper.get_or_create_user()
-        conversation = yield user_helper.get_conversation(conversation_key)
-        returnValue(conversation)
+        router = yield user_helper.get_router(router_key)
+        returnValue(router)
 
 
-class AppWorkerHelper(object):
+class RouterWorkerHelper(object):
     def __init__(self, worker_class, **msg_helper_args):
         self._worker_class = worker_class
         msg_helper_kw = {}
@@ -92,39 +82,69 @@ class AppWorkerHelper(object):
             msg_helper_kw.update(msg_helper_args)
 
         self.vumi_helper = VumiApiHelper()
-        self._app_helper = ApplicationHelper(
-            self._conversation_type(), self.vumi_helper)
+        self._router_helper = RouterHelper(
+            self._router_type(), self.vumi_helper)
         self.msg_helper = GoMessageHelper(**msg_helper_kw)
-        self.transport_name = self.msg_helper.transport_name
-        self.worker_helper = WorkerHelper(self.transport_name)
-        self.dispatch_helper = MessageDispatchHelper(
-            self.msg_helper, self.worker_helper)
+        self.ri_connector_name = 'ri_conn'
+        self.ro_connector_name = 'ro_conn'
 
         # Proxy methods from our helpers.
-        generate_proxies(self, self._app_helper)
+        generate_proxies(self, self._router_helper)
         generate_proxies(self, self.msg_helper)
-        generate_proxies(self, self.worker_helper)
-        generate_proxies(self, self.dispatch_helper)
+
+        # We need versions of these for both inbound and outbound so we can't
+        # generate proxies automagically.
+        # TODO: Build some mechanism for grouping sets of proxies together.
+        self._ri_worker_helper = WorkerHelper(self.ri_connector_name)
+        self._ri_dispatch_helper = MessageDispatchHelper(
+            self.msg_helper, self._ri_worker_helper)
+        # Grab all proxies for these ones. We'll override the RO versions.
+        generate_proxies(self, self._ri_worker_helper)
+        generate_proxies(self, self._ri_dispatch_helper)
+
+        self._ro_worker_helper = WorkerHelper(
+            self.ro_connector_name, broker=self._ri_worker_helper.broker)
+        self._ro_dispatch_helper = MessageDispatchHelper(
+            self.msg_helper, self._ro_worker_helper)
+
+        self._override_proxies(self._ro_worker_helper, [
+            'get_dispatched_events',
+            'get_dispatched_inbound',
+            'wait_for_dispatched_events',
+            'wait_for_dispatched_inbound',
+            'clear_dispatched_events',
+            'clear_dispatched_inbound',
+            'dispatch_outbound',
+        ])
+        self._override_proxies(self._ro_dispatch_helper, [
+            'make_dispatch_outbound',
+        ])
+
+    def _override_proxies(self, source, methods):
+        for method in methods:
+            setattr(self, method, getattr(source, method))
 
     def _worker_name(self):
         return self._worker_class.worker_name
 
-    def _conversation_type(self):
+    def _router_type(self):
         # This is a guess based on worker_name.
         # We need a better way to do this.
         return self._worker_name().rpartition('_')[0].decode('utf-8')
 
     @inlineCallbacks
     def cleanup(self):
-        yield self.worker_helper.cleanup()
+        yield self._ro_worker_helper.cleanup()
+        yield self._ri_worker_helper.cleanup()
         yield self.vumi_helper.cleanup()
 
     @inlineCallbacks
-    def get_app_worker(self, config=None, start=True):
+    def get_router_worker(self, config=None, start=True):
         # Note: We assume that this is called exactly once per test.
         config = self.vumi_helper.mk_config(config or {})
         config.setdefault('worker_name', self._worker_name())
-        config.setdefault('transport_name', self.msg_helper.transport_name)
+        config.setdefault('ri_connector_name', self.ri_connector_name)
+        config.setdefault('ro_connector_name', self.ro_connector_name)
         worker = yield self.get_worker(self._worker_class, config, start)
         # Set up our other bits of helper.
         self.vumi_helper.set_vumi_api(worker.vumi_api)
@@ -132,41 +152,47 @@ class AppWorkerHelper(object):
         returnValue(worker)
 
     @inlineCallbacks
-    def start_conversation(self, conversation):
+    def start_router(self, router):
         assert self._get_pending_commands() == [], (
-            "Found pending commands while starting conversation, aborting.")
-        yield conversation.start()
-        yield self.dispatch_commands_to_app()
+            "Found pending commands while starting router, aborting.")
+        user_helper = yield self.vumi_helper.get_or_create_user()
+        router_api = user_helper.user_api.get_router_api(
+            router.router_type, router.key)
+        yield router_api.start_router(router)
+        yield self.dispatch_commands_to_router()
 
     @inlineCallbacks
-    def stop_conversation(self, conversation):
+    def stop_router(self, router):
         assert self._get_pending_commands() == [], (
-            "Found pending commands while stopping conversation, aborting.")
-        yield conversation.stop_conversation()
-        yield self.dispatch_commands_to_app()
+            "Found pending commands while stopping router, aborting.")
+        user_helper = yield self.vumi_helper.get_or_create_user()
+        router_api = user_helper.user_api.get_router_api(
+            router.router_type, router.key)
+        yield router_api.stop_router(router)
+        yield self.dispatch_commands_to_router()
 
     def _get_pending_commands(self):
-        return self.worker_helper.get_dispatched('vumi', 'api', VumiApiCommand)
+        return self.get_dispatched('vumi', 'api', VumiApiCommand)
 
     @inlineCallbacks
-    def dispatch_commands_to_app(self):
+    def dispatch_commands_to_router(self):
         pending_commands = self._get_pending_commands()
-        self.worker_helper._clear_dispatched('vumi', 'api')
+        self._ri_worker_helper._clear_dispatched('vumi', 'api')
         for command in pending_commands:
-            yield self.worker_helper.dispatch_raw(
+            yield self.dispatch_raw(
                 "%s.control" % (self._worker_name(),), command)
 
     @inlineCallbacks
     def dispatch_command(self, command, *args, **kw):
         cmd = VumiApiCommand.command(
             self._worker_name(), command, *args, **kw)
-        yield self.worker_helper.dispatch_raw('vumi.api', cmd)
-        yield self.dispatch_commands_to_app()
+        yield self.dispatch_raw('vumi.api', cmd)
+        yield self.dispatch_commands_to_router()
 
     def get_published_metrics(self, worker):
         return [
             (metric.name, value)
             for metric, ((time, value),) in worker.metrics._oneshot_msgs]
 
-    def get_dispatched_app_events(self):
-        return self.worker_helper.get_dispatched('vumi', 'event', VumiApiEvent)
+    def get_dispatched_router_events(self):
+        return self.get_dispatched('vumi', 'event', VumiApiEvent)

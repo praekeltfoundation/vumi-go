@@ -1,30 +1,26 @@
 import base64
 import urllib
 
-
 from mock import Mock
 from twisted.internet.defer import inlineCallbacks, succeed
 from twisted.web import http
 
 from vumi.utils import http_request_full
-from vumi.tests.helpers import WorkerHelper
+from vumi.tests.helpers import VumiTestCase, WorkerHelper
 
-from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.conversation_api.conversation_api import (
     ConversationApiWorker, ConversationConfigResource)
 from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class ConversationApiTestCase(GoWorkerTestCase):
-
-    use_riak = True
+class ConversationApiTestCase(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
         yield super(ConversationApiTestCase, self).setUp()
         self.worker_helper = WorkerHelper()
         self.add_cleanup(self.worker_helper.cleanup)
-        self.vumi_helper = VumiApiHelper(self)
+        self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
         yield self.vumi_helper.setup_vumi_api()
 
@@ -37,7 +33,7 @@ class ConversationApiTestCase(GoWorkerTestCase):
         self.patch(ConversationConfigResource, 'load_source_from_url',
                    self.mocked_url_call)
 
-        self.config = self.mk_config({
+        self.config = self.vumi_helper.mk_config({
             'worker_name': 'conversation_api_worker',
             'web_path': '/foo/',
             'web_port': 0,

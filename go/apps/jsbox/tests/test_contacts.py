@@ -10,9 +10,6 @@ from vumi.application.tests.test_sandbox import (
 
 from go.apps.jsbox.contacts import ContactsResource, GroupsResource
 from go.vumitools.tests.helpers import VumiApiHelper
-from go.vumitools.tests.utils import GoPersistenceMixin
-from go.vumitools.account import AccountStore
-from go.vumitools.contact import ContactStore
 
 
 class StubbedAppWorker(DummyAppWorker):
@@ -24,18 +21,16 @@ class StubbedAppWorker(DummyAppWorker):
         return self.user_api
 
 
-class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
-    use_riak = True
+class TestContactsResource(ResourceTestCaseBase):
+    # TODO: Make this resource stuff into a helper in vumi.
     app_worker_cls = StubbedAppWorker
     resource_cls = ContactsResource
 
     @inlineCallbacks
     def setUp(self):
         super(TestContactsResource, self).setUp()
-        self._persist_setUp()
-        self.add_cleanup(self._persist_tearDown)
 
-        self.vumi_helper = VumiApiHelper(self)
+        self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
 
         yield self.vumi_helper.setup_vumi_api()
@@ -487,18 +482,15 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         return self.assert_bad_command('save', contact={'key': u'213123'})
 
 
-class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
-    use_riak = True
+class TestGroupsResource(ResourceTestCaseBase):
     app_worker_cls = StubbedAppWorker
     resource_cls = GroupsResource
 
     @inlineCallbacks
     def setUp(self):
         super(TestGroupsResource, self).setUp()
-        self._persist_setUp()
-        self.add_cleanup(self._persist_tearDown)
 
-        self.vumi_helper = VumiApiHelper(self)
+        self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
 
         yield self.vumi_helper.setup_vumi_api()

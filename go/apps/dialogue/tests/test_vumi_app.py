@@ -8,31 +8,30 @@ import os
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.trial.unittest import SkipTest
 
+from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
 from go.apps.dialogue.vumi_app import DialogueApplication
 from go.apps.dialogue.tests.dummy_polls import simple_poll
-from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.tests.helpers import AppWorkerHelper
 
 
-class TestDialogueApplication(AppWorkerTestCase):
+class TestDialogueApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(TestDialogueApplication, self).setUp()
         if DialogueApplication.find_nodejs() is None:
             raise SkipTest("No node.js executable found.")
 
-        self.app_helper = AppWorkerHelper(self, DialogueApplication)
+        self.app_helper = AppWorkerHelper(DialogueApplication)
         self.add_cleanup(self.app_helper.cleanup)
 
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')
         node_path = os.environ['SANDBOX_NODE_PATH']  # Required to run tests.
-        redis = yield self.get_redis_manager()
+        redis = yield self.app_helper.vumi_helper.get_redis_manager()
         self.kv_redis = redis.sub_manager('kv')
-        config = self.mk_config({
+        self.app = yield self.app_helper.get_app_worker({
             'args': [sandboxer_js],
             'timeout': 10,
             'app_context': (
@@ -58,7 +57,6 @@ class TestDialogueApplication(AppWorkerTestCase):
                 },
             },
         })
-        self.app = yield self.app_helper.get_app_worker(config)
 
     @inlineCallbacks
     def setup_conversation(self):

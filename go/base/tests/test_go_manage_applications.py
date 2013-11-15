@@ -1,56 +1,56 @@
 from django.core.management.base import CommandError
-from go.base.tests.utils import VumiGoDjangoTestCase
+
 from go.base.management.commands import go_manage_application
-from go.base.utils import vumi_api_for_user
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
-
-    use_riak = True
+class GoManageApplicationCommandTestCase(GoDjangoTestCase):
 
     def setUp(self):
-        super(GoManageApplicationCommandTestCase, self).setUp()
-        self.setup_api()
-        self.user = self.mk_django_user()
-        self.user_api = vumi_api_for_user(self.user)
-        self.profile = self.user.get_profile()
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+
+        self.command = go_manage_application.Command()
+        self.vumi_helper.patch_settings(VUMI_INSTALLED_APPS={
+            'go.apps.dummy': {
+                'namespace': 'dummy',
+                'display_name': 'dummy'
+            }
+        })
 
     def get_riak_account(self):
         return self.profile.get_user_account()
 
-    def set_permissions(self, user, enabled, application):
-        command = go_manage_application.Command()
-        command.handle_validated(**{
-            'email-address': user.email,
+    def set_permissions(self, application, enabled):
+        self.command.handle_validated(**{
+            'email-address': self.user_helper.get_django_user().email,
             'application-module': application,
             'enable': enabled,
             'disable': not enabled,
         })
 
+    def assert_permission(self, app, enabled):
+        self.assertEqual(
+            enabled, (app in self.user_helper.user_api.applications()))
+
     def test_enable_permissions(self):
-        self.patch_settings(VUMI_INSTALLED_APPS={
-            'go.apps.test': {
-                'namespace': 'test',
-                'display_name': 'test'
-            }
-        })
-        self.set_permissions(self.user, enabled=True,
-            application='go.apps.test')
-        self.assertTrue('go.apps.test' in self.user_api.applications())
+        self.assert_permission('go.apps.dummy', enabled=False)
+        self.set_permissions('go.apps.dummy', enabled=True)
+        self.assert_permission('go.apps.dummy', enabled=True)
 
     def test_double_permission_error(self):
-        self.set_permissions(self.user, enabled=True,
-            application='go.apps.tests')
-        self.assertRaises(CommandError, self.set_permissions,
-            self.user, enabled=True, application='go.apps.tests')
+        self.set_permissions('go.apps.dummy', enabled=True)
+        self.assertRaises(
+            CommandError, self.set_permissions, 'go.apps.dummy', enabled=True)
 
     def test_disable_permissions(self):
-        self.set_permissions(self.user, enabled=True,
-            application='go.apps.test')
-        self.set_permissions(self.user, enabled=False,
-            application='go.apps.test')
-        self.assertFalse('go.apps.test' in self.user_api.applications())
+        self.set_permissions('go.apps.dummy', enabled=True)
+        self.assert_permission('go.apps.dummy', enabled=True)
+        self.set_permissions('go.apps.dummy', enabled=False)
+        self.assert_permission('go.apps.dummy', enabled=False)
 
     def test_disable_permissions_for_non_enabled_app(self):
-        self.assertRaises(CommandError, self.set_permissions,
-            self.user, enabled=False, application='go.apps.tests')
+        self.assertRaises(
+            CommandError, self.set_permissions, 'go.apps.dummy', enabled=False)

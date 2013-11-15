@@ -1,48 +1,49 @@
 from twisted.internet.defer import inlineCallbacks
 
-from go.vumitools.tests.utils import RouterWorkerTestCase
+from vumi.tests.helpers import VumiTestCase
+
 from go.vumitools.routing import RoutingMetadata
 from go.routers.keyword.vumi_app import KeywordRouter
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.routers.tests.helpers import RouterWorkerHelper
 
 
-class TestKeywordRouter(RouterWorkerTestCase):
+class TestKeywordRouter(VumiTestCase):
 
     router_class = KeywordRouter
 
     @inlineCallbacks
     def setUp(self):
-        super(TestKeywordRouter, self).setUp()
+        self.app_helper = RouterWorkerHelper(KeywordRouter)
+        self.add_cleanup(self.app_helper.cleanup)
 
-        worker = yield self.get_router_worker(self.mk_config({}))
-        self.vumi_api = worker.vumi_api
-        user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_account_key = user_account.key
-        self.user_api = self.vumi_api.get_user_api(self.user_account_key)
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.router_worker = yield self.app_helper.get_router_worker({})
 
     @inlineCallbacks
-    def assert_routed_inbound(self, msg, router, expected_endpoint):
-        yield self.dispatch_inbound_to_router(msg, router)
+    def assert_routed_inbound(self, content, router, expected_endpoint):
+        msg = yield self.app_helper.make_dispatch_inbound(
+            content, router=router)
         emsg = msg.copy()
         emsg.set_routing_endpoint(expected_endpoint)
-        rmsg = self.get_dispatched_inbound('ro_conn')[-1]
+        rmsg = self.app_helper.get_dispatched_inbound()[-1]
         self.assertEqual(emsg, rmsg)
 
     @inlineCallbacks
-    def assert_routed_outbound(self, msg, router, src_endpoint):
-        yield self.dispatch_outbound_to_router(msg, router, src_endpoint)
+    def assert_routed_outbound(self, content, router, src_endpoint):
+        msg = yield self.app_helper.make_dispatch_outbound(
+            content, router=router, routing_endpoint=src_endpoint)
         emsg = msg.copy()
         emsg.set_routing_endpoint('default')
-        rmsg = self.get_dispatched_outbound('ri_conn')[-1]
+        rmsg = self.app_helper.get_dispatched_outbound()[-1]
         self.assertEqual(emsg, rmsg)
 
     @inlineCallbacks
-    def assert_routed_event(self, event, router, expected_endpoint):
-        yield self.dispatch_event_to_router(event, router)
-        eevent = event.copy()
+    def assert_routed_event(self, router, expected_endpoint, hops):
+        ack = self.app_helper.make_ack(router=router)
+        self.set_event_hops(ack, hops)
+        yield self.app_helper.dispatch_event(ack)
+        eevent = ack.copy()
         eevent.set_routing_endpoint(expected_endpoint)
-        [revent] = self.get_dispatched_events('ro_conn')
+        [revent] = self.app_helper.get_dispatched_events()
         self.assertEqual(eevent, revent)
 
     def set_event_hops(self, event, outbound_hops, num_inbound_hops=1):
@@ -54,152 +55,124 @@ class TestKeywordRouter(RouterWorkerTestCase):
 
     @inlineCallbacks
     def test_start(self):
-        router = yield self.setup_router({}, started=False)
+        router = yield self.app_helper.create_router()
         self.assertTrue(router.stopped())
         self.assertFalse(router.running())
 
-        yield self.start_router(router)
-        router = yield self.user_api.get_router(router.key)
+        yield self.app_helper.start_router(router)
+        router = yield self.app_helper.get_router(router.key)
         self.assertFalse(router.stopped())
         self.assertTrue(router.running())
 
     @inlineCallbacks
     def test_stop(self):
-        router = yield self.setup_router({}, started=True)
+        router = yield self.app_helper.create_router(started=True)
         self.assertFalse(router.stopped())
         self.assertTrue(router.running())
 
-        yield self.stop_router(router)
-        router = yield self.user_api.get_router(router.key)
+        yield self.app_helper.stop_router(router)
+        router = yield self.app_helper.get_router(router.key)
         self.assertTrue(router.stopped())
         self.assertFalse(router.running())
 
     @inlineCallbacks
     def test_no_messages_processed_while_stopped(self):
-        router = yield self.setup_router({}, started=False)
+        router = yield self.app_helper.create_router()
 
-        yield self.dispatch_inbound_to_router(
-            self.msg_helper.make_inbound("foo"), router)
-        self.assertEqual([], self.get_dispatched_inbound('ro_conn'))
+        yield self.app_helper.make_dispatch_inbound("foo", router=router)
+        self.assertEqual([], self.app_helper.get_dispatched_inbound())
 
-        yield self.dispatch_event_to_router(self.msg_helper.make_ack(), router)
-        self.assertEqual([], self.get_dispatched_events('ro_conn'))
+        yield self.app_helper.make_dispatch_ack(router=router)
+        self.assertEqual([], self.app_helper.get_dispatched_events())
 
-        yield self.dispatch_outbound_to_router(
-            self.msg_helper.make_outbound("foo"), router)
-        self.assertEqual([], self.get_dispatched_outbound('ri_conn'))
-        [nack] = self.get_dispatched_events('ro_conn')
+        yield self.app_helper.make_dispatch_outbound("foo", router=router)
+        self.assertEqual([], self.app_helper.get_dispatched_outbound())
+        [nack] = self.app_helper.get_dispatched_events()
         self.assertEqual(nack['event_type'], 'nack')
 
     @inlineCallbacks
     def test_inbound_no_config(self):
-        router = yield self.setup_router({})
-        yield self.assert_routed_inbound(
-            self.msg_helper.make_inbound("foo bar"), router, 'default')
-        yield self.assert_routed_inbound(
-            self.msg_helper.make_inbound("baz quux"), router, 'default')
+        router = yield self.app_helper.create_router(started=True)
+        yield self.assert_routed_inbound("foo bar", router, 'default')
+        yield self.assert_routed_inbound("baz quux", router, 'default')
 
     @inlineCallbacks
     def test_inbound_keyword(self):
-        router = yield self.setup_router({
+        router = yield self.app_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
                 'abc123': 'app2',
             },
         })
-        yield self.assert_routed_inbound(
-            self.msg_helper.make_inbound("foo bar"), router, 'app1')
-        yield self.assert_routed_inbound(
-            self.msg_helper.make_inbound("baz quux"), router, 'default')
-        yield self.assert_routed_inbound(
-            self.msg_helper.make_inbound(" FoO bar"), router, 'app1')
-        yield self.assert_routed_inbound(
-            self.msg_helper.make_inbound(" aBc123 baz"), router, 'app2')
+        yield self.assert_routed_inbound("foo bar", router, 'app1')
+        yield self.assert_routed_inbound("baz quux", router, 'default')
+        yield self.assert_routed_inbound(" FoO bar", router, 'app1')
+        yield self.assert_routed_inbound(" aBc123 baz", router, 'app2')
 
     @inlineCallbacks
     def test_outbound_no_config(self):
-        router = yield self.setup_router({})
-        yield self.assert_routed_outbound(
-            self.msg_helper.make_outbound("foo bar"), router, 'default')
-        yield self.assert_routed_outbound(
-            self.msg_helper.make_outbound("baz quux"), router, 'default')
-        yield self.assert_routed_outbound(
-            self.msg_helper.make_outbound("foo bar"), router, 'app1')
-        yield self.assert_routed_outbound(
-            self.msg_helper.make_outbound("baz quux"), router, 'app1')
+        router = yield self.app_helper.create_router(started=True)
+        yield self.assert_routed_outbound("foo bar", router, 'default')
+        yield self.assert_routed_outbound("baz quux", router, 'default')
+        yield self.assert_routed_outbound("foo bar", router, 'app1')
+        yield self.assert_routed_outbound("baz quux", router, 'app1')
 
     @inlineCallbacks
     def test_outbound(self):
-        router = yield self.setup_router({
+        router = yield self.app_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
         })
-        yield self.assert_routed_outbound(
-            self.msg_helper.make_outbound("foo bar"), router, 'default')
-        yield self.assert_routed_outbound(
-            self.msg_helper.make_outbound("baz quux"), router, 'default')
-        yield self.assert_routed_outbound(
-            self.msg_helper.make_outbound("foo bar"), router, 'app1')
-        yield self.assert_routed_outbound(
-            self.msg_helper.make_outbound("baz quux"), router, 'app1')
+        yield self.assert_routed_outbound("foo bar", router, 'default')
+        yield self.assert_routed_outbound("baz quux", router, 'default')
+        yield self.assert_routed_outbound("foo bar", router, 'app1')
+        yield self.assert_routed_outbound("baz quux", router, 'app1')
 
     @inlineCallbacks
     def test_event_default_to_default(self):
-        router = yield self.setup_router({
+        router = yield self.app_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
         })
-        ack = self.msg_helper.make_ack()
-        self.add_router_md_to_msg(ack, router, 'default')
-        self.set_event_hops(ack, [
+        yield self.assert_routed_event(router, 'default', [
             [['app1', 'default'], ['kwr1', 'default']],
             [['kwr1', 'default'], ['sphex', 'default']],
         ])
-        yield self.assert_routed_event(ack, router, 'default')
 
     @inlineCallbacks
     def test_event_foo_to_default(self):
-        router = yield self.setup_router({
+        router = yield self.app_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
         })
-        ack = self.msg_helper.make_ack()
-        self.add_router_md_to_msg(ack, router, 'foo')
-        self.set_event_hops(ack, [
+        yield self.assert_routed_event(router, 'default', [
             [['app1', 'default'], ['kwr1', 'default']],
             [['kwr1', 'foo'], ['sphex', 'default']],
         ])
-        yield self.assert_routed_event(ack, router, 'default')
 
     @inlineCallbacks
     def test_event_default_to_foo(self):
-        router = yield self.setup_router({
+        router = yield self.app_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
         })
-        ack = self.msg_helper.make_ack()
-        self.add_router_md_to_msg(ack, router, 'default')
-        self.set_event_hops(ack, [
+        yield self.assert_routed_event(router, 'foo', [
             [['app1', 'default'], ['kwr1', 'foo']],
             [['kwr1', 'default'], ['sphex', 'default']],
         ])
-        yield self.assert_routed_event(ack, router, 'foo')
 
     @inlineCallbacks
     def test_event_foo_to_bar(self):
-        router = yield self.setup_router({
+        router = yield self.app_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
         })
-        ack = self.msg_helper.make_ack()
-        self.add_router_md_to_msg(ack, router, 'foo')
-        self.set_event_hops(ack, [
+        yield self.assert_routed_event(router, 'bar', [
             [['app1', 'default'], ['kwr1', 'bar']],
             [['kwr1', 'foo'], ['sphex', 'default']],
         ])
-        yield self.assert_routed_event(ack, router, 'bar')

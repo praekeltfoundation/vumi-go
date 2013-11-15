@@ -8,11 +8,8 @@ from django.core import mail
 from django.core.urlresolvers import reverse
 from django.utils.unittest import skip
 
-from mock import patch
-
 import go.base.utils
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
@@ -20,6 +17,7 @@ from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.vumitools.conversation.utils import ConversationWrapper
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class EnabledAction(ConversationAction):
@@ -128,17 +126,17 @@ class FakeConversationPackage(object):
         self.ConversationViewDefinition = vdef_cls
 
 
-class BaseConversationViewTestCase(VumiGoDjangoTestCase):
-    use_riak = True
-
+class BaseConversationViewTestCase(GoDjangoTestCase):
     def setUp(self):
-        super(BaseConversationViewTestCase, self).setUp()
-        self.monkey_patch(
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.monkey_patch(
             go.base.utils, 'get_conversation_pkg', self._get_conversation_pkg)
-        self.patch_settings(VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
-        self.setup_api()
-        self.setup_user_api()
-        self.setup_client()
+        self.vumi_helper.patch_settings(
+            VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
 
     def _get_conversation_pkg(self, conversation_type, from_list=()):
         """Test stub for `go.base.utils.get_conversation_pkg()`
@@ -165,16 +163,15 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
-        self.assertNotContains(response, u'My Conversation')
+        self.assertNotContains(response, u'myconv')
 
-        self.create_conversation(
-            name=u'My Conversation', conversation_type=u'dummy')
+        self.user_helper.create_conversation(u'dummy', name=u'myconv')
         response = self.client.get(reverse('conversations:index'))
-        self.assertContains(response, u'My Conversation')
+        self.assertContains(response, u'myconv')
 
     def test_index_search(self):
         """Filter conversations based on query string"""
-        conv = self.create_conversation(conversation_type=u'dummy')
+        conv = self.user_helper.create_conversation(u'dummy')
 
         response = self.client.get(reverse('conversations:index'))
         self.assertContains(response, conv.name)
@@ -184,9 +181,9 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.assertNotContains(response, conv.name)
 
     def test_index_search_on_type(self):
-        conv = self.create_conversation(conversation_type=u'dummy')
-        self.add_app_permission(u'gotest.dummy')
-        self.add_app_permission(u'gotest.with_actions')
+        conv = self.user_helper.create_conversation(u'dummy')
+        self.user_helper.add_app_permission(u'gotest.dummy')
+        self.user_helper.add_app_permission(u'gotest.with_actions')
 
         def search(conversation_type):
             return self.client.get(reverse('conversations:index'), {
@@ -198,7 +195,7 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.assertNotContains(search('with_actions'), conv.key)
 
     def test_index_search_on_status(self):
-        conv = self.create_conversation(conversation_type=u'dummy')
+        conv = self.user_helper.create_conversation(u'dummy')
 
         def search(conversation_status):
             return self.client.get(reverse('conversations:index'), {
@@ -212,7 +209,7 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.assertNotContains(search('finished'), conv.key)
 
         # Set the status to `running'
-        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv = self.user_helper.get_conversation(conv.key)
         conv.set_status_started()
         conv.save()
         self.assertNotContains(search('draft'), conv.key)
@@ -220,7 +217,7 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.assertNotContains(search('finished'), conv.key)
 
         # Set the status to `stopped' again
-        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv = self.user_helper.get_conversation(conv.key)
         conv.set_status_stopped()
         conv.save()
         self.assertContains(search('draft'), conv.key)
@@ -236,7 +233,7 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
 
     def test_pagination(self):
         for i in range(13):
-            conv = self.create_conversation(conversation_type=u'dummy')
+            conv = self.user_helper.create_conversation(u'dummy')
         response = self.client.get(reverse('conversations:index'))
         # CONVERSATIONS_PER_PAGE = 12
         self.assertContains(response, conv.name, count=12)
@@ -244,10 +241,10 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.assertContains(response, conv.name, count=1)
 
     def test_pagination_with_query_and_type(self):
-        self.add_app_permission(u'gotest.dummy')
-        self.add_app_permission(u'gotest.with_actions')
+        self.user_helper.add_app_permission(u'gotest.dummy')
+        self.user_helper.add_app_permission(u'gotest.with_actions')
         for i in range(13):
-            conv = self.create_conversation(conversation_type=u'dummy')
+            conv = self.user_helper.create_conversation(u'dummy')
         response = self.client.get(reverse('conversations:index'), {
             'query': conv.name,
             'p': 2,
@@ -260,7 +257,7 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
 
 class TestNewConversationView(BaseConversationViewTestCase):
     def test_get_new_conversation(self):
-        self.add_app_permission(u'gotest.dummy')
+        self.user_helper.add_app_permission(u'gotest.dummy')
         response = self.client.get(reverse('conversations:new_conversation'))
         self.assertContains(response, 'Conversation name')
         self.assertContains(response, 'kind of conversation')
@@ -268,14 +265,14 @@ class TestNewConversationView(BaseConversationViewTestCase):
         self.assertNotContains(response, 'with_actions')
 
     def test_post_new_conversation(self):
-        self.add_app_permission(u'gotest.dummy')
+        self.user_helper.add_app_permission(u'gotest.dummy')
         conv_data = {
             'name': 'new conv',
             'conversation_type': 'dummy',
         }
         response = self.client.post(
             reverse('conversations:new_conversation'), conv_data)
-        [conv] = self.user_api.active_conversations()
+        [conv] = self.user_helper.user_api.active_conversations()
         show_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': ''})
         self.assertRedirects(response, show_url)
@@ -283,14 +280,14 @@ class TestNewConversationView(BaseConversationViewTestCase):
         self.assertEqual(conv.conversation_type, 'dummy')
 
     def test_post_new_conversation_extra_endpoints(self):
-        self.add_app_permission(u'gotest.extra_endpoints')
+        self.user_helper.add_app_permission(u'gotest.extra_endpoints')
         conv_data = {
             'name': 'new conv',
             'conversation_type': 'extra_endpoints',
         }
         response = self.client.post(reverse('conversations:new_conversation'),
                                     conv_data)
-        [conv] = self.user_api.active_conversations()
+        [conv] = self.user_helper.user_api.active_conversations()
         show_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': ''})
         self.assertRedirects(response, show_url)
@@ -300,8 +297,13 @@ class TestNewConversationView(BaseConversationViewTestCase):
 
 
 class TestConversationViews(BaseConversationViewTestCase):
+    def setUp(self):
+        super(TestConversationViews, self).setUp()
+        self.msg_helper = GoMessageHelper(
+            mdb=self.vumi_helper.get_vumi_api().mdb)
+
     def test_show_no_content_block(self):
-        conv = self.create_conversation(conversation_type=u'dummy')
+        conv = self.user_helper.create_conversation(u'dummy')
         show_url = self.get_view_url(conv, 'show')
         response = self.client.get(show_url)
         self.assertEqual(response.status_code, 200)
@@ -309,14 +311,14 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(response, show_url + 'edit/')
 
     def test_show_editable(self):
-        conv = self.create_conversation(conversation_type=u'simple_edit')
+        conv = self.user_helper.create_conversation(u'simple_edit')
         response = self.client.get(self.get_view_url(conv, 'show'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Content')
         self.assertContains(response, self.get_view_url(conv, 'edit'))
 
     def test_edit_simple(self):
-        conv = self.create_conversation(conversation_type=u'simple_edit')
+        conv = self.user_helper.create_conversation(u'simple_edit')
         self.assertEqual(conv.config, {})
 
         response = self.client.get(self.get_view_url(conv, 'edit'))
@@ -328,7 +330,7 @@ class TestConversationViews(BaseConversationViewTestCase):
             'simple_field': ['field value'],
         })
         self.assertRedirects(response, self.get_view_url(conv, 'show'))
-        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv = self.user_helper.get_conversation(conv.key)
         self.assertEqual(conv.config, {'simple_field': 'field value'})
 
         response = self.client.get(self.get_view_url(conv, 'edit'))
@@ -337,7 +339,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(response, 'field value')
 
     def test_edit_complex(self):
-        conv = self.create_conversation(conversation_type=u'complex_edit')
+        conv = self.user_helper.create_conversation(u'complex_edit')
         self.assertEqual(conv.config, {})
 
         response = self.client.get(self.get_view_url(conv, 'edit'))
@@ -352,7 +354,7 @@ class TestConversationViews(BaseConversationViewTestCase):
             'bar-simple_field': ['field value 2'],
         })
         self.assertRedirects(response, self.get_view_url(conv, 'show'))
-        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv = self.user_helper.get_conversation(conv.key)
         self.assertEqual(conv.config, {
             'foo': {'simple_field': 'field value 1'},
             'bar': {'simple_field': 'field value 2'},
@@ -366,8 +368,8 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(response, 'field value 2')
 
     def test_edit_conversation_details(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', name=u'test', description=u'test')
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'test', description=u'test')
 
         response = self.client.post(
             reverse('conversations:conversation', kwargs={
@@ -379,15 +381,16 @@ class TestConversationViews(BaseConversationViewTestCase):
         show_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': ''})
         self.assertRedirects(response, show_url)
-        reloaded_conv = self.user_api.get_wrapped_conversation(conv.key)
+        reloaded_conv = self.user_helper.get_conversation(conv.key)
         self.assertEqual(reloaded_conv.name, 'foo')
         self.assertEqual(reloaded_conv.description, 'bar')
 
     def test_conversation_contact_group_listing(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', name=u'test', description=u'test')
-        group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
-        group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'test', description=u'test')
+        contact_store = self.user_helper.user_api.contact_store
+        group1 = contact_store.new_group(u'Contact Group 1')
+        group2 = contact_store.new_group(u'Contact Group 2')
 
         conv.add_group(group1)
         conv.save()
@@ -400,10 +403,11 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(resp, group2.name)
 
     def test_conversation_render_contact_group_edit(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', name=u'test', description=u'test')
-        group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
-        group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'test', description=u'test')
+        contact_store = self.user_helper.user_api.contact_store
+        group1 = contact_store.new_group(u'Contact Group 1')
+        group2 = contact_store.new_group(u'Contact Group 2')
 
         conv.add_group(group1)
         conv.save()
@@ -447,11 +451,12 @@ class TestConversationViews(BaseConversationViewTestCase):
         })
 
     def test_conversation_contact_group_assignment(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', name=u'test', description=u'test')
-        self.user_api.contact_store.new_group(u'Contact Group 1')
-        group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
-        group3 = self.user_api.contact_store.new_group(u'Contact Group 3')
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'test', description=u'test')
+        contact_store = self.user_helper.user_api.contact_store
+        contact_store.new_group(u'Contact Group 1')
+        group2 = contact_store.new_group(u'Contact Group 2')
+        group3 = contact_store.new_group(u'Contact Group 3')
 
         groups_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
@@ -469,7 +474,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_start(self):
-        conv = self.create_conversation(conversation_type=u'dummy')
+        conv = self.user_helper.create_conversation(u'dummy')
 
         response = self.client.post(
             self.get_view_url(conv, 'start'), follow=True)
@@ -477,7 +482,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "Dummy Conversation started")
 
-        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv = self.user_helper.get_conversation(conv.key)
         self.assertTrue(conv.starting())
         [start_cmd] = self.get_api_commands_sent()
         self.assertEqual(start_cmd, VumiApiCommand.command(
@@ -485,8 +490,7 @@ class TestConversationViews(BaseConversationViewTestCase):
             user_account_key=conv.user_account.key, conversation_key=conv.key))
 
     def test_stop(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
 
         response = self.client.post(
             self.get_view_url(conv, 'stop'), follow=True)
@@ -494,19 +498,18 @@ class TestConversationViews(BaseConversationViewTestCase):
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "Dummy Conversation stopped")
 
-        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv = self.user_helper.get_conversation(conv.key)
         self.assertTrue(conv.stopping())
 
     def test_aggregates(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
         # Inbound only
-        self.add_messages_to_conv(
-            5, conv, start_date=date(2012, 1, 1), time_multiplier=12)
+        self.msg_helper.add_inbound_to_conv(
+            conv, 5, start_date=date(2012, 1, 1), time_multiplier=12)
         # Inbound and outbound
-        self.add_messages_to_conv(
-            5, conv, start_date=date(2013, 1, 1), time_multiplier=12,
-            reply=True)
+        msgs = self.msg_helper.add_inbound_to_conv(
+            conv, 5, start_date=date(2013, 1, 1), time_multiplier=12)
+        self.msg_helper.add_replies_to_conv(conv, msgs)
         response = self.client.get(
             self.get_view_url(conv, 'aggregates'), {'direction': 'inbound'})
         self.assertEqual(response.content, '\r\n'.join([
@@ -529,17 +532,17 @@ class TestConversationViews(BaseConversationViewTestCase):
             ]))
 
     def test_export_messages(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        self.add_messages_to_conv(
-            5, conv, start_date=date(2012, 1, 1), time_multiplier=12,
-            reply=True)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msgs = self.msg_helper.add_inbound_to_conv(
+            conv, 5, start_date=date(2012, 1, 1), time_multiplier=12)
+        self.msg_helper.add_replies_to_conv(conv, msgs)
         response = self.client.post(self.get_view_url(conv, 'message_list'), {
             '_export_conversation_messages': True,
         })
         self.assertRedirects(response, self.get_view_url(conv, 'message_list'))
         [email] = mail.outbox
-        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertEqual(
+            email.recipients(), [self.user_helper.get_django_user().email])
         self.assertTrue(conv.name in email.subject)
         self.assertTrue(conv.name in email.body)
         [(file_name, zipcontent, mime_type)] = email.attachments
@@ -551,11 +554,10 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(mime_type, 'application/zip')
 
     def test_message_list_pagination(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        # Create 21 inbound & 21 outbound messages, since we have
-        # 20 messages per page it should give us 2 pages
-        self.add_messages_to_conv(21, conv)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        # Create 21 inbound messages, since we have 20 messages per page it
+        # should give us 2 pages
+        self.msg_helper.add_inbound_to_conv(conv, 21)
         response = self.client.get(self.get_view_url(conv, 'message_list'))
 
         # Check pagination
@@ -575,20 +577,22 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(response, '&amp;p=0', 0)
 
     def test_message_list_statistics(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        msgs = self.add_messages_to_conv(10, conv, reply=True)
-        replies = [reply for _msg, reply in msgs]
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
+        replies = self.msg_helper.add_replies_to_conv(conv, msgs)
         for msg in replies[:4]:
-            self.ack_message(msg)
+            self.msg_helper.make_stored_ack(conv, msg)
         for msg in replies[4:9]:
-            self.nack_message(msg)
+            self.msg_helper.make_stored_nack(conv, msg)
         for msg in replies[:2]:
-            self.delivery_report_on_message(msg, status='delivered')
+            self.msg_helper.make_stored_delivery_report(
+                conv, msg, delivery_status='delivered')
         for msg in replies[2:5]:
-            self.delivery_report_on_message(msg, status='pending')
+            self.msg_helper.make_stored_delivery_report(
+                conv, msg, delivery_status='pending')
         for msg in replies[5:9]:
-            self.delivery_report_on_message(msg, status='failed')
+            self.msg_helper.make_stored_delivery_report(
+                conv, msg, delivery_status='failed')
 
         response = self.client.get(self.get_view_url(conv, 'message_list'))
 
@@ -615,66 +619,72 @@ class TestConversationViews(BaseConversationViewTestCase):
             html=True)
 
     def test_message_list_no_sensitive_msgs(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+
+        def make_stored_msgs(go_metadata={}):
+            self.msg_helper.make_stored_inbound(
+                conv, "hi", from_addr='from-me',
+                helper_metadata={'go': go_metadata})
+            self.msg_helper.make_stored_outbound(
+                conv, "hi", to_addr='from-me',
+                helper_metadata={'go': go_metadata})
 
         def assert_messages(count):
             r_in = self.client.get(
                 self.get_view_url(conv, 'message_list'),
                 {'direction': 'inbound'})
-            self.assertContains(r_in, 'from-addr', count)
+            self.assertContains(r_in, 'from-me', count)
             r_out = self.client.get(
                 self.get_view_url(conv, 'message_list'),
                 {'direction': 'outbound'})
-            self.assertContains(r_out, 'from-addr', count)
+            self.assertContains(r_out, 'from-me', count)
 
         assert_messages(0)
-        self.add_message_to_conv(conv, reply=True)
+        make_stored_msgs()
         assert_messages(1)
-        self.add_message_to_conv(conv, reply=True, sensitive=True)
+        make_stored_msgs({'sensitive': True})
         assert_messages(1)
-        self.add_message_to_conv(conv, reply=True)
+        make_stored_msgs({'sensitive': False})
         assert_messages(2)
 
     def test_message_list_with_bad_transport_type_inbound(self):
         # inbound messages could have an unsupported transport_type
         # if the transport sent something we don't yet support
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
 
-        self.add_message_to_conv(conv, transport_type="bad horse")
+        self.msg_helper.make_stored_inbound(
+            conv, "hi", transport_type="bad horse", from_addr='from-me')
 
         r_in = self.client.get(
             self.get_view_url(conv, 'message_list'),
             {'direction': 'inbound'})
 
-        self.assertContains(r_in, 'from-addr', 1)
+        self.assertContains(r_in, 'from-me', 1)
         self.assertContains(r_in, 'bad horse (unsupported)', 1)
 
     def test_message_list_with_bad_transport_type_outbound(self):
         # unsent message don't have their transport type set to something
         # that a contact can be created for
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
 
-        self.add_message_to_conv(conv, reply=True, transport_type="bad horse")
+        self.msg_helper.make_stored_outbound(
+            conv, "hi", transport_type="bad horse", to_addr='from-me')
 
         r_out = self.client.get(
             self.get_view_url(conv, 'message_list'),
             {'direction': 'outbound'})
 
-        self.assertContains(r_out, 'from-addr', 1)
+        self.assertContains(r_out, 'from-me', 1)
         self.assertContains(r_out, 'bad horse (unsupported)', 1)
 
     def test_reply_on_inbound_messages_only(self):
         # Fake the routing setup.
-        self.monkey_patch(
+        self.vumi_helper.monkey_patch(
             ConversationWrapper, 'has_channel_supporting_generic_sends',
             lambda s: True)
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        messages = self.add_messages_to_conv(1, conv, reply=True)
-        [msg_in, msg_out] = messages[0]
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        [msg_in] = self.msg_helper.add_inbound_to_conv(conv, 1)
+        [msg_out] = self.msg_helper.add_replies_to_conv(conv, [msg_in])
 
         response = self.client.get(
             self.get_view_url(conv, 'message_list'), {'direction': 'inbound'})
@@ -689,18 +699,16 @@ class TestConversationViews(BaseConversationViewTestCase):
     def test_no_reply_with_no_generic_send_channels(self):
         # We have no routing hooked up and hence no channels supporting generic
         # sends.
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        self.add_messages_to_conv(1, conv)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        self.msg_helper.add_inbound_to_conv(conv, 1)
 
         response = self.client.get(
             self.get_view_url(conv, 'message_list'), {'direction': 'inbound'})
         self.assertNotContains(response, 'Reply')
 
     def test_send_one_off_reply(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        self.add_messages_to_conv(1, conv)
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        self.msg_helper.add_inbound_to_conv(conv, 1)
         [msg] = conv.received_messages()
         response = self.client.post(self.get_view_url(conv, 'message_list'), {
             'in_reply_to': msg['message_id'],
@@ -723,75 +731,6 @@ class TestConversationViews(BaseConversationViewTestCase):
             'msg_options': {'in_reply_to': msg['message_id']},
         })
 
-    @skip("The new views don't have this.")
-    def test_show_cached_message_overview(self):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        self.add_messages_to_conv(10, conv)
-        response = self.client.get(self.get_view_url(conv, 'show'))
-        self.assertContains(response,
-            '10 sent for delivery to the networks.')
-        self.assertContains(response,
-            '10 accepted for delivery by the networks.')
-        self.assertContains(response, '10 delivered.')
-
-    @skip("The new views don't have this.")
-    @patch('go.base.message_store_client.MatchResult')
-    @patch('go.base.message_store_client.Client')
-    def test_message_search(self, Client, MatchResult):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        fake_client = FakeMessageStoreClient()
-        fake_result = FakeMatchResult()
-        Client.return_value = fake_client
-        MatchResult.return_value = fake_result
-
-        response = self.client.get(self.get_view_url(conv, 'message_list'), {
-            'q': 'hello world 1',
-        })
-
-        template_names = [t.name for t in response.templates]
-        self.assertTrue(
-            'generic/includes/message-load-results.html' in template_names)
-        self.assertEqual(response.context['token'], fake_client.token)
-
-    @skip("The new views don't have this.")
-    @patch('go.base.message_store_client.MatchResult')
-    @patch('go.base.message_store_client.Client')
-    def test_message_results(self, Client, MatchResult):
-        conv = self.create_conversation(
-            conversation_type=u'dummy', started=True)
-        fake_client = FakeMessageStoreClient()
-        fake_result = FakeMatchResult(tries=2,
-            results=[self.mkmsg_out() for i in range(10)])
-        Client.return_value = fake_client
-        MatchResult.return_value = fake_result
-
-        fetch_results_url = self.get_view_url(conv, 'message_search_result')
-        fetch_results_params = {
-            'q': 'hello world 1',
-            'batch_id': 'batch-id',
-            'direction': 'inbound',
-            'token': fake_client.token,
-            'delay': 100,
-        }
-
-        response1 = self.client.get(fetch_results_url, fetch_results_params)
-        response2 = self.client.get(fetch_results_url, fetch_results_params)
-
-        # First time it should still show the loading page
-        self.assertTrue('generic/includes/message-load-results.html' in
-                        [t.name for t in response1.templates])
-        self.assertEqual(response1.context['delay'], 1.1 * 100)
-        # Second time it should still render the messages
-        self.assertTrue('generic/includes/message-list.html' in
-                        [t.name for t in response2.templates])
-        self.assertEqual(response1.context['token'], fake_client.token)
-        # Second time we should list the matching messages
-        self.assertEqual(response2.context['token'], fake_client.token)
-        self.assertEqual(
-            len(response2.context['message_page'].object_list), 10)
-
 
 class TestConversationTemplateTags(BaseConversationViewTestCase):
     def _assert_cs_url(self, suffix, conv, view_name=None):
@@ -803,7 +742,7 @@ class TestConversationTemplateTags(BaseConversationViewTestCase):
         self.assertEqual(expected, result)
 
     def test_conversation_screen_tag(self):
-        conv = self.create_conversation(conversation_type=u'dummy')
+        conv = self.user_helper.create_conversation(u'dummy')
         self._assert_cs_url('', conv)
         self._assert_cs_url('', conv, 'show')
         self._assert_cs_url('edit_detail/', conv, 'edit_detail')
@@ -817,7 +756,7 @@ class TestConversationTemplateTags(BaseConversationViewTestCase):
         self.assertEqual(expected, result)
 
     def test_conversation_action_tag(self):
-        conv = self.create_conversation(conversation_type=u'with_actions')
+        conv = self.user_helper.create_conversation(u'with_actions')
         self._assert_ca_url('enabled', conv, 'enabled')
         self._assert_ca_url('disabled', conv, 'disabled')
         # The conversation_action tag currently just builds a URL without

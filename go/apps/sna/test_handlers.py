@@ -1,44 +1,46 @@
-from go.vumitools.opt_out import OptOutStore
-from go.vumitools.tests.test_handler import EventHandlerTestCase
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.tests.helpers import VumiTestCase
+
 from vxpolls.manager import PollManager
 
+from go.apps.sna import USSDOptOutHandler, USSDMenuCompletionHandler
+from go.vumitools.opt_out import OptOutStore
+from go.vumitools.tests.helpers import EventHandlerHelper
 
-class USSDOptOutHandlerTestCase(EventHandlerTestCase):
 
-    handlers = [
-        ('sisi_ni_amani', 'go.apps.sna.USSDOptOutHandler', {
-            'poll_manager_prefix': 'vumigo.'
-            })
-    ]
+class TestUSSDOptOutHandler(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(USSDOptOutHandlerTestCase, self).setUp()
-        self.contact_store = self.user_api.contact_store
-        yield self.contact_store.contacts.enable_search()
-        yield self.contact_store.groups.enable_search()
-        self.oo_store = OptOutStore(self.vumi_api.manager, self.account.key)
-        self.pm = PollManager(self.vumi_api.redis, 'vumigo.')
-        self.track_event(self.account.key, self.conversation.key,
-            'survey_completed', 'sisi_ni_amani')
+        self.eh_helper = EventHandlerHelper()
+        self.add_cleanup(self.eh_helper.cleanup)
 
-    @inlineCallbacks
-    def tearDown(self):
-        yield super(USSDOptOutHandlerTestCase, self).tearDown()
-        self.pm.stop()
+        yield self.eh_helper.setup_event_dispatcher(
+            'sisi_ni_amani', USSDOptOutHandler, {
+                'poll_manager_prefix': 'vumigo.',
+            })
+
+        vumi_api = self.eh_helper.vumi_helper.get_vumi_api()
+        user_helper = yield self.eh_helper.vumi_helper.get_or_create_user()
+        self.contact_store = user_helper.user_api.contact_store
+        self.oo_store = OptOutStore(vumi_api.manager, user_helper.account_key)
+
+        self.pm = PollManager(vumi_api.redis, 'vumigo.')
+        self.add_cleanup(self.pm.stop)
+
+        self.eh_helper.track_event('survey_completed', 'sisi_ni_amani')
 
     @inlineCallbacks
     def test_opt_in(self):
         msisdn = u'+2345'
         message_id = u'message-id'
-        event = self.mkevent('survey_completed', {
+        event = self.eh_helper.make_event('survey_completed', {
             'from_addr': msisdn,
             'message_id': message_id,
             'transport_type': 'ussd',
-            }, conv_key=self.conversation.key, account_key=self.account.key)
+        })
 
         yield self.oo_store.new_opt_out('msisdn', msisdn, {
             'message_id': message_id})
@@ -50,7 +52,7 @@ class USSDOptOutHandlerTestCase(EventHandlerTestCase):
         [opt_out] = yield self.oo_store.list_opt_outs()
         self.assertTrue(opt_out)
 
-        yield self.publish_event(event)
+        yield self.eh_helper.dispatch_event(event)
 
         opt_outs = yield self.oo_store.list_opt_outs()
         self.assertEqual(opt_outs, [])
@@ -59,11 +61,11 @@ class USSDOptOutHandlerTestCase(EventHandlerTestCase):
     def test_opt_out(self):
         msisdn = u'+2345'
         message_id = u'message-id'
-        event = self.mkevent('survey_completed', {
+        event = self.eh_helper.make_event('survey_completed', {
             'from_addr': msisdn,
             'message_id': message_id,
             'transport_type': 'ussd',
-            }, conv_key=self.conversation.key, account_key=self.account.key)
+        })
 
         contact = yield self.contact_store.new_contact(msisdn=msisdn)
         contact.extra['opted_out'] = u'2'
@@ -72,7 +74,7 @@ class USSDOptOutHandlerTestCase(EventHandlerTestCase):
         opt_outs = yield self.oo_store.list_opt_outs()
         self.assertEqual(opt_outs, [])
 
-        yield self.publish_event(event)
+        yield self.eh_helper.dispatch_event(event)
 
         [opt_out] = yield self.oo_store.list_opt_outs()
         self.assertTrue(opt_out)
@@ -81,11 +83,11 @@ class USSDOptOutHandlerTestCase(EventHandlerTestCase):
     def test_opt_out_for_empty_outed_out_value(self):
         msisdn = u'+2345'
         message_id = u'message-id'
-        event = self.mkevent('survey_completed', {
+        event = self.eh_helper.make_event('survey_completed', {
             'from_addr': msisdn,
             'message_id': message_id,
             'transport_type': 'ussd',
-            }, conv_key=self.conversation.key, account_key=self.account.key)
+        })
 
         contact = yield self.contact_store.new_contact(msisdn=msisdn)
         contact.extra['opted_out'] = u''
@@ -94,54 +96,53 @@ class USSDOptOutHandlerTestCase(EventHandlerTestCase):
         opt_outs = yield self.oo_store.list_opt_outs()
         self.assertEqual(opt_outs, [])
 
-        yield self.publish_event(event)
+        yield self.eh_helper.dispatch_event(event)
 
         opt_outs = yield self.oo_store.list_opt_outs()
         self.assertEqual(opt_outs, [])
 
 
-class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
-
-    handlers = [
-        ('sisi_ni_amani', 'go.apps.sna.USSDMenuCompletionHandler', {}),
-    ]
+class TestUSSDMenuCompletionHandler(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(USSDMenuCompletionHandlerTestCase, self).setUp()
-        self.contact_store = self.user_api.contact_store
-        yield self.contact_store.contacts.enable_search()
-        yield self.contact_store.groups.enable_search()
+        self.eh_helper = EventHandlerHelper()
+        self.add_cleanup(self.eh_helper.cleanup)
+
+        yield self.eh_helper.setup_event_dispatcher(
+            'sisi_ni_amani', USSDMenuCompletionHandler, {})
+
+        user_helper = yield self.eh_helper.vumi_helper.get_or_create_user()
+        self.contact_store = user_helper.user_api.contact_store
         self.contact = yield self.contact_store.new_contact(
-                                                        msisdn=u'+27761234567')
-        yield self.conversation.start()
-        self.track_event(self.account.key, self.conversation.key,
+            msisdn=u'+27761234567')
+
+        self.eh_helper.track_event(
             'survey_completed', 'sisi_ni_amani', handler_config={
                 'sms_copy': {
                     'english': 'english sms',
                     'swahili': 'swahili sms',
                 },
-                'conversation_key': self.conversation.key,
+                'conversation_key': self.eh_helper.conversation.key,
             })
 
     def send_event(self, msisdn):
-        event = self.mkevent('survey_completed', {
+        event = self.eh_helper.make_event('survey_completed', {
             'from_addr': msisdn,
             'message_id': 'message-id',
             'transport_type': 'ussd',
-            }, conv_key=self.conversation.key, account_key=self.account.key)
-        return self.publish_event(event)
+        })
+        return self.eh_helper.dispatch_event(event)
 
     @inlineCallbacks
     def test_handle_event_default(self):
         yield self.send_event(self.contact.msisdn)
-        [start_cmd, send_msg_cmd] = self.get_dispatcher_commands()
+        [command] = self.eh_helper.get_dispatched_commands()
 
-        self.assertEqual(start_cmd['command'], 'start')
-        self.assertEqual(send_msg_cmd['command'], 'send_message')
-        self.assertEqual(send_msg_cmd['kwargs'], {
+        self.assertEqual(command['command'], 'send_message')
+        self.assertEqual(command['kwargs'], {
             'command_data': {
-                'batch_id': self.conversation.batch.key,
+                'batch_id': self.eh_helper.conversation.batch.key,
                 'content': 'english sms',
                 'to_addr': self.contact.msisdn,
                 'msg_options': {},
@@ -153,11 +154,11 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.contact.extra['language'] = u'1'
         yield self.contact.save()
         yield self.send_event(self.contact.msisdn)
-        [command] = self.get_dispatcher_commands()[1:]
+        [command] = self.eh_helper.get_dispatched_commands()
 
         self.assertEqual(command['args'],
-                         [self.conversation.user_account.key,
-                          self.conversation.key])
+                         [self.eh_helper.conversation.user_account.key,
+                          self.eh_helper.conversation.key])
         data = command['kwargs']['command_data']
         self.assertEqual(data['content'], 'english sms')
 
@@ -166,10 +167,10 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.contact.extra['language'] = u'2'
         yield self.contact.save()
         yield self.send_event(self.contact.msisdn)
-        [command] = self.get_dispatcher_commands()[1:]
+        [command] = self.eh_helper.get_dispatched_commands()
 
         self.assertEqual(command['args'],
-                         [self.conversation.user_account.key,
-                          self.conversation.key])
+                         [self.eh_helper.conversation.user_account.key,
+                          self.eh_helper.conversation.key])
         data = command['kwargs']['command_data']
         self.assertEqual(data['content'], 'swahili sms')

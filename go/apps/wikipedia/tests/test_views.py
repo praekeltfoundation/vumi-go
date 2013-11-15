@@ -1,38 +1,47 @@
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
 
 
-class WikipediaTestCase(DjangoGoApplicationTestCase):
-    TEST_CONVERSATION_TYPE = u'wikipedia'
+class TestWikipediaViews(GoDjangoTestCase):
+
+    def setUp(self):
+        self.app_helper = AppViewsHelper(u'wikipedia')
+        self.add_cleanup(self.app_helper.cleanup)
+        self.client = self.app_helper.get_client()
 
     def test_new_conversation(self):
         """Ensure that the newly created conversation has the right endpoints.
         """
-        self.add_app_permission(u'go.apps.wikipedia')
-        self.assertEqual(len(self.conv_store.list_conversations()), 0)
-        response = self.post_new_conversation()
-        self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        conversation = self.get_latest_conversation()
+        user_helper = self.app_helper.vumi_helper.get_or_create_user()
+        user_helper.add_app_permission(u'go.apps.wikipedia')
+        conv_store = user_helper.user_api.conversation_store
+
+        self.assertEqual(len(conv_store.list_conversations()), 0)
+        response = self.client.post(self.app_helper.get_new_view_url(), {
+            'name': u"conversation name",
+            'conversation_type': u"wikipedia",
+        })
+        self.assertEqual(len(conv_store.list_conversations()), 1)
+
+        conversations = []
+        for key in conv_store.list_conversations():
+            conversations.append(conv_store.get_conversation_by_key(key))
+        conversation = max(conversations, key=lambda c: c.created_at)
+        conv_helper = self.app_helper.get_conversation_helper(conversation)
+
         self.assertEqual(conversation.name, 'conversation name')
         self.assertEqual(conversation.description, '')
         self.assertEqual(conversation.config, {})
         self.assertEqual(list(conversation.extra_endpoints), [u'sms_content'])
-        self.assertRedirects(
-            response, self.get_view_url('show', conversation.key))
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
 
     def test_show_stopped(self):
-        """
-        Test showing the conversation
-        """
-        self.setup_conversation()
-        response = self.client.get(self.get_view_url('show'))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        response = self.client.get(conv_helper.get_view_url('show'))
+        self.assertContains(response, u"<h1>myconv</h1>")
 
     def test_show_running(self):
-        """
-        Test showing the conversation
-        """
-        self.setup_conversation(started=True)
-        response = self.client.get(self.get_view_url('show'))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        conv_helper = self.app_helper.create_conversation(
+            name=u"myconv", started=True)
+        response = self.client.get(conv_helper.get_view_url('show'))
+        self.assertContains(response, u"<h1>myconv</h1>")

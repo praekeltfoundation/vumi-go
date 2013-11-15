@@ -2,19 +2,18 @@ import base64
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import MockHttpServer
 
 from go.apps.afropinions import YoPaymentHandler
 from go.vumitools.tests.helpers import EventHandlerHelper
-from go.vumitools.tests.utils import GoWorkerTestCase
 
 
-class YoPaymentHandlerTestCase(GoWorkerTestCase):
+class TestYoPaymentHandler(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(YoPaymentHandlerTestCase, self).setUp()
-        self.eh_helper = EventHandlerHelper(self)
+        self.eh_helper = EventHandlerHelper()
         self.add_cleanup(self.eh_helper.cleanup)
 
         yield self.eh_helper.setup_event_dispatcher(

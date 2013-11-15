@@ -2,38 +2,28 @@ import urllib
 
 from django.core.urlresolvers import reverse
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.utils import get_router_view_definition
 from go.vumitools.router.models import ROUTER_ARCHIVED
 
 
-class RouterViewsTestCase(VumiGoDjangoTestCase):
-    use_riak = True
+class RouterViewsTestCase(GoDjangoTestCase):
 
     def setUp(self):
-        super(RouterViewsTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
-        self.setup_client()
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
 
     def get_view_url(self, view, router_key):
         view_def = get_router_view_definition('keyword', None)
         return view_def.get_view_url(view, router_key=router_key)
 
-    def mk_router(self, **kw):
-        params = {
-            'router_type': u'keyword',
-            'name': u'kwr',
-            'description': u'keyword router',
-            'config': {},
-        }
-        params.update(kw)
-        return self.user_api.new_router(**params)
-
     def test_index(self):
-        router = self.mk_router()
-        archived_router = self.mk_router(
-            name=u'archived', archive_status=ROUTER_ARCHIVED)
+        router = self.user_helper.create_router(u'keyword')
+        archived_router = self.user_helper.create_router(
+            u'keyword', name=u'archived', archive_status=ROUTER_ARCHIVED)
         response = self.client.get(reverse('routers:index'))
         self.assertContains(response, urllib.quote(router.key))
         self.assertNotContains(response, urllib.quote(archived_router.key))
@@ -52,7 +42,7 @@ class RouterViewsTestCase(VumiGoDjangoTestCase):
             'router_type': 'keyword',
         }
         response = self.client.post(reverse('routers:new_router'), router_data)
-        [router] = self.user_api.active_routers()
+        [router] = self.user_helper.user_api.active_routers()
         self.assertRedirects(response, self.get_view_url('edit', router.key))
         self.assertEqual(router.name, 'new router')
         self.assertEqual(router.router_type, 'keyword')
@@ -62,15 +52,15 @@ class RouterViewsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_show_router(self):
-        router = self.mk_router()
+        router = self.user_helper.create_router(u'keyword')
         response = self.client.get(self.get_view_url('show', router.key))
         self.assertContains(response, router.name)
         self.assertContains(response, router.description)
 
     def test_archive_router(self):
-        router = self.mk_router()
+        router = self.user_helper.create_router(u'keyword')
         self.assertFalse(router.archived())
         response = self.client.post(self.get_view_url('archive', router.key))
         self.assertRedirects(response, reverse('routers:index'))
-        router = self.user_api.get_router(router.key)
+        router = self.user_helper.user_api.get_router(router.key)
         self.assertTrue(router.archived())

@@ -7,32 +7,31 @@ from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
-from vumi.utils import http_request_full, HttpTimeoutError
+from vumi.config import ConfigContext
 from vumi.message import TransportUserMessage, TransportEvent
+from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import MockHttpServer, LogCatcher
 from vumi.transports.vumi_bridge.client import StreamingClient
-from vumi.config import ConfigContext
+from vumi.utils import http_request_full, HttpTimeoutError
 
-from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.resource import StreamResource, ConversationResource
 from go.apps.tests.helpers import AppWorkerHelper
 
 
-class TestStreamingHTTPWorker(AppWorkerTestCase):
+class TestStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestStreamingHTTPWorker, self).setUp()
-        self.app_helper = AppWorkerHelper(self, StreamingHTTPWorker)
+        self.app_helper = AppWorkerHelper(StreamingHTTPWorker)
         self.add_cleanup(self.app_helper.cleanup)
 
-        self.config = self.mk_config({
+        self.config = {
             'health_path': '/health/',
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
-        })
+        }
         self.app = yield self.app_helper.get_app_worker(self.config)
         self.addr = self.app.webserver.getHost()
         self.url = 'http://%s:%s%s' % (

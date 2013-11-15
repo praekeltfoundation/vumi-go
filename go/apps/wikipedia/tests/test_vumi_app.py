@@ -1,55 +1,43 @@
 from twisted.internet.defer import inlineCallbacks
+
+from vumi.tests.helpers import VumiTestCase
+
 from vumi_wikipedia.tests import test_wikipedia as tw
 from vumi_wikipedia.tests.test_wikipedia_api import (
     FakeHTTPTestCaseMixin, WIKIPEDIA_RESPONSES)
 
-from go.vumitools.tests.utils import AppWorkerTestCase
+from go.apps.tests.helpers import AppWorkerHelper
 from go.apps.wikipedia.vumi_app import WikipediaApplication
-from go.vumitools.tests.helpers import GoMessageHelper
 
 
-class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
-    application_class = WikipediaApplication
-    transport_type = u'ussd'
+class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestWikipediaApplication, self).setUp()
+        self.app_helper = AppWorkerHelper(WikipediaApplication)
+        self.add_cleanup(self.app_helper.cleanup)
+
+        self.app = yield self.app_helper.get_app_worker({
+            "secret_key": "s3cr3t",
+        })
+
         yield self.start_webserver(WIKIPEDIA_RESPONSES)
-
-        self.config = self.mk_config({"secret_key": "s3cr3t"})
-        self.app = yield self.get_application(self.config)
-
-        # Steal app's vumi_api
-        self.vumi_api = self.app.vumi_api  # YOINK!
-
-        # Create a test user account
-        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
-        yield self.setup_tagpools()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield self.stop_webserver()
-        yield super(TestWikipediaApplication, self).tearDown()
+        self.add_cleanup(self.stop_webserver)
 
     @inlineCallbacks
     def setup_conv(self, config={}):
         config.setdefault('api_url', self.url)
-        self.conv = yield self.create_conversation(
-            delivery_class=self.transport_type, config=config)
-        yield self.start_conversation(self.conv)
+        self.conv = yield self.app_helper.create_conversation(config=config)
+        yield self.app_helper.start_conversation(self.conv)
 
     def get_outbound_msgs(self, endpoint):
-        return [m for m in self.get_dispatched_outbound()
+        return [m for m in self.app_helper.get_dispatched_outbound()
                 if m['routing_metadata']['endpoint_name'] == endpoint]
 
     @inlineCallbacks
     def assert_response(self, text, expected, session_event=None):
-        yield self.dispatch_to_conv(
-            self.msg_helper.make_inbound(text, session_event=session_event),
-            self.conv)
+        yield self.app_helper.make_dispatch_inbound(
+            text, session_event=session_event, conv=self.conv)
         self.assertEqual(
             expected, self.get_outbound_msgs('default')[-1]['content'])
 

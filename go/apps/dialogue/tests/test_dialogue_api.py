@@ -6,19 +6,13 @@ from vumi.tests.helpers import VumiTestCase
 
 from go.apps.dialogue.dialogue_api import DialogueActionDispatcher
 from go.vumitools.tests.helpers import VumiApiHelper
-from go.vumitools.tests.utils import GoPersistenceMixin
 
 
-class TestDialogueActionDispatcher(VumiTestCase, GoPersistenceMixin):
-
-    use_riak = True
+class TestDialogueActionDispatcher(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(VumiTestCase, self).setUp()
-        self._persist_setUp()
-        self.add_cleanup(self._persist_tearDown)
-        self.vumi_helper = VumiApiHelper(self)
+        self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
         yield self.vumi_helper.setup_vumi_api()
 

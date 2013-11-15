@@ -1,18 +1,17 @@
 from StringIO import StringIO
 
-from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_manage_routing_table
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.routing_table import GoConnector
 
 
-class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
-
-    use_riak = True
+class TestGoManageRoutingTableCommand(GoDjangoTestCase):
 
     def setUp(self):
-        super(TestGoManageRoutingTableCommand, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
 
         self.command = go_manage_routing_table.Command()
         self.command.stdout = StringIO()
@@ -26,7 +25,8 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
                    for sc, se, dc, de in expected_entries))
 
     def handle_command(self, **options):
-        options.setdefault('email-address', self.django_user.email)
+        user_email = self.user_helper.get_django_user().email
+        options.setdefault('email-address', user_email)
         options.setdefault('show', False)
         options.setdefault('clear', False)
         options.setdefault('add', ())
@@ -41,7 +41,7 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
         self.assertEqual([''], errlines)
 
     def test_show_not_empty(self):
-        user_account = self.user_api.get_user_account()
+        user_account = self.user_helper.get_user_account()
         rt = user_account.routing_table
         tag_conn = 'TRANSPORT_TAG:new:tag1'
         conv_conn = 'CONVERSATION:new:12345'
@@ -60,7 +60,7 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
         self.assertEqual([''], errlines)
 
     def test_clear(self):
-        user_account = self.user_api.get_user_account()
+        user_account = self.user_helper.get_user_account()
         rt = user_account.routing_table
         tag_conn = 'TRANSPORT_TAG:new:tag1'
         conv_conn = 'CONVERSATION:new:12345'
@@ -68,32 +68,34 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
         rt.add_entry(conv_conn, "default", tag_conn, "default")
         user_account.save()
 
-        self.assertTrue(self.user_api.get_routing_table())
+        self.assertTrue(self.user_helper.user_api.get_routing_table())
         outlines, errlines = self.handle_command(clear=True)
         self.assertEqual(['Routing table cleared.'], outlines)
         self.assertEqual([''], errlines)
-        self.assertFalse(self.user_api.get_routing_table())
+        self.assertFalse(self.user_helper.user_api.get_routing_table())
 
     def test_add(self):
-        conv = self.create_conversation(name=u'active')
-        account = self.user_api.get_user_account()
+        conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'active')
+        account = self.user_helper.get_user_account()
         account.tags.append(('new', 'tag1'))
         account.save()
         tag_conn = 'TRANSPORT_TAG:new:tag1'
         conv_conn = 'CONVERSATION:%s:%s' % (conv.conversation_type, conv.key)
 
-        self.assertFalse(self.user_api.get_routing_table())
+        self.assertFalse(self.user_helper.user_api.get_routing_table())
         outlines, errlines = self.handle_command(
             add=(tag_conn, "default", conv_conn, "default"))
         self.assertEqual(['Routing table entry added.'], outlines)
         self.assertEqual([''], errlines)
         self.assert_routing_entries(
-            self.user_api.get_routing_table(),
+            self.user_helper.user_api.get_routing_table(),
             [(tag_conn, "default", conv_conn, "default")])
 
     def test_remove(self):
-        conv = self.create_conversation(name=u'active')
-        account = self.user_api.get_user_account()
+        conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'active')
+        account = self.user_helper.get_user_account()
         account.tags.append(('new', 'tag1'))
         tag_conn = 'TRANSPORT_TAG:new:tag1'
         conv_conn = 'CONVERSATION:%s:%s' % (conv.conversation_type, conv.key)
@@ -102,11 +104,11 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
         rt.add_entry(conv_conn, "default", tag_conn, "default")
         account.save()
 
-        self.assertTrue(self.user_api.get_routing_table())
+        self.assertTrue(self.user_helper.user_api.get_routing_table())
         outlines, errlines = self.handle_command(
             remove=(tag_conn, "default", conv_conn, "default"))
         self.assertEqual(['Routing table entry removed.'], outlines)
         self.assertEqual([''], errlines)
         self.assert_routing_entries(
-            self.user_api.get_routing_table(),
+            self.user_helper.user_api.get_routing_table(),
             [(conv_conn, "default", tag_conn, "default")])

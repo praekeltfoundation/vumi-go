@@ -4,15 +4,17 @@ import json
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+
 from go.api.go_api.session_manager import SessionManager, GO_USER_ACCOUNT_KEY
-from go.vumitools.tests.utils import GoTestCase
 
 
-class SessionManagerTestCase(GoTestCase):
+class SessionManagerTestCase(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        super(SessionManagerTestCase, self).setUp()
-        self.redis = yield self.get_redis_manager()
+        self.persistence_helper = PersistenceHelper()
+        self.add_cleanup(self.persistence_helper.cleanup)
+        self.redis = yield self.persistence_helper.get_redis_manager()
         self.sm = SessionManager(self.redis)
 
     @inlineCallbacks

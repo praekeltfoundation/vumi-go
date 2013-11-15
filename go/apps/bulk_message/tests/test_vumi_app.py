@@ -5,22 +5,21 @@
 from twisted.internet.defer import inlineCallbacks, returnValue, DeferredQueue
 from twisted.internet.task import Clock
 
-from vumi.message import TransportUserMessage
 from vumi.components.window_manager import WindowManager
+from vumi.message import TransportUserMessage
+from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
-from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.api import VumiApiCommand
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.apps.tests.helpers import AppWorkerHelper
+from go.vumitools.api import VumiApiCommand
 
 
-class TestBulkMessageApplication(AppWorkerTestCase):
+class TestBulkMessageApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestBulkMessageApplication, self).setUp()
-        self.app_helper = AppWorkerHelper(self, BulkMessageApplication)
+        self.app_helper = AppWorkerHelper(BulkMessageApplication)
         self.add_cleanup(self.app_helper.cleanup)
 
         # Patch the clock so we can control time

@@ -9,10 +9,11 @@ from twisted.trial.unittest import TestCase
 from twisted.web import resource
 from twisted.web.test.test_web import DummyRequest
 
+from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+
 from go.api.go_api.auth import (
     GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper)
 from go.api.go_api.session_manager import SessionManager
-from go.vumitools.tests.utils import GoTestCase
 from go.vumitools.tests.helpers import VumiApiHelper
 
 import mock
@@ -41,11 +42,12 @@ class GoUserRealmTestCase(TestCase):
                           realm.requestAvatar, u"user", mind)
 
 
-class GoUserSessionAccessCheckerTestCase(GoTestCase):
+class GoUserSessionAccessCheckerTestCase(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        super(GoUserSessionAccessCheckerTestCase, self).setUp()
-        self.redis = yield self.get_redis_manager()
+        self.persistence_helper = PersistenceHelper(is_sync=False)
+        self.add_cleanup(self.persistence_helper.cleanup)
+        self.redis = yield self.persistence_helper.get_redis_manager()
         self.sm = SessionManager(self.redis)
 
     @inlineCallbacks
@@ -83,14 +85,11 @@ class GoUserSessionAccessCheckerTestCase(GoTestCase):
         self.assertTrue(errored)
 
 
-class GoUserAuthSessionWrapperTestCase(GoTestCase):
-
-    use_riak = True
+class GoUserAuthSessionWrapperTestCase(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(GoUserAuthSessionWrapperTestCase, self).setUp()
-        self.vumi_helper = VumiApiHelper(self)
+        self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
         yield self.vumi_helper.setup_vumi_api()
         self.vumi_api = yield self.vumi_helper.get_vumi_api()

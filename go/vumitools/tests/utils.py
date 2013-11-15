@@ -2,16 +2,12 @@
 
 """Utilities for go.vumitools tests."""
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.persist.fields import (
     ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
-from vumi.message import TransportEvent
-from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
 from vumi.tests.helpers import VumiTestCase
 
-from go.vumitools.api import VumiApiCommand
 from go.vumitools.account import UserAccount
 from go.vumitools.contact import Contact, ContactGroup
 from go.vumitools.utils import MessageMetadataHelper
@@ -68,170 +64,133 @@ class FakeAmqpConnection(object):
         return commands
 
 
-class GoPersistenceMixin(PersistenceMixin):
-    # def _persist_setUp(self):
-    #     self._users_created = 0
-    #     return super(GoPersistenceMixin, self)._persist_setUp()
+# class GoPersistenceMixin(PersistenceMixin):
+#     # def _persist_setUp(self):
+#     #     self._users_created = 0
+#     #     return super(GoPersistenceMixin, self)._persist_setUp()
 
-    @PersistenceMixin.sync_or_async
-    def _clear_bucket_properties(self, account_keys, manager):
-        # TODO: Fix this hackery when we can.
-        import sys
-        manager_module = sys.modules[manager.__module__]
-        del_bp = getattr(manager_module, 'delete_bucket_properties', None)
-        if del_bp is None:
-            # This doesn't exist everywhere yet.
-            return
+#     @PersistenceMixin.sync_or_async
+#     def _clear_bucket_properties(self, account_keys, manager):
+#         # TODO: Fix this hackery when we can.
+#         import sys
+#         manager_module = sys.modules[manager.__module__]
+#         del_bp = getattr(manager_module, 'delete_bucket_properties', None)
+#         if del_bp is None:
+#             # This doesn't exist everywhere yet.
+#             return
 
-        client = manager.client
-        for account_key in account_keys:
-            sub_manager = manager.sub_manager(account_key)
-            yield del_bp(client.bucket(sub_manager.bucket_name(Contact)))
-            yield del_bp(client.bucket(sub_manager.bucket_name(ContactGroup)))
+#         client = manager.client
+#         for account_key in account_keys:
+#             sub_manager = manager.sub_manager(account_key)
+#             yield del_bp(client.bucket(sub_manager.bucket_name(Contact)))
+#             yield del_bp(client.bucket(sub_manager.bucket_name(ContactGroup)))
 
-    def _list_accounts(self, manager):
-        bucket = manager.client.bucket(
-            manager.bucket_name(UserAccount))
-        if self.sync_persistence:
-            return bucket.get_keys()
-        return bucket.list_keys()
+#     def _list_accounts(self, manager):
+#         bucket = manager.client.bucket(
+#             manager.bucket_name(UserAccount))
+#         if self.sync_persistence:
+#             return bucket.get_keys()
+#         return bucket.list_keys()
 
-    @PersistenceMixin.sync_or_async
-    def _persist_purge_riak(self, manager):
-        # If buckets are empty, they aren't listed. However, they may still
-        # have properties set. Therefore, we find all account keys and
-        # clear properties from their associated buckets.
-        accounts = yield self._list_accounts(manager)
-        yield manager.purge_all()
-        # This must happen after the objects are deleted, otherwise the
-        # indexes don't go away.
-        yield self._clear_bucket_properties(accounts, manager)
-
-
-class GoRouterWorkerTestMixin(GoPersistenceMixin):
-
-    def _worker_name(self):
-        # DummyApplicationWorker has no worker_name attr.
-        return getattr(self.router_class, 'worker_name', 'unnamed')
-
-    def _router_type(self):
-        # This is a guess based on worker_name.
-        # We need a better way to do this.
-        return self._worker_name().rpartition('_')[0].decode('utf-8')
-
-    def setup_router(self, config, started=True, **kw):
-        if started:
-            kw['status'] = u'running'
-        return self.create_router(config=config, **kw)
-
-    def create_router(self, **kw):
-        router_type = kw.pop('router_type', None)
-        if router_type is None:
-            router_type = self._router_type()
-        name = kw.pop('name', u'Subject')
-        description = kw.pop('description', u'')
-        config = kw.pop('config', {})
-        self.assertTrue(isinstance(config, dict))
-        return self.user_api.new_router(
-            router_type, name, description, config, **kw)
-
-    @inlineCallbacks
-    def start_router(self, router):
-        router_api = self.user_api.get_router_api(
-            router.router_type, router.key)
-        yield router_api.start_router(router)
-        for cmd in self.get_dispatcher_commands():
-            yield self.dispatch_command(
-                cmd.payload['command'], *cmd.payload['args'],
-                **cmd.payload['kwargs'])
-
-    @inlineCallbacks
-    def stop_router(self, router):
-        router_api = self.user_api.get_router_api(
-            router.router_type, router.key)
-        yield router_api.stop_router(router)
-        for cmd in self.get_dispatcher_commands():
-            yield self.dispatch_command(
-                cmd.payload['command'], *cmd.payload['args'],
-                **cmd.payload['kwargs'])
-
-    def add_router_md_to_msg(self, msg, router, endpoint=None):
-        msg.payload.setdefault('helper_metadata', {})
-        md = MessageMetadataHelper(self.vumi_api, msg)
-        md.set_router_info(router.router_type, router.key)
-        md.set_user_account(self.user_account_key)
-        if endpoint is not None:
-            msg.set_routing_endpoint(endpoint)
-
-    def dispatch_inbound_to_router(self, msg, router, endpoint=None):
-        self.add_router_md_to_msg(msg, router, endpoint)
-        return self.dispatch_inbound(msg, 'ri_conn')
-
-    def dispatch_outbound_to_router(self, msg, router, endpoint=None):
-        self.add_router_md_to_msg(msg, router, endpoint)
-        return self.dispatch_outbound(msg, 'ro_conn')
-
-    def dispatch_event_to_router(self, msg, router, endpoint=None):
-        self.add_router_md_to_msg(msg, router, endpoint)
-        return self.dispatch_event(msg, 'ri_conn')
+#     @PersistenceMixin.sync_or_async
+#     def _persist_purge_riak(self, manager):
+#         # If buckets are empty, they aren't listed. However, they may still
+#         # have properties set. Therefore, we find all account keys and
+#         # clear properties from their associated buckets.
+#         accounts = yield self._list_accounts(manager)
+#         yield manager.purge_all()
+#         # This must happen after the objects are deleted, otherwise the
+#         # indexes don't go away.
+#         yield self._clear_bucket_properties(accounts, manager)
 
 
-class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
+# class GoRouterWorkerTestMixin(GoPersistenceMixin):
 
-    use_riak = True
+#     def _worker_name(self):
+#         # DummyApplicationWorker has no worker_name attr.
+#         return getattr(self.router_class, 'worker_name', 'unnamed')
 
-    def setUp(self):
-        self._persist_setUp()
-        super(RouterWorkerTestCase, self).setUp()
+#     def _router_type(self):
+#         # This is a guess based on worker_name.
+#         # We need a better way to do this.
+#         return self._worker_name().rpartition('_')[0].decode('utf-8')
 
-    @inlineCallbacks
-    def tearDown(self):
-        yield super(RouterWorkerTestCase, self).tearDown()
-        yield self._persist_tearDown()
+#     def setup_router(self, config, started=True, **kw):
+#         if started:
+#             kw['status'] = u'running'
+#         return self.create_router(config=config, **kw)
 
-    def get_router_worker(self, config, start=True):
-        if 'worker_name' not in config:
-            config['worker_name'] = self._worker_name()
-        if 'ri_connector_name' not in config:
-            config['ri_connector_name'] = 'ri_conn'
-        if 'ro_connector_name' not in config:
-            config['ro_connector_name'] = 'ro_conn'
-        return self.get_worker(
-            config, self.router_class, start=start)
+#     def create_router(self, **kw):
+#         router_type = kw.pop('router_type', None)
+#         if router_type is None:
+#             router_type = self._router_type()
+#         name = kw.pop('name', u'Subject')
+#         description = kw.pop('description', u'')
+#         config = kw.pop('config', {})
+#         self.assertTrue(isinstance(config, dict))
+#         return self.user_api.new_router(
+#             router_type, name, description, config, **kw)
+
+#     @inlineCallbacks
+#     def start_router(self, router):
+#         router_api = self.user_api.get_router_api(
+#             router.router_type, router.key)
+#         yield router_api.start_router(router)
+#         for cmd in self.get_dispatcher_commands():
+#             yield self.dispatch_command(
+#                 cmd.payload['command'], *cmd.payload['args'],
+#                 **cmd.payload['kwargs'])
+
+#     @inlineCallbacks
+#     def stop_router(self, router):
+#         router_api = self.user_api.get_router_api(
+#             router.router_type, router.key)
+#         yield router_api.stop_router(router)
+#         for cmd in self.get_dispatcher_commands():
+#             yield self.dispatch_command(
+#                 cmd.payload['command'], *cmd.payload['args'],
+#                 **cmd.payload['kwargs'])
+
+#     def add_router_md_to_msg(self, msg, router, endpoint=None):
+#         msg.payload.setdefault('helper_metadata', {})
+#         md = MessageMetadataHelper(self.vumi_api, msg)
+#         md.set_router_info(router.router_type, router.key)
+#         md.set_user_account(self.user_account_key)
+#         if endpoint is not None:
+#             msg.set_routing_endpoint(endpoint)
+
+#     def dispatch_inbound_to_router(self, msg, router, endpoint=None):
+#         self.add_router_md_to_msg(msg, router, endpoint)
+#         return self.dispatch_inbound(msg, 'ri_conn')
+
+#     def dispatch_outbound_to_router(self, msg, router, endpoint=None):
+#         self.add_router_md_to_msg(msg, router, endpoint)
+#         return self.dispatch_outbound(msg, 'ro_conn')
+
+#     def dispatch_event_to_router(self, msg, router, endpoint=None):
+#         self.add_router_md_to_msg(msg, router, endpoint)
+#         return self.dispatch_event(msg, 'ri_conn')
 
 
-class GoWorkerTestCase(GoPersistenceMixin, VumiWorkerTestCase):
+# class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
 
-    use_riak = True
+#     use_riak = True
 
-    def setUp(self):
-        self._persist_setUp()
-        super(GoWorkerTestCase, self).setUp()
+#     def setUp(self):
+#         self._persist_setUp()
+#         super(RouterWorkerTestCase, self).setUp()
 
-    @inlineCallbacks
-    def tearDown(self):
-        yield super(GoWorkerTestCase, self).tearDown()
-        yield self._persist_tearDown()
+#     @inlineCallbacks
+#     def tearDown(self):
+#         yield super(RouterWorkerTestCase, self).tearDown()
+#         yield self._persist_tearDown()
 
-    # @inlineCallbacks
-    # def get_worker(self, config, *args, **kw):
-    #     if 'worker_name' not in config:
-    #         config['worker_name'] = self._worker_name()
-    #     worker = yield super(GoWorkerTestCase, self).get_worker(
-    #         config, self.worker_class, *args, **kw)
-    #     returnValue(worker)
-
-
-class GoTestCase(GoPersistenceMixin, VumiTestCase):
-    # TODO: Get rid of this (and its subclasses) once persistence stuff is in a
-    # helper.
-    use_riak = False
-
-    def setUp(self):
-        super(GoTestCase, self).setUp()
-        self._persist_setUp()
-        self.add_cleanup(self._persist_tearDown)
-
-
-class AppWorkerTestCase(GoTestCase):
-    use_riak = True
+#     def get_router_worker(self, config, start=True):
+#         if 'worker_name' not in config:
+#             config['worker_name'] = self._worker_name()
+#         if 'ri_connector_name' not in config:
+#             config['ri_connector_name'] = 'ri_conn'
+#         if 'ro_connector_name' not in config:
+#             config['ro_connector_name'] = 'ro_conn'
+#         return self.get_worker(
+#             config, self.router_class, start=start)

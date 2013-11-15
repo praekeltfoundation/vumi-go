@@ -7,17 +7,14 @@ from django.utils.unittest import skip
 
 from go.account.utils import send_user_account_summary
 from go.account.tasks import send_scheduled_account_summary
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.base.tests.helpers import DjangoVumiApiHelper
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
-class AccountTestCase(VumiGoDjangoTestCase):
-    use_riak = True
+class AccountTestCase(GoDjangoTestCase):
 
     def setUp(self):
-        super(AccountTestCase, self).setUp()
-        self.vumi_helper = DjangoVumiApiHelper(self)
+        self.vumi_helper = DjangoVumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
         self.vumi_helper.setup_vumi_api()
         self.user_helper = self.vumi_helper.make_django_user()
@@ -111,7 +108,7 @@ class AccountTestCase(VumiGoDjangoTestCase):
             'msisdn': '+27761234567',
             'confirm_start_conversation': True,
             '_account': True,
-            })
+        })
         token_url = response.context['token_url']
         response = self.client.get(reverse('account:details'))
 
@@ -169,12 +166,12 @@ class AccountTestCase(VumiGoDjangoTestCase):
         self.assertEqual([], mail.outbox)
 
 
-class EmailTestCase(VumiGoDjangoTestCase):
+class EmailTestCase(GoDjangoTestCase):
     use_riak = True
 
     def setUp(self):
         super(EmailTestCase, self).setUp()
-        self.vumi_helper = DjangoVumiApiHelper(self)
+        self.vumi_helper = DjangoVumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
         self.vumi_helper.setup_vumi_api()
         self.user_helper = self.vumi_helper.make_django_user()

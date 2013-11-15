@@ -1,15 +1,11 @@
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
 
-from go.apps.tests.view_helpers import AppViewHelper
-from go.base.tests.utils import VumiGoDjangoTestCase
 
-
-class TestHttpApiViews(VumiGoDjangoTestCase):
-
-    use_riak = True
+class TestHttpApiViews(GoDjangoTestCase):
 
     def setUp(self):
-        super(TestHttpApiViews, self).setUp()
-        self.app_helper = AppViewHelper(self, u'http_api')
+        self.app_helper = AppViewsHelper(u'http_api')
         self.add_cleanup(self.app_helper.cleanup)
         self.client = self.app_helper.get_client()
 

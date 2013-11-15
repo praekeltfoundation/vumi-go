@@ -2,17 +2,14 @@ import json
 import logging
 
 from go.apps.jsbox.log import LogManager
-from go.apps.tests.view_helpers import AppViewHelper
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
 
 
-class TestJsBoxViews(VumiGoDjangoTestCase):
-
-    use_riak = True
+class TestJsBoxViews(GoDjangoTestCase):
 
     def setUp(self):
-        super(TestJsBoxViews, self).setUp()
-        self.app_helper = AppViewHelper(self, u'jsbox')
+        self.app_helper = AppViewsHelper(u'jsbox')
         self.add_cleanup(self.app_helper.cleanup)
         self.client = self.app_helper.get_client()
 

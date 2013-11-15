@@ -4,14 +4,13 @@ from StringIO import StringIO
 from zipfile import ZipFile
 
 from django.conf import settings
-from django.test import TestCase
-from django.utils.html import escape
-from django.core.urlresolvers import reverse
 from django.core import mail
-
 from django.core.files.storage import default_storage
+from django.core.urlresolvers import reverse
+from django.utils.html import escape
+
 from go.contacts.parsers.base import FieldNormalizer
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 TEST_GROUP_NAME = u"Test Group"
@@ -32,14 +31,15 @@ def group_url(group_key):
     return reverse('contacts:group', kwargs={'group_key': group_key})
 
 
-class BaseContactsTestCase(VumiGoDjangoTestCase):
-    use_riak = True
-
+class BaseContactsTestCase(GoDjangoTestCase):
     def setUp(self):
-        super(BaseContactsTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
-        self.setup_client()
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.user_email = self.user_helper.get_django_user().email
+        self.contact_store = self.user_helper.user_api.contact_store
+        self.client = self.vumi_helper.get_client()
         self.clear_tmp_storage()
 
     def clear_tmp_storage(self):
@@ -164,7 +164,7 @@ class ContactsTestCase(BaseContactsTestCase):
         [email] = mail.outbox
         [(file_name, contents, mime_type)] = email.attachments
 
-        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertEqual(email.recipients(), [self.user_email])
         self.assertTrue('Contacts export' in email.subject)
         self.assertTrue('2 contact(s)' in email.body)
         self.assertEqual(file_name, 'contacts-export.zip')
@@ -676,7 +676,7 @@ class GroupsTestCase(BaseContactsTestCase):
         [email] = mail.outbox
         [(file_name, contents, mime_type)] = email.attachments
 
-        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertEqual(email.recipients(), [self.user_email])
         self.assertTrue(
             '%s contacts export' % (group.name,) in email.subject)
         self.assertTrue(
@@ -722,7 +722,7 @@ class GroupsTestCase(BaseContactsTestCase):
         [email] = mail.outbox
         [(file_name, contents, mime_type)] = email.attachments
 
-        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertEqual(email.recipients(), [self.user_email])
         self.assertTrue('Contacts export' in email.subject)
         self.assertTrue(
             '2 contact(s) from the following groups:',
@@ -809,7 +809,7 @@ class SmartGroupsTestCase(BaseContactsTestCase):
             '_new_smart_group': '1',
         })
         group = newest(self.contact_store.list_groups())
-        conversation = self.create_conversation()
+        conversation = self.user_helper.create_conversation(u'bulk_message')
         conversation.groups.add(group)
         conversation.save()
 
@@ -829,7 +829,7 @@ class SmartGroupsTestCase(BaseContactsTestCase):
 
         contact = self.mkcontact()
         group = newest(self.contact_store.list_groups())
-        conversation = self.create_conversation()
+        conversation = self.user_helper.create_conversation(u'bulk_message')
         conversation.groups.add(group)
         conversation.save()
 
@@ -857,7 +857,7 @@ class SmartGroupsTestCase(BaseContactsTestCase):
         match = self.mkcontact(name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
-        conversation = self.create_conversation()
+        conversation = self.user_helper.create_conversation(u'bulk_message')
         conversation.groups.add(group)
         conversation.save()
 
@@ -877,7 +877,7 @@ class SmartGroupsTestCase(BaseContactsTestCase):
         contact3 = self.mkcontact(name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
-        conv = self.create_conversation()
+        conv = self.user_helper.create_conversation(u'bulk_message')
         conv.groups.add(group)
         conv.save()
 
@@ -943,7 +943,7 @@ class SmartGroupsTestCase(BaseContactsTestCase):
         zipfile = ZipFile(StringIO(contents), 'r')
         csv_contents = zipfile.open('contacts-export.csv', 'r').read()
 
-        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertEqual(email.recipients(), [self.user_email])
         self.assertTrue(
             '%s contacts export' % (group.name,) in email.subject)
         self.assertTrue(
@@ -954,7 +954,7 @@ class SmartGroupsTestCase(BaseContactsTestCase):
         self.assertEqual(mime_type, 'application/zip')
 
 
-class TestFieldNormalizer(TestCase):
+class TestFieldNormalizer(GoDjangoTestCase):
 
     def setUp(self):
         self.fn = FieldNormalizer()

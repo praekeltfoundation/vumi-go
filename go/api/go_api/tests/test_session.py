@@ -1,10 +1,10 @@
 """Tests for go.api.go_api.session."""
 
 from go.api.go_api.session import SessionStore, CreateError
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase
 
 
-class SessionStoreTestCase(VumiGoDjangoTestCase):
+class SessionStoreTestCase(GoDjangoTestCase):
     def mk_session_store(self, session_key=None):
         ss = SessionStore(session_key)
         return (ss, ss.session_manager)

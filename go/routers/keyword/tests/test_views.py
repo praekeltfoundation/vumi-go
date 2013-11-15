@@ -1,41 +1,53 @@
-from go.routers.tests.base import DjangoGoRouterTestCase
-from go.vumitools.tests.utils import VumiApiCommand
+from go.base.tests.helpers import GoDjangoTestCase
+from go.routers.tests.view_helpers import RouterViewsHelper
+from go.vumitools.api import VumiApiCommand
 
 
-class KeywordViewTests(DjangoGoRouterTestCase):
-    TEST_ROUTER_TYPE = u'keyword'
+class KeywordViewTests(GoDjangoTestCase):
+
+    def setUp(self):
+        self.app_helper = RouterViewsHelper(u'keyword')
+        self.add_cleanup(self.app_helper.cleanup)
+        self.user_helper = self.app_helper.vumi_helper.get_or_create_user()
+        self.client = self.app_helper.get_client()
 
     def test_new_router(self):
-        self.assertEqual(len(self.router_store.list_routers()), 0)
-        response = self.post_new_router()
-        self.assertEqual(len(self.router_store.list_routers()), 1)
-        router = self.get_latest_router()
-        self.assertRedirects(response, self.get_view_url('edit', router.key))
+        router_store = self.user_helper.user_api.router_store
+        self.assertEqual([], router_store.list_routers())
+
+        response = self.client.post(self.app_helper.get_new_view_url(), {
+            'name': u"myrouter",
+            'router_type': u'keyword',
+        })
+        [router_key] = router_store.list_routers()
+        rtr_helper = self.app_helper.get_router_helper_by_key(router_key)
+        self.assertRedirects(response, rtr_helper.get_view_url('edit'))
 
     def test_show_stopped(self):
-        self.setup_router(started=False)
-        response = self.client.get(self.get_view_url('show'))
+        rtr_helper = self.app_helper.create_router(name=u"myrouter")
+        response = self.client.get(rtr_helper.get_view_url('show'))
         router = response.context[0].get('router')
-        self.assertEqual(router.name, self.TEST_ROUTER_NAME)
-        self.assertContains(response, self.get_view_url('start'))
-        self.assertNotContains(response, self.get_view_url('stop'))
+        self.assertEqual(router.name, u"myrouter")
+        self.assertContains(response, rtr_helper.get_view_url('start'))
+        self.assertNotContains(response, rtr_helper.get_view_url('stop'))
 
     def test_show_running(self):
-        self.setup_router()
-        response = self.client.get(self.get_view_url('show'))
+        rtr_helper = self.app_helper.create_router(
+            name=u"myrouter", started=True)
+        response = self.client.get(rtr_helper.get_view_url('show'))
         router = response.context[0].get('router')
-        self.assertEqual(router.name, self.TEST_ROUTER_NAME)
-        self.assertNotContains(response, self.get_view_url('start'))
-        self.assertContains(response, self.get_view_url('stop'))
+        self.assertEqual(router.name, u"myrouter")
+        self.assertNotContains(response, rtr_helper.get_view_url('start'))
+        self.assertContains(response, rtr_helper.get_view_url('stop'))
 
     def test_start(self):
-        self.setup_router(started=False)
+        rtr_helper = self.app_helper.create_router(started=False)
 
-        response = self.client.post(self.get_view_url('start'))
-        self.assertRedirects(response, self.get_view_url('show'))
-        router = self.get_router()
+        response = self.client.post(rtr_helper.get_view_url('start'))
+        self.assertRedirects(response, rtr_helper.get_view_url('show'))
+        router = rtr_helper.get_router()
         self.assertTrue(router.starting())
-        [start_cmd] = self.get_api_commands_sent()
+        [start_cmd] = self.app_helper.get_api_commands_sent()
         self.assertEqual(
             start_cmd, VumiApiCommand.command(
                 '%s_router' % (router.router_type,), 'start',
@@ -43,13 +55,13 @@ class KeywordViewTests(DjangoGoRouterTestCase):
                 router_key=router.key))
 
     def test_stop(self):
-        self.setup_router(started=True)
+        rtr_helper = self.app_helper.create_router(started=True)
 
-        response = self.client.post(self.get_view_url('stop'))
-        self.assertRedirects(response, self.get_view_url('show'))
-        router = self.get_router()
+        response = self.client.post(rtr_helper.get_view_url('stop'))
+        self.assertRedirects(response, rtr_helper.get_view_url('show'))
+        router = rtr_helper.get_router()
         self.assertTrue(router.stopping())
-        [start_cmd] = self.get_api_commands_sent()
+        [start_cmd] = self.app_helper.get_api_commands_sent()
         self.assertEqual(
             start_cmd, VumiApiCommand.command(
                 '%s_router' % (router.router_type,), 'stop',
@@ -57,24 +69,24 @@ class KeywordViewTests(DjangoGoRouterTestCase):
                 router_key=router.key))
 
     def test_get_edit_empty_config(self):
-        self.setup_router()
-        response = self.client.get(self.get_view_url('edit'))
+        rtr_helper = self.app_helper.create_router(started=True)
+        response = self.client.get(rtr_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
 
     def test_get_edit_small_config(self):
-        self.setup_router({'keyword_endpoint_mapping': {
-            'mykeyw[o0]rd': 'target_endpoint',
-        }})
-        response = self.client.get(self.get_view_url('edit'))
+        rtr_helper = self.app_helper.create_router(started=True, config={
+            'keyword_endpoint_mapping': {'mykeyw[o0]rd': 'target_endpoint'},
+        })
+        response = self.client.get(rtr_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'mykeyw[o0]rd')
         self.assertContains(response, 'target_endpoint')
 
     def test_edit_router_keyword_config(self):
-        self.setup_router()
-        router = self.get_router()
+        rtr_helper = self.app_helper.create_router(started=True)
+        router = rtr_helper.get_router()
         self.assertEqual(router.config, {})
-        response = self.client.post(self.get_view_url('edit'), {
+        response = self.client.post(rtr_helper.get_view_url('edit'), {
             'keyword_endpoint_mapping-TOTAL_FORMS': ['2'],
             'keyword_endpoint_mapping-INITIAL_FORMS': ['0'],
             'keyword_endpoint_mapping-MAX_NUM_FORMS': [''],
@@ -85,8 +97,8 @@ class KeywordViewTests(DjangoGoRouterTestCase):
             'keyword_endpoint_mapping-1-target_endpoint': ['quux'],
             'keyword_endpoint_mapping-1-DELETE': [''],
         })
-        self.assertRedirects(response, self.get_view_url('show'))
-        router = self.get_router()
+        self.assertRedirects(response, rtr_helper.get_view_url('show'))
+        router = rtr_helper.get_router()
         self.assertEqual(router.config, {u'keyword_endpoint_mapping': {
             'foo': 'bar',
             'baz': 'quux',

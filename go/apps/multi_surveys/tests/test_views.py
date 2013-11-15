@@ -4,16 +4,16 @@ from StringIO import StringIO
 
 from django.core import mail
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
 
 
-class MultiSurveyTestCase(DjangoGoApplicationTestCase):
-    TEST_CONVERSATION_TYPE = u'multi_survey'
+class MultiSurveyTestCase(GoDjangoTestCase):
 
     def setUp(self):
-        super(MultiSurveyTestCase, self).setUp()
-        self.patch_settings(
-            VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
+        self.app_helper = AppViewsHelper(u'multi_survey')
+        self.add_cleanup(self.app_helper.cleanup)
+        self.client = self.app_helper.get_client()
 
     def add_tagpool_to_conv(self):
         self.declare_tags(u'longcode', 4)
@@ -31,24 +31,27 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
-        self.setup_conversation()
-        response = self.client.get(self.get_view_url('show'))
+        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, 'Test Conversation')
+        self.assertEqual(conversation.name, 'myconv')
 
     def test_export_messages(self):
-        self.setup_conversation(started=True)
-        self.add_messages_to_conv(
-            5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
-        conv_url = self.get_view_url('message_list')
+        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        msgs = conv_helper.add_stored_inbound(
+            5, start_date=date(2012, 1, 1), time_multiplier=12)
+        conversation = conv_helper.get_conversation()
+        conv_helper.add_stored_replies(msgs)
+        conv_url = conv_helper.get_view_url('message_list')
         response = self.client.post(conv_url, {
             '_export_conversation_messages': True,
             })
         self.assertRedirects(response, conv_url)
         [email] = mail.outbox
-        self.assertEqual(email.recipients(), [self.django_user.email])
-        self.assertTrue(self.conversation.name in email.subject)
-        self.assertTrue(self.conversation.name in email.body)
+        django_user = self.app_helper.get_or_create_user().get_django_user()
+        self.assertEqual(email.recipients(), [django_user.email])
+        self.assertTrue(conversation.name in email.subject)
+        self.assertTrue(conversation.name in email.body)
         [(file_name, contents, mime_type)] = email.attachments
         self.assertEqual(file_name, 'messages-export.zip')
 

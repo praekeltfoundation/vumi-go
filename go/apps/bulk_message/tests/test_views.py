@@ -2,19 +2,16 @@ from django.core.urlresolvers import reverse
 
 from vumi.tests.utils import RegexMatcher
 
-from go.apps.tests.view_helpers import AppViewHelper
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.vumitools.tests.utils import VumiApiCommand
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.api import VumiApiCommand
 from go.vumitools.token_manager import TokenManager
 
 
-class TestBulkMessageViews(VumiGoDjangoTestCase):
-
-    use_riak = True
+class TestBulkMessageViews(GoDjangoTestCase):
 
     def setUp(self):
-        super(TestBulkMessageViews, self).setUp()
-        self.app_helper = AppViewHelper(self, u'bulk_message')
+        self.app_helper = AppViewsHelper(u'bulk_message')
         self.add_cleanup(self.app_helper.cleanup)
         self.client = self.app_helper.get_client()
 
