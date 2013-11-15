@@ -47,7 +47,7 @@ class ResponseTimeMiddleware(object):
             response['X-Response-Time'] = response_time
 
             metric = self.metric_from_request(request)
-            metric.oneshot(response_time)
+            metric.oneshot(value=response_time)
         except AttributeError, e:
             # For cases where our request object was not processed and given a
             # `start_time` attribute

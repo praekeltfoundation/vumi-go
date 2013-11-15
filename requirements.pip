@@ -6,7 +6,7 @@ pep8==0.6.1
 pyflakes==0.4.0
 supervisor==3.0a10
 coverage==3.7
-South==0.7.3
+South==0.8.2
 psycopg2==2.4
 Fabric==1.2.2
 celery==2.5.3

@@ -4,6 +4,7 @@ from StringIO import StringIO
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import CommandError
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.test.client import Client
 from django.test.utils import override_settings
@@ -111,18 +112,17 @@ class DjangoVumiApiHelper(object):
         vumi_config.update(pcfg)
         self.patch_settings(VUMI_API_CONFIG=vumi_config)
 
-        has_listeners = lambda: base_models.post_save.has_listeners(
-            base_models.User)
+        has_listeners = lambda: post_save.has_listeners(get_user_model())
         assert has_listeners(), "User model has no listeners. Aborting."
-        base_models.post_save.disconnect(
-            sender=base_models.User,
+        post_save.disconnect(
+            sender=get_user_model(),
             dispatch_uid='go.base.models.create_user_profile')
         assert not has_listeners(), (
             "User model still has listeners. Make sure DjangoVumiApiHelper"
             " is cleaned up properly.")
-        base_models.post_save.connect(
+        post_save.connect(
             self.create_user_profile,
-            sender=base_models.User,
+            sender=get_user_model(),
             dispatch_uid='DjangoVumiApiHelper.create_user_profile')
 
         # We might need an AMQP connection at some point.
@@ -133,12 +133,12 @@ class DjangoVumiApiHelper(object):
         self.monkey_patch(amqp, 'connection', self.amqp_connection)
 
     def restore_django_bits(self):
-        base_models.post_save.disconnect(
-            sender=base_models.User,
+        post_save.disconnect(
+            sender=get_user_model(),
             dispatch_uid='DjangoVumiApiHelper.create_user_profile')
-        base_models.post_save.connect(
+        post_save.connect(
             base_models.create_user_profile,
-            sender=base_models.User,
+            sender=get_user_model(),
             dispatch_uid='go.base.models.create_user_profile')
 
     @proxyable
@@ -151,7 +151,7 @@ class DjangoVumiApiHelper(object):
     @proxyable
     def get_client(self):
         client = Client()
-        client.login(username='username', password='password')
+        client.login(username='user@domain.com', password='password')
         return client
 
     @proxyable
@@ -163,7 +163,7 @@ class DjangoVumiApiHelper(object):
     @proxyable
     def make_django_user(self):
         user = get_user_model().objects.create_user(
-            username='username', email='user@domain.com', password='password')
+            email='user@domain.com', password='password')
         user.first_name = "Test"
         user.last_name = "User"
         user.save()
@@ -181,7 +181,7 @@ class DjangoVumiApiHelper(object):
             return
 
         user_helper = self.make_user(
-            unicode(instance.username), enable_search=False)
+            unicode(instance.email), enable_search=False)
         base_models.UserProfile.objects.create(
             user=instance, user_account=user_helper.account_key)
         # We add this to the helper instance rather than subclassing or

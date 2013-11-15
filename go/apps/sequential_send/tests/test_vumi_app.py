@@ -258,18 +258,3 @@ class TestSequentialSendApplication(VumiTestCase):
             key=lambda m: m['to_addr'])
         self.assertEqual(msg['content'], 'bar')
         self.assertEqual(msg['to_addr'], contact3.msisdn)
-
-    @inlineCallbacks
-    def test_collect_metrics(self):
-        conv = yield self.app_helper.create_conversation()
-        yield self.app_helper.start_conversation(conv)
-        yield self.app_helper.dispatch_command(
-            'collect_metrics', conversation_key=conv.key,
-            user_account_key=conv.user_account.key)
-
-        prefix = "campaigns.test-0-user.conversations.%s" % conv.key
-
-        self.assertEqual(
-            self.app_helper.get_published_metrics(self.app),
-            [("%s.messages_sent" % prefix, 0),
-             ("%s.messages_received" % prefix, 0)])

@@ -188,26 +188,6 @@ class TestBulkMessageApplication(VumiTestCase):
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
 
     @inlineCallbacks
-    def test_collect_metrics(self):
-        conv = yield self.app_helper.create_conversation()
-        yield self.app_helper.start_conversation(conv)
-
-        yield self.app_helper.make_stored_outbound(conv, "out 1")
-        yield self.app_helper.make_stored_outbound(conv, "out 2")
-        yield self.app_helper.make_stored_inbound(conv, "in 2")
-
-        yield self.app_helper.dispatch_command(
-            'collect_metrics', conversation_key=conv.key,
-            user_account_key=conv.user_account.key)
-
-        prefix = "campaigns.test-0-user.conversations.%s" % conv.key
-
-        self.assertEqual(
-            self.app_helper.get_published_metrics(self.app),
-            [("%s.messages_sent" % prefix, 2),
-             ("%s.messages_received" % prefix, 1)])
-
-    @inlineCallbacks
     def test_reconcile_cache(self):
         conv = yield self.app_helper.create_conversation()
 

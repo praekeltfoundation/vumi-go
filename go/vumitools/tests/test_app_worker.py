@@ -4,9 +4,25 @@
 
 from twisted.internet.defer import inlineCallbacks
 
+from go.base import utils as base_utils
 from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.tests.helpers import GoMessageHelper
+from go.vumitools.metrics import ConversationMetric
+from go.vumitools.conversation.definition import ConversationDefinitionBase
+
+
+class DummyMetric(ConversationMetric):
+    METRIC_NAME = 'dummy_metric'
+
+    def get_value(self, user_api):
+        return 42
+
+
+class DummyConversationDefinition(ConversationDefinitionBase):
+    conversation_type = 'dummy'
+
+    metrics = (DummyMetric,)
 
 
 class DummyApplication(GoApplicationWorker):
@@ -36,12 +52,17 @@ class DummyApplication(GoApplicationWorker):
 
 
 class TestGoApplicationWorker(AppWorkerTestCase):
-
     application_class = DummyApplication
 
     @inlineCallbacks
     def setUp(self):
         super(TestGoApplicationWorker, self).setUp()
+
+        self.patch(
+            base_utils,
+            'get_conversation_definition',
+            lambda conv_type, conv: DummyConversationDefinition(conv))
+
         self.config = self.mk_config({})
         self.app = yield self.get_application(self.config)
 
@@ -95,6 +116,10 @@ class TestGoApplicationWorker(AppWorkerTestCase):
     def test_collect_metrics(self):
         yield self.start_conversation(self.conv)
 
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [])
+
         yield self.dispatch_command(
             'collect_metrics',
             conversation_key=self.conv.key,
@@ -104,5 +129,40 @@ class TestGoApplicationWorker(AppWorkerTestCase):
 
         self.assertEqual(
             self.get_published_metrics(self.app),
-            [("%s.messages_sent" % prefix, 0),
-             ("%s.messages_received" % prefix, 0)])
+            [("%s.dummy_metric" % prefix, 42)])
+
+    @inlineCallbacks
+    def test_conversation_metric_publishing(self):
+        yield self.start_conversation(self.conv)
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [])
+
+        yield self.app.publish_conversation_metrics(
+            self.user_api,
+            self.conv.key)
+
+        prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [("%s.dummy_metric" % prefix, 42)])
+
+    @inlineCallbacks
+    def test_account_metric_publishing(self):
+        yield self.start_conversation(self.conv)
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [])
+
+        yield self.app.publish_account_metric(
+            self.user_account.key,
+            'some-store',
+            'some-metric',
+            42)
+
+        self.assertEqual(
+            self.get_published_metrics(self.app),
+            [("campaigns.test-0-user.stores.some-store.some-metric", 42)])

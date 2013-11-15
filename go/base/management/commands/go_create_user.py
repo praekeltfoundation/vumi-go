@@ -43,7 +43,7 @@ class Command(BaseCommand):
             surname = options['surname']
             user_model = get_user_model()
             user = user_model.objects.create_user(
-                username=email_address, email=email_address, password=password)
+                email=email_address, password=password)
             user.first_name = name
             user.last_name = surname
             user.save()
