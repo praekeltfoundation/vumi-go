@@ -1,42 +1,43 @@
 # -*- coding: utf-8 -*-
 
-from mock import Mock
-
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
 from go.apps.jsbox.message_store import MessageStoreResource
-from go.vumitools.tests.utils import GoAppWorkerTestMixin
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
 
 
 class StubbedAppWorker(DummyAppWorker):
     def __init__(self):
         super(StubbedAppWorker, self).__init__()
-        self.user_api = Mock()
+        self.user_api = None
 
     def user_api_for_api(self, api):
         return self.user_api
 
 
-class MessageStoreResourceTestCase(ResourceTestCaseBase, GoAppWorkerTestMixin):
-    use_riak = True
+class MessageStoreResourceTestCase(ResourceTestCaseBase):
     app_worker_cls = StubbedAppWorker
     resource_cls = MessageStoreResource
 
     @inlineCallbacks
     def setUp(self):
         super(MessageStoreResourceTestCase, self).setUp()
-        yield self._persist_setUp()
 
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
         self.msg_helper = GoMessageHelper()
-        self.vumi_api = yield self.get_vumi_api()
-        self.message_store = self.vumi_api.mdb
-        yield self.setup_user_api(self.vumi_api)
 
-        self.conversation = yield self.create_conversation(started=True)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u"user")
+        self.app_worker.user_api = self.user_helper.user_api
+
+        self.message_store = self.vumi_helper.get_vumi_api().mdb
+
+        self.conversation = yield self.user_helper.create_conversation(
+            u'jsbox', started=True)
 
         # store inbound
         yield self.message_store.add_inbound_message(
@@ -54,20 +55,8 @@ class MessageStoreResourceTestCase(ResourceTestCaseBase, GoAppWorkerTestMixin):
 
         # monkey patch for when no conversation_key is provided
         self.app_worker.conversation_for_api = lambda *a: self.conversation
-        # monkey patch for when a conversation_key is provided and always
-        # return ``None`` which means it doesn't exist.
-        self.app_worker.user_api.get_wrapped_conversation.return_value = None
 
         yield self.create_resource({})
-
-    def _worker_name(self):
-        """hack to get GoAppWorkerTestMixin to get a `conversation_type` when
-        calling `create_conversation()`"""
-        return 'unnamed'
-
-    def tearDown(self):
-        super(MessageStoreResourceTestCase, self).tearDown()
-        return self._persist_tearDown()
 
     @inlineCallbacks
     def test_handle_progress_status(self):
@@ -98,6 +87,7 @@ class MessageStoreResourceTestCase(ResourceTestCaseBase, GoAppWorkerTestMixin):
     @inlineCallbacks
     def test_handle_count_inbound_uniques(self):
         reply = yield self.dispatch_command('count_inbound_uniques')
+        print reply
         self.assertTrue(reply['success'])
         self.assertEqual(reply['count'], 1)
 

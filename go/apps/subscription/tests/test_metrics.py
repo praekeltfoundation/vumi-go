@@ -1,7 +1,9 @@
 from twisted.internet.defer import inlineCallbacks
+
+from vumi.tests.helpers import VumiTestCase
+
 from go.apps.subscription.metrics import SubscriptionMetric
-from go.vumitools.tests.utils import TxMetricTestBase
-from go.vumitools.contact import ContactStore
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
 class ToySubscriptionMetric(SubscriptionMetric):
@@ -9,22 +11,24 @@ class ToySubscriptionMetric(SubscriptionMetric):
     CONTACT_LOOKUP_KEY = 'toy-subscription'
 
 
-class TestSubscriptionMetric(TxMetricTestBase):
+class TestSubscriptionMetric(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        yield super(TestSubscriptionMetric, self).setUp()
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.get_or_create_user()
 
-        self.conv = yield self.create_conversation(
-            conversation_type=u'some_conversation')
+        self.conv = yield self.user_helper.create_conversation(
+            u'some_conversation')
 
-        self.contact_store = ContactStore.from_user_account(self.user)
-        yield self.contact_store.contacts.enable_search()
+        contact_store = self.user_helper.user_api.contact_store
 
-        self.contact1 = yield self.contact_store.new_contact(
+        self.contact1 = yield contact_store.new_contact(
             name=u'contact-1',
             msisdn=u'+27831234567')
 
-        self.contact2 = yield self.contact_store.new_contact(
+        self.contact2 = yield contact_store.new_contact(
             name=u'contact-2',
             msisdn=u'+27831234568')
 
@@ -42,7 +46,7 @@ class TestSubscriptionMetric(TxMetricTestBase):
     @inlineCallbacks
     def test_value_retrieval(self):
         self.assertEqual(
-            (yield self.metric.get_value(self.user_api)), 0)
+            (yield self.metric.get_value(self.user_helper.user_api)), 0)
 
         self.contact1.subscription['campaign-1'] = u'toy-subscription'
         self.contact2.subscription['campaign-1'] = u'toy-subscription'
@@ -51,4 +55,4 @@ class TestSubscriptionMetric(TxMetricTestBase):
         yield self.contact2.save()
 
         self.assertEqual(
-            (yield self.metric.get_value(self.user_api)), 2)
+            (yield self.metric.get_value(self.user_helper.user_api)), 2)

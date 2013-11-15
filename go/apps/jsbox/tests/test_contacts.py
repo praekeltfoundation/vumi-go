@@ -2,7 +2,6 @@
 
 import json
 
-from mock import Mock
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.tests.test_sandbox import (
@@ -15,7 +14,7 @@ from go.vumitools.tests.helpers import VumiApiHelper
 class StubbedAppWorker(DummyAppWorker):
     def __init__(self):
         super(StubbedAppWorker, self).__init__()
-        self.user_api = Mock()
+        self.user_api = None
 
     def user_api_for_api(self, api):
         return self.user_api
@@ -35,9 +34,9 @@ class TestContactsResource(ResourceTestCaseBase):
 
         yield self.vumi_helper.setup_vumi_api()
         self.user_helper = yield self.vumi_helper.make_user(u"user")
+        self.app_worker.user_api = self.user_helper.user_api
         self.contact_store = self.user_helper.user_api.contact_store
 
-        self.app_worker.user_api.contact_store = self.contact_store
         yield self.create_resource({'delivery_class': u'sms'})
 
     def check_reply(self, reply, **kw):
@@ -495,9 +494,9 @@ class TestGroupsResource(ResourceTestCaseBase):
 
         yield self.vumi_helper.setup_vumi_api()
         self.user_helper = yield self.vumi_helper.make_user(u"user")
+        self.app_worker.user_api = self.user_helper.user_api
         self.contact_store = self.user_helper.user_api.contact_store
 
-        self.app_worker.user_api.contact_store = self.contact_store
         yield self.create_resource({})
 
     def check_reply(self, reply, **kw):
