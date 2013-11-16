@@ -309,7 +309,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_expiry(self):
         mw = yield self.get_middleware({'max_lifetime': 10})
-        msg1 = self.mk_msg(transport_name='endpoint_0')
+        msg1 = self.msg_helper.make_inbound('foo', transport_name='endpoint_0')
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
         key = mw.key('dummy_endpoint', msg1['message_id'])
         ttl = yield mw.redis.ttl(key)
