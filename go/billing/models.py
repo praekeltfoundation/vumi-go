@@ -114,3 +114,30 @@ class Transaction(models.Model):
 
     def __unicode__(self):
         return unicode(self.pk)
+
+
+class MonthlyStatement(models.Model):
+    """Monthly account statement data"""
+
+    account = models.ForeignKey(Account, related_name='monthly_statements')
+    year = models.PositiveIntegerField()
+    month = models.PositiveIntegerField()
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return u"%s (%d/%d)" % (self.account, self.year, self.month)
+
+
+class LineItem(models.Model):
+    """Monthly statement line item"""
+
+    statement = models.ForeignKey(MonthlyStatement, related_name='line_items')
+    tag_pool_name = models.CharField(max_length=100, blank=True)
+    tag_name = models.CharField(max_length=100, blank=True)
+    message_direction = models.CharField(max_length=20, blank=True)
+    total_cost = models.IntegerField(default=0)
+
+    def __unicode__(self):
+        return u"%s, %s, %s, %d credits" % (
+            self.tag_pool_name, self.tag_name,
+            self.message_direction, self.total_cost)
