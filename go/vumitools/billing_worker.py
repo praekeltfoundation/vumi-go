@@ -55,6 +55,17 @@ class BillingApi(object):
         }
         return self._call_api("/transactions", data=data, method='POST')
 
+    def get_account_statement(self, account_number, year, month):
+        """Fetch a statement for the given ``account_number`` for the given
+           ``year`` and ``month``.
+        """
+        query = {
+            'year': year,
+            'month': month
+        }
+        url = "/accounts/%s/statement" % (account_number.encode('utf-8'),)
+        return self._call_api(url, query=query, method='GET')
+
 
 class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
 
