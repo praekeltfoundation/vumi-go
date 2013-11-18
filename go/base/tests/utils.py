@@ -1,19 +1,19 @@
-from datetime import datetime, timedelta
-from StringIO import StringIO
-import uuid
+# from datetime import datetime, timedelta
+# from StringIO import StringIO
+# import uuid
 
-from django.test import TestCase
-from django.core.paginator import Paginator
-from django.core.management.base import CommandError
-from django.contrib.auth import get_user_model
+# from django.test import TestCase
+# from django.core.paginator import Paginator
+# from django.core.management.base import CommandError
+# from django.contrib.auth import get_user_model
 
-from vumi.tests.fake_amqp import FakeAMQPBroker
-from vumi.message import TransportUserMessage, TransportEvent
+# from vumi.tests.fake_amqp import FakeAMQPBroker
+# from vumi.message import TransportUserMessage, TransportEvent
 
-from go.vumitools.tests.utils import GoPersistenceMixin, FakeAmqpConnection
-from go.vumitools.api import VumiApi
-from go.base import models as base_models
-from go.base import utils as base_utils
+# from go.vumitools.tests.utils import GoPersistenceMixin, FakeAmqpConnection
+# from go.vumitools.api import VumiApi
+# from go.base import models as base_models
+# from go.base import utils as base_utils
 
 
 # class override_settings(object):
