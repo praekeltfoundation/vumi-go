@@ -1,3 +1,5 @@
+import csv
+
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
 from django.contrib import messages
@@ -5,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordChangeForm
 from django.conf import settings
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 
@@ -16,6 +18,7 @@ from go.account.forms import (EmailForm, AccountForm, UserAccountForm,
 from go.account.tasks import update_account_details
 from go.base.models import UserProfile
 from go.token.django_token_manager import DjangoTokenManager
+from go.billing.models import MonthlyStatement
 
 
 class GoRegistrationView(RegistrationView):
@@ -171,17 +174,44 @@ def user_detail(request, user_id=None):
     })
 
 
-def billing(request):
-    # TODO: Complete once billing data exists.
+@login_required
+def billing(request, template_name='account/billing.html'):
+    """Display a list of available statements for the logged in user"""
+    try:
+        account = request.user.account_set.all()[0]
+        statement_list = MonthlyStatement.objects\
+            .filter(account=account)\
+            .order_by('-year', '-month')
 
-    # FAKE DATA
-    statement_list = (
-        {'date': '2013-03-31'},
-        {'date': '2013-02-28'},
-        {'date': '2013-01-31'},
-        {'date': '2013-12-31'},
-    )
+    except IndexError:
+        statement_list = []
 
-    return render(request, 'account/billing.html', {
+    context = {
         'statement_list': statement_list
-    })
+    }
+    return render(request, template_name, context)
+
+
+@login_required
+def statement_view(request, statement_id=None):
+    """Send a CSV version of the statement with the given
+       ``statement_id`` to the user's browser.
+    """
+    monthly_statement = get_object_or_404(
+        MonthlyStatement, pk=statement_id, account__user=request.user)
+
+    response = HttpResponse(mimetype='text/csv')
+    filename = "Vumi Go Statement (%s-%s).csv" % (monthly_statement.year,
+                                                  monthly_statement.month)
+
+    response['Content-Disposition'] = 'attachment; filename=%s' % (filename,)
+    writer = csv.writer(response)
+    headings = ["Tag pool name", "Tag name", "Message direction", "Total cost"]
+    writer.writerow(headings)
+    line_item_list = monthly_statement.line_items.all()
+    for line_item in line_item_list:
+        writer.writerow([
+            line_item.tag_pool_name, line_item.tag_name,
+            line_item.message_direction, line_item.total_cost])
+
+    return response

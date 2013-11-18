@@ -18,8 +18,8 @@
                 <tbody>
                     {% for statement in statement_list %}
                     <tr>
-                        <td>{{ statement.date }}</td>
-                        <td><a href="{% url 'todo' %}">View</a></td>
+                        <td>{{ statement.year }}-{{ statement.month }}</td>
+                        <td><a href="{% url 'account:statement_view' statement.id %}">View</a></td>
                     </tr>
                     {% empty %}
                     <tr>
