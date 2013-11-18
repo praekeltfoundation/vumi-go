@@ -15,31 +15,27 @@
             {% csrf_token %}
             {{ account_form|crispy }}
 
-            <input type="submit" class="btn btn-primary" value="Save">                
+            <input type="submit" class="btn btn-primary" value="Save">
             <button class="btn btn-default" data-toggle="modal" data-target="#changePassword">Change password</button>
         </form>
     </div>
-
-    {% comment %} TODO
-    <div class="col-md-4 sidebar">
+    <div class="col-md-4 col-md-offset-4">
         <h4>Admin settings</h4>
         <ul class="nav nav-pills nav-stacked">
             <li>
-                <a href="{% url account:billing %}">
-                    Billing<br>
-                    <span>View a list of monthly statements</span>
-                </a>
-                
+                <h4><a href="{% url "account:billing" %}">Billing</a><h5>
+                <p>View a list of monthly statements</p>
             </li>
+            {% comment %}
             <li>
-                <a href="{% url account:user_list %}">
+                <a href="{% url "account:user_list" %}">
                     Users and permissions<br>
                     <span>Add and edit users and access rights</span>
                 </a>
-            </li>   
+            </li>
+            {% endcomment %}
         </ul>
     </div>
-    {% endcomment %}
 </div>
 {% endblock %}
 
