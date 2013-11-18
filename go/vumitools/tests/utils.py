@@ -11,7 +11,7 @@ from vumi.persist.fields import (
     ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
 from vumi.message import TransportEvent
 from vumi.worker import BaseWorker
-from vumi.application.tests.test_base import ApplicationTestCase
+from vumi.application.tests.utils import ApplicationTestCase
 from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
 
 from go.vumitools.api import VumiApiCommand, VumiApi
