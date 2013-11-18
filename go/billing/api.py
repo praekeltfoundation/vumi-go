@@ -1,5 +1,9 @@
 import json
 
+from datetime import date
+
+from dateutil.relativedelta import relativedelta
+
 from twisted.python import log
 from twisted.internet import defer
 from twisted.web.resource import Resource
@@ -174,10 +178,23 @@ class AccountResource(BaseResource):
     def render_GET(self, request):
         """Handle an HTTP GET request"""
         params = filter(None, request.postpath)
-        if len(params) > 0:
+        if len(params) == 1:
             d = self.get_account(params[0])
             d.addCallbacks(self._render_to_json, self._handle_error,
                            callbackArgs=[request], errbackArgs=[request])
+
+        elif len(params) == 2 and params[1] == 'statement':
+            account_number = params[0]
+            year = request.args.get('year', None)
+            month = request.args.get('month', None)
+            if year and month:
+                d = self.get_account_statement(account_number, year[0],
+                                               month[0])
+
+                d.addCallbacks(self._render_to_json, self._handle_error,
+                               callbackArgs=[request], errbackArgs=[request])
+            else:
+                self._handle_bad_request(request)
 
         else:
             d = self.get_account_list()
@@ -204,6 +221,34 @@ class AccountResource(BaseResource):
             defer.returnValue(result[0])
         else:
             defer.returnValue(None)
+
+    @defer.inlineCallbacks
+    def get_account_statement(self, account_number, year, month):
+        """Generate a statement for the ``account_number`` for the given
+           ``year`` and ``month``.
+        """
+        query = """
+            SELECT tag_pool_name, tag_name, message_direction,
+                   SUM(credit_amount) AS total_cost
+            FROM billing_transaction
+            WHERE account_number = %(account_number)s
+            AND created >= %(from_date)s
+            AND created < %(to_date)s
+            GROUP BY tag_pool_name, tag_name, message_direction
+        """
+
+        year = int(year)
+        month = int(month)
+        from_date = date(year, month, 1)
+        to_date = from_date + relativedelta(months=1)
+        params = {
+            'account_number': account_number,
+            'from_date': from_date,
+            'to_date': to_date
+        }
+
+        result = yield self._connection_pool.runQuery(query, params)
+        defer.returnValue(result)
 
     @defer.inlineCallbacks
     def get_account_list(self):
