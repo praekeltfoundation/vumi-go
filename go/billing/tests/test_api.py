@@ -2,6 +2,8 @@ import json
 import decimal
 import pytest
 
+from datetime import date
+
 from twisted.internet import defer
 from twisted.trial import unittest
 
@@ -396,3 +398,18 @@ class TransactionTestCase(unittest.TestCase):
         self.assertEqual(response.responseCode, 200)
         account = json.loads(response.value(), parse_float=decimal.Decimal)
         self.assertTrue(account.get('credit_balance', 0) == -credit_amount)
+
+        # Get an account statement for the current month and verify that the
+        # amounts are correct
+        url = 'accounts/%s/statement' % ("11111",)
+        today = date.today()
+        args = {'year': today.year, 'month': today.month}
+        response = yield self.web.get(url, args=args)
+        self.assertEqual(response.responseCode, 200)
+        line_items = json.loads(response.value(), parse_float=decimal.Decimal)
+        self.assertTrue(len(line_items) > 0)
+        self.assertEqual(line_items, [{
+            "tag_pool_name": "test_pool2",
+            "tag_name": "12345",
+            "total_cost": -credit_amount,
+            "message_direction": "Inbound"}])

@@ -1,5 +1,6 @@
 import json
 import decimal
+import urllib
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.trial.unittest import TestCase
@@ -139,6 +140,55 @@ class TestBillingApi(TestCase):
         }
         d = self.billing_api.create_transaction(**kwargs)
         yield self.assertFailure(d, BillingError)
+
+    @inlineCallbacks
+    def test_get_account_statement_request(self):
+        hrm = HttpRequestMock(self._mk_response())
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'year': 2013,
+            'month': 11,
+        }
+        yield self.billing_api.get_account_statement(**kwargs)
+        uri = "%saccounts/%s/statement" % (
+            self.api_url, 'test-account')
+        query = {'year': 2013, 'month': 11}
+        uri = "%s?%s" % (uri, urllib.urlencode(query))
+        self.assertEqual(hrm.request.uri, uri)
+
+    @inlineCallbacks
+    def test_get_account_statement_response(self):
+        delivered_body = [
+            {
+                "tag_pool_name": "pool1",
+                "tag_name": "1234",
+                "message_direction": "Inbound",
+                "total_cost": -63
+            },
+            {
+                "tag_pool_name": "pool1",
+                "tag_name": "1234",
+                "message_direction": "Outbound",
+                "total_cost": -190
+            }
+        ]
+        response = self._mk_response(
+            delivered_body=json.dumps(delivered_body, cls=JSONEncoder))
+
+        hrm = HttpRequestMock(response)
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'year': 2013,
+            'month': 11,
+        }
+        result = yield self.billing_api.get_account_statement(**kwargs)
+        self.assertEqual(result, delivered_body)
 
 
 class TestBillingDispatcher(AppWorkerTestCase):
