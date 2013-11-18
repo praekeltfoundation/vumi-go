@@ -279,6 +279,32 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['from_addr'], None)
 
     @inlineCallbacks
+    def test_in_send_to_with_evil_content(self):
+        msg = {
+            'content': 0xBAD,
+            'to_addr': '+1234',
+        }
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, json.dumps(msg),
+                                           self.auth_headers, method='PUT')
+        self.assert_bad_request(
+            response, "Invalid or missing value for payload key 'content'")
+
+    @inlineCallbacks
+    def test_in_send_to_with_evil_to_addr(self):
+        msg = {
+            'content': 'good',
+            'to_addr': 1234,
+        }
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, json.dumps(msg),
+                                           self.auth_headers, method='PUT')
+        self.assert_bad_request(
+            response, "Invalid or missing value for payload key 'to_addr'")
+
+    @inlineCallbacks
     def test_in_reply_to(self):
         inbound_msg = yield self.msg_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
@@ -308,6 +334,22 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['session_event'], None)
         self.assertEqual(sent_msg['to_addr'], inbound_msg['from_addr'])
         self.assertEqual(sent_msg['from_addr'], '9292')
+
+    @inlineCallbacks
+    def test_in_reply_to_with_evil_content(self):
+        inbound_msg = yield self.msg_helper.make_stored_inbound(
+            self.conversation, 'in 1', message_id='1')
+
+        msg = {
+            'content': 0xBAD,
+            'in_reply_to': inbound_msg['message_id'],
+        }
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, json.dumps(msg),
+                                           self.auth_headers, method='PUT')
+        self.assert_bad_request(
+            response, "Invalid or missing value for payload key 'content'")
 
     @inlineCallbacks
     def test_invalid_in_reply_to(self):

@@ -138,14 +138,27 @@ class MsgOptions(object):
     WHITELIST = {}
 
     def __init__(self, payload):
-        self.error = None
-        for key, checker in self.WHITELIST.iteritems():
+        self.errors = []
+        for key, checker in sorted(self.WHITELIST.iteritems()):
             value = payload.get(key)
             if not checker(value):
-                self.error = (
+                self.errors.append(
                     "Invalid or missing value for payload key %r" % (key,))
-                break
-            setattr(self, key, value)
+            else:
+                setattr(self, key, value)
+
+    @property
+    def is_valid(self):
+        return not bool(self.errors)
+
+    @property
+    def error_msg(self):
+        if not self.errors:
+            return None
+        elif len(self.errors) == 1:
+            return self.errors[0]
+        else:
+            return "Errors:\n* %s" % ("\n* ".join(self.errors))
 
 
 class MsgCheckHelpers(object):
@@ -240,8 +253,8 @@ class MessageStream(StreamResource):
             return
 
         msg_options = ReplyToOptions(payload)
-        if msg_options.error:
-            self.client_error_response(request, msg_options.error)
+        if not msg_options.is_valid:
+            self.client_error_response(request, msg_options.error_msg)
             return
 
         continue_session = (msg_options.session_event
@@ -261,6 +274,10 @@ class MessageStream(StreamResource):
         conversation = yield self.get_conversation(user_account)
 
         msg_options = SendToOptions(payload)
+        if not msg_options.is_valid:
+            self.client_error_response(request, msg_options.error_msg)
+            return
+
         helper_metadata = conversation.set_go_helper_metadata()
 
         msg = yield self.worker.send_to(
