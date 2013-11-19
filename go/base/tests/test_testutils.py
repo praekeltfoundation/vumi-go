@@ -2,7 +2,8 @@ import json
 import requests
 
 from go.vumitools.tests.utils import GoTestCase
-from go.base.tests.utils import FakeResponse, FakeRpcResponse, FakeServer
+from go.base.tests.utils import (
+    FakeResponse, FakeRpcResponse, FakeRpcErrorResponse, FakeServer)
 
 
 class TestFakeResponse(GoTestCase):
@@ -28,8 +29,10 @@ class TestFakeRpcResponse(GoTestCase):
             'result': {'foo': 'bar'}
         })
 
+
+class TestFakeRpcErrorResponse(GoTestCase):
     def test_rpc_error_response_data(self):
-        resp = FakeRpcResponse(id='some-id', error=':(')
+        resp = FakeRpcErrorResponse(id='some-id', error=':(')
         self.assertEqual(resp.json, {
             'jsonrpc': '2.0',
             'id': 'some-id',

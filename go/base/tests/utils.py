@@ -380,22 +380,24 @@ class FakeResponse(Response):
 
 
 class FakeRpcResponse(FakeResponse):
-    def __init__(self, id=None, result=None, error=None):
-        super(FakeRpcResponse, self).__init__(
-            data=self.make_rpc_data(id, result, error))
+    def __init__(self, id=None, result=None):
+        data = self.make_rpc_data(id, result)
+        super(FakeRpcResponse, self).__init__(data=data)
 
     @classmethod
-    def make_rpc_data(cls, id=None, result=None, error=None):
-        data = {
+    def make_rpc_data(cls, id=None, result=None):
+        return {
             'id': id,
             'jsonrpc': '2.0',
             'result': result,
         }
 
-        if error is not None:
-            data['error'] = error
 
-        return data
+class FakeRpcErrorResponse(FakeResponse):
+    def __init__(self, id=None, error=None):
+        data = FakeRpcResponse.make_rpc_data(id, result=None)
+        data['error'] = error
+        super(FakeRpcErrorResponse, self).__init__(data=data)
 
 
 class FakeServer(object):
