@@ -3,7 +3,8 @@ from go.base.tests.utils import VumiGoDjangoTestCase
 
 from go.dashboard.tests.utils import FakeDiamondashApiClient
 from go.dashboard.base import (
-    DashboardParseError, Dashboard, DashboardLayout, visit_dicts)
+    DashboardSyncError, DashboardParseError,
+    Dashboard, DashboardLayout, visit_dicts)
 
 
 class ToyLayout(DashboardLayout):
@@ -19,7 +20,7 @@ class TestDashboardApiClient(VumiGoDjangoTestCase):
         super(TestDashboardApiClient, self).setUp()
 
         # test using the fake client, we only stub the requests and responses,
-        # not the methods the delegate to them
+        # not the methods that delegate to them
         self.client = FakeDiamondashApiClient()
 
     def test_replace_dashboard(self):
@@ -34,11 +35,68 @@ class TestDashboardApiClient(VumiGoDjangoTestCase):
 class TestDashboard(VumiGoDjangoTestCase):
     def setUp(self):
         super(TestDashboard, self).setUp()
+        self.diamondash_api = FakeDiamondashApiClient()
+
+        layout = ToyLayout([{
+            'type': 'lvalue',
+            'time_range': '1d',
+            'title': 'Spam (24h)',
+            'target': {
+                'metric_type': 'foo',
+                'name': 'spam',
+            },
+        }, {
+            'type': 'lvalue',
+            'time_range': '1d',
+            'title': 'Ham (24h)',
+            'target': {
+                'metric_type': 'foo',
+                'name': 'ham',
+            },
+        }])
 
         self.dashboard = Dashboard(
             'ackbar-the-dashboard',
             'Ackbar the Dashboard',
-            ToyLayout())
+            layout)
+
+        # Stub dashboard api with the fake api
+        self.dashboard.api = self.diamondash_api
+
+    def tearDown(self):
+        super(TestDashboard, self).setUp()
+
+    def test_sync(self):
+        self.assertEqual(self.dashboard.serialize(), None)
+        self.diamondash_api.set_response({'happy': 'config'})
+
+        self.dashboard.sync()
+        [request] = self.diamondash_api.get_requests()
+
+        self.assertEqual(request['data'], {
+            'name': 'ackbar-the-dashboard',
+            'title': 'Ackbar the Dashboard',
+            'widgets': [{
+                'type': 'lvalue',
+                'time_range': '1d',
+                'title': 'Spam (24h)',
+                'target': 'foo.spam',
+            }, {
+                'type': 'lvalue',
+                'time_range': '1d',
+                'title': 'Ham (24h)',
+                'target': 'foo.ham',
+            }]
+        })
+        self.assertEqual(self.dashboard.serialize(), {'happy': 'config'})
+
+    def test_sync_for_api_error_responses(self):
+        self.diamondash_api.set_error_response(':(')
+        self.assertRaises(DashboardSyncError, self.dashboard.sync)
+
+    def test_sync_for_error_responses(self):
+        self.diamondash_api.set_error_response('Gateway Timeout')
+        self.assertRaises(DashboardSyncError, self.dashboard.sync)
 
 
 class TestDashboardLayout(VumiGoDjangoTestCase):

@@ -5,7 +5,7 @@ from requests.exceptions import HTTPError
 from go.dashboard import DiamondashApiClient
 
 
-class FakeDashboardApiClient(DiamondashApiClient):
+class FakeDiamondashApiClient(DiamondashApiClient):
     def __init__(self):
         self.requests = []
         self.response = None
@@ -20,7 +20,7 @@ class FakeDashboardApiClient(DiamondashApiClient):
         }))
 
     def set_response(self, response):
-        self.response
+        self.response = response
 
     def request(self, method, url, data):
         self.requests.append({
