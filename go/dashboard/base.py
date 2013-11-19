@@ -5,8 +5,38 @@ import requests
 from django.conf import settings
 
 
+def is_collection(obj):
+    return (
+        isinstance(obj, dict)
+        or isinstance(obj, list)
+        or isinstance(obj, set)
+        or isinstance(obj, tuple))
+
+
+def is_mutable_collection(obj):
+    return (
+        isinstance(obj, dict)
+        or isinstance(obj, list)
+        or isinstance(obj, set))
+
+
+def collection_items(collection):
+    if isinstance(collection, dict):
+        items = collection.iteritems()
+    else:
+        items = enumerate(collection)
+    return items
+
+
 def visit_dicts(collection, fn):
-    pass
+    is_mutable = is_mutable_collection(collection)
+
+    for key, value in collection_items(collection):
+        if is_collection(value):
+            visit_dicts(value, fn)
+
+            if is_mutable and isinstance(value, dict):
+                collection[key] = fn(value)
 
 
 class DashboardSyncError(Exception):
