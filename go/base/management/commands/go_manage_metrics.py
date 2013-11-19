@@ -1,13 +1,9 @@
-from optparse import make_option
-
-from django.core.management.base import BaseCommand, CommandError
-
-from go.base.utils import vumi_api, vumi_api_for_user
 from go.base.command_utils import (
-    get_user_by_email, get_user_by_account_key, user_details_as_string)
+    BaseGoCommand, make_command_option, make_email_option,
+    get_user_by_account_key, user_details_as_string)
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     # TODO Use riak instead of redis for maintaining the list of accounts
     # for which metric collection should be disabled
 
@@ -15,81 +11,29 @@ class Command(BaseCommand):
 
     help = "Disable or re-enable metric collection for a Vumi Go user"
 
-    LOCAL_OPTIONS = dict((opt.dest, opt) for opt in [
-        make_option('--email-address',
-            dest='email-address',
-            help='Email address for the Vumi Go user'),
-        make_option('--list',
-            dest='list',
-            action='store_true',
-            default=False,
+    option_list = BaseGoCommand.option_list + (
+        make_email_option(),
+        make_command_option('list',
             help='List the Vumi Go user accounts that currently have '
                  'metric collection disabled'),
-        make_option('--enable',
-            dest='enable',
-            action='store_true',
-            default=False,
+        make_command_option('enable',
             help='Enable metric collection for the Vumi Go user'),
-        make_option('--disable',
-            dest='disable',
-            action='store_true',
-            default=False,
+        make_command_option('disable',
             help='Disable metric collection for the Vumi Go user'),
-    ])
+    )
 
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS.values())
-
-    def handle(self, *args, **options):
-        action = self.get_action(options)
-
-        if action == 'list':
-            self.list_users()
-        else:
-            email_addr = (
-                options.get('email-address') or
-                self.ask_for_option('email-address'))
-
-            if action == 'enable':
-                self.enable_metrics(email_addr)
-            elif action == 'disable':
-                self.disable_metrics(email_addr)
-
-    def ask_for_option(self, name):
-        opt = self.LOCAL_OPTIONS[name]
-        value = raw_input("%s: " % (opt.help,))
-        if value:
-            return value
-        else:
-            raise CommandError('Please provide %s:' % (opt.dest,))
-
-    def get_action(self, options):
-        actions = [
-            name for name in ['enable', 'disable', 'list']
-            if options[name]]
-
-        if len(actions) != 1:
-            raise CommandError(
-                'Please specify either --list, --enable or --disable.')
-
-        return actions[0]
-
-    def enable_metrics(self, email_addr):
-        user = get_user_by_email(email_addr)
-        user_api = vumi_api_for_user(user)
+    def handle_command_enable(self, *args, **options):
+        _user, user_api = self.mk_user_api(options=options)
         user_account_key = user_api.user_account_key
-        redis = user_api.api.redis
-        redis.srem('disabled_metrics_accounts', user_account_key)
+        self.vumi_api.redis.srem('disabled_metrics_accounts', user_account_key)
 
-    def disable_metrics(self, email_addr):
-        user = get_user_by_email(email_addr)
-        user_api = vumi_api_for_user(user)
+    def handle_command_disable(self, *args, **options):
+        _user, user_api = self.mk_user_api(options=options)
         user_account_key = user_api.user_account_key
-        redis = user_api.api.redis
-        redis.sadd('disabled_metrics_accounts', user_account_key)
+        self.vumi_api.redis.sadd('disabled_metrics_accounts', user_account_key)
 
-    def list_users(self):
-        api = vumi_api()
-        acc_keys = api.redis.smembers('disabled_metrics_accounts')
+    def handle_command_list(self, *args, **options):
+        acc_keys = self.vumi_api.redis.smembers('disabled_metrics_accounts')
 
         if not acc_keys:
             self.stderr.write('No accounts have metric collection disabled.\n')

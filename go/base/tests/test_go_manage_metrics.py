@@ -22,20 +22,13 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
         command = go_manage_metrics.Command()
         command.stdout = self.stdout
         command.stderr = self.stderr
-
-        opts = {
-            'list': False,
-            'enable': False,
-            'disable': False,
-        }
-        opts.update(kw)
-        command.handle(**opts)
+        command.handle(**kw)
 
     def set_metrics(self, user, disabled):
+        command = "disable" if disabled else "enable"
         self.run_command(**{
-            'email-address': user.email,
-            'enable': not disabled,
-            'disable': disabled,
+            'email_address': user.email,
+            'command': [command],
         })
 
     def test_enable_metrics(self):
@@ -75,7 +68,7 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
 
     def test_listing(self):
         self.set_metrics(self.user, disabled=True)
-        self.run_command(list=True)
+        self.run_command(command=['list'])
 
         self.assertEqual(
             self.stdout.getvalue(),
@@ -83,7 +76,7 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
                 self.user.get_profile().user_account))
 
     def test_listing_for_no_accounts_disabled(self):
-        self.run_command(list=True)
+        self.run_command(command=['list'])
 
         self.assertEqual(
             self.stderr.getvalue(),
