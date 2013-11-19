@@ -423,6 +423,10 @@ class FakeServer(object):
     def stubbed_request(self, method, url, **kwargs):
         kwargs['url'] = url
         kwargs['method'] = method
+
+        if 'data' in kwargs:
+            kwargs['data'] = json.loads(kwargs['data'])
+
         self.requests.append(kwargs)
         return self.response
 

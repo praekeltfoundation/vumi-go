@@ -1,3 +1,4 @@
+import json
 import requests
 
 from go.vumitools.tests.utils import GoTestCase
@@ -46,6 +47,14 @@ class TestFakeServer(GoTestCase):
             {'method': 'patch', 'url': 'http://some.place'},
             {'method': 'options', 'url': 'http://some.place'},
             {'method': 'delete', 'url': 'http://some.place'}])
+
+    def test_request_catching_for_json_data_loading(self):
+        requests.put('http://some.place', data=json.dumps({'foo': 'bar'}))
+        self.assertEqual(self.server.get_requests(), [{
+            'method': 'put',
+            'url': 'http://some.place',
+            'data': {'foo': 'bar'},
+        }])
 
     def test_request_response_setting(self):
         resp = FakeResponse()
