@@ -32,7 +32,7 @@ class Account(models.Model):
     alert_credit_balance = models.IntegerField(default=0)
 
     def __unicode__(self):
-        return u"{0} ({1})".format(self.account_number, self.user.username)
+        return u"{0} ({1})".format(self.account_number, self.user.email)
 
 
 class MessageCost(models.Model):
