@@ -47,16 +47,16 @@ class DashboardSyncError(Exception):
 
 class DashboardParseError(Exception):
     """
-    Raised when dashboard data cannot be parsed into a something that can be
+    Raised when dashboard data cannot be parsed into something that can be
     given to diamondash.
     """
 
 
 class Dashboard(object):
-    def __init__(self, name, title, widgets):
+    def __init__(self, name, title, layout):
         self.name = name
         self.title = title
-        self.widgets = widgets
+        self.layout = layout
 
     def _api_url(self):
         return urljoin(settings.DIAMONDASH_URL, 'dashboards')
@@ -65,7 +65,7 @@ class Dashboard(object):
         return {
             'name': self.name,
             'title': self.title,
-            'widgets': self.widgets.serialize()
+            'widgets': self.layout.serialize()
         }
 
     def sync(self):
@@ -95,10 +95,10 @@ class Dashboard(object):
 
 
 class DashboardLayout(object):
-    def __init__(self, entities):
+    def __init__(self, entities=None):
         self.entities = []
 
-        for entity in entities:
+        for entity in (entities or []):
             self.add_entity(entity)
 
     def handle_metric(self, target):
@@ -113,7 +113,7 @@ class DashboardLayout(object):
         return handler(target)
 
     def parse_widget_metrics(self, widget):
-        def traverse(collection, key):
+        def traverse(collection):
             if 'metric_type' in collection:
                 collection = self.handle_metric(collection)
             return collection
