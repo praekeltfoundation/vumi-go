@@ -49,12 +49,24 @@ def make_command_option(command_name, **kw):
         **kw)
 
 
+def make_email_option():
+    return make_option(
+        '--email-address', dest='email_address',
+        help='Email address for the Vumi Go user')
+
+
 class BaseGoCommand(BaseCommand):
     def list_commands(self):
         return [opt.const for opt in self.option_list
                 if opt.action == 'append_const' and opt.dest == 'command']
 
-    def mk_user_api(self, email_address):
+    def mk_user_api(self, email_address=None, options=None):
+        if email_address is None and options is None:
+            raise ValueError("email_address or options is required")
+        if email_address is None:
+            if 'email_address' not in options:
+                raise CommandError("--email-address must be specified")
+            email_address = options.get('email_address')
         user = get_user_by_email(email_address)
         user_api = vumi_api_for_user(user)
         return user, user_api
@@ -86,14 +98,9 @@ class BaseGoCommand(BaseCommand):
 
 class BaseGoAccountCommand(BaseGoCommand):
     option_list = BaseGoCommand.option_list + (
-        make_option('--email-address',
-                    dest='email_address',
-                    help='Email address for the Vumi Go user'),
+        make_email_option(),
     )
 
     def handle(self, *args, **options):
-        if 'email_address' not in options:
-            raise CommandError("--email-address must be specified")
-
-        self.user, self.user_api = self.mk_user_api(options['email_address'])
+        self.user, self.user_api = self.mk_user_api(options=options)
         return super(BaseGoAccountCommand, self).handle(*args, **options)
