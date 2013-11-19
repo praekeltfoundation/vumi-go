@@ -313,7 +313,8 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
         key = mw.key('dummy_endpoint', msg1['message_id'])
         ttl = yield mw.redis.ttl(key)
-        self.assertTrue(0 < ttl < 10)
+        self.assertTrue(
+            0 < ttl <= 10, "Expected 0 < ttl <= 10, found: %r" % (ttl,))
 
 
 class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
