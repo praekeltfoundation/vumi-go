@@ -1,7 +1,7 @@
 import json
 
 from go.vumitools.tests.utils import VumiApiCommand
-from go.api.go_api.tests.utils import MockRpc
+from go.base.tests.utils import FakeRpcResponse, FakeServer
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
@@ -16,11 +16,11 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
 
     def setUp(self):
         super(DialogueTestCase, self).setUp()
-        self.mock_rpc = MockRpc()
+        self.go_api = FakeServer()
 
     def tearDown(self):
         super(DialogueTestCase, self).tearDown()
-        self.mock_rpc.tearDown()
+        self.go_api.tear_down()
 
     def check_model_data(self, response, conv, poll):
         expected = poll.copy()
@@ -115,7 +115,7 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
     def test_edit(self):
         self.setup_conversation()
         poll = {"foo": "bar"}
-        self.mock_rpc.set_response(result={"poll": poll})
+        self.go_api.set_response(FakeRpcResponse(result={"poll": poll}))
         response = self.client.get(self.get_view_url('edit'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
