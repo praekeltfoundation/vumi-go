@@ -2,8 +2,8 @@ import json
 
 from django.core.urlresolvers import reverse
 
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.api.go_api.tests.utils import MockRpc
+from go.base.tests.utils import (
+    VumiGoDjangoTestCase, FakeRpcResponse, FakeServer)
 
 from go.api.go_api.api_types import (
     ChannelType, ConversationType, RoutingEntryType)
@@ -20,11 +20,11 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         self.setup_api()
         self.setup_user_api()
         self.setup_client()
-        self.mock_rpc = MockRpc()
+        self.go_api = FakeServer()
 
     def tearDown(self):
         super(RoutingScreenTestCase, self).tearDown()
-        self.mock_rpc.tearDown()
+        self.go_api.tear_down()
 
     def make_routing_table(self, channels=(), conversations=(), routing=()):
         routing_table = {
@@ -70,14 +70,16 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         self.assertContains(response, model_data)
 
     def check_api_request(self):
-        request = self.mock_rpc.request
-        self.assertEqual(request['method'], 'routing_table')
-        self.assertEqual(request['params'], [self.user_api.user_account_key])
+        [request] = self.go_api.get_requests()
+        data = request['data']
+
+        self.assertEqual(data['method'], 'routing_table')
+        self.assertEqual(data['params'], [self.user_api.user_account_key])
 
     def test_empty_routing(self):
         routing_table = self.make_routing_table()
 
-        self.mock_rpc.set_response(result=routing_table)
+        self.go_api.set_response(FakeRpcResponse(result=routing_table))
         response = self.client.get(reverse('routing'))
 
         self.check_api_request()
@@ -93,7 +95,7 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
             channels=[self.user_api.get_channel(tag)], conversations=[conv],
             routing=[(conv, tag), (tag, conv)])
 
-        self.mock_rpc.set_response(result=routing_table)
+        self.go_api.set_response(FakeRpcResponse(result=routing_table))
         response = self.client.get(reverse('routing'))
 
         self.check_api_request()

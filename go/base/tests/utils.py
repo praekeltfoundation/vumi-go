@@ -1,7 +1,11 @@
 from datetime import datetime, timedelta
 from StringIO import StringIO
+from functools import partial
 import uuid
+import json
 
+from mock import patch as mock_patch
+from requests import Response
 from django.conf import settings, UserSettingsHolder
 from django.utils.functional import wraps
 from django.test import TestCase
@@ -356,3 +360,94 @@ class GoAccountCommandTestCase(VumiGoDjangoTestCase):
     def assert_command_output(self, expected_output, *command, **options):
         self.call_command(*command, **options)
         self.assertEqual(expected_output, self.command.stdout.getvalue())
+
+
+class FakeResponse(Response):
+    def __init__(self, content=None, data=None, code=200):
+        super(FakeResponse, self).__init__()
+        self.status_code = code
+
+        if content is not None:
+            self._content = content
+        elif data is not None:
+            self._content = json.dumps(data)
+        else:
+            self._content = ""
+
+    @property
+    def reason(self):
+        return self._content
+
+
+class FakeRpcResponse(FakeResponse):
+    def __init__(self, id=None, result=None, error=None):
+        super(FakeRpcResponse, self).__init__(
+            data=self.make_rpc_data(id, result, error))
+
+    @classmethod
+    def make_rpc_data(cls, id=None, result=None, error=None):
+        data = {
+            'id': id,
+            'jsonrpc': '2.0',
+            'result': result,
+        }
+
+        if error is not None:
+            data['error'] = error
+
+        return data
+
+
+class FakeServer(object):
+    METHODS = [
+        'get',
+        'post',
+        'put',
+        'head',
+        'patch',
+        'options',
+        'delete'
+    ]
+
+    def __init__(self):
+        self.requests = []
+        self.patchers = {}
+        self.set_response(FakeResponse())
+
+        self._patch_request()
+        for method in self.METHODS:
+            self._patch_request_method(method)
+
+    def _patch_request(self):
+        patcher = mock_patch('requests.request')
+        self.patchers['request'] = patcher
+
+        patched = patcher.start()
+        patched.side_effect = self.stubbed_request
+
+    def _patch_request_method(self, method):
+        patcher = mock_patch('requests.%s' % method)
+        self.patchers['request'] = patcher
+
+        patched = patcher.start()
+        patched.side_effect = partial(self.stubbed_request, method)
+
+    def tear_down(self):
+        for patcher in self.patchers.values():
+            patcher.stop()
+
+    def get_requests(self):
+        return self.requests
+
+    def stubbed_request(self, method, url, **kwargs):
+        kwargs['url'] = url
+        kwargs['method'] = method
+
+        if 'data' in kwargs:
+            kwargs['data'] = json.loads(kwargs['data'])
+
+        self.requests.append(kwargs)
+        return self.response
+
+    def set_response(self, response):
+        self.response = response

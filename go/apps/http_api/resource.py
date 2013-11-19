@@ -45,6 +45,28 @@ class BaseResource(resource.Resource):
         user_api = self.get_user_api(user_account)
         return user_api.get_wrapped_conversation(conversation_key)
 
+    def finish_response(self, request, body, code, status=None):
+        request.setResponseCode(code, status)
+        request.write(body)
+        request.finish()
+
+    def client_error_response(self, request, reason, code=http.BAD_REQUEST):
+        msg = json.dumps({
+            "success": False,
+            "reason": reason,
+        })
+        self.finish_response(request, msg, code=code, status=reason)
+
+    def success_response(self, request, reason, code=http.OK):
+        msg = json.dumps({
+            "success": True,
+            "reason": reason,
+        })
+        self.finish_response(request, msg, code=code, status=reason)
+
+    def successful_send_response(self, request, msg, code=http.OK):
+        self.finish_response(request, msg.to_json(), code=code)
+
 
 class StreamResource(BaseResource):
 
@@ -110,6 +132,63 @@ class EventStream(StreamResource):
     routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
 
 
+class MsgOptions(object):
+    """Helper for sanitizing msg options from clients."""
+
+    WHITELIST = {}
+
+    def __init__(self, payload):
+        self.errors = []
+        for key, checker in sorted(self.WHITELIST.iteritems()):
+            value = payload.get(key)
+            if not checker(value):
+                self.errors.append(
+                    "Invalid or missing value for payload key %r" % (key,))
+            else:
+                setattr(self, key, value)
+
+    @property
+    def is_valid(self):
+        return not bool(self.errors)
+
+    @property
+    def error_msg(self):
+        if not self.errors:
+            return None
+        elif len(self.errors) == 1:
+            return self.errors[0]
+        else:
+            return "Errors:\n* %s" % ("\n* ".join(self.errors))
+
+
+class MsgCheckHelpers(object):
+    @staticmethod
+    def is_unicode_or_none(value):
+        return (value is None) or (isinstance(value, unicode))
+
+    @staticmethod
+    def is_session_event(value):
+        return value in TransportUserMessage.SESSION_EVENTS
+
+
+class SendToOptions(MsgOptions):
+    """Payload options for messages sent with `.send_to(...)`."""
+
+    WHITELIST = {
+        'content': MsgCheckHelpers.is_unicode_or_none,
+        'to_addr': MsgCheckHelpers.is_unicode_or_none,
+    }
+
+
+class ReplyToOptions(MsgOptions):
+    """Payload options for messages sent with `.reply_to(...)`."""
+
+    WHITELIST = {
+        'content': MsgCheckHelpers.is_unicode_or_none,
+        'session_event': MsgCheckHelpers.is_session_event,
+    }
+
+
 class MessageStream(StreamResource):
 
     message_class = TransportUserMessage
@@ -135,13 +214,6 @@ class MessageStream(StreamResource):
             return {'load_balancer': copy.deepcopy(load_balancer)}
         return {}
 
-    def get_msg_options(self, payload, white_list=[]):
-        raw_payload = copy.deepcopy(payload.copy())
-        msg_options = dict((key, value)
-                           for key, value in raw_payload.items()
-                           if key in white_list)
-        return msg_options
-
     def get_conversation_tag(self, conversation):
         return (conversation.delivery_tag_pool, conversation.delivery_tag)
 
@@ -150,8 +222,7 @@ class MessageStream(StreamResource):
         try:
             payload = json.loads(request.content.read())
         except ValueError:
-            request.setResponseCode(http.BAD_REQUEST, 'Invalid Message')
-            request.finish()
+            self.client_error_response(request, 'Invalid Message')
             return
 
         in_reply_to = payload.get('in_reply_to')
@@ -167,9 +238,7 @@ class MessageStream(StreamResource):
 
         reply_to = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
         if reply_to is None:
-            request.setResponseCode(http.BAD_REQUEST)
-            request.write('Invalid in_reply_to value')
-            request.finish()
+            self.client_error_response(request, 'Invalid in_reply_to value')
             return
 
         reply_to_mdh = MessageMetadataHelper(self.vumi_api, reply_to)
@@ -180,43 +249,42 @@ class MessageStream(StreamResource):
                         ' key' % (reply_to,))
             msg_conversation_key = None
         if msg_conversation_key != conversation.key:
-            request.setResponseCode(http.BAD_REQUEST)
-            request.write('Invalid in_reply_to value')
-            request.finish()
+            self.client_error_response(request, 'Invalid in_reply_to value')
             return
 
-        msg_options = self.get_msg_options(payload,
-                                           ['session_event', 'content'])
-        content = msg_options.pop('content')
-        continue_session = (msg_options.pop('session_event', None)
+        msg_options = ReplyToOptions(payload)
+        if not msg_options.is_valid:
+            self.client_error_response(request, msg_options.error_msg)
+            return
+
+        continue_session = (msg_options.session_event
                             != TransportUserMessage.SESSION_CLOSE)
         helper_metadata = conversation.set_go_helper_metadata()
         helper_metadata.update(self.get_load_balancer_metadata(payload))
 
         msg = yield self.worker.reply_to(
-            reply_to, content, continue_session,
+            reply_to, msg_options.content, continue_session,
             helper_metadata=helper_metadata)
 
-        request.setResponseCode(http.OK)
-        request.write(msg.to_json())
-        request.finish()
+        self.successful_send_response(request, msg)
 
     @inlineCallbacks
     def handle_PUT_send_to(self, request, payload):
         user_account = request.getUser()
         conversation = yield self.get_conversation(user_account)
 
-        msg_options = self.get_msg_options(payload, ['content', 'to_addr'])
-        to_addr = msg_options.pop('to_addr')
-        content = msg_options.pop('content')
-        msg_options['helper_metadata'] = conversation.set_go_helper_metadata()
+        msg_options = SendToOptions(payload)
+        if not msg_options.is_valid:
+            self.client_error_response(request, msg_options.error_msg)
+            return
+
+        helper_metadata = conversation.set_go_helper_metadata()
 
         msg = yield self.worker.send_to(
-            to_addr, content, endpoint='default', **msg_options)
+            msg_options.to_addr, msg_options.content,
+            endpoint='default', helper_metadata=helper_metadata)
 
-        request.setResponseCode(http.OK)
-        request.write(msg.to_json())
-        request.finish()
+        self.successful_send_response(request, msg)
 
 
 class MetricResource(BaseResource):
@@ -251,8 +319,7 @@ class MetricResource(BaseResource):
         try:
             metrics = self.parse_metrics(data)
         except (ValueError, InvalidAggregate, InvalidMessage):
-            request.setResponseCode(http.BAD_REQUEST, 'Invalid Message')
-            request.finish()
+            self.client_error_response(request, 'Invalid Message')
             return
 
         conversation = yield self.get_conversation(user_account)
@@ -262,7 +329,7 @@ class MetricResource(BaseResource):
             self.worker.publish_account_metric(user_account, store, name,
                                                value, agg_class)
 
-        request.finish()
+        self.success_response(request, 'Metrics published')
 
 
 class ConversationResource(resource.Resource):
