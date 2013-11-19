@@ -1,5 +1,7 @@
 {% extends "app.html" %}
 
+{% load go_tags %}
+
 {% block content_extraclass %}account{% endblock %}
 {% block content_title %}Statements{% endblock %}
 
@@ -10,14 +12,25 @@
             {% include "base/includes/messages.html" %}
             <table class="table table-form-view">
                 <thead>
+                    {% get_param request 'o' as o %}
                     <tr>
                         <th></th>
-                        <th>Date</th>
+                        <th>
+                            {% if o == '-month,-year' %}
+                                <a href="?{% add_params request o='year,month'|split:',' %}">Date</a>
+                                <span class="glyphicon glyphicon-chevron-up"></span>
+                            {% elif o == 'month,year' %}
+                                <a href="?{% add_params request o='-year,-month'|split:',' %}">Date</a>
+                                <span class="glyphicon glyphicon-chevron-down"></span>
+                            {% else %}
+                                <a href="?{% add_params request o='year,month'|split:',' %}">Date</a>
+                            {% endif %}
+                        </th>
                         <th>Statement</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for statement in statement_list %}
+                    {% for statement in page %}
                     <tr>
                         <td></td>
                         <td>{{ statement.year }}-{{ statement.month }}</td>

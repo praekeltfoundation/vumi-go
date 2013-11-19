@@ -182,10 +182,11 @@ def user_detail(request, user_id=None):
 def billing(request, template_name='account/billing.html'):
     """Display a list of available statements for the logged in user"""
     try:
+        order_by = request.GET.getlist('o', ['-year', '-month'])
         account = request.user.account_set.all()[0]
         statement_list = MonthlyStatement.objects\
             .filter(account=account)\
-            .order_by('-year', '-month')
+            .order_by(*order_by)
 
     except IndexError:
         statement_list = []
