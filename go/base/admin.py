@@ -6,8 +6,16 @@ from go.base.models import GoUser, UserProfile, UserOrganisation
 from go.base.forms import GoUserCreationForm, GoUserChangeForm
 
 
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    fields = ('organisation', 'is_admin', 'user_account')
+    readonly_fields = ('user_account',)
+    can_delete = False
+
+
 class GoUserAdmin(UserAdmin):
     # The forms to add and change user instances
+    inlines = (UserProfileInline,)
 
     # The fields to be used in displaying the User model.
     # These override the definitions on the base UserAdmin
@@ -18,7 +26,6 @@ class GoUserAdmin(UserAdmin):
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
                                        'groups', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
-        (_('Profile'), {'fields': ('userprofile',)}),
     )
     add_fieldsets = (
         (None, {
