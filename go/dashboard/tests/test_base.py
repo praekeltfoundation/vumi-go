@@ -1,7 +1,33 @@
 from go.vumitools.tests.utils import GoTestCase
+from go.base.tests.utils import FakeResponse, FakeServer
 
 from go.dashboard.base import (
-    DashboardParseError, Dashboard, DashboardLayout, visit_dicts)
+    DashboardSyncError, DashboardParseError,
+    Dashboard, DashboardLayout, visit_dicts)
+
+
+class FakeDiamondashResponse(FakeResponse):
+    def __init__(self, data=None, code=200):
+        data = self.make_response_data(data)
+        super(FakeDiamondashResponse, self).__init__(data=data, code=code)
+
+    def make_response_data(self, data=None):
+        return {
+            'success': True,
+            'data': data
+        }
+
+
+class FakeDiamondashErrorResponse(FakeResponse):
+    def __init__(self, message, code):
+        data = self.make_response_data(message)
+        super(FakeDiamondashErrorResponse, self).__init__(data=data, code=code)
+
+    def make_response_data(self, message):
+        return {
+            'success': False,
+            'message': message
+        }
 
 
 class ToyLayout(DashboardLayout):
@@ -15,11 +41,75 @@ class ToyLayout(DashboardLayout):
 class TestDashboard(GoTestCase):
     def setUp(self):
         super(TestDashboard, self).setUp()
+        self.diamondash = FakeServer()
+
+        layout = ToyLayout([{
+            'type': 'lvalue',
+            'time_range': '1d',
+            'title': 'Spam (24h)',
+            'target': {
+                'metric_type': 'foo',
+                'name': 'spam',
+            },
+        }, {
+            'type': 'lvalue',
+            'time_range': '1d',
+            'title': 'Ham (24h)',
+            'target': {
+                'metric_type': 'foo',
+                'name': 'ham',
+            },
+        }])
 
         self.dashboard = Dashboard(
             'ackbar-the-dashboard',
             'Ackbar the Dashboard',
-            ToyLayout())
+            layout)
+
+    def tearDown(self):
+        super(TestDashboard, self).setUp()
+
+    def test_sync(self):
+        self.assertEqual(self.dashboard.serialize(), None)
+
+        resp = FakeDiamondashResponse({'happy': 'config'})
+        self.diamondash.set_response(resp)
+
+        self.dashboard.sync()
+        [request] = self.diamondash.get_requests()
+
+        self.assertEqual(request['method'], 'put')
+
+        self.assertEqual(
+            request['url'],
+            'http://localhost:7115/api/dashboards')
+
+        self.assertEqual(request['data'], {
+            'name': 'ackbar-the-dashboard',
+            'title': 'Ackbar the Dashboard',
+            'widgets': [{
+                'type': 'lvalue',
+                'time_range': '1d',
+                'title': 'Spam (24h)',
+                'target': 'foo.spam',
+            }, {
+                'type': 'lvalue',
+                'time_range': '1d',
+                'title': 'Ham (24h)',
+                'target': 'foo.ham',
+            }]
+        })
+        self.assertEqual(self.dashboard.serialize(), {'happy': 'config'})
+
+    def test_sync_for_api_error_responses(self):
+        resp = FakeDiamondashErrorResponse(':(', code=400)
+        self.diamondash.set_response(resp)
+        self.assertRaises(DashboardSyncError, self.dashboard.sync)
+
+    def test_sync_for_error_responses(self):
+        resp = FakeResponse('Gateway Timeout', code=504)
+        self.diamondash.set_response(resp)
+        self.assertRaises(DashboardSyncError, self.dashboard.sync)
 
 
 class TestDashboardLayout(GoTestCase):
