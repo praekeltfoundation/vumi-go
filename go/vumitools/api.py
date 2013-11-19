@@ -23,6 +23,7 @@ from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.opt_out import OptOutStore
 from go.vumitools.router import RouterStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
@@ -92,6 +93,8 @@ class VumiUserApi(object):
                                         self.user_account_key)
         self.channel_store = ChannelStore(self.api.manager,
                                           self.user_account_key)
+        self.optout_store = OptOutStore(self.api.manager,
+                                        self.user_account_key)
 
     def exists(self):
         return self.api.user_exists(self.user_account_key)

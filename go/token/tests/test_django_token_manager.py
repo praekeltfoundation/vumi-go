@@ -58,7 +58,7 @@ class DjangoTokenManagerTestCase(VumiGoDjangoTestCase):
         token = self.tm.generate('/path/', user_id=self.user.pk)
         token_url = reverse('token', kwargs={'token': token})
         token_data = self.tm.get(token)
-        self.client.login(username='username', password='password')
+        self.client.login(email='user@domain.com', password='password')
         response = self.client.get(token_url)
         self.assertTrue(
             response['Location'].endswith('/path/?token=%s-%s%s' % (

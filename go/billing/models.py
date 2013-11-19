@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.conf import settings
 
 import go.billing.settings as app_settings
 
@@ -19,7 +20,7 @@ class TagPool(models.Model):
 class Account(models.Model):
     """Represents a user account"""
 
-    user = models.ForeignKey('auth.User')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     account_number = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     credit_balance = models.IntegerField(default=0)
@@ -95,6 +96,7 @@ class Transaction(models.Model):
 
     account_number = models.CharField(max_length=100)
     tag_pool_name = models.CharField(max_length=100, blank=True)
+    tag_name = models.CharField(max_length=100, blank=True)
     message_direction = models.CharField(max_length=20, blank=True)
     message_cost = models.IntegerField(blank=True, null=True)
     markup_percent = models.DecimalField(max_digits=10, decimal_places=2,

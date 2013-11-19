@@ -32,7 +32,7 @@ def details(request):
     account_form = AccountForm(request.user, initial={
         'name': request.user.first_name,
         'surname': request.user.last_name,
-        'email_address': request.user.username,
+        'email_address': request.user.email,
         'msisdn': account.msisdn,
         'confirm_start_conversation': account.confirm_start_conversation,
         'email_summary': account.email_summary,
@@ -160,12 +160,6 @@ def user_detail(request, user_id=None):
                                             instance=edit_user_profile)
 
         if user_form.is_valid() and user_profile_form.is_valid():
-            # TODO: This works fine for editing users, but I think
-            # creating users is slightly more complicated because
-            # it needs to work within riak.
-
-            # TODO: Username isn't required in vumigo, what should we
-            # use instead?
             user_form.save()
             user_profile_form.save()
             messages.add_message(request, messages.INFO, 'User saved')

@@ -152,6 +152,12 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
     opt_out_connector = ConfigText(
         "Connector to publish opt-out messages on.",
         static=True, required=True)
+    billing_inbound_connector = ConfigText(
+        "Connector to publish inbound messages on.",
+        static=True, required=False)
+    billing_outbound_connector = ConfigText(
+        "Connector to publish outbound messages on.",
+        static=True, required=False)
     user_account_key = ConfigText(
         "Key of the user account the message is from.")
 
@@ -220,6 +226,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     ROUTER = GoConnector.ROUTER
     TRANSPORT_TAG = GoConnector.TRANSPORT_TAG
     OPT_OUT = GoConnector.OPT_OUT
+    BILLING = GoConnector.BILLING
 
     # directions (references to GoConnector constants for convenience)
     INBOUND = GoConnector.INBOUND
@@ -231,6 +238,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self._go_setup_worker()
         config = self.get_static_config()
         self.opt_out_connector = config.opt_out_connector
+        self.billing_inbound_connector = config.billing_inbound_connector
+        self.billing_outbound_connector = config.billing_outbound_connector
+        self.billing_connectors = set()
+        self.billing_connectors.add(self.billing_inbound_connector)
+        self.billing_connectors.add(self.billing_outbound_connector)
         self.router_inbound_connector_mapping = (
             config.router_inbound_connector_mapping)
         self.router_outbound_connector_mapping = (
@@ -297,7 +309,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         returnValue(self.CONFIG_CLASS(config_dict))
 
     def connector_type(self, connector_name):
-        if connector_name in self.application_connectors:
+        if connector_name in self.billing_connectors:
+            return self.BILLING
+        elif connector_name in self.application_connectors:
             return self.CONVERSATION
         elif connector_name in self.router_connectors:
             return self.ROUTER
@@ -346,10 +360,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         if direction == self.INBOUND:
             allowed_types = (
-                self.CONVERSATION, self.ROUTER, self.OPT_OUT)
+                self.CONVERSATION, self.ROUTER, self.OPT_OUT, self.BILLING)
         else:
             allowed_types = (
-                self.ROUTER, self.TRANSPORT_TAG)
+                self.ROUTER, self.TRANSPORT_TAG, self.BILLING)
 
         if conn.ctype not in allowed_types:
             raise UnroutableMessageError(
@@ -391,6 +405,12 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         elif conn.ctype == conn.OPT_OUT:
             dst_connector_name = self.opt_out_connector
 
+        elif conn.ctype == conn.BILLING:
+            if direction == self.INBOUND:
+                dst_connector_name = self.billing_inbound_connector
+            else:
+                dst_connector_name = self.billing_outbound_connector
+
         else:
             raise UnroutableMessageError(
                 "Serious error. Reached apparently unreachable state"
@@ -414,10 +434,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         msg_mdh = self.get_metadata_helper(msg)
 
         if direction == self.INBOUND:
-            allowed_types = (self.TRANSPORT_TAG, self.ROUTER)
+            allowed_types = (self.TRANSPORT_TAG, self.ROUTER, self.BILLING)
         else:
             allowed_types = (self.CONVERSATION, self.ROUTER,
-                             self.OPT_OUT)
+                             self.OPT_OUT, self.BILLING)
 
         if connector_type not in allowed_types:
             raise UnroutableMessageError(
@@ -440,6 +460,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         elif connector_type == self.OPT_OUT:
             src_conn = str(GoConnector.for_opt_out())
 
+        elif connector_type == self.BILLING:
+            src_conn = str(GoConnector.for_billing(direction))
+
         else:
             raise UnroutableMessageError(
                 "Serious error. Reached apparently unreachable state"
@@ -461,6 +484,27 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
+    def tag_for_reply(self, reply):
+        """Look up the original message and return its tag.
+
+        Used to route replies from the opt-out worker back to the transport
+        the original message came from.self
+
+        Raises UnroutableMessageError if the tag cannout be determined.
+        """
+        orig_msg = yield self.find_message_for_reply(reply)
+        if orig_msg is None:
+            raise UnroutableMessageError(
+                "Could not find original message for reply from"
+                " the opt-out worker", reply)
+        orig_msg_mdh = self.get_metadata_helper(orig_msg)
+        if orig_msg_mdh.tag is None:
+            raise UnroutableMessageError(
+                "Could not find tag on original message for reply"
+                " from the opt-out worker", reply)
+        returnValue(orig_msg_mdh.tag)
+
+    @inlineCallbacks
     def publish_outbound_optout(self, config, msg):
         """Publish a reply from the opt-out worker.
 
@@ -468,19 +512,42 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         sending the reply out via the same tag the original
         message came in on.
         """
-        orig_msg = yield self.find_message_for_reply(msg)
-        if orig_msg is None:
-            raise UnroutableMessageError(
-                "Could not find original message for reply from"
-                " the opt-out worker", msg)
-        orig_msg_mdh = self.get_metadata_helper(orig_msg)
-        if orig_msg_mdh.tag is None:
-            raise UnroutableMessageError(
-                "Could not find tag on original message for reply"
-                " from the opt-out worker", msg)
-        dst_conn = GoConnector.for_transport_tag(*orig_msg_mdh.tag)
+        tag = yield self.tag_for_reply(msg)
+        dst_conn = GoConnector.for_transport_tag(*tag)
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, [str(dst_conn), 'default'], self.OUTBOUND)
+        yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
+
+    @inlineCallbacks
+    def publish_inbound_to_billing(self, config, msg):
+        """Publish an inbound message to the billing worker."""
+        target = (str(GoConnector.for_billing(self.INBOUND)), 'default')
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            msg, target, self.INBOUND)
+
+        yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
+
+    @inlineCallbacks
+    def publish_outbound_to_billing(self, config, msg, tag):
+        """Publish an outbound message to the billing worker."""
+        msg_mdh = self.get_metadata_helper(msg)
+        msg_mdh.set_tag(tag)
+        target = (str(GoConnector.for_billing(self.OUTBOUND)), 'default')
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            msg, target, self.OUTBOUND)
+
+        yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
+
+    @inlineCallbacks
+    def publish_outbound_from_billing(self, config, msg):
+        """Publish an outbound message to its intended destination
+        after billing.
+        """
+        msg_mdh = self.get_metadata_helper(msg)
+        dst_conn = GoConnector.for_transport_tag(*msg_mdh.tag)
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            msg, [str(dst_conn), 'default'], self.OUTBOUND)
+
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
@@ -491,12 +558,14 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         * transports (these might be opt-out messages)
         * routers
+        * the billing worker
 
         And may go to:
 
         * routers
         * conversations
         * the opt-out worker
+        * the billing worker
         """
         log.debug("Processing inbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
@@ -505,8 +574,15 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         connector_type = self.connector_type(connector_name)
         src_conn = self.acquire_source(msg, connector_type, self.INBOUND)
 
-        if (connector_type == self.TRANSPORT_TAG
-                and msg_mdh.is_optout_message()):
+        if self.billing_inbound_connector:
+            if connector_type == self.TRANSPORT_TAG:
+                yield self.publish_inbound_to_billing(config, msg)
+                return
+            if connector_type == self.BILLING:
+                # set the src_conn to the transport and keep routing
+                src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
+
+        if msg_mdh.is_optout_message():
             yield self.publish_inbound_optout(config, msg)
             return
 
@@ -530,11 +606,13 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         * conversations
         * routers
         * the opt-out worker
+        * the billing worker
 
         And may go to:
 
         * routers
         * transports
+        * the billing worker
         """
         log.debug("Processing outbound: %s" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
@@ -543,15 +621,33 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         connector_type = self.connector_type(connector_name)
         src_conn = self.acquire_source(msg, connector_type, self.OUTBOUND)
 
-        if connector_type == self.OPT_OUT:
-            yield self.publish_outbound_optout(config, msg)
-            return
+        if self.billing_outbound_connector:
+            if connector_type in (self.CONVERSATION, self.ROUTER):
+                msg_mdh.reset_paid()
+            elif connector_type == self.OPT_OUT:
+                tag = yield self.tag_for_reply(msg)
+                yield self.publish_outbound_to_billing(config, msg, tag)
+                return
+            elif connector_type == self.BILLING:
+                yield self.publish_outbound_from_billing(config, msg)
+                return
+        else:
+            if connector_type == self.OPT_OUT:
+                yield self.publish_outbound_optout(config, msg)
+                return
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
             log.debug("No target found for message from '%s': %s" % (
                 connector_name, msg))
             return
+
+        if self.billing_outbound_connector:
+            target_conn = GoConnector.parse(target[0])
+            if target_conn.ctype == target_conn.TRANSPORT_TAG:
+                tag = [target_conn.tagpool, target_conn.tagname]
+                yield self.publish_outbound_to_billing(config, msg, tag)
+                return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.OUTBOUND)

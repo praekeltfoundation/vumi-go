@@ -63,13 +63,6 @@ class TestSubscriptionApplication(AppWorkerTestCase):
         msg = self.msg_helper.make_inbound(content, **kw)
         return self.dispatch_to_conv(msg, self.conv)
 
-    def set_subscription(self, contact, subscribed, unsubscribed):
-        for campaign_name in subscribed:
-            contact.subscription[campaign_name] = u'subscribed'
-        for campaign_name in unsubscribed:
-            contact.subscription[campaign_name] = u'unsubscribed'
-        return contact.save()
-
     @inlineCallbacks
     def test_subscribe_unsubscribe(self):
         yield self.assert_subscription(self.contact, 'foo', None)
@@ -103,28 +96,3 @@ class TestSubscriptionApplication(AppWorkerTestCase):
         [reply] = yield self.get_dispatched_messages()
         self.assertEqual('Unrecognised keyword.', reply['content'])
         yield self.assert_subscription(self.contact, 'foo', None)
-
-    @inlineCallbacks
-    def test_collect_metrics(self):
-        second_contact = yield self.user_api.contact_store.new_contact(
-            name=u'Second', surname=u'Contact', msisdn=u'+27831234568')
-        third_contact = yield self.user_api.contact_store.new_contact(
-            name=u'Third', surname=u'Contact', msisdn=u'+27831234569')
-        yield self.set_subscription(self.contact, [], ['bar'])
-        yield self.set_subscription(second_contact, ['foo', 'bar'], [])
-        yield self.set_subscription(third_contact, ['foo'], ['bar'])
-
-        yield self.dispatch_command(
-            'collect_metrics', conversation_key=self.conv.key,
-            user_account_key=self.user_account.key)
-
-        prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
-
-        self.assertEqual(
-            self.get_published_metrics(self.app),
-            [("%s.foo.subscribed" % prefix, 2),
-             ("%s.foo.unsubscribed" % prefix, 0),
-             ("%s.bar.subscribed" % prefix, 1),
-             ("%s.bar.unsubscribed" % prefix, 2),
-             ("%s.messages_sent" % prefix, 0),
-             ("%s.messages_received" % prefix, 0)])

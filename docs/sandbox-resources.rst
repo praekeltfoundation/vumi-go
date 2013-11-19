@@ -82,3 +82,24 @@ operations are available. There is a limit of 10000 keys per user.
 .. autoclass:: vumi.application.sandbox.RedisResource
    :members:
    :show-inheritance:
+
+**messagestore**
+
+Provides access to the stats in the messagestore. Specifically counts of
+messages sent, received, unique "from_addr"s and "to_addr"s and
+calculated throughput of any conversation linked to a Vumi Go account.
+
+.. autoclass:: go.apps.jsbox.message_store.MessageStoreResource
+   :members:
+   :show-inheritance:
+
+**optout**
+
+Provides access to the opt-out status of contacts. Allows one to check, count and change the opt-out status of ``address_type`` and ``address_value`` pairs.
+
+.. note:: This resource needs to be enabled on a per-account basis.
+          By default it is disabled for all accounts.
+
+.. autoclass:: go.apps.jsbox.opt_out.OptOutResource
+   :members:
+   :show-inheritance:

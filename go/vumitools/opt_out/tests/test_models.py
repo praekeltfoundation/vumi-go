@@ -104,3 +104,10 @@ class TestOptOutStore(GoTestCase):
         opt_outs = yield self.opt_out_store.opt_outs_for_addresses(
             "msisdn", [])
         self.assertEqual(opt_outs, [])
+
+    @inlineCallbacks
+    def test_count(self):
+        store = self.opt_out_store
+        yield store.new_opt_out(
+            "msisdn", "+1234", self.msg_helper.make_inbound("inbound"))
+        self.assertEqual((yield store.count()), 1)
