@@ -267,9 +267,8 @@ class MetricsMiddleware(BaseMiddleware):
 
     def set_inbound_timestamp(self, transport_name, message):
         key = self.key(transport_name, message['message_id'])
-        d = self.redis.set(key, repr(time.time()))
-        d.addCallback(lambda _: self.redis.expire(key, self.max_lifetime))
-        return d
+        return self.redis.setex(
+            key, self.max_lifetime, repr(time.time()))
 
     @inlineCallbacks
     def get_outbound_timestamp(self, transport_name, message):
