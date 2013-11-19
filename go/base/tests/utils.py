@@ -379,6 +379,25 @@ class FakeResponse(Response):
         return self._content
 
 
+class FakeRpcResponse(FakeResponse):
+    def __init__(self, id=None, result=None, error=None):
+        super(FakeRpcResponse, self).__init__(
+            data=self.make_rpc_data(id, result, error))
+
+    @classmethod
+    def make_rpc_data(cls, id=None, result=None, error=None):
+        data = {
+            'id': id,
+            'jsonrpc': '2.0',
+            'result': result,
+        }
+
+        if error is not None:
+            data['error'] = error
+
+        return data
+
+
 class FakeServer(object):
     METHODS = [
         'get',
