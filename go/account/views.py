@@ -2,6 +2,7 @@ import csv
 
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -19,6 +20,9 @@ from go.account.tasks import update_account_details
 from go.base.models import UserProfile
 from go.token.django_token_manager import DjangoTokenManager
 from go.billing.models import MonthlyStatement
+
+
+STATEMENTS_PER_PAGE = 12
 
 
 class GoRegistrationView(RegistrationView):
@@ -186,8 +190,18 @@ def billing(request, template_name='account/billing.html'):
     except IndexError:
         statement_list = []
 
+    paginator = Paginator(statement_list, STATEMENTS_PER_PAGE)
+    try:
+        page = paginator.page(request.GET.get('p', 1))
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        page = paginator.page(paginator.num_pages)
+
     context = {
-        'statement_list': statement_list
+        'statement_list': statement_list,
+        'paginator': paginator,
+        'page': page,
     }
     return render(request, template_name, context)
 

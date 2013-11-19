@@ -645,6 +645,83 @@ button {
 .campaigns .actions .right a:first-child {
   margin-right: 20px;
 }
+.routing #diagram .column-container {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  text-align: center;
+}
+.routing #diagram .column-container .title {
+  font-size: 22px;
+  margin: 10px 0;
+  font-family: inherit;
+  font-weight: bold;
+  display: block;
+  color: inherit;
+  text-rendering: optimizelegibility;
+}
+.routing #diagram .column-container .new {
+  font-size: 30px;
+  width: 130px;
+}
+.routing #diagram .column-container .column {
+  margin-top: 15px;
+}
+.routing #diagram .column-container .state {
+  background: #d2d0c7;
+  color: #333;
+  font-size: 16px;
+  text-align: center;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+  width: 150px;
+  min-height: 100px;
+  margin: 15px auto;
+  padding-top: 10px;
+  z-index: 0;
+  -webkit-user-select: none;
+}
+.routing #diagram .column-container .state .name {
+  margin: 10px;
+}
+.routing #diagram .column-container .state:hover {
+  cursor: move;
+}
+.routing #diagram .column-container .endpoint {
+  background: #888;
+  padding: 3px;
+}
+.routing #diagram .column-container .endpoint:hover {
+  cursor: pointer;
+}
+.routing #diagram ._jsPlumb_endpoint,
+.routing #diagram ._jsPlumb_connector {
+  z-index: 200;
+}
+.routing #diagram ._jsPlumb_endpoint svg circle:hover {
+  cursor: move;
+}
+.routing #diagram ._jsPlumb_connector {
+  z-index: 1;
+  opacity: 0.85;
+}
+.routing #diagram ._jsPlumb_endpoint {
+  z-index: 5;
+  opacity: 0.85;
+}
+.routing #diagram ._jsPlumb_endpoint svg circle:hover {
+  cursor: move;
+}
+.routing #diagram ._jsPlumb_dragging {
+  opacity: 0.5;
+}
+.routing #diagram ._jsPlumb_hover {
+  opacity: 0.75;
+}
 .contacts .smart-group-search form {
   display: inline;
 }

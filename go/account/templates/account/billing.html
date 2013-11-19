@@ -8,9 +8,10 @@
     <div class="col-md-12">
         <div class="indent">
             {% include "base/includes/messages.html" %}
-            <table class="table">
+            <table class="table table-form-view">
                 <thead>
                     <tr>
+                        <th></th>
                         <th>Date</th>
                         <th>Statement</th>
                     </tr>
@@ -18,6 +19,7 @@
                 <tbody>
                     {% for statement in statement_list %}
                     <tr>
+                        <td></td>
                         <td>{{ statement.year }}-{{ statement.month }}</td>
                         <td><a href="{% url 'account:statement_view' statement.id %}">View</a></td>
                     </tr>
