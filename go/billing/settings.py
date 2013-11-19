@@ -1,8 +1,10 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
 CREDIT_CONVERSION_FACTOR = getattr(
-    settings, 'BILLING_CREDIT_CONVERSION_FACTOR', 0.4)
+    settings, 'BILLING_CREDIT_CONVERSION_FACTOR', Decimal('0.4'))
 
 API_MIN_CONNECTIONS = getattr(settings, 'BILLING_API_MIN_CONNECTIONS', 10)
 

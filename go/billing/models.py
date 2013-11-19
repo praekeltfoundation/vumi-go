@@ -25,7 +25,7 @@ class Account(models.Model):
     description = models.TextField(blank=True)
     credit_balance = models.IntegerField(default=0)
     alert_threshold = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.0,
+        max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("Low-credits notification will be sent when the "
                     "credit balance reaches the alert threshold percentage"))
 
@@ -59,13 +59,13 @@ class MessageCost(models.Model):
         default=0, help_text=_("The base message cost in cents."))
 
     markup_percent = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.0,
+        max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("The markup percentage. e.g. 20.0 for twenty percent"))
 
     @property
     def resulting_price(self):
         """Return the resulting price in cents"""
-        markup = self.message_cost * self.markup_percent / Decimal(100.0)
+        markup = self.message_cost * self.markup_percent / Decimal('100.0')
         return self.message_cost + markup.to_integral_value()
 
     @property
