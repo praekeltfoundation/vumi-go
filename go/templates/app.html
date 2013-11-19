@@ -41,7 +41,7 @@
                 <li><a href="{% url 'account:details' %}">Details</a></li>
                 {# TODO <li><a href="#">Switch account</a></li> #}
                 <li><a href="{% url 'auth_logout' %}">Logout</a></li>
-                <li><a href="#">{% credit_balance request.user %}</a></li>
+                <li><span class="status">{% credit_balance request.user %}</span></li>
             </ul>
         </li>
     </ul>

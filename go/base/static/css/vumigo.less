@@ -11,7 +11,7 @@ a:link, button {
 }
 
 .btn.disabled {
-  // hack to allow tooltips to work with disabled buttons 
+  // hack to allow tooltips to work with disabled buttons
   pointer-events: auto;
 }
 
@@ -40,12 +40,22 @@ a:link, button {
   .nav {
     background: transparent !important;
 
-    li { 
+    li {
       height: 39px;
       padding: 0 15px;
+
+      span.status {
+        display: block;
+        padding: 3px 20px;
+        clear: both;
+        font-weight: normal;
+        line-height: 1.428571429;
+        color: #333333;
+        white-space: nowrap;
+      }
     }
 
-    a {
+    a, span.status {
       color: #0bcac3 !important;
       text-shadow: none !important;
       outline: none;
@@ -119,7 +129,7 @@ a:link, button {
     .dropdown-menu {
       background: #2f3436;
       border: none;
-      
+
       &:after {
         border-top-color: @border;
         border-bottom-color: @border;
@@ -137,12 +147,12 @@ a:link, button {
   .header {
     height: 54px;
     line-height: 54px;
-    
+
     h1 {
       font-size: 24px;
       line-height: 54px;
       font-weight: bold;
-      
+
       padding: 0 12px;
       margin: 0;
       color: #2F3436;
@@ -169,7 +179,7 @@ a:link, button {
     margin: 0 0 5px 0;
 
     .sidebar {
-      background: #d2d0c7; 
+      background: #d2d0c7;
       .box-sizing(content-box);
       border-left: 5px #15191a solid;
       margin-left: -20px !important;
@@ -195,7 +205,7 @@ a:link, button {
 
   // this cannot be applied to a row or span element.
   // it's unfortunate, but that's the way the cookie crumbles.
-  // you'll get visual leaks if you try and indent one of the 
+  // you'll get visual leaks if you try and indent one of the
   // above.
   .indent {
     margin: 2em 1em;
@@ -250,7 +260,7 @@ a:link, button {
 
 .content .sidebar .extra-actions {
   margin-bottom: 1em;
-  
+
   a, a.active { color: #0088cc; }
   a.active {
     margin: 0;
@@ -274,7 +284,7 @@ a:link, button {
 
   li {
     padding: 0;
-    margin: 0;  
+    margin: 0;
   }
 }
 
@@ -361,6 +371,21 @@ a:link, button {
 
       .type(#3a87ad; #d9edf7);
     }
+  }
+}
+
+.menu-contextual {
+  background: #fff;
+  padding: 10px;
+  margin: 0 15px;
+
+  h4 {
+    font-weight: bold;
+  }
+
+  h4, p {
+    border-bottom: 1px dotted #ccc;
+    padding-bottom: 10px;
   }
 }
 
