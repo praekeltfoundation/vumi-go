@@ -4,12 +4,13 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from go.vumitools.tests.utils import GoTestCase
-from go.vumitools.account import AccountStore
+from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+
 from go.vumitools.channel.models import ChannelStore, CheapPlasticChannel
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class TestChannel(GoTestCase):
+class TestChannel(VumiTestCase):
 
     def make_channel(self, tagpool_metadata={}):
         return CheapPlasticChannel("pool", "tag", tagpool_metadata, "batch1")
@@ -35,16 +36,18 @@ class TestChannel(GoTestCase):
         self.assertFalse(channel.supports_replies())
 
 
-class TestChannelStore(GoTestCase):
-    use_riak = True
+class TestChannelStore(VumiTestCase):
+    is_sync = False
 
     @inlineCallbacks
     def setUp(self):
-        super(TestChannelStore, self).setUp()
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.channel_store = ChannelStore.from_user_account(self.account)
+        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
+        print self.vumi_helper.is_sync
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.get_or_create_user()
+        user_account = yield self.user_helper.get_user_account()
+        self.channel_store = ChannelStore.from_user_account(user_account)
 
     @inlineCallbacks
     def test_get_channel_by_tag(self):
@@ -60,4 +63,4 @@ class TestChannelStore(GoTestCase):
 
 
 class TestChannelStoreSync(TestChannelStore):
-    sync_persistence = True
+    is_sync = True

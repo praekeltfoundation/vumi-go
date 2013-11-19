@@ -2,33 +2,29 @@ import json
 
 from django.core.urlresolvers import reverse
 
-from go.base.tests.utils import VumiGoDjangoTestCase
 from go.api.go_api.tests.utils import MockRpc
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 from go.api.go_api.api_types import (
     ChannelType, ConversationType, RoutingEntryType)
 
 
-class RoutingScreenTestCase(VumiGoDjangoTestCase):
+class RoutingScreenTestCase(GoDjangoTestCase):
     # Most of the functionality of this view lives in JS, so we just test that
     # we're correctly injecting initial state into the template.
 
-    use_riak = True
-
     def setUp(self):
-        super(RoutingScreenTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
-        self.setup_client()
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
         self.mock_rpc = MockRpc()
-
-    def tearDown(self):
-        super(RoutingScreenTestCase, self).tearDown()
-        self.mock_rpc.tearDown()
+        self.add_cleanup(self.mock_rpc.tearDown)
 
     def make_routing_table(self, channels=(), conversations=(), routing=()):
         routing_table = {
-            u'campaign_id': self.user_api.user_account_key,
+            u'campaign_id': self.user_helper.account_key,
             u'channels': [],
             u'conversations': [],
             u'routers': [],
@@ -72,7 +68,7 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
     def check_api_request(self):
         request = self.mock_rpc.request
         self.assertEqual(request['method'], 'routing_table')
-        self.assertEqual(request['params'], [self.user_api.user_account_key])
+        self.assertEqual(request['params'], [self.user_helper.account_key])
 
     def test_empty_routing(self):
         routing_table = self.make_routing_table()
@@ -87,11 +83,11 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
             response, reverse('conversations:new_conversation'))
 
     def test_non_empty_routing(self):
-        conv = self.create_conversation()
+        conv = self.user_helper.create_conversation(u'bulk_message')
         tag = (u'pool', u'tag')
         routing_table = self.make_routing_table(
-            channels=[self.user_api.get_channel(tag)], conversations=[conv],
-            routing=[(conv, tag), (tag, conv)])
+            channels=[self.user_helper.user_api.get_channel(tag)],
+            conversations=[conv], routing=[(conv, tag), (tag, conv)])
 
         self.mock_rpc.set_response(result=routing_table)
         response = self.client.get(reverse('routing'))

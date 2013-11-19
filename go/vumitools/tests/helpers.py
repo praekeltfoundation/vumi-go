@@ -160,6 +160,23 @@ class GoMessageHelper(object):
             return messages
 
     @proxyable
+    def add_outbound_to_conv(self, conv, count, start_date=None,
+                             time_multiplier=10):
+        now = start_date or datetime.now().date()
+
+        messages = []
+        for i in range(count):
+            timestamp = now - timedelta(hours=i * time_multiplier)
+            messages.append(self.make_stored_outbound(
+                conv, "outbound %s" % (i,), to_addr='to-%s' % (i,),
+                timestamp=timestamp))
+        if isinstance(messages[0], Deferred):
+            # We're async, return a Deferred.
+            return gatherResults(messages)
+        else:
+            return messages
+
+    @proxyable
     def add_replies_to_conv(self, conv, msgs):
         messages = []
         ds = []
@@ -202,13 +219,14 @@ class VumiApiHelper(object):
         self._vumi_api = vumi_api
 
     @proxyable
-    def setup_vumi_api(self):
+    def setup_vumi_api(self, amqp_client=None):
         if self.is_sync:
             from django.conf import settings
-            self._vumi_api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
+            self._vumi_api = VumiApi.from_config_sync(
+                settings.VUMI_API_CONFIG, amqp_client)
             return
 
-        d = VumiApi.from_config_async(self.mk_config({}))
+        d = VumiApi.from_config_async(self.mk_config({}), amqp_client)
         return d.addCallback(self.set_vumi_api)
 
     @proxyable
