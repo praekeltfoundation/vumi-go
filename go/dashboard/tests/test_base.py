@@ -3,7 +3,7 @@ from go.base.tests.utils import FakeResponse, FakeServer
 
 from go.dashboard.base import (
     DashboardSyncError, DashboardParseError,
-    Dashboard, DashboardLayout, visit_dicts)
+    Dashboard, DashboardLayout, visit_dicts, ensure_handler_fields)
 
 
 class FakeDiamondashResponse(FakeResponse):
@@ -31,9 +31,11 @@ class FakeDiamondashErrorResponse(FakeResponse):
 
 
 class ToyLayout(DashboardLayout):
+    @ensure_handler_fields('name')
     def handle_foo_metric(self, target):
         return "foo.%s" % target['name']
 
+    @ensure_handler_fields('name')
     def handle_bar_metric(self, target):
         return "bar.%s" % target['name']
 
@@ -194,6 +196,31 @@ class TestDashboardLayout(GoTestCase):
                 }]
             }
         }])
+
+    def test_metric_handling(self):
+        self.assertEqual(
+            self.layout.handle_foo_metric({'name': 'ham'}),
+            'foo.ham')
+
+        self.assertEqual(
+            self.layout.handle_bar_metric({'name': 'spam'}),
+            'bar.spam')
+
+    def test_metric_handling_for_field_checking(self):
+        self.assertRaises(
+            DashboardParseError,
+            self.layout.handle_foo_metric,
+            {})
+
+        self.assertRaises(
+            DashboardParseError,
+            self.layout.handle_foo_metric,
+            {'lerp': 'larp'})
+
+        self.assertRaises(
+            DashboardParseError,
+            self.layout.handle_bar_metric,
+            {})
 
     def test_new_row_adding(self):
         self.assertEqual(self.layout.serialize(), [])

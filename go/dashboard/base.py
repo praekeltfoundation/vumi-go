@@ -1,5 +1,6 @@
 import json
 from urlparse import urljoin
+from functools import wraps
 
 import requests
 from django.conf import settings
@@ -37,6 +38,20 @@ def visit_dicts(collection, fn):
 
             if is_mutable and isinstance(value, dict):
                 collection[key] = fn(value)
+
+
+def ensure_handler_fields(*fields):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(self, target):
+            missing_fields = [f for f in fields if f not in target]
+            if missing_fields:
+                raise DashboardParseError(
+                    "Dashboard layout handler '%s' is missing fields: %s" %
+                    (fn.__name__, missing_fields))
+            return fn(self, target)
+        return wrapper
+    return decorator
 
 
 class DashboardSyncError(Exception):
