@@ -1,4 +1,11 @@
-from go.dashboard.base import Dashboard, DashboardLayout
+from go.dashboard.base import (
+    DashboardSyncError, DashboardParseError,
+    Dashboard, DashboardLayout, ConversationDashboardLayout)
 
 
-__all__ = ['Dashboard', 'DashboardLayout']
+__all__ = [
+    'DashboardSyncError',
+    'DashboardParseError',
+    'Dashboard',
+    'DashboardLayout',
+    'ConversationDashboardLayout']
