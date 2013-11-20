@@ -5,6 +5,8 @@ from functools import wraps
 import requests
 from django.conf import settings
 
+from go.vumitools.metrics import ConversationMetric, AccountMetric
+
 
 def is_collection(obj):
     return (
@@ -147,3 +149,20 @@ class DashboardLayout(object):
 
     def serialize(self):
         return self.entities
+
+
+class ConversationDashboardLayout(DashboardLayout):
+    def __init__(self, conv, entities=None):
+        self.conv = conv
+        super(ConversationDashboardLayout, self).__init__(entities)
+
+    @ensure_handler_fields('name')
+    def handle_conversation_metric(self, target):
+        return ConversationMetric.make_name(self.conv, target['name'])
+
+    @ensure_handler_fields('store', 'name')
+    def handle_account_metric(self, target):
+        return AccountMetric.make_name(
+            self.conv.user_account.key,
+            target['store'],
+            target['name'])

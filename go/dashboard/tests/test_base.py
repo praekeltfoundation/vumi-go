@@ -4,10 +4,11 @@ from go.base.tests.utils import VumiGoDjangoTestCase
 from go.dashboard.tests.utils import FakeDiamondashApiClient
 from go.dashboard.base import (
     DashboardSyncError, DashboardParseError,
-    Dashboard, DashboardLayout, visit_dicts, ensure_handler_fields)
+    Dashboard, DashboardLayout, ConversationDashboardLayout,
+    visit_dicts, ensure_handler_fields)
 
 
-class ToyLayout(DashboardLayout):
+class ToyDashboardLayout(DashboardLayout):
     @ensure_handler_fields('name')
     def handle_foo_metric(self, target):
         return "foo.%s" % target['name']
@@ -39,7 +40,7 @@ class TestDashboard(VumiGoDjangoTestCase):
         super(TestDashboard, self).setUp()
         self.diamondash_api = FakeDiamondashApiClient()
 
-        layout = ToyLayout([{
+        layout = ToyDashboardLayout([{
             'type': 'lvalue',
             'time_range': '1d',
             'title': 'Spam (24h)',
@@ -104,7 +105,7 @@ class TestDashboard(VumiGoDjangoTestCase):
 class TestDashboardLayout(VumiGoDjangoTestCase):
     def setUp(self):
         super(TestDashboardLayout, self).setUp()
-        self.layout = ToyLayout()
+        self.layout = ToyDashboardLayout()
 
     def test_visit_dicts(self):
         def traverse(collection):
@@ -186,28 +187,29 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
 
     def test_metric_handling(self):
         self.assertEqual(
-            self.layout.handle_foo_metric({'name': 'ham'}),
+            self.layout.handle_metric({
+                'metric_type': 'foo',
+                'name': 'ham',
+            }),
             'foo.ham')
 
         self.assertEqual(
-            self.layout.handle_bar_metric({'name': 'spam'}),
+            self.layout.handle_bar_metric({
+                'metric_type': 'bar',
+                'name': 'spam',
+            }),
             'bar.spam')
 
     def test_metric_handling_for_field_checking(self):
         self.assertRaises(
             DashboardParseError,
-            self.layout.handle_foo_metric,
-            {})
-
-        self.assertRaises(
-            DashboardParseError,
-            self.layout.handle_foo_metric,
-            {'lerp': 'larp'})
+            self.layout.handle_metric,
+            {'metric_type': 'foo'})
 
         self.assertRaises(
             DashboardParseError,
             self.layout.handle_bar_metric,
-            {})
+            {'metric_type': 'bar'})
 
     def test_new_row_adding(self):
         self.assertEqual(self.layout.serialize(), [])
@@ -261,3 +263,60 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
                     'name': 'spam'
                 }
             })
+
+
+class TestConversationDashboardLayout(VumiGoDjangoTestCase):
+    def setUp(self):
+        super(TestConversationDashboardLayout, self).setUp()
+        self.setup_user_api()
+        self.conv = self.create_conversation()
+        self.layout = ConversationDashboardLayout(self.conv)
+
+    def test_conversation_metric_handling(self):
+        self.assertEqual(
+            self.layout.handle_metric({
+                'metric_type': 'conversation',
+                'name': 'foo',
+            }),
+            "campaigns.%s.conversations.%s.foo" %
+            (self.conv.user_account.key, self.conv.key))
+
+    def test_conversation_metric_handling_for_missing_fields(self):
+        self.layout.handle_metric({
+            'metric_type': 'conversation',
+            'name': 'foo',
+        })
+
+        self.assertRaises(
+            DashboardParseError,
+            self.layout.handle_metric,
+            {'metric_type': 'conversation'})
+
+    def test_account_metric_handling(self):
+        self.assertEqual(
+            self.layout.handle_metric({
+                'metric_type': 'account',
+                'store': 'red',
+                'name': 'foo',
+            }),
+            "campaigns.%s.stores.red.foo" %
+            (self.conv.user_account.key))
+
+    def test_account_metric_handling_for_missing_fields(self):
+        self.layout.handle_metric({
+            'metric_type': 'account',
+            'store': 'red',
+            'name': 'foo',
+        })
+
+        self.assertRaises(
+            DashboardParseError,
+            self.layout.handle_metric,
+            {'metric_type': 'account',
+             'store': 'red'})
+
+        self.assertRaises(
+            DashboardParseError,
+            self.layout.handle_metric,
+            {'metric_type': 'account',
+             'name': 'foo'})
