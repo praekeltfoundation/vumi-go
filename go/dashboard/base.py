@@ -57,9 +57,10 @@ class Dashboard(object):
         self.name = name
         self.title = title
         self.layout = layout
+        self.config = None
 
     def _api_url(self):
-        return urljoin(settings.DIAMONDASH_URL, 'dashboards')
+        return urljoin(settings.DIAMONDASH_API_URL, 'dashboards')
 
     def _raw_serialize(self):
         return {
@@ -79,16 +80,15 @@ class Dashboard(object):
         try:
             response.raise_for_status()
         except Exception, e:
-            DashboardSyncError("Dashboard sync failed: %s" % e)
+            raise DashboardSyncError("Dashboard sync failed: %s" % e)
 
-        content = json.loads(response.content)
-
+        content = response.json
         if not content['success']:
             raise DashboardSyncError(
                 "Dashboard sync failed: (%s) %s" %
-                (response.code, content['message']))
+                (response.status_code, content['message']))
 
-        self.config = json.loads(content['data'])
+        self.config = content['data']
 
     def serialize(self):
         return self.config
@@ -131,7 +131,7 @@ class DashboardLayout(object):
         if entity == 'new_row':
             self.new_row()
         else:
-            self.add_entity(entity)
+            self.add_widget(entity)
 
     def serialize(self):
         return self.entities
