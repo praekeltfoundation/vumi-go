@@ -1,11 +1,12 @@
 # -*- test-case-name: go.vumitools.tests.test_metrics_worker -*-
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.task import LoopingCall
 
 from vumi import log
 from vumi.worker import BaseWorker
 from vumi.config import ConfigInt
+from vumi.persist.model import Manager
 
 from go.vumitools.api import VumiApi, VumiApiCommand
 from go.vumitools.app_worker import GoWorkerConfigMixin, GoWorkerMixin
@@ -76,8 +77,11 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
     def setup_connectors(self):
         pass
 
+    @Manager.calls_manager
     def find_account_keys(self):
-        return self.redis.smembers('metrics_accounts')
+        keys = yield self.vumi_api.account_store.users.all_keys()
+        disabled_keys = yield self.redis.smembers('disabled_metrics_accounts')
+        returnValue(set(keys) - set(disabled_keys))
 
     def find_conversations_for_account(self, account_key):
         user_api = self.vumi_api.get_user_api(account_key)
