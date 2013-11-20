@@ -44,7 +44,16 @@ class TestFakeRpcErrorResponse(GoTestCase):
 class TestFakeServer(GoTestCase):
     def setUp(self):
         super(TestFakeServer, self).setUp()
-        self.server = FakeServer()
+
+        self.patch(requests, 'get', lambda *a, **kw: 'get')
+        self.patch(requests, 'post', lambda *a, **kw: 'post')
+        self.patch(requests, 'put', lambda *a, **kw: 'put')
+        self.patch(requests, 'head', lambda *a, **kw: 'head')
+        self.patch(requests, 'patch', lambda *a, **kw: 'patch')
+        self.patch(requests, 'options', lambda *a, **kw: 'options')
+        self.patch(requests, 'delete', lambda *a, **kw: 'delete')
+
+        self.server = FakeServer(r'^http://some.place')
 
     def tearDown(self):
         super(TestFakeServer, self).tearDown()
@@ -90,3 +99,24 @@ class TestFakeServer(GoTestCase):
         self.assertEqual(resp, requests.patch('http://some.place'))
         self.assertEqual(resp, requests.options('http://some.place'))
         self.assertEqual(resp, requests.delete('http://some.place'))
+
+    def test_request_bypassing(self):
+        requests.request('get', 'http://other.place')
+        requests.get('http://other.place')
+        requests.post('http://other.place')
+        requests.put('http://other.place')
+        requests.head('http://other.place')
+        requests.patch('http://other.place')
+        requests.options('http://other.place')
+        requests.delete('http://other.place')
+        self.assertEqual(self.server.get_requests(), [])
+
+    def test_request_response_bypassing(self):
+        self.assertEqual('get', requests.request('get', 'http://other.place'))
+        self.assertEqual('get', requests.get('http://other.place'))
+        self.assertEqual('post', requests.post('http://other.place'))
+        self.assertEqual('put', requests.put('http://other.place'))
+        self.assertEqual('head', requests.head('http://other.place'))
+        self.assertEqual('patch', requests.patch('http://other.place'))
+        self.assertEqual('options', requests.options('http://other.place'))
+        self.assertEqual('delete', requests.delete('http://other.place'))

@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 from StringIO import StringIO
 from functools import partial
+import re
 import uuid
 import json
 
-from mock import patch as mock_patch
-from requests import Response
+import requests
 from django.conf import settings, UserSettingsHolder
 from django.utils.functional import wraps
 from django.test import TestCase
@@ -362,7 +362,7 @@ class GoAccountCommandTestCase(VumiGoDjangoTestCase):
         self.assertEqual(expected_output, self.command.stdout.getvalue())
 
 
-class FakeResponse(Response):
+class FakeResponse(requests.Response):
     def __init__(self, content=None, data=None, code=200):
         super(FakeResponse, self).__init__()
         self.status_code = code
@@ -411,9 +411,12 @@ class FakeServer(object):
         'delete'
     ]
 
-    def __init__(self):
+    def __init__(self, url_pattern=r'.*'):
+        self.url_pattern = re.compile(url_pattern)
+
         self.requests = []
         self.patchers = {}
+        self.originals = {}
         self.set_response(FakeResponse())
 
         self._patch_request()
@@ -421,35 +424,35 @@ class FakeServer(object):
             self._patch_request_method(method)
 
     def _patch_request(self):
-        patcher = mock_patch('requests.request')
-        self.patchers['request'] = patcher
-
-        patched = patcher.start()
-        patched.side_effect = self.stubbed_request
+        self.originals['request'] = requests.request
+        requests.request = self.stubbed_request
 
     def _patch_request_method(self, method):
-        patcher = mock_patch('requests.%s' % method)
-        self.patchers['request'] = patcher
-
-        patched = patcher.start()
-        patched.side_effect = partial(self.stubbed_request, method)
+        self.originals[method] = getattr(requests, method)
+        setattr(requests, method, partial(self.stubbed_request, method))
 
     def tear_down(self):
-        for patcher in self.patchers.values():
-            patcher.stop()
+        for name, original in self.originals.iteritems():
+            setattr(requests, name, original)
 
     def get_requests(self):
         return self.requests
 
     def stubbed_request(self, method, url, **kwargs):
-        kwargs['url'] = url
-        kwargs['method'] = method
+        if self.url_pattern.match(url):
+            kwargs['url'] = url
+            kwargs['method'] = method
 
-        if 'data' in kwargs:
-            kwargs['data'] = json.loads(kwargs['data'])
+            if 'data' in kwargs:
+                kwargs['data'] = json.loads(kwargs['data'])
 
-        self.requests.append(kwargs)
-        return self.response
+            self.requests.append(kwargs)
+            resp = self.response
+        else:
+            original = self.originals[method]
+            resp = original(url, **kwargs)
+
+        return resp
 
     def set_response(self, response):
         self.response = response
