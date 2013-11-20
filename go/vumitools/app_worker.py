@@ -9,10 +9,25 @@ from vumi.blinkenlights.metrics import MetricManager
 from vumi.config import IConfigData, ConfigText, ConfigDict
 from vumi.connectors import IgnoreMessage
 
-from go.base import utils as base_utils
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.metrics import AccountMetric
 from go.vumitools.utils import MessageMetadataHelper
+
+
+def get_conversation_definition(conversation_type, conv=None):
+    """XXX: Temporary hack until we short out how to do this properly
+       in Vumi workers.
+       """
+    app_pkg = __import__('go.apps.%s' % conversation_type, ['definition'])
+    return app_pkg.definition.ConversationDefinition(conv)
+
+
+def get_router_definition(router_type, router=None):
+    """XXX: Temporary hack until we short out how to do this properly
+       in Vumi workers.
+       """
+    router_pkg = __import__('go.routers.%s' % router_type, ['definition'])
+    return router_pkg.definition.RouterDefinition(router)
 
 
 class GoApplicationConfigData(object):
@@ -274,7 +289,7 @@ class GoWorkerMixin(object):
         conv = yield user_api.get_conversation(conversation_key)
 
         conv_type = conv.conversation_type
-        conv_def = base_utils.get_conversation_definition(conv_type, conv)
+        conv_def = get_conversation_definition(conv_type, conv)
 
         yield gatherResults([
             m.oneshot(self.metrics, user_api=user_api)

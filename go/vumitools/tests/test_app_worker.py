@@ -4,7 +4,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from go.base import utils as base_utils
+from go.vumitools import app_worker
 from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.tests.helpers import GoMessageHelper
@@ -59,7 +59,7 @@ class TestGoApplicationWorker(AppWorkerTestCase):
         super(TestGoApplicationWorker, self).setUp()
 
         self.patch(
-            base_utils,
+            app_worker,
             'get_conversation_definition',
             lambda conv_type, conv: DummyConversationDefinition(conv))
 
