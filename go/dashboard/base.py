@@ -59,7 +59,8 @@ class Dashboard(object):
         self.layout = layout
         self.config = None
 
-    def _api_url(self):
+    @classmethod
+    def api_url(cls):
         return urljoin(settings.DIAMONDASH_API_URL, 'dashboards')
 
     def _raw_serialize(self):
@@ -74,7 +75,7 @@ class Dashboard(object):
         Ensures the dashboard exists on diamondash's side
         """
         response = requests.put(
-            self._api_url(),
+            self.api_url(),
             data=json.dumps(self._raw_serialize()))
 
         try:
@@ -82,13 +83,7 @@ class Dashboard(object):
         except Exception, e:
             raise DashboardSyncError("Dashboard sync failed: %s" % e)
 
-        content = response.json
-        if not content['success']:
-            raise DashboardSyncError(
-                "Dashboard sync failed: (%s) %s" %
-                (response.status_code, content['message']))
-
-        self.config = content['data']
+        self.config = response.json['data']
 
     def serialize(self):
         return self.config
