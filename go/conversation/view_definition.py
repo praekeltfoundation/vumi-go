@@ -676,6 +676,9 @@ class ConversationViewDefinitionBase(object):
     def is_editable(self):
         return self.edit_view is not None
 
+    def get_metrics(self):
+        return self._conv_def.get_metrics()
+
     def get_actions(self):
         return self._conv_def.get_actions()
 
