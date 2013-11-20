@@ -193,6 +193,9 @@ class MetricsMiddleware(BaseMiddleware):
         received its `message_id` is stored and when a reply for the given
         `message_id` is sent out, the timestamps are compared and a averaged
         metric is published.
+    :param int max_lifetime:
+        How long to keep a timestamp for. Anything older than this is trashed.
+        Defaults to 60 seconds.
     :param dict redis_manager:
         Connection configuration details for Redis.
     :param str op_mode:
@@ -215,6 +218,7 @@ class MetricsMiddleware(BaseMiddleware):
         self.count_suffix = self.config.get('count_suffix', 'count')
         self.response_time_suffix = self.config.get('response_time_suffix',
             'response_time')
+        self.max_lifetime = int(self.config.get('max_lifetime', 60))
         self.op_mode = self.config.get('op_mode', 'passive')
         if self.op_mode not in self.KNOWN_MODES:
             raise ConfigError('Unknown op_mode: %s' % (
@@ -263,7 +267,8 @@ class MetricsMiddleware(BaseMiddleware):
 
     def set_inbound_timestamp(self, transport_name, message):
         key = self.key(transport_name, message['message_id'])
-        return self.redis.set(key, repr(time.time()))
+        return self.redis.setex(
+            key, self.max_lifetime, repr(time.time()))
 
     @inlineCallbacks
     def get_outbound_timestamp(self, transport_name, message):
