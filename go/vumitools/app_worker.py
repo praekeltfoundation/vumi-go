@@ -18,7 +18,8 @@ def get_conversation_definition(conversation_type, conv=None):
     """XXX: Temporary hack until we short out how to do this properly
        in Vumi workers.
        """
-    app_pkg = __import__('go.apps.%s' % conversation_type, ['definition'])
+    app_pkg = __import__('go.apps.%s' % conversation_type,
+                         fromlist=['definition'])
     return app_pkg.definition.ConversationDefinition(conv)
 
 
@@ -26,7 +27,8 @@ def get_router_definition(router_type, router=None):
     """XXX: Temporary hack until we short out how to do this properly
        in Vumi workers.
        """
-    router_pkg = __import__('go.routers.%s' % router_type, ['definition'])
+    router_pkg = __import__('go.routers.%s' % router_type,
+                            fromlist=['definition'])
     return router_pkg.definition.RouterDefinition(router)
 
 
