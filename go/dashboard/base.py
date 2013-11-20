@@ -81,8 +81,9 @@ class DiamondashApiClient(object):
 
 
 class Dashboard(object):
+    api_client = DiamondashApiClient()
+
     def __init__(self, name, title, layout):
-        self.api = DiamondashApiClient()
         self.name = name
         self.title = title
         self.layout = layout
@@ -100,7 +101,8 @@ class Dashboard(object):
         Ensures the dashboard exists on diamondash's side
         """
         try:
-            self.config = self.api.replace_dashboard(self._raw_serialize())
+            raw_config = self._raw_serialize()
+            self.config = self.api_client.replace_dashboard(raw_config)
         except Exception, e:
             raise DashboardSyncError("Dashboard sync failed: %s" % e)
 

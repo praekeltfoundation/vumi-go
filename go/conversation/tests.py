@@ -1,18 +1,18 @@
 import json
+import logging
 from datetime import date
 from StringIO import StringIO
 from zipfile import ZipFile
 
+from mock import patch
 from django import forms
 from django.core import mail
 from django.core.urlresolvers import reverse
 from django.utils.unittest import skip
 
-from mock import patch
-
 import go.base.utils
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
+from go.base.tests.utils import (
+    VumiGoDjangoTestCase, FakeServer, FakeMessageStoreClient, FakeMatchResult)
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
@@ -20,6 +20,9 @@ from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.vumitools.conversation.utils import ConversationWrapper
+from go.dashboard import Dashboard, DashboardLayout, DashboardParseError
+from go.dashboard.tests.utils import (
+    FakeDiamondashResponse, FakeDiamondashErrorResponse)
 
 
 class EnabledAction(ConversationAction):
@@ -161,7 +164,7 @@ class BaseConversationViewTestCase(VumiGoDjangoTestCase):
         return go.base.utils.connection.get_commands()
 
 
-class TestConversationDashboardView(BaseConversationViewTestCase):
+class TestConversationsDashboardView(BaseConversationViewTestCase):
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
@@ -831,3 +834,62 @@ class TestConversationTemplateTags(BaseConversationViewTestCase):
     @skip("TODO")
     def test_get_reply_form_for_message(self):
         raise NotImplementedError("TODO")
+
+
+class TestConversationDashboardView(BaseConversationViewTestCase):
+    def setUp(self):
+        super(TestConversationDashboardView, self).setUp()
+        self.diamondash = FakeServer(Dashboard.api_url())
+
+        self.error_log = []
+        logger = logging.getLogger('go.conversation.view_definition')
+
+        def log_error(e):
+            self.error_log.append(unicode(e))
+
+        self.monkey_patch(logger, 'error', log_error)
+
+    def tearDown(self):
+        super(TestConversationDashboardView, self).tearDown()
+        self.diamondash.tear_down()
+
+    def test_get_dashboard(self):
+        self.diamondash.set_response(
+            FakeDiamondashResponse({'happy': 'dashboard'}))
+
+        conv = self.create_conversation(conversation_type=u'dummy')
+        response = self.client.get(self.get_view_url(conv, 'dashboard'))
+
+        [dd_request] = self.diamondash.get_requests()
+        raw_dashboard = dd_request['data']
+        self.assertEqual(raw_dashboard['name'], conv.key)
+        self.assertEqual(raw_dashboard['title'], conv.name)
+        self.assertTrue('widgets' in raw_dashboard)
+
+        self.assertEqual(
+            json.loads(response.context['model_data']),
+            {'happy': 'dashboard'})
+
+    def test_get_dashboard_for_sync_error_handling(self):
+        self.diamondash.set_response(FakeDiamondashErrorResponse(':(', 404))
+
+        conv = self.create_conversation(conversation_type=u'dummy')
+        response = self.client.get(self.get_view_url(conv, 'dashboard'))
+
+        self.assertEqual(
+            self.error_log,
+            ['Dashboard sync failed: 404 Client Error: '
+             '{"message": ":(", "success": false}'])
+
+        self.assertEqual(json.loads(response.context['model_data']), None)
+
+    def test_get_dashboard_for_parse_error_handling(self):
+        def bad_add_entity(*a, **kw):
+            raise DashboardParseError(':(')
+
+        self.monkey_patch(DashboardLayout, 'add_entity', bad_add_entity)
+        conv = self.create_conversation(conversation_type=u'dummy')
+
+        response = self.client.get(self.get_view_url(conv, 'dashboard'))
+        self.assertEqual(self.error_log, [':('])
+        self.assertEqual(json.loads(response.context['model_data']), None)

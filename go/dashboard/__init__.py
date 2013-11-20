@@ -1,4 +1,13 @@
-from go.dashboard.base import DiamondashApiClient, Dashboard, DashboardLayout
+from go.dashboard.base import (
+    DashboardSyncError, DashboardParseError,
+    DiamondashApiClient, Dashboard,
+    DashboardLayout, ConversationDashboardLayout)
 
 
-__all__ = ['DiamondashApiClient', 'Dashboard', 'DashboardLayout']
+__all__ = [
+    'DashboardSyncError',
+    'DashboardParseError',
+    'DiamondashApiClient',
+    'Dashboard',
+    'DashboardLayout',
+    'ConversationDashboardLayout']

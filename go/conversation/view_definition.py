@@ -23,6 +23,9 @@ from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
                                    ConversationDetailForm)
 from go.conversation.tasks import export_conversation_messages
 from go.conversation.utils import PagedMessageCache
+from go.dashboard import (
+    DashboardSyncError, DashboardParseError,
+    Dashboard, ConversationDashboardLayout)
 
 logger = logging.getLogger(__name__)
 
@@ -616,6 +619,101 @@ class EditConversationGroupsView(ConversationTemplateView):
             content_type="application/json")
 
 
+class ConversationDashboardView(ConversationTemplateView):
+    view_name = 'dashboard'
+    path_suffix = 'dashboard/'
+
+    def build_layout(self, conversation):
+        """
+        Returns a conversation's dashboard widget data.
+        Override to specialise dashboard building.
+        """
+
+        return ConversationDashboardLayout(conversation, [{
+            'type': 'lvalue',
+            'time_range': '1d',
+            'title': 'Messages Sent (24h)',
+            'target': 'messages_sent',
+        }, {
+            'type': 'lvalue',
+            'time_range': '1d',
+            'title': 'Messages Received (24h)',
+            'target': 'messages_received',
+        }, 'new_row', {
+            'type': 'graph',
+            'title': 'Messages Sent and Received (24h)',
+            'width': 6,
+            'time_range': '24h',
+            'bucket_size': '15m',
+            'metrics': [{
+                'title': 'Messagent Sent',
+                'target': {
+                    'metric_type': 'conversation',
+                    'name': 'messages_sent',
+                }
+            }, {
+                'title': 'Messagent Received',
+                'target': {
+                    'metric_type': 'conversation',
+                    'name': 'messages_received',
+                }
+            }]
+        }, {
+            'type': 'graph',
+            'title': 'Messages Sent and Received (30d)',
+            'width': 6,
+            'time_range': '30d',
+            'bucket_size': '1d',
+            'metrics': [{
+                'title': 'Messagent Sent',
+                'target': {
+                    'metric_type': 'conversation',
+                    'name': 'messages_received',
+                },
+            }, {
+                'title': 'Messagent Received',
+                'target': {
+                    'metric_type': 'conversation',
+                    'name': 'messages_received',
+                }
+            }]
+        }])
+
+    def on_sync_error(self, e):
+        """
+        Hook for doing things when a dashboard sync error is encountered. Logs
+        the error by default.
+        """
+        logger.error(e)
+
+    def on_parse_error(self, e):
+        """
+        Hook for doing things when a dashboard parse error is encountered. Logs
+        the error by default.
+        """
+        logger.error(e)
+
+    def get(self, request, conversation):
+        dashboard = None
+
+        try:
+            # build the dashboard
+            layout = self.build_layout(conversation)
+            dashboard = Dashboard(conversation.key, conversation.name, layout)
+
+            # give the dashboard to diamondash
+            dashboard.sync()
+        except DashboardParseError, e:
+            self.on_parse_error(e)
+        except DashboardSyncError, e:
+            self.on_sync_error(e)
+
+        model_data = json.dumps(dashboard.serialize() if dashboard else None)
+        return self.render_to_response({
+            'model_data': model_data,
+        })
+
+
 class ConversationViewDefinitionBase(object):
     """Definition of conversation UI.
 
@@ -641,6 +739,7 @@ class ConversationViewDefinitionBase(object):
         StopConversationView,
         ArchiveConversationView,
         AggregatesConversationView,
+        ConversationDashboardView
     )
 
     def __init__(self, conv_def):

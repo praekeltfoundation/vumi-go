@@ -58,13 +58,12 @@ class TestDashboard(VumiGoDjangoTestCase):
             },
         }])
 
+        self.monkey_patch(Dashboard, 'api_client', self.diamondash_api)
+
         self.dashboard = Dashboard(
             'ackbar-the-dashboard',
             'Ackbar the Dashboard',
             layout)
-
-        # Stub dashboard api with the fake api
-        self.dashboard.api = self.diamondash_api
 
     def tearDown(self):
         super(TestDashboard, self).setUp()
