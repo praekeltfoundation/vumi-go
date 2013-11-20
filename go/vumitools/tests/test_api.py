@@ -4,33 +4,28 @@
 
 import uuid
 
-from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.tests.utils import get_fake_amq_client
+from vumi.tests.helpers import VumiTestCase
 from vumi.errors import VumiError
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
-from go.vumitools.api import (
-    VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent)
-from go.vumitools.tests.utils import AppWorkerTestCase, FakeAmqpConnection
+from go.vumitools.api import VumiUserApi, VumiApiCommand, VumiApiEvent
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 from go.vumitools.routing_table import GoConnector, RoutingTable
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class TestTxVumiApi(AppWorkerTestCase):
+class TestTxVumiApi(VumiTestCase):
+    is_sync = False
+
     @inlineCallbacks
     def setUp(self):
-        yield super(TestTxVumiApi, self).setUp()
-        if self.sync_persistence:
-            # Set up the vumi exchange, in case we don't have one.
-            self._amqp.exchange_declare('vumi', 'direct')
-            self.vumi_api = VumiApi.from_config_sync(
-                self.mk_config({}), FakeAmqpConnection(self._amqp))
-        else:
-            self.vumi_api = yield VumiApi.from_config_async(
-                self.mk_config({}), get_fake_amq_client(self._amqp))
+        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_api = self.vumi_helper.get_vumi_api()
 
     @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
@@ -47,25 +42,26 @@ class TestTxVumiApi(AppWorkerTestCase):
                     batch_id="b123", content="Hello!",
                     msg_options={'from_addr': '+56'}, to_addr=addr)
 
-        [cmd1, cmd2] = self.get_dispatcher_commands()
+        [cmd1, cmd2] = self.vumi_helper.get_dispatched_commands()
         self.assertEqual(cmd1.payload['kwargs']['to_addr'], '+12')
         self.assertEqual(cmd2.payload['kwargs']['to_addr'], '+34')
 
 
 class TestVumiApi(TestTxVumiApi):
-    sync_persistence = True
+    is_sync = True
 
 
-class TestTxVumiUserApi(AppWorkerTestCase):
+class TestTxVumiUserApi(VumiTestCase):
+    is_sync = False
+
     @inlineCallbacks
     def setUp(self):
-        yield super(TestTxVumiUserApi, self).setUp()
-        if self.sync_persistence:
-            self.vumi_api = VumiApi.from_config_sync(self.mk_config({}))
-        else:
-            self.vumi_api = yield VumiApi.from_config_async(self.mk_config({}))
-        self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_api = self.vumi_helper.get_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u'Buster')
+        self.user_api = self.user_helper.user_api
 
         # Some stores for old versions to test migrations.
         self.account_store_vnone = AccountStoreVNone(self.vumi_api.manager)
@@ -74,8 +70,9 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_optout_filtering(self):
         group = yield self.user_api.contact_store.new_group(u'test-group')
-        optout_store = OptOutStore.from_user_account(self.user_account)
-        contact_store = ContactStore.from_user_account(self.user_account)
+        user_account = yield self.user_helper.get_user_account()
+        optout_store = OptOutStore.from_user_account(user_account)
+        contact_store = ContactStore.from_user_account(user_account)
 
         # Create two random contacts
         yield self.user_api.contact_store.new_contact(
@@ -83,10 +80,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield self.user_api.contact_store.new_contact(
             msisdn=u'+27760000000', groups=[group.key])
 
-        conv = yield self.create_conversation(
-            conversation_type=u'dummy', delivery_class=u'sms')
-        conv.add_group(group)
-        yield conv.save()
+        conv = yield self.user_helper.create_conversation(
+            u'dummy', delivery_class=u'sms', groups=[group])
 
         # Opt out the first contact
         yield optout_store.new_opt_out(u'msisdn', u'+27761234567', {
@@ -108,7 +103,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_exists(self):
         self.assertTrue(
-            (yield self.vumi_api.user_exists(self.user_account.key)))
+            (yield self.vumi_api.user_exists(self.user_helper.account_key)))
         self.assertTrue((yield self.user_api.exists()))
 
         self.assertFalse((yield self.vumi_api.user_exists('foo')))
@@ -116,8 +111,9 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_active_channels(self):
-        tag1, tag2, tag3 = yield self.setup_tagpool(
+        tag1, tag2, tag3 = yield self.vumi_helper.setup_tagpool(
             u"pool1", [u"1234", u"5678", u"9012"])
+        yield self.user_helper.add_tagpool_permission(u"pool1")
 
         yield self.user_api.acquire_specific_tag(tag1)
         channels = yield self.user_api.active_channels()
@@ -140,8 +136,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def test_declare_acquire_and_release_tags(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
         yield self.vumi_api.tpm.declare_tags([tag1, tag2])
-        yield self.add_tagpool_permission(u"poolA")
-        yield self.add_tagpool_permission(u"poolB")
+        yield self.user_helper.add_tagpool_permission(u"poolA")
+        yield self.user_helper.add_tagpool_permission(u"poolB")
 
         yield self.assert_account_tags([])
         tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
@@ -168,7 +164,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_batch_id_for_specific_tag(self):
-        [tag] = yield self.setup_tagpool(u"poolA", [u"tag1"])
+        [tag] = yield self.vumi_helper.setup_tagpool(u"poolA", [u"tag1"])
+        yield self.user_helper.add_tagpool_permission(u"poolA")
         yield self.user_api.acquire_specific_tag(tag)
         tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
         self.assertNotEqual(tag_info.current_batch.key, None)
@@ -192,7 +189,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_release_tag_with_routing_entries(self):
-        [tag1] = yield self.setup_tagpool(u"pool1", [u"1234"])
+        [tag1] = yield self.vumi_helper.setup_tagpool(u"pool1", [u"1234"])
+        yield self.user_helper.add_tagpool_permission(u"pool1")
         yield self.assert_account_tags([])
         yield self.user_api.acquire_specific_tag(tag1)
         yield self.assert_account_tags([list(tag1)])
@@ -218,8 +216,9 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def _setup_routing_table_test_new_conv(self, routing_table=None):
-        tag1, tag2, tag3 = yield self.setup_tagpool(
+        tag1, tag2, tag3 = yield self.vumi_helper.setup_tagpool(
             u"pool1", [u"1234", u"5678", u"9012"])
+        yield self.user_helper.add_tagpool_permission(u"pool1")
         yield self.user_api.acquire_specific_tag(tag1)
         conv = yield self.user_api.new_conversation(
             u'bulk_message', u'name', u'desc', {})
@@ -348,20 +347,16 @@ class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True
 
 
-class TestTxVumiRouterApi(AppWorkerTestCase):
+class TestTxVumiRouterApi(VumiTestCase):
+    is_sync = False
+
     @inlineCallbacks
     def setUp(self):
-        yield super(TestTxVumiRouterApi, self).setUp()
-        if self.sync_persistence:
-            # Set up the vumi exchange, in case we don't have one.
-            self._amqp.exchange_declare('vumi', 'direct')
-            self.vumi_api = VumiApi.from_config_sync(
-                self.mk_config({}), FakeAmqpConnection(self._amqp))
-        else:
-            self.vumi_api = yield VumiApi.from_config_async(
-                self.mk_config({}), get_fake_amq_client(self._amqp))
-        self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u'Buster')
+        self.user_api = self.user_helper.user_api
 
     def create_router(self, **kw):
         # TODO: Fix test infrastructe to avoid duplicating this stuff.
@@ -426,13 +421,13 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
         router_api = yield self.get_router_api(router)
         self.assertTrue(router.stopped())
         self.assertFalse(router.starting())
-        self.assertEqual([], self.get_dispatcher_commands())
+        self.assertEqual([], self.vumi_helper.get_dispatched_commands())
 
         yield router_api.start_router()
         router = yield router_api.get_router()
         self.assertFalse(router.stopped())
         self.assertTrue(router.starting())
-        [cmd] = self.get_dispatcher_commands()
+        [cmd] = self.vumi_helper.get_dispatched_commands()
         self.assertEqual(cmd['command'], 'start')
         self.assertEqual(cmd['kwargs'], {
             'user_account_key': router.user_account.key,
@@ -445,13 +440,13 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
         router_api = yield self.get_router_api(router)
         self.assertTrue(router.running())
         self.assertFalse(router.stopping())
-        self.assertEqual([], self.get_dispatcher_commands())
+        self.assertEqual([], self.vumi_helper.get_dispatched_commands())
 
         yield router_api.stop_router()
         router = yield router_api.get_router()
         self.assertFalse(router.running())
         self.assertTrue(router.stopping())
-        [cmd] = self.get_dispatcher_commands()
+        [cmd] = self.vumi_helper.get_dispatched_commands()
         self.assertEqual(cmd['command'], 'stop')
         self.assertEqual(cmd['kwargs'], {
             'user_account_key': router.user_account.key,
@@ -460,10 +455,10 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
 
 
 class TestVumiRouterApi(TestTxVumiRouterApi):
-    sync_persistence = True
+    is_sync = True
 
 
-class TestVumiApiCommand(TestCase):
+class TestVumiApiCommand(VumiTestCase):
     def test_default_routing_config(self):
         cfg = VumiApiCommand.default_routing_config()
         self.assertEqual(cfg, {
@@ -474,7 +469,7 @@ class TestVumiApiCommand(TestCase):
             })
 
 
-class TestVumiApiEvent(TestCase):
+class TestVumiApiEvent(VumiTestCase):
     def test_default_routing_config(self):
         cfg = VumiApiEvent.default_routing_config()
         self.assertEqual(cfg, {

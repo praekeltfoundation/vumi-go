@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.tests.test_base import DummyApplicationWorker
-from vumi.tests.helpers import VumiTestCase, WorkerHelper
+from vumi.tests.helpers import VumiTestCase
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.tests.helpers import VumiApiHelper
@@ -14,18 +13,10 @@ class TestConversationWrapper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.worker_helper = WorkerHelper()
-        self.add_cleanup(self.worker_helper.cleanup)
         self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
 
-        # TODO: A better way to get a VumiApi instance with an AMQP client.
-        worker = yield self.worker_helper.get_worker(
-            DummyApplicationWorker, self.vumi_helper.mk_config({
-                'transport_name': 'foo',
-            }), start=False)
-
-        yield self.vumi_helper.setup_vumi_api(amqp_client=worker._amqp_client)
+        yield self.vumi_helper.setup_vumi_api()
         self.user_helper = yield self.vumi_helper.make_user(u'username')
         self.msg_helper = GoMessageHelper(self.vumi_helper.get_vumi_api().mdb)
 

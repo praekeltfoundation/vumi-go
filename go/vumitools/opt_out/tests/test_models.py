@@ -4,23 +4,25 @@ from datetime import datetime, timedelta
 
 from twisted.internet.defer import inlineCallbacks
 
-from go.vumitools.tests.utils import GoTestCase
-from go.vumitools.account import AccountStore
+from vumi.tests.helpers import VumiTestCase
+
 from go.vumitools.opt_out.models import OptOutStore
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
 
 
-class TestOptOutStore(GoTestCase):
+class TestOptOutStore(VumiTestCase):
 
     use_riak = True
 
     @inlineCallbacks
     def setUp(self):
-        super(TestOptOutStore, self).setUp()
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.opt_out_store = OptOutStore.from_user_account(self.account)
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        user_account = yield self.user_helper.get_user_account()
+
+        self.opt_out_store = OptOutStore.from_user_account(user_account)
         self.msg_helper = GoMessageHelper()
 
     def test_setup_proxies(self):
@@ -39,10 +41,11 @@ class TestOptOutStore(GoTestCase):
         # check opt out is correct
         self.assertEqual(opt_out.key,
                          self.opt_out_store.opt_out_id("msisdn", "+1234"))
-        self.assertEqual(opt_out.user_account.key, self.account.key)
+        self.assertEqual(
+            opt_out.user_account.key, self.user_helper.account_key)
         self.assertEqual(opt_out.message, msg['message_id'])
-        self.assertTrue(datetime.utcnow() - opt_out.created_at
-                        < timedelta(minutes=1))
+        self.assertTrue(
+            datetime.utcnow() - opt_out.created_at < timedelta(minutes=1))
         # check that opt out was saved
         opt_out_2 = yield self.opt_out_store.opt_outs.load(opt_out.key)
         self.assertEqual(opt_out_2.message, unicode(msg['message_id']))

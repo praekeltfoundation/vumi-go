@@ -10,7 +10,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.web.server import Site
 
 from vumi.utils import http_request
-from vumi.tests.helpers import VumiTestCase, WorkerHelper
+from vumi.tests.helpers import VumiTestCase
 
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
@@ -25,8 +25,6 @@ class GoApiServerTestCase(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.worker_helper = WorkerHelper()
-        self.add_cleanup(self.worker_helper.cleanup)
         self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
         yield self.vumi_helper.setup_vumi_api()
@@ -436,8 +434,6 @@ class GoApiServerTestCase(VumiTestCase):
 class GoApiWorkerTestCase(VumiTestCase):
 
     def setUp(self):
-        self.worker_helper = WorkerHelper()
-        self.add_cleanup(self.worker_helper.cleanup)
         self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
 
@@ -449,7 +445,7 @@ class GoApiWorkerTestCase(VumiTestCase):
         config.setdefault('web_path', 'api')
         config.setdefault('health_path', 'health')
         config = self.vumi_helper.mk_config(config)
-        worker = yield self.worker_helper.get_worker(
+        worker = yield self.vumi_helper.get_worker_helper().get_worker(
             GoApiWorker, config, start)
 
         vumi_api = worker.vumi_api

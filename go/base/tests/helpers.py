@@ -9,12 +9,8 @@ from django.test import TestCase
 from django.test.client import Client
 from django.test.utils import override_settings
 
-from twisted.python.monkey import MonkeyPatcher
+from vumi.tests.helpers import generate_proxies, proxyable
 
-from vumi.blinkenlights.metrics import MetricMessage
-from vumi.tests.helpers import WorkerHelper, generate_proxies, proxyable
-
-from go.base import amqp
 from go.base import models as base_models
 from go.base import utils as base_utils
 from go.vumitools.tests.helpers import VumiApiHelper
@@ -36,62 +32,15 @@ class GoDjangoTestCase(TestCase):
         self._cleanup_funcs.append((func, args, kw))
 
 
-class FakeAmqpConnection(object):
-    """Wrapper around an AMQP client that forwards messages.
-
-    Command and metric messages are stored for later inspection.
-    """
-    def __init__(self, amqp_client):
-        self._amqp = amqp_client
-        self._connected = False
-        self.commands = []
-        self.metrics = []
-
-    def is_connected(self):
-        return self._connected
-
-    def connect(self, dsn=None):
-        self._connected = True
-
-    def publish(self, message, exchange, routing_key):
-        self._amqp.publish_raw(exchange, routing_key, message)
-
-    def publish_command_message(self, command):
-        self.commands.append(command)
-        self.publish(command.to_json(), 'vumi', 'vumi.api')
-
-    def publish_metric_message(self, metric):
-        self.metrics.append(metric)
-        self.publish(metric.to_json(), 'vumi', 'vumi.metrics')
-
-    def get_commands(self):
-        commands, self.commands = self.commands, []
-        return commands
-
-    def get_metrics(self):
-        metrics, self.metrics = self.metrics, []
-        return metrics
-
-    def publish_metric(self, metric_name, aggregators, value, timestamp=None):
-        metric_msg = MetricMessage()
-        metric_msg.append((metric_name,
-            tuple(sorted(agg.name for agg in aggregators)),
-            [(timestamp, value)]))
-        return self.publish_metric_message(metric_msg)
-
-
 class DjangoVumiApiHelper(object):
     is_sync = True  # For when we're being treated like a VumiApiHelper.
 
-    def __init__(self, worker_helper=None, use_riak=True):
+    def __init__(self, use_riak=True):
         self.use_riak = use_riak
         self._vumi_helper = VumiApiHelper(is_sync=True, use_riak=use_riak)
-        if worker_helper is None:
-            worker_helper = WorkerHelper()
-        self._worker_helper = worker_helper
+
         generate_proxies(self, self._vumi_helper)
         # TODO: Better/more generic way to do this patching?
-        self._monkey_patches = []
         self._settings_patches = []
         self.replace_django_bits()
 
@@ -100,16 +49,16 @@ class DjangoVumiApiHelper(object):
         self.restore_django_bits()
         for patch in reversed(self._settings_patches):
             patch.disable()
-        for patch in reversed(self._monkey_patches):
-            patch.restore()
 
     def replace_django_bits(self):
+        # We do this redis manager hackery here because we might use it from
+        # Django-land before setting (or without) up a vumi_api.
         # TODO: Find a nicer way to give everything the same fake redis.
         pcfg = self._vumi_helper._persistence_helper._config_overrides
         pcfg['redis_manager']['FAKE_REDIS'] = self.get_redis_manager()
 
         vumi_config = settings.VUMI_API_CONFIG.copy()
-        vumi_config.update(pcfg)
+        vumi_config.update(self.mk_config({}))
         self.patch_settings(VUMI_API_CONFIG=vumi_config)
 
         has_listeners = lambda: post_save.has_listeners(get_user_model())
@@ -125,13 +74,6 @@ class DjangoVumiApiHelper(object):
             sender=get_user_model(),
             dispatch_uid='DjangoVumiApiHelper.create_user_profile')
 
-        # We might need an AMQP connection at some point.
-        broker = self._worker_helper.broker
-        broker.exchange_declare('vumi', 'direct')
-        self.amqp_connection = FakeAmqpConnection(broker)
-        self.monkey_patch(base_utils, 'connection', self.amqp_connection)
-        self.monkey_patch(amqp, 'connection', self.amqp_connection)
-
     def restore_django_bits(self):
         post_save.disconnect(
             sender=get_user_model(),
@@ -140,13 +82,6 @@ class DjangoVumiApiHelper(object):
             base_models.create_user_profile,
             sender=get_user_model(),
             dispatch_uid='go.base.models.create_user_profile')
-
-    @proxyable
-    def monkey_patch(self, obj, attribute, value):
-        monkey_patch = MonkeyPatcher((obj, attribute, value))
-        self._monkey_patches.append(monkey_patch)
-        monkey_patch.patch()
-        return monkey_patch
 
     @proxyable
     def get_client(self):
@@ -188,6 +123,11 @@ class DjangoVumiApiHelper(object):
         # wrapping it because we only need the one thing.
         user_helper.get_django_user = lambda: (
             get_user_model().objects.get(pk=instance.pk))
+
+    @property
+    def amqp_connection(self):
+        # This is a property so that we get the patched version.
+        return base_utils.connection
 
 
 class GoAccountCommandTestCase(GoDjangoTestCase):

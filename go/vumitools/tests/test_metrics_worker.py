@@ -3,22 +3,26 @@
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock, LoopingCall
 
-from go.vumitools.tests.utils import GoWorkerTestCase
+from vumi.tests.helpers import VumiTestCase
+
 from go.vumitools import metrics_worker
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class GoMetricsWorkerTestCase(GoWorkerTestCase):
-    worker_class = metrics_worker.GoMetricsWorker
+class TestGoMetricsWorker(VumiTestCase):
 
+    @inlineCallbacks
     def setUp(self):
-        super(GoMetricsWorkerTestCase, self).setUp()
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
         self.clock = Clock()
         self.patch(metrics_worker, 'LoopingCall', self.looping_call)
 
     def get_metrics_worker(self, config=None, start=True):
-        if config is None:
-            config = {}
-        return self.get_worker(self.mk_config(config), start)
+        config = self.vumi_helper.mk_config(config or {})
+        return self.vumi_helper.get_worker_helper().get_worker(
+            metrics_worker.GoMetricsWorker, config, start=start)
 
     def rkey(self, name):
         return name
@@ -63,70 +67,68 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
     @inlineCallbacks
     def test_find_accounts(self):
         worker = yield self.get_metrics_worker()
-        acc1 = yield self.make_account(worker, u'acc1')
-        acc2 = yield self.make_account(worker, u'acc2')
-        yield self.make_account(worker, u'acc3')
-        yield worker.redis.sadd('metrics_accounts', acc1.key)
-        yield worker.redis.sadd('metrics_accounts', acc2.key)
+        user1_helper = yield self.vumi_helper.make_user(u'acc1')
+        user2_helper = yield self.vumi_helper.make_user(u'acc2')
+        yield self.vumi_helper.make_user(u'acc3')
+        yield worker.redis.sadd('metrics_accounts', user1_helper.account_key)
+        yield worker.redis.sadd('metrics_accounts', user2_helper.account_key)
 
         account_keys = yield worker.find_account_keys()
-        self.assertEqual(sorted([acc1.key, acc2.key]), sorted(account_keys))
+        self.assertEqual(
+            sorted([user1_helper.account_key, user2_helper.account_key]),
+            sorted(account_keys))
 
     @inlineCallbacks
     def test_find_conversations_for_account(self):
         worker = yield self.get_metrics_worker()
-        acc1 = yield self.make_account(worker, u'acc1')
-        akey = acc1.key
-        user_api = worker.vumi_api.get_user_api(akey)
+        user_helper = yield self.vumi_helper.make_user(u'acc1')
+        akey = user_helper.account_key
 
-        conv1 = yield self.make_conv(user_api, u'conv1')
-        yield self.archive_conv(conv1)
-        conv2 = yield self.make_conv(user_api, u'conv2')
-        yield self.start_conv(conv2)
-        yield self.make_conv(user_api, u'conv3')
+        conv1 = yield user_helper.create_conversation(
+            u'dummy_conv', name=u'conv1', started=True)
+        yield user_helper.create_conversation(
+            u'dummy_conv', name=u'conv2', archived=True)
+        yield user_helper.create_conversation(u'dummy_conv', name=u'conv3')
 
         conversations = yield worker.find_conversations_for_account(akey)
-        self.assertEqual([c.key for c in conversations], [conv2.key])
+        self.assertEqual([c.key for c in conversations], [conv1.key])
 
     @inlineCallbacks
     def test_send_metrics_command(self):
         worker = yield self.get_metrics_worker()
-        acc1 = yield self.make_account(worker, u'acc1')
-        akey = acc1.key
-        user_api = worker.vumi_api.get_user_api(akey)
+        user_helper = yield self.vumi_helper.make_user(u'acc1')
 
-        conv1 = yield self.make_conv(user_api, u'conv1')
-        yield self.start_conv(conv1)
+        conv1 = yield user_helper.create_conversation(
+            u'dummy_conv', name=u'conv1', started=True)
 
         yield worker.send_metrics_command(conv1)
-        [cmd] = self._get_dispatched('vumi.api')
+        [cmd] = self.vumi_helper.get_dispatched_commands()
 
-        self.assertEqual(cmd['worker_name'], 'my_conv_application')
-        self.assertEqual(cmd.payload['kwargs']['conversation_key'], conv1.key)
-        self.assertEqual(cmd.payload['kwargs']['user_account_key'], akey)
+        self.assertEqual(cmd['worker_name'], 'dummy_conv_application')
+        self.assertEqual(cmd['kwargs']['conversation_key'], conv1.key)
+        self.assertEqual(
+            cmd['kwargs']['user_account_key'], user_helper.account_key)
 
     @inlineCallbacks
     def test_metrics_loop_func(self):
         worker = yield self.get_metrics_worker()
-        acc1 = yield self.make_account(worker, u'acc1')
-        acc2 = yield self.make_account(worker, u'acc2')
-        yield worker.redis.sadd('metrics_accounts', acc1.key)
-        yield worker.redis.sadd('metrics_accounts', acc2.key)
-        user_api1 = worker.vumi_api.get_user_api(acc1.key)
-        user_api2 = worker.vumi_api.get_user_api(acc2.key)
+        user1_helper = yield self.vumi_helper.make_user(u'acc1')
+        user2_helper = yield self.vumi_helper.make_user(u'acc2')
+        yield worker.redis.sadd('metrics_accounts', user1_helper.account_key)
+        yield worker.redis.sadd('metrics_accounts', user2_helper.account_key)
 
-        conv1 = yield self.make_conv(user_api1, u'conv1')
-        yield self.start_conv(conv1)
-        conv2 = yield self.make_conv(user_api1, u'conv2')
-        yield self.start_conv(conv2)
-        conv3 = yield self.make_conv(user_api2, u'conv3')
-        yield self.start_conv(conv3)
-        conv4 = yield self.make_conv(user_api2, u'conv4')
-        yield self.start_conv(conv4)
+        conv1 = yield user1_helper.create_conversation(
+            u'dummy_conv', name=u'conv1', started=True)
+        conv2 = yield user1_helper.create_conversation(
+            u'dummy_conv', name=u'conv2', started=True)
+        conv3 = yield user2_helper.create_conversation(
+            u'dummy_conv', name=u'conv3', started=True)
+        conv4 = yield user2_helper.create_conversation(
+            u'dummy_conv', name=u'conv4', started=True)
 
         yield worker.metrics_loop_func()
 
-        cmds = self._get_dispatched('vumi.api')
-        conv_keys = [c.payload['kwargs']['conversation_key'] for c in cmds]
+        cmds = self.vumi_helper.get_dispatched_commands()
+        conv_keys = [c['kwargs']['conversation_key'] for c in cmds]
         self.assertEqual(sorted(conv_keys),
                          sorted(c.key for c in [conv1, conv2, conv3, conv4]))

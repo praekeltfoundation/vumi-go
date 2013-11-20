@@ -3,7 +3,9 @@ import uuid
 
 from twisted.internet.defer import (
     inlineCallbacks, returnValue, Deferred, gatherResults)
+from twisted.python.monkey import MonkeyPatcher
 
+from vumi.blinkenlights.metrics import MetricMessage
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
     generate_proxies)
@@ -11,6 +13,22 @@ from vumi.tests.helpers import (
 from go.vumitools.api import VumiApi, VumiApiEvent, VumiApiCommand
 from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.utils import MessageMetadataHelper
+
+
+class PatchHelper(object):
+    def __init__(self):
+        self._monkey_patches = []
+
+    def cleanup(self):
+        for patch in reversed(self._monkey_patches):
+            patch.restore()
+
+    @proxyable
+    def monkey_patch(self, obj, attribute, value):
+        monkey_patch = MonkeyPatcher((obj, attribute, value))
+        self._monkey_patches.append(monkey_patch)
+        monkey_patch.patch()
+        return monkey_patch
 
 
 class GoMessageHelper(object):
@@ -193,20 +211,95 @@ class GoMessageHelper(object):
             return messages
 
 
+class FakeAmqpConnection(object):
+    """Wrapper around an AMQP client that forwards messages.
+
+    Command and metric messages are stored for later inspection.
+    """
+    def __init__(self, amqp_client):
+        self._amqp = amqp_client
+        self._connected = False
+        self.commands = []
+        self.metrics = []
+
+    def is_connected(self):
+        return self._connected
+
+    def connect(self, dsn=None):
+        self._connected = True
+
+    def publish(self, message, exchange, routing_key):
+        self._amqp.publish_raw(exchange, routing_key, message)
+
+    def publish_command_message(self, command):
+        self.commands.append(command)
+        self.publish(command.to_json(), 'vumi', 'vumi.api')
+
+    def publish_metric_message(self, metric):
+        self.metrics.append(metric)
+        self.publish(metric.to_json(), 'vumi', 'vumi.metrics')
+
+    def get_commands(self):
+        commands, self.commands = self.commands, []
+        return commands
+
+    def get_metrics(self):
+        metrics, self.metrics = self.metrics, []
+        return metrics
+
+    def publish_metric(self, metric_name, aggregators, value, timestamp=None):
+        metric_msg = MetricMessage()
+        metric_msg.append((metric_name,
+            tuple(sorted(agg.name for agg in aggregators)),
+            [(timestamp, value)]))
+        return self.publish_metric_message(metric_msg)
+
+
 class VumiApiHelper(object):
     # TODO: Clear bucket properties.
-    def __init__(self, is_sync=False, use_riak=True, vumi_api=None):
+    def __init__(self, is_sync=False, use_riak=True):
         self.is_sync = is_sync
+        self._patch_helper = PatchHelper()
+        generate_proxies(self, self._patch_helper)
+
         self._persistence_helper = PersistenceHelper(
             use_riak=use_riak, is_sync=is_sync)
+        self.broker = None  # Will be replaced by the first worker_helper.
+        self._worker_helpers = {}
+        if is_sync:
+            self._django_amqp_setup()
         self._users_created = 0
         self._user_helpers = {}
-        self._vumi_api = vumi_api
+        self._vumi_api = None
 
         generate_proxies(self, self._persistence_helper)
 
+    @maybe_async
     def cleanup(self):
-        return self._persistence_helper.cleanup()
+        for worker_helper in self._worker_helpers.values():
+            # All of these will wait for the same broker, but that's fine.
+            yield worker_helper.cleanup()
+        yield self._persistence_helper.cleanup()
+        self._patch_helper.cleanup()
+
+    def _django_amqp_setup(self):
+        import go.base.amqp
+        import go.base.utils
+        # We might need an AMQP connection at some point.
+        broker = self.get_worker_helper().broker
+        broker.exchange_declare('vumi', 'direct')
+        amqp_connection = FakeAmqpConnection(broker)
+        self.monkey_patch(go.base.utils, 'connection', amqp_connection)
+        self.monkey_patch(go.base.amqp, 'connection', amqp_connection)
+
+    def get_worker_helper(self, connector_name=None):
+        if connector_name not in self._worker_helpers:
+            worker_helper = WorkerHelper(connector_name, self.broker)
+            # If this is our first worker helper, we need to grab the broker it
+            # created. If it isn't, its broker will be self.broker anyway.
+            self.broker = worker_helper.broker
+            self._worker_helpers[connector_name] = worker_helper
+        return self._worker_helpers[connector_name]
 
     @proxyable
     def get_vumi_api(self):
@@ -217,15 +310,26 @@ class VumiApiHelper(object):
     def set_vumi_api(self, vumi_api):
         assert self._vumi_api is None, "Can't override existing vumi_api."
         self._vumi_api = vumi_api
+        # TODO: Find a nicer way to give everything the same fake redis.
+        pcfg = self._persistence_helper._config_overrides
+        pcfg['redis_manager']['FAKE_REDIS'] = vumi_api.redis
 
     @proxyable
-    def setup_vumi_api(self, amqp_client=None):
+    def setup_vumi_api(self):
         if self.is_sync:
-            from django.conf import settings
-            self._vumi_api = VumiApi.from_config_sync(
-                settings.VUMI_API_CONFIG, amqp_client)
-            return
+            return self.setup_sync_vumi_api()
+        else:
+            return self.setup_async_vumi_api()
 
+    def setup_sync_vumi_api(self):
+        from django.conf import settings
+        import go.base.amqp
+        self._vumi_api = VumiApi.from_config_sync(
+            settings.VUMI_API_CONFIG, go.base.amqp.connection)
+
+    def setup_async_vumi_api(self):
+        worker_helper = self.get_worker_helper()
+        amqp_client = worker_helper.get_fake_amqp_client(worker_helper.broker)
         d = VumiApi.from_config_async(self.mk_config({}), amqp_client)
         return d.addCallback(self.set_vumi_api)
 
@@ -263,6 +367,10 @@ class VumiApiHelper(object):
         if metadata:
             yield self.get_vumi_api().tpm.set_metadata(pool, metadata)
         returnValue(tags)
+
+    def get_dispatched_commands(self):
+        return self.get_worker_helper().get_dispatched(
+            'vumi', 'api', VumiApiCommand)
 
 
 class UserApiHelper(object):
@@ -307,13 +415,16 @@ class UserApiHelper(object):
 
     @proxyable
     @maybe_async
-    def create_conversation(self, conversation_type, started=False, **kw):
+    def create_conversation(self, conversation_type, started=False,
+                            archived=False, **kw):
         name = kw.pop('name', u'My Conversation')
         description = kw.pop('description', u'')
         config = kw.pop('config', {})
         assert isinstance(config, dict)
         if started:
             kw.setdefault('status', u'running')
+        if archived:
+            kw.setdefault('archive_status', u'archive')
         conversation = yield self.user_api.new_conversation(
             conversation_type, name, description, config, **kw)
         returnValue(self.user_api.wrap_conversation(conversation))
@@ -340,13 +451,11 @@ class UserApiHelper(object):
 
 class EventHandlerHelper(object):
     def __init__(self):
-        self.worker_helper = WorkerHelper()
         self.vumi_helper = VumiApiHelper()
+        self.worker_helper = self.vumi_helper.get_worker_helper()
 
-    @inlineCallbacks
     def cleanup(self):
-        yield self.vumi_helper.cleanup()
-        yield self.worker_helper.cleanup()
+        return self.vumi_helper.cleanup()
 
     @inlineCallbacks
     def setup_event_dispatcher(self, name, cls, config):
@@ -391,4 +500,4 @@ class EventHandlerHelper(object):
         return self.worker_helper.dispatch_raw('vumi.event', event)
 
     def get_dispatched_commands(self):
-        return self.worker_helper.get_dispatched('vumi', 'api', VumiApiCommand)
+        return self.vumi_helper.get_dispatched_commands()

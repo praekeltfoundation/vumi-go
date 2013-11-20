@@ -6,7 +6,7 @@ from twisted.internet.defer import inlineCallbacks, succeed
 from twisted.web import http
 
 from vumi.utils import http_request_full
-from vumi.tests.helpers import VumiTestCase, WorkerHelper
+from vumi.tests.helpers import VumiTestCase
 
 from go.api.conversation_api.conversation_api import (
     ConversationApiWorker, ConversationConfigResource)
@@ -17,9 +17,6 @@ class ConversationApiTestCase(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(ConversationApiTestCase, self).setUp()
-        self.worker_helper = WorkerHelper()
-        self.add_cleanup(self.worker_helper.cleanup)
         self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
         yield self.vumi_helper.setup_vumi_api()
@@ -39,7 +36,7 @@ class ConversationApiTestCase(VumiTestCase):
             'web_port': 0,
             'health_path': '/health/',
         })
-        self.worker = yield self.worker_helper.get_worker(
+        self.worker = yield self.vumi_helper.get_worker_helper().get_worker(
             ConversationApiWorker, self.config)
         self.addr = self.worker.webserver.getHost()
         self.url = 'http://%s:%s%s' % (

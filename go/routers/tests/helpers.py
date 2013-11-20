@@ -1,8 +1,7 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.tests.helpers import (
-    WorkerHelper, MessageDispatchHelper, proxyable, generate_proxies,
-    maybe_async)
+    MessageDispatchHelper, proxyable, generate_proxies, maybe_async)
 
 from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
@@ -95,15 +94,16 @@ class RouterWorkerHelper(object):
         # We need versions of these for both inbound and outbound so we can't
         # generate proxies automagically.
         # TODO: Build some mechanism for grouping sets of proxies together.
-        self._ri_worker_helper = WorkerHelper(self.ri_connector_name)
+        self._ri_worker_helper = self.vumi_helper.get_worker_helper(
+            self.ri_connector_name)
         self._ri_dispatch_helper = MessageDispatchHelper(
             self.msg_helper, self._ri_worker_helper)
         # Grab all proxies for these ones. We'll override the RO versions.
         generate_proxies(self, self._ri_worker_helper)
         generate_proxies(self, self._ri_dispatch_helper)
 
-        self._ro_worker_helper = WorkerHelper(
-            self.ro_connector_name, broker=self._ri_worker_helper.broker)
+        self._ro_worker_helper = self.vumi_helper.get_worker_helper(
+            self.ro_connector_name)
         self._ro_dispatch_helper = MessageDispatchHelper(
             self.msg_helper, self._ro_worker_helper)
 

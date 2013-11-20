@@ -1,8 +1,7 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.tests.helpers import (
-    WorkerHelper, MessageDispatchHelper, proxyable, generate_proxies,
-    maybe_async)
+    MessageDispatchHelper, proxyable, generate_proxies, maybe_async)
 
 from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
@@ -96,7 +95,8 @@ class AppWorkerHelper(object):
             self._conversation_type(), self.vumi_helper)
         self.msg_helper = GoMessageHelper(**msg_helper_kw)
         self.transport_name = self.msg_helper.transport_name
-        self.worker_helper = WorkerHelper(self.transport_name)
+        self.worker_helper = self.vumi_helper.get_worker_helper(
+            self.transport_name)
         self.dispatch_helper = MessageDispatchHelper(
             self.msg_helper, self.worker_helper)
 
@@ -114,10 +114,8 @@ class AppWorkerHelper(object):
         # We need a better way to do this.
         return self._worker_name().rpartition('_')[0].decode('utf-8')
 
-    @inlineCallbacks
     def cleanup(self):
-        yield self.worker_helper.cleanup()
-        yield self.vumi_helper.cleanup()
+        return self.vumi_helper.cleanup()
 
     @inlineCallbacks
     def get_app_worker(self, config=None, start=True):

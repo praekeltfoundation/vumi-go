@@ -4,21 +4,23 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from go.vumitools.tests.utils import model_eq, GoTestCase
-from go.vumitools.account import AccountStore
+from vumi.tests.helpers import VumiTestCase
+
+from go.vumitools.tests.utils import model_eq
 from go.vumitools.router.models import RouterStore
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class TestRouter(GoTestCase):
-    use_riak = True
+class TestRouter(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestRouter, self).setUp()
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.router_store = RouterStore.from_user_account(self.account)
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        user_account = yield self.user_helper.get_user_account()
+        self.router_store = RouterStore.from_user_account(user_account)
 
     def assert_status(self, router, expected_status_name, archived=False):
         for status_name in ['starting', 'running', 'stopping', 'stopped']:
@@ -53,16 +55,17 @@ class TestRouter(GoTestCase):
         self.assert_status(router, 'stopped', archived=True)
 
 
-class TestRouterStore(GoTestCase):
+class TestRouterStore(VumiTestCase):
     use_riak = True
 
     @inlineCallbacks
     def setUp(self):
-        super(TestRouterStore, self).setUp()
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.router_store = RouterStore.from_user_account(self.account)
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        user_account = yield self.user_helper.get_user_account()
+        self.router_store = RouterStore.from_user_account(user_account)
 
     def assert_models_equal(self, m1, m2):
         self.assertTrue(model_eq(m1, m2),
