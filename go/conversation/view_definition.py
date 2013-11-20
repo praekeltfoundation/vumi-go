@@ -294,7 +294,7 @@ class MessageListView(ConversationTemplateView):
                 "to_addr": inbound_message['from_addr'],
                 "content": content,
                 "msg_options": {'in_reply_to': in_reply_to},
-           }
+            }
         )
 
     def post(self, request, conversation):
