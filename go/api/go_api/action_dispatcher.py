@@ -4,7 +4,7 @@ from twisted.internet.defer import maybeDeferred
 
 from vumi.rpc import signature, Unicode, Dict
 
-from go.base.utils import (
+from go.config import (
     configured_conversation_types, configured_router_types,
     get_conversation_definition, get_router_definition)
 from go.api.go_api.utils import GoApiSubHandler, GoApiError
