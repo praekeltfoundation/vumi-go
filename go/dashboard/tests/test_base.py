@@ -1,5 +1,7 @@
 from go.base.tests.utils import VumiGoDjangoTestCase
 
+
+from go.dashboard.tests.utils import FakeDiamondashApiClient
 from go.dashboard.base import (
     DashboardParseError, Dashboard, DashboardLayout, visit_dicts)
 
@@ -10,6 +12,23 @@ class ToyLayout(DashboardLayout):
 
     def handle_bar_metric(self, target):
         return "bar.%s" % target['name']
+
+
+class TestDashboardApiClient(VumiGoDjangoTestCase):
+    def setUp(self):
+        super(TestDashboardApiClient, self).setUp()
+
+        # test using the fake client, we only stub the requests and responses,
+        # not the methods the delegate to them
+        self.client = FakeDiamondashApiClient()
+
+    def test_replace_dashboard(self):
+        self.client.replace_dashboard({'some': 'dashboard'})
+        self.assertEqual(self.client.get_requests(), [{
+            'method': 'put',
+            'url': '/dashboards',
+            'data': {'some': 'dashboard'},
+        }])
 
 
 class TestDashboard(VumiGoDjangoTestCase):

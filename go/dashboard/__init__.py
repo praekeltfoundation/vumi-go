@@ -1,4 +1,4 @@
-from go.dashboard.base import Dashboard, DashboardLayout
+from go.dashboard.base import DashboardApiClient, Dashboard, DashboardLayout
 
 
-__all__ = ['Dashboard', 'DashboardLayout']
+__all__ = ['DashboardApiClient', 'Dashboard', 'DashboardLayout']

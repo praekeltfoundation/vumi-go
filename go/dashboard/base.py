@@ -52,16 +52,24 @@ class DashboardParseError(Exception):
     """
 
 
+class DiamondashApiClient(object):
+    def request(self, method, url, data=None):
+        url = urljoin(settings.DIAMONDASH_API_URL, url)
+        resp = requests.request(method, url, data=json.dumps(data))
+        resp.raise_for_status()
+        return resp.json['data']
+
+    def replace_dashboard(self, config):
+        return self.request('put', '/dashboards', config)
+
+
 class Dashboard(object):
     def __init__(self, name, title, layout):
+        self.api = DiamondashApiClient()
         self.name = name
         self.title = title
         self.layout = layout
         self.config = None
-
-    @classmethod
-    def api_url(cls):
-        return urljoin(settings.DIAMONDASH_API_URL, 'dashboards')
 
     def _raw_serialize(self):
         return {
@@ -74,16 +82,10 @@ class Dashboard(object):
         """
         Ensures the dashboard exists on diamondash's side
         """
-        response = requests.put(
-            self.api_url(),
-            data=json.dumps(self._raw_serialize()))
-
         try:
-            response.raise_for_status()
+            self.config = self.api.replace_dashboard(self._raw_serialize())
         except Exception, e:
             raise DashboardSyncError("Dashboard sync failed: %s" % e)
-
-        self.config = response.json['data']
 
     def serialize(self):
         return self.config
