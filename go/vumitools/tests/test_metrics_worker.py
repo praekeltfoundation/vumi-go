@@ -106,6 +106,11 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
 
     @inlineCallbacks
     def test_metrics_loop_func(self):
+        def no_looping(*args, **kw):
+            return self.looping_call(lambda: None)
+        self.patch(metrics_worker, 'LoopingCall',
+                   no_looping)
+
         worker = yield self.get_metrics_worker()
         acc1 = yield self.make_account(worker, u'acc1')
         acc2 = yield self.make_account(worker, u'acc2')
