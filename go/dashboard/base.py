@@ -59,6 +59,13 @@ def ensure_handler_fields(*fields):
     return decorator
 
 
+class DiamondashApiError(Exception):
+    """
+    Raised when we something goes wrong while trying to interact with
+    diamondash api.
+    """
+
+
 class DashboardSyncError(Exception):
     """
     Raised when we fail to sync the dashboard with diamondash.
@@ -84,7 +91,12 @@ class DiamondashApiClient(object):
             self.make_api_url(path),
             data=json.dumps(data))
 
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError, e:
+            raise DiamondashApiError(
+                "%s: %s" % (e, resp.content))
+
         return resp.json['data']
 
     def replace_dashboard(self, config):

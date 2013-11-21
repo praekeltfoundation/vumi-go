@@ -1,8 +1,6 @@
 import json
 
-from requests.exceptions import HTTPError
-
-from go.dashboard import DiamondashApiClient
+from go.dashboard import DiamondashApiError, DiamondashApiClient
 
 
 class FakeDiamondashApiClient(DiamondashApiClient):
@@ -13,11 +11,13 @@ class FakeDiamondashApiClient(DiamondashApiClient):
     def get_requests(self):
         return self.requests
 
-    def set_error_response(self, message):
-        self.response = HTTPError(json.dumps({
+    def set_error_response(self, code, message):
+        data = json.dumps({
             'success': False,
             'message': message
-        }))
+        })
+
+        self.response = DiamondashApiError("(%s) %s" % (code, data))
 
     def set_response(self, response):
         self.response = response

@@ -97,12 +97,8 @@ class TestDashboard(VumiGoDjangoTestCase):
         })
         self.assertEqual(self.dashboard.serialize(), {'happy': 'config'})
 
-    def test_sync_for_api_error_responses(self):
-        self.diamondash_api.set_error_response(':(')
-        self.assertRaises(DashboardSyncError, self.dashboard.sync)
-
     def test_sync_for_error_responses(self):
-        self.diamondash_api.set_error_response('Gateway Timeout')
+        self.diamondash_api.set_error_response(404, ':(')
         self.assertRaises(DashboardSyncError, self.dashboard.sync)
 
 
