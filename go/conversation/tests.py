@@ -135,7 +135,7 @@ class BaseConversationViewTestCase(VumiGoDjangoTestCase):
         super(BaseConversationViewTestCase, self).setUp()
         self.monkey_patch(
             go.base.utils, 'get_conversation_pkg', self._get_conversation_pkg)
-        self.patch_settings(VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
+        self.patch_config(VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
         self.setup_api()
         self.setup_user_api()
         self.setup_client()

@@ -28,7 +28,7 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
         })
 
     def test_enable_permissions(self):
-        self.patch_settings(VUMI_INSTALLED_APPS={
+        self.patch_config(VUMI_INSTALLED_APPS={
             'go.apps.test': {
                 'namespace': 'test',
                 'display_name': 'test'
