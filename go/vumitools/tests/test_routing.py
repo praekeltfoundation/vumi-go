@@ -3,7 +3,8 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.tests.helpers import MessageHelper
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
+    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError,
+    UnroutableMessageError)
 from go.vumitools.tests.utils import GoTestCase, AppWorkerTestCase
 from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.routing_table import RoutingTable
@@ -810,3 +811,65 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
                      ], outbound_hops_from=msg)
 
         self.assertEqual([ack], self.get_dispatched_events('app1'))
+
+
+class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestUnroutableSessionResponse, self).setUp()
+        yield self.setup_routing_table_dispatcher_test()
+
+    @inlineCallbacks
+    def get_dispatcher(self, **config_extras):
+        config = {
+            "receive_inbound_connectors": [
+                "sphex", "router_ro",
+            ],
+            "receive_outbound_connectors": [
+                "app1", "router_ri",
+            ],
+            "unroutable_inbound_session_reply": "Eep!",
+        }
+        config.update(config_extras)
+        dispatcher = yield super(
+            TestUnroutableSessionResponse, self).get_dispatcher(**config)
+
+        returnValue(dispatcher)
+
+    def assert_reply_matches(self, reply, msg, content,
+                             session_event='close', **md):
+        expected = msg.reply(content, session_event=session_event)
+        expected = self.with_md(expected, **md)
+
+        expected["message_id"] = reply["message_id"]
+        expected["timestamp"] = reply["timestamp"]
+        self.assertEqual(reply, expected)
+
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_unowned_tag(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "badtag"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used(
+            'sphex.inbound', 'sphex.outbound')
+
+        [reply] = self.get_dispatched_outbound('sphex')
+        self.assert_reply_matches(reply, msg, "Eep!",
+                                  tag=("pool1", "badtag"))
+
+    @inlineCallbacks
+    def test_inbound_message_from_router_to_unroutable(self):
+        yield self.get_dispatcher()
+
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            router=('router', 'badrouter'))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_rkeys_used('router_ro.inbound', 'router_ro.outbound')
+
+        [reply] = self.get_dispatched_outbound('router_ro')
+        self.assert_reply_matches(reply, msg, "Eep!",
+                                  router=('router', 'badrouter'))
