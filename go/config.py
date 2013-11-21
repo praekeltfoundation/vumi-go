@@ -8,12 +8,18 @@
    sort.
    """
 
+import copy
+
 from go.errors import UnknownConversationType, UnknownRouterType
 
 
 def configured_conversation_types():
     return dict((a['namespace'], a['display_name'])
                 for a in _VUMI_INSTALLED_APPS.itervalues())
+
+
+def configured_conversations():
+    return copy.deepcopy(_VUMI_INSTALLED_APPS)
 
 
 def obsolete_conversation_types():
@@ -23,6 +29,10 @@ def obsolete_conversation_types():
 def configured_router_types():
     return dict((a['namespace'], a['display_name'])
                 for a in _VUMI_INSTALLED_ROUTERS.itervalues())
+
+
+def configured_routers():
+    return copy.deepcopy(_VUMI_INSTALLED_ROUTERS)
 
 
 def obsolete_router_types():

@@ -19,6 +19,9 @@ from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
+from go.config import (
+    configured_conversations,
+    configured_routers)
 from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
@@ -29,7 +32,6 @@ from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.token_manager import TokenManager
 
-from django.conf import settings
 from django.utils.datastructures import SortedDict
 
 from vumi.message import TransportUserMessage
@@ -230,7 +232,7 @@ class VumiUserApi(object):
             app_permissions.extend((yield permissions))
         applications = [permission.application for permission
                             in app_permissions]
-        app_settings = settings.VUMI_INSTALLED_APPS
+        app_settings = configured_conversations()
         returnValue(SortedDict([(application,
                         app_settings[application])
                         for application in sorted(applications)
@@ -240,7 +242,7 @@ class VumiUserApi(object):
     def router_types(self):
         # TODO: Permissions.
         yield None
-        router_settings = settings.VUMI_INSTALLED_ROUTERS
+        router_settings = configured_routers()
         returnValue(SortedDict([(router_type, router_settings[router_type])
                                 for router_type in sorted(router_settings)]))
 

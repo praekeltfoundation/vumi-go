@@ -6,6 +6,7 @@ from go.config import (
     get_conversation_pkg, get_router_pkg,
     get_conversation_definition, get_router_definition,
     configured_conversation_types, configured_router_types,
+    configured_conversations, configured_routers,
     obsolete_conversation_types, obsolete_router_types)
 from go.errors import UnknownConversationType, UnknownRouterType
 
@@ -14,6 +15,13 @@ class ConversationDefinitionHelpersTestCase(TestCase):
     def test_configured_conversation_types(self):
         conv_types = configured_conversation_types()
         self.assertEqual(conv_types['bulk_message'], 'Group Message')
+
+    def test_configured_conversations(self):
+        convs = configured_conversations()
+        self.assertEqual(convs['go.apps.bulk_message'], {
+            'namespace': 'bulk_message',
+            'display_name': 'Group Message',
+        })
 
     def test_obsolete_conversation_types(self):
         obsolete_types = obsolete_conversation_types()
@@ -45,6 +53,13 @@ class RouterDefinitionHelpersTestCase(TestCase):
     def test_configured_router_types(self):
         conv_types = configured_router_types()
         self.assertEqual(conv_types['keyword'], 'Keyword')
+
+    def test_configured_routers(self):
+        routers = configured_routers()
+        self.assertEqual(routers['go.routers.keyword'], {
+            'namespace': 'keyword',
+            'display_name': 'Keyword',
+        })
 
     def test_obsolete_router_types(self):
         obsolete_types = obsolete_router_types()
