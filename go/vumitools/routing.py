@@ -160,6 +160,10 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         static=True, required=False)
     user_account_key = ConfigText(
         "Key of the user account the message is from.")
+    unroutable_inbound_session_reply = ConfigText(
+        "Text to send on encounter unroutable inbound messages"
+        " that are part of a session.",
+        static=True, required=False)
 
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
@@ -550,6 +554,18 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
+    def errback_inbound(self, f, msg, connector_name):
+        if (f.check(UnroutableMessageError)
+                and msg['session_event'] is not None):
+            config = self.get_static_config()
+            response = config.unroutable_inbound_session_reply
+            if response is not None:
+                reply = msg.reply(response, continue_session=False)
+                self.publish_outbound(
+                    reply, connector_name, msg.get_routing_endpoint())
+                return
+        return self.default_errback(f, msg, connector_name)
+
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
         """Process an inbound message.
@@ -588,9 +604,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
-            log.debug("No target found for message from '%s': %s" % (
-                connector_name, msg))
-            return
+            raise UnroutableMessageError(
+                "No target found for inbound message from %r"
+                % (connector_name,), msg)
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.INBOUND)
@@ -638,9 +654,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
-            log.debug("No target found for message from '%s': %s" % (
-                connector_name, msg))
-            return
+            raise UnroutableMessageError(
+                "No target found for outbound message from '%s': %s" % (
+                    connector_name, msg))
 
         if self.billing_outbound_connector:
             target_conn = GoConnector.parse(target[0])
