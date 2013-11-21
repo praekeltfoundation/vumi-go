@@ -1,4 +1,4 @@
-from go.vumitools.tests.utils import GoTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase
 
 from go.dashboard.base import (
     DashboardParseError, Dashboard, DashboardLayout, visit_dicts)
@@ -12,7 +12,7 @@ class ToyLayout(DashboardLayout):
         return "bar.%s" % target['name']
 
 
-class TestDashboard(GoTestCase):
+class TestDashboard(VumiGoDjangoTestCase):
     def setUp(self):
         super(TestDashboard, self).setUp()
 
@@ -22,7 +22,7 @@ class TestDashboard(GoTestCase):
             ToyLayout())
 
 
-class TestDashboardLayout(GoTestCase):
+class TestDashboardLayout(VumiGoDjangoTestCase):
     def setUp(self):
         super(TestDashboardLayout, self).setUp()
         self.layout = ToyLayout()
