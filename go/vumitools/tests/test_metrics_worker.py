@@ -112,6 +112,11 @@ class TestGoMetricsWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_metrics_loop_func(self):
+        def no_looping(*args, **kw):
+            return self.looping_call(lambda: None)
+        self.patch(metrics_worker, 'LoopingCall',
+                   no_looping)
+
         worker = yield self.get_metrics_worker()
         user1_helper = yield self.vumi_helper.make_user(u'acc1')
         user2_helper = yield self.vumi_helper.make_user(u'acc2')

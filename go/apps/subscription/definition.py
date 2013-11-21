@@ -10,7 +10,7 @@ class ConversationDefinition(ConversationDefinitionBase):
 
         campaign_names = sorted(set([
             h['campaign_name']
-            for h in self.conv.get_config().get('handlers', [])]))
+            for h in self.conv.config.get('handlers', [])]))
 
         metrics.extend([
             SubscribedMetric(self.conv, campaign_name)

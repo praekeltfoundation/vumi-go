@@ -12,12 +12,13 @@ class TestSubscriptionConversationDefinition(GoDjangoTestCase):
         self.vumi_helper.setup_vumi_api()
         self.user_helper = self.vumi_helper.get_or_create_user()
 
-        self.conv = self.user_helper.create_conversation(
+        wrapped_conv = self.user_helper.create_conversation(
             u'subscription', config={
                 'handlers': [
                     {'campaign_name': 'campaign-1'},
                     {'campaign_name': 'campaign-2'}]
             })
+        self.conv = wrapped_conv.c
         self.conv_def = ConversationDefinition(self.conv)
 
     def test_metrics_retrieval(self):
