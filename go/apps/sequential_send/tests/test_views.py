@@ -2,7 +2,7 @@ from go.apps.tests.view_helpers import AppViewsHelper
 from go.base.tests.helpers import GoDjangoTestCase
 
 
-class SequentialSendTestCase(GoDjangoTestCase):
+class TestSequentialSendViews(GoDjangoTestCase):
     def setUp(self):
         self.app_helper = AppViewsHelper(u'sequential_send')
         self.add_cleanup(self.app_helper.cleanup)

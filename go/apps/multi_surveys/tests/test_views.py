@@ -8,7 +8,7 @@ from go.apps.tests.view_helpers import AppViewsHelper
 from go.base.tests.helpers import GoDjangoTestCase
 
 
-class MultiSurveyTestCase(GoDjangoTestCase):
+class TestMultiSurveyViews(GoDjangoTestCase):
 
     def setUp(self):
         self.app_helper = AppViewsHelper(u'multi_survey')

@@ -48,7 +48,7 @@ class FakeTemplateToken(object):
         self.contents = contents
 
 
-class UtilsTestCase(GoDjangoTestCase):
+class TestUtils(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()

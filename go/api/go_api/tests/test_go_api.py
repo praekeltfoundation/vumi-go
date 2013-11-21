@@ -17,11 +17,7 @@ from go.api.go_api.go_api import GoApiWorker, GoApiServer
 from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class GoApiServerTestCase(VumiTestCase):
-
-    worker_name = 'GoApiServer'
-    transport_name = 'sphex'
-    transport_type = 'sphex_type'
+class TestGoApiServer(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
@@ -431,7 +427,7 @@ class GoApiServerTestCase(VumiTestCase):
                                  u"no such sub-handler unknown")
 
 
-class GoApiWorkerTestCase(VumiTestCase):
+class TestGoApiWorker(VumiTestCase):
 
     def setUp(self):
         self.vumi_helper = VumiApiHelper()

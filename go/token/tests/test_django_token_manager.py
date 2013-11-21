@@ -9,7 +9,7 @@ from go.vumitools.token_manager import TokenManager
 from go.token.django_token_manager import DjangoTokenManager
 
 
-class DjangoTokenManagerTestCase(GoDjangoTestCase):
+class TestDjangoTokenManager(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()

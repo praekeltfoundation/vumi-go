@@ -19,13 +19,13 @@ class StubbedAppWorker(DummyAppWorker):
         return self.user_api
 
 
-class OptOutResourceTestCase(ResourceTestCaseBase):
+class TestOptOutResource(ResourceTestCaseBase):
     app_worker_cls = StubbedAppWorker
     resource_cls = OptOutResource
 
     @inlineCallbacks
     def setUp(self):
-        super(OptOutResourceTestCase, self).setUp()
+        super(TestOptOutResource, self).setUp()
 
         self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)

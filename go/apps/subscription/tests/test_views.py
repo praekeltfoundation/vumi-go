@@ -4,7 +4,7 @@ from go.apps.tests.view_helpers import AppViewsHelper
 from go.base.tests.helpers import GoDjangoTestCase
 
 
-class SubscriptionTestCase(GoDjangoTestCase):
+class TestSubscriptionViews(GoDjangoTestCase):
     def setUp(self):
         self.app_helper = AppViewsHelper(u'subscription')
         self.add_cleanup(self.app_helper.cleanup)

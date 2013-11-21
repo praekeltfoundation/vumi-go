@@ -2,7 +2,7 @@ from go.apps.tests.view_helpers import AppViewsHelper
 from go.base.tests.helpers import GoDjangoTestCase
 
 
-class StaticReplyTestCase(GoDjangoTestCase):
+class TestStaticReplyViews(GoDjangoTestCase):
     def setUp(self):
         self.app_helper = AppViewsHelper(u'static_reply')
         self.add_cleanup(self.app_helper.cleanup)

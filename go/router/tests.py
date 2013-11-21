@@ -7,7 +7,7 @@ from go.base.utils import get_router_view_definition
 from go.vumitools.router.models import ROUTER_ARCHIVED
 
 
-class RouterViewsTestCase(GoDjangoTestCase):
+class TestRouterViews(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()

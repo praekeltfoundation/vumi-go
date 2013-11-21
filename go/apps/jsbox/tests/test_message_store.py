@@ -18,13 +18,13 @@ class StubbedAppWorker(DummyAppWorker):
         return self.user_api
 
 
-class MessageStoreResourceTestCase(ResourceTestCaseBase):
+class TestMessageStoreResource(ResourceTestCaseBase):
     app_worker_cls = StubbedAppWorker
     resource_cls = MessageStoreResource
 
     @inlineCallbacks
     def setUp(self):
-        super(MessageStoreResourceTestCase, self).setUp()
+        super(TestMessageStoreResource, self).setUp()
 
         self.vumi_helper = VumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)

@@ -6,7 +6,7 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.management.commands import go_assign_tagpool
 
 
-class GoAssignTagpoolCommandTestCase(GoDjangoTestCase):
+class TestGoAssignTagpoolCommand(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()

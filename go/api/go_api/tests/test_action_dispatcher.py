@@ -3,7 +3,8 @@
 from mock import Mock
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
+
+from vumi.tests.helpers import VumiTestCase
 
 from go.api.go_api.action_dispatcher import (
     ActionDispatcher, ActionError, ConversationActionDispatcher,
@@ -22,7 +23,7 @@ class SimpleActionDispatcher(ActionDispatcher):
         return user_api.get_object(obj_key)
 
 
-class ActionDispatcherTestCase(TestCase):
+class TestActionDispatcher(VumiTestCase):
 
     def test_dispatcher_type_name(self):
         self.assertEqual(ActionDispatcher.dispatcher_type_name, None)
@@ -56,19 +57,19 @@ class ActionDispatcherTestCase(TestCase):
                 user_account_key))
 
 
-class ActionErrorTestCase(TestCase):
+class TestActionError(VumiTestCase):
     def test_action_error(self):
         err = ActionError("Testing")
         self.assertEqual(err.faultString, "Testing")
         self.assertEqual(err.faultCode, 400)
 
 
-class ConversationAcitonDispatcherTestCase(TestCase):
+class TestConversationAcitonDispatcher(VumiTestCase):
     def test_dispatcher_type_name(self):
         self.assertEqual(
             ConversationActionDispatcher.dispatcher_type_name, 'conversation')
 
 
-class RouterActionDispatcherTestCase(TestCase):
+class TestRouterActionDispatcher(VumiTestCase):
     def test_dispatcher_type_name(self):
         self.assertEqual(RouterActionDispatcher.dispatcher_type_name, 'router')

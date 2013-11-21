@@ -5,7 +5,6 @@ import base64
 from twisted.cred import error
 from twisted.cred.credentials import UsernamePassword
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 from twisted.web import resource
 from twisted.web.test.test_web import DummyRequest
 
@@ -19,7 +18,7 @@ from go.vumitools.tests.helpers import VumiApiHelper
 import mock
 
 
-class GoUserRealmTestCase(TestCase):
+class TestGoUserRealm(VumiTestCase):
     def test_request_avatar(self):
         expected_resource = object()
         getter = mock.Mock(return_value=expected_resource)
@@ -42,7 +41,7 @@ class GoUserRealmTestCase(TestCase):
                           realm.requestAvatar, u"user", mind)
 
 
-class GoUserSessionAccessCheckerTestCase(VumiTestCase):
+class TestGoUserSessionAccessChecker(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
         self.persistence_helper = PersistenceHelper(is_sync=False)
@@ -85,7 +84,7 @@ class GoUserSessionAccessCheckerTestCase(VumiTestCase):
         self.assertTrue(errored)
 
 
-class GoUserAuthSessionWrapperTestCase(VumiTestCase):
+class TestGoUserAuthSessionWrapper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):

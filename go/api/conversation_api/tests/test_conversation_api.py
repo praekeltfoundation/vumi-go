@@ -13,7 +13,7 @@ from go.api.conversation_api.conversation_api import (
 from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class ConversationApiTestCase(VumiTestCase):
+class TestConversationApi(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):

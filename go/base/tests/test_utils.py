@@ -8,7 +8,7 @@ from go.base.utils import (
 from go.errors import UnknownConversationType, UnknownRouterType
 
 
-class ConversationDefinitionHelpersTestCase(GoDjangoTestCase):
+class TestConversationDefinitionHelpers(GoDjangoTestCase):
     def test_get_conversation_pkg(self):
         pkg = get_conversation_pkg('bulk_message', ['definition'])
         self.assertEqual(pkg.__name__, 'go.apps.bulk_message')
@@ -49,7 +49,7 @@ class ConversationDefinitionHelpersTestCase(GoDjangoTestCase):
         self.assertEqual(view_def._conv_def.conversation_type, 'wikipedia_sms')
 
 
-class RouterDefinitionHelpersTestCase(GoDjangoTestCase):
+class TestRouterDefinitionHelpers(GoDjangoTestCase):
     def test_get_router_pkg(self):
         pkg = get_router_pkg('keyword', ['definition'])
         self.assertEqual(pkg.__name__, 'go.routers.keyword')

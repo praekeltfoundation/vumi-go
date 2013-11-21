@@ -1,9 +1,11 @@
 import json
 import decimal
+
 import pytest
 
 from twisted.internet import defer
-from twisted.trial import unittest
+
+from vumi.tests.helpers import VumiTestCase
 
 from go.billing import settings as app_settings
 from go.billing import api
@@ -22,7 +24,7 @@ skipif_unsupported_db = pytest.mark.skipif(
     reason="Billing API requires PostGreSQL")
 
 
-class UserTestCase(unittest.TestCase):
+class TestUser(VumiTestCase):
 
     @pytest.mark.django_db
     @defer.inlineCallbacks
@@ -75,7 +77,7 @@ class UserTestCase(unittest.TestCase):
         self.assertTrue("test@example.com" in email_list)
 
 
-class AccountTestCase(unittest.TestCase):
+class TestAccount(VumiTestCase):
 
     @pytest.mark.django_db
     @defer.inlineCallbacks
@@ -168,7 +170,7 @@ class AccountTestCase(unittest.TestCase):
         self.assertTrue(found)
 
 
-class CostTestCase(unittest.TestCase):
+class TestCost(VumiTestCase):
 
     @pytest.mark.django_db
     @defer.inlineCallbacks
@@ -289,7 +291,7 @@ class CostTestCase(unittest.TestCase):
         self.assertEqual(message_cost[0].get('credit_amount'), credit_amount)
 
 
-class TransactionTestCase(unittest.TestCase):
+class TestTransaction(VumiTestCase):
 
     @pytest.mark.django_db
     @defer.inlineCallbacks

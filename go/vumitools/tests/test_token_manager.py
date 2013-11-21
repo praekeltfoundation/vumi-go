@@ -8,7 +8,7 @@ from go.vumitools.token_manager import (
 from mock import patch
 
 
-class TokenManagerTestCase(VumiTestCase):
+class TestTokenManager(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):

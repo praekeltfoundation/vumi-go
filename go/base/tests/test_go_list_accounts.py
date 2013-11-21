@@ -5,7 +5,7 @@ from go.base.management.commands import go_list_accounts
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class GoListAccountsCommandTestCase(GoDjangoTestCase):
+class TestGoListAccountsCommand(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()

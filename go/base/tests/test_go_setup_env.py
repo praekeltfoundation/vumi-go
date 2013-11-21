@@ -29,8 +29,7 @@ class FakeFile(StringIO):
         pass
 
 
-class GoBootstrapEnvTestCase(GoDjangoTestCase):
-    use_riak = True
+class TestGoSetupEnv(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()

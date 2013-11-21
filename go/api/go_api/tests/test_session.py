@@ -4,7 +4,7 @@ from go.api.go_api.session import SessionStore, CreateError
 from go.base.tests.helpers import GoDjangoTestCase
 
 
-class SessionStoreTestCase(GoDjangoTestCase):
+class TestSessionStore(GoDjangoTestCase):
     def mk_session_store(self, session_key=None):
         ss = SessionStore(session_key)
         return (ss, ss.session_manager)

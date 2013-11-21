@@ -9,13 +9,7 @@ from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.api import VumiApiCommand
 
 
-class SurveyTestCase(GoDjangoTestCase):
-
-    TEST_CHANNEL_METADATA = {
-        "supports": {
-            "generic_sends": True,
-        },
-    }
+class TestSurveysViews(GoDjangoTestCase):
 
     def setUp(self):
         self.app_helper = AppViewsHelper(u'survey')

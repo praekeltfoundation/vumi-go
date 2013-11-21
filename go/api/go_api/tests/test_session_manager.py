@@ -9,7 +9,7 @@ from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 from go.api.go_api.session_manager import SessionManager, GO_USER_ACCOUNT_KEY
 
 
-class SessionManagerTestCase(VumiTestCase):
+class TestSessionManager(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
         self.persistence_helper = PersistenceHelper()

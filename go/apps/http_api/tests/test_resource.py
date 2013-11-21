@@ -1,4 +1,4 @@
-from twisted.trial.unittest import TestCase
+from vumi.tests.helpers import VumiTestCase
 
 from go.apps.http_api.resource import MsgOptions
 
@@ -10,7 +10,7 @@ class ToyMsgOptions(MsgOptions):
     }
 
 
-class TestMsgOptions(TestCase):
+class TestMsgOptions(VumiTestCase):
 
     def assert_no_attribute(self, obj, attr):
         self.assertRaises(AttributeError, getattr, obj, attr)

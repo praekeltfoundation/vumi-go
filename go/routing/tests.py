@@ -9,7 +9,7 @@ from go.api.go_api.api_types import (
     ChannelType, ConversationType, RoutingEntryType)
 
 
-class RoutingScreenTestCase(GoDjangoTestCase):
+class TestRoutingScreen(GoDjangoTestCase):
     # Most of the functionality of this view lives in JS, so we just test that
     # we're correctly injecting initial state into the template.
 

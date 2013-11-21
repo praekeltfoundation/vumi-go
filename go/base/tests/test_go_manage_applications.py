@@ -4,7 +4,7 @@ from go.base.management.commands import go_manage_application
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class GoManageApplicationCommandTestCase(GoDjangoTestCase):
+class TestGoManageApplicationCommand(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()

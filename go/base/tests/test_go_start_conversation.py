@@ -7,7 +7,6 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoStartConversation(GoDjangoTestCase):
-    use_riak = True
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()

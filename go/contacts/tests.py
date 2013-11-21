@@ -60,7 +60,7 @@ class BaseContactsTestCase(GoDjangoTestCase):
             msisdn=unicode(msisdn), **kwargs)
 
 
-class ContactsTestCase(BaseContactsTestCase):
+class TestContacts(BaseContactsTestCase):
     def test_redirect_index(self):
         response = self.client.get(reverse('contacts:index'))
         self.assertRedirects(response, reverse('contacts:groups'))
@@ -496,7 +496,7 @@ class ContactsTestCase(BaseContactsTestCase):
         })
 
 
-class GroupsTestCase(BaseContactsTestCase):
+class TestGroups(BaseContactsTestCase):
     def get_all_contacts(self, keys=None):
         if keys is None:
             keys = self.contact_store.list_contacts()
@@ -748,7 +748,7 @@ class GroupsTestCase(BaseContactsTestCase):
         self.assertEqual(mime_type, 'application/zip')
 
 
-class SmartGroupsTestCase(BaseContactsTestCase):
+class TestSmartGroups(BaseContactsTestCase):
     def mksmart_group(self, query, name='a smart group'):
         response = self.client.post(reverse('contacts:groups'), {
             'name': name,

@@ -2,7 +2,7 @@ from go.apps.tests.view_helpers import AppViewsHelper
 from go.base.tests.helpers import GoDjangoTestCase
 
 
-class OptOutTestCase(GoDjangoTestCase):
+class TestOptOutViews(GoDjangoTestCase):
     def setUp(self):
         self.app_helper = AppViewsHelper(u'opt_out')
         self.add_cleanup(self.app_helper.cleanup)

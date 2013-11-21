@@ -56,7 +56,6 @@ class TestRouter(VumiTestCase):
 
 
 class TestRouterStore(VumiTestCase):
-    use_riak = True
 
     @inlineCallbacks
     def setUp(self):

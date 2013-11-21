@@ -6,7 +6,7 @@ from django.core.urlresolvers import reverse
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class BaseViewsTestCase(GoDjangoTestCase):
+class TestBaseViews(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)

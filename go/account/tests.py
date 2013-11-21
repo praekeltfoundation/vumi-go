@@ -10,7 +10,7 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
-class AccountTestCase(GoDjangoTestCase):
+class TestAccountViews(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()
@@ -161,11 +161,9 @@ class AccountTestCase(GoDjangoTestCase):
         self.assertEqual([], mail.outbox)
 
 
-class EmailTestCase(GoDjangoTestCase):
-    use_riak = True
+class TestEmail(GoDjangoTestCase):
 
     def setUp(self):
-        super(EmailTestCase, self).setUp()
         self.vumi_helper = DjangoVumiApiHelper()
         self.add_cleanup(self.vumi_helper.cleanup)
         self.vumi_helper.setup_vumi_api()

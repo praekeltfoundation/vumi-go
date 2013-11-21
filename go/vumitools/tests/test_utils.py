@@ -8,7 +8,7 @@ from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class MessageMetadataHelperTestCase(VumiTestCase):
+class TestMessageMetadataHelper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):

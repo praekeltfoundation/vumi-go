@@ -4,7 +4,7 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.routing_table import RoutingTable
 
 
-class WizardViewsTestCase(GoDjangoTestCase):
+class TestWizardViews(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = DjangoVumiApiHelper()
