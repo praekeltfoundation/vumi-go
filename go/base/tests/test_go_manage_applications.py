@@ -13,7 +13,7 @@ class TestGoManageApplicationCommand(GoDjangoTestCase):
         self.user_helper = self.vumi_helper.make_django_user()
 
         self.command = go_manage_application.Command()
-        self.vumi_helper.patch_settings(VUMI_INSTALLED_APPS={
+        self.vumi_helper.patch_config(VUMI_INSTALLED_APPS={
             'go.apps.dummy': {
                 'namespace': 'dummy',
                 'display_name': 'dummy'

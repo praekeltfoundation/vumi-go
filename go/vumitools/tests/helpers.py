@@ -10,6 +10,7 @@ from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
     generate_proxies)
 
+import go.config
 from go.vumitools.api import VumiApi, VumiApiEvent, VumiApiCommand
 from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.utils import MessageMetadataHelper
@@ -29,6 +30,11 @@ class PatchHelper(object):
         self._monkey_patches.append(monkey_patch)
         monkey_patch.patch()
         return monkey_patch
+
+    @proxyable
+    def patch_config(self, **kwargs):
+        for key, value in kwargs.items():
+            self.monkey_patch(go.config, "_%s" % key, value)
 
 
 class GoMessageHelper(object):

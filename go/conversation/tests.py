@@ -132,7 +132,7 @@ class BaseConversationViewTestCase(GoDjangoTestCase):
         self.add_cleanup(self.vumi_helper.cleanup)
         self.vumi_helper.monkey_patch(
             go.base.utils, 'get_conversation_pkg', self._get_conversation_pkg)
-        self.vumi_helper.patch_settings(
+        self.vumi_helper.patch_config(
             VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
         self.vumi_helper.setup_vumi_api()
         self.user_helper = self.vumi_helper.make_django_user()

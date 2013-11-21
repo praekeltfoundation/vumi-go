@@ -111,7 +111,7 @@ def create_permissions_for_tests(*args, **kw):
     from django.contrib.auth.models import ContentType, Permission
     if 'auth_permission' not in connection.introspection.table_names():
         return
-    for model in ('user', 'permission', 'group'):
+    for model in ('gouser', 'user', 'permission', 'group'):
             ct, _ = ContentType.objects.get_or_create(
                 model=model, app_label='auth')
             for perm_name in ('add', 'change', 'delete'):
