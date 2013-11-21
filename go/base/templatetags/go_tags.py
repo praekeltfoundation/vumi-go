@@ -1,3 +1,5 @@
+from urlparse import parse_qs
+
 from django import template
 register = template.Library()
 
@@ -14,16 +16,20 @@ def split(value, delimiter):
 
 
 @register.simple_tag
-def add_params(request, params_dict=None, **kwargs):
-    """Reconstruct the URL parameters by adding any extras passed in to
-       ``kwargs``.
+def add_params(request, params=None, **kwargs):
+    """Reconstruct the URL parameters by adding any extra params.
+
+    ``params`` can either be a query string or a *dict* mapping parameter
+    names to values.
     """
     query = request.GET.copy()
-    if params_dict:
-        params_dict.update(kwargs)
+    if params:
+        if isinstance(params, basestring):
+            params = parse_qs(params)
+        params.update(kwargs)
     else:
-        params_dict = kwargs
-    for k, v in params_dict.iteritems():
+        params = kwargs
+    for k, v in params.iteritems():
         if isinstance(v, list):
             query.setlist(k, v)
         else:
