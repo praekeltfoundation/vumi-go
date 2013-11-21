@@ -618,7 +618,7 @@ class EditConversationGroupsView(ConversationTemplateView):
 
 
 class ConversationDashboardView(ConversationTemplateView):
-    view_name = 'dashboard'
+    view_name = 'conversation_dashboard'
     path_suffix = 'dashboard/'
 
     def build_layout(self, conversation):
@@ -628,48 +628,48 @@ class ConversationDashboardView(ConversationTemplateView):
         """
 
         return ConversationDashboardLayout(conversation, [{
-            'type': 'lvalue',
+            'type': 'diamondash.widgets.lvalue.LValueWidget',
             'time_range': '1d',
-            'title': 'Messages Sent (24h)',
+            'name': 'Messages Sent (24h)',
             'target': 'messages_sent',
         }, {
-            'type': 'lvalue',
+            'type': 'diamondash.widgets.lvalue.LValueWidget',
             'time_range': '1d',
-            'title': 'Messages Received (24h)',
+            'name': 'Messages Received (24h)',
             'target': 'messages_received',
         }, 'new_row', {
-            'type': 'graph',
-            'title': 'Messages Sent and Received (24h)',
+            'type': 'diamondash.widgets.graph.GraphWidget',
+            'name': 'Messages Sent and Received (24h)',
             'width': 6,
             'time_range': '24h',
             'bucket_size': '15m',
             'metrics': [{
-                'title': 'Messagent Sent',
+                'name': 'Messagent Sent',
                 'target': {
                     'metric_type': 'conversation',
                     'name': 'messages_sent',
                 }
             }, {
-                'title': 'Messagent Received',
+                'name': 'Messagent Received',
                 'target': {
                     'metric_type': 'conversation',
                     'name': 'messages_received',
                 }
             }]
         }, {
-            'type': 'graph',
-            'title': 'Messages Sent and Received (30d)',
+            'type': 'diamondash.widgets.graph.GraphWidget',
+            'name': 'Messages Sent and Received (30d)',
             'width': 6,
             'time_range': '30d',
             'bucket_size': '1d',
             'metrics': [{
-                'title': 'Messagent Sent',
+                'name': 'Messagent Sent',
                 'target': {
                     'metric_type': 'conversation',
                     'name': 'messages_received',
                 },
             }, {
-                'title': 'Messagent Received',
+                'name': 'Messagent Received',
                 'target': {
                     'metric_type': 'conversation',
                     'name': 'messages_received',
