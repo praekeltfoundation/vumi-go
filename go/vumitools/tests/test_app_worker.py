@@ -7,7 +7,7 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase
 
 from go.apps.tests.helpers import AppWorkerHelper
-from go.base import utils as base_utils
+from go.vumitools import app_worker
 from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.metrics import ConversationMetric
 from go.vumitools.conversation.definition import ConversationDefinitionBase
@@ -61,7 +61,7 @@ class TestGoApplicationWorker(VumiTestCase):
         self.add_cleanup(self.app_helper.cleanup)
 
         self.patch(
-            base_utils,
+            app_worker,
             'get_conversation_definition',
             lambda conv_type, conv: DummyConversationDefinition(conv))
 

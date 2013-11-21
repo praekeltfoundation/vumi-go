@@ -69,8 +69,9 @@ class TestGoMetricsWorker(VumiTestCase):
         worker = yield self.get_metrics_worker()
         user1_helper = yield self.vumi_helper.make_user(u'acc1')
         user2_helper = yield self.vumi_helper.make_user(u'acc2')
-        yield self.vumi_helper.make_user(u'acc3')
-        yield worker.redis.sadd('metrics_accounts', user1_helper.account_key)
+        user3_helper = yield self.vumi_helper.make_user(u'acc3')
+        yield worker.redis.sadd(
+            'disabled_metrics_accounts', user3_helper.account_key)
         yield worker.redis.sadd('metrics_accounts', user2_helper.account_key)
 
         account_keys = yield worker.find_account_keys()
@@ -114,8 +115,6 @@ class TestGoMetricsWorker(VumiTestCase):
         worker = yield self.get_metrics_worker()
         user1_helper = yield self.vumi_helper.make_user(u'acc1')
         user2_helper = yield self.vumi_helper.make_user(u'acc2')
-        yield worker.redis.sadd('metrics_accounts', user1_helper.account_key)
-        yield worker.redis.sadd('metrics_accounts', user2_helper.account_key)
 
         conv1 = yield user1_helper.create_conversation(
             u'dummy_conv', name=u'conv1', started=True)

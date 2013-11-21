@@ -1,58 +1,44 @@
-from optparse import make_option
-
-from django.core.management.base import BaseCommand, CommandError
-
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import (
+    BaseGoCommand, make_command_option, make_email_option,
+    get_user_by_account_key, user_details_as_string)
 
 
-class Command(BaseCommand):
-    help = "Enable or disable metrics for a Vumi Go user"
+class Command(BaseGoCommand):
+    # TODO Use riak instead of redis for maintaining the list of accounts
+    # for which metric collection should be disabled
 
-    LOCAL_OPTIONS = [
-        make_option('--email-address',
-            dest='email-address',
-            help='Email address for the Vumi Go user'),
-        make_option('--enable',
-            dest='enable',
-            action='store_true',
-            default=False,
-            help='Give access to this application'),
-        make_option('--disable',
-            dest='disable',
-            action='store_true',
-            default=False,
-            help='Revoke access to this application'),
-    ]
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
+    encoding = 'utf-8'
 
-    def handle(self, *args, **options):
-        options = options.copy()
-        for opt in self.LOCAL_OPTIONS:
-            if options.get(opt.dest) is None:
-                value = raw_input("%s: " % (opt.help,))
-                if value:
-                    options[opt.dest] = value
-                else:
-                    raise CommandError('Please provide %s:' % (opt.dest,))
+    help = "Disable or re-enable metric collection for a Vumi Go user"
 
-        self.handle_validated(*args, **options)
+    option_list = BaseGoCommand.option_list + (
+        make_email_option(),
+        make_command_option('list',
+            help='List the Vumi Go user accounts that currently have '
+                 'metric collection disabled'),
+        make_command_option('enable',
+            help='Enable metric collection for the Vumi Go user'),
+        make_command_option('disable',
+            help='Disable metric collection for the Vumi Go user'),
+    )
 
-    def handle_validated(self, *args, **options):
-        email_address = options['email-address']
-        enable = options['enable']
-        disable = options['disable']
-
-        if (enable and disable) or not (enable or disable):
-            raise CommandError(
-                'Please specify either --enable or --disable.')
-
-        user = get_user_by_email(email_address)
-        user_api = vumi_api_for_user(user)
+    def handle_command_enable(self, *args, **options):
+        _user, user_api = self.mk_user_api(options=options)
         user_account_key = user_api.user_account_key
-        redis = user_api.api.redis
+        self.vumi_api.redis.srem('disabled_metrics_accounts', user_account_key)
 
-        if enable:
-            redis.sadd('metrics_accounts', user_account_key)
-        elif disable:
-            redis.srem('metrics_accounts', user_account_key)
+    def handle_command_disable(self, *args, **options):
+        _user, user_api = self.mk_user_api(options=options)
+        user_account_key = user_api.user_account_key
+        self.vumi_api.redis.sadd('disabled_metrics_accounts', user_account_key)
+
+    def handle_command_list(self, *args, **options):
+        acc_keys = self.vumi_api.redis.smembers('disabled_metrics_accounts')
+
+        if not acc_keys:
+            self.stderr.write('No accounts have metric collection disabled.\n')
+        else:
+            for i, acc_key in enumerate(acc_keys):
+                user = get_user_by_account_key(acc_key)
+                output = u"%s. %s\n" % (i, user_details_as_string(user))
+                self.stdout.write(output.encode(self.encoding))
