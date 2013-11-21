@@ -15,6 +15,7 @@ from twisted.python.monkey import MonkeyPatcher
 from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
 
+import go.config
 from go.vumitools.tests.utils import GoPersistenceMixin, FakeAmqpConnection
 from go.vumitools.api import VumiApi
 from go.base import models as base_models
@@ -113,6 +114,10 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         patch = override_settings(**kwargs)
         patch.enable()
         self._settings_patches.append(patch)
+
+    def patch_config(self, **kwargs):
+        for key, value in kwargs.items():
+            self.monkey_patch(go.config, "_%s" % key, value)
 
     def create_user_profile(self, sender, instance, created, **kwargs):
         if not self.use_riak:
