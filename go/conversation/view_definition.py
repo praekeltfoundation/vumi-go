@@ -23,9 +23,7 @@ from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
                                    ConversationDetailForm)
 from go.conversation.tasks import export_conversation_messages
 from go.conversation.utils import PagedMessageCache
-from go.dashboard import (
-    DashboardSyncError, DashboardParseError,
-    Dashboard, ConversationDashboardLayout)
+from go.dashboard import Dashboard, ConversationDashboardLayout
 
 logger = logging.getLogger(__name__)
 
@@ -679,16 +677,10 @@ class ConversationDashboardView(ConversationTemplateView):
             }]
         }])
 
-    def on_sync_error(self, e):
+    def on_error(self, e):
         """
-        Hook for doing things when a dashboard sync error is encountered. Logs
-        the error by default.
-        """
-        logger.error(e)
-
-    def on_parse_error(self, e):
-        """
-        Hook for doing things when a dashboard parse error is encountered. Logs
+        Hook for doing things when a errors are encountered while parsing the
+        dashboard layout and syncing the dashboard with diamondash. Logs
         the error by default.
         """
         logger.error(e)
@@ -703,10 +695,8 @@ class ConversationDashboardView(ConversationTemplateView):
 
             # give the dashboard to diamondash
             dashboard.sync()
-        except DashboardParseError, e:
-            self.on_parse_error(e)
-        except DashboardSyncError, e:
-            self.on_sync_error(e)
+        except Exception, e:
+            self.on_error(e)
 
         model_data = json.dumps(dashboard.serialize() if dashboard else None)
         return self.render_to_response({

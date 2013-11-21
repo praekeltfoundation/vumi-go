@@ -12,7 +12,7 @@ from django.utils.unittest import skip
 
 import go.base.utils
 from go.base.tests.utils import (
-    VumiGoDjangoTestCase, FakeServer, FakeMessageStoreClient, FakeMatchResult)
+    VumiGoDjangoTestCase, FakeMessageStoreClient, FakeMatchResult)
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
@@ -21,8 +21,7 @@ from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.dashboard import Dashboard, DashboardLayout, DashboardParseError
-from go.dashboard.tests.utils import (
-    FakeDiamondashResponse, FakeDiamondashErrorResponse)
+from go.dashboard.tests.utils import FakeDiamondashApiClient
 
 
 class EnabledAction(ConversationAction):
@@ -839,7 +838,7 @@ class TestConversationTemplateTags(BaseConversationViewTestCase):
 class TestConversationDashboardView(BaseConversationViewTestCase):
     def setUp(self):
         super(TestConversationDashboardView, self).setUp()
-        self.diamondash = FakeServer(Dashboard.api_url())
+        self.diamondash_api = FakeDiamondashApiClient()
 
         self.error_log = []
         logger = logging.getLogger('go.conversation.view_definition')
@@ -848,19 +847,18 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
             self.error_log.append(unicode(e))
 
         self.monkey_patch(logger, 'error', log_error)
+        self.monkey_patch(Dashboard, 'api_client', self.diamondash_api)
 
     def tearDown(self):
         super(TestConversationDashboardView, self).tearDown()
-        self.diamondash.tear_down()
 
     def test_get_dashboard(self):
-        self.diamondash.set_response(
-            FakeDiamondashResponse({'happy': 'dashboard'}))
+        self.diamondash_api.set_response({'happy': 'dashboard'})
 
         conv = self.create_conversation(conversation_type=u'dummy')
         response = self.client.get(self.get_view_url(conv, 'dashboard'))
 
-        [dd_request] = self.diamondash.get_requests()
+        [dd_request] = self.diamondash_api.get_requests()
         raw_dashboard = dd_request['data']
         self.assertEqual(raw_dashboard['name'], conv.key)
         self.assertEqual(raw_dashboard['title'], conv.name)
@@ -871,14 +869,14 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
             {'happy': 'dashboard'})
 
     def test_get_dashboard_for_sync_error_handling(self):
-        self.diamondash.set_response(FakeDiamondashErrorResponse(':(', 404))
+        self.diamondash_api.set_error_response(':(')
 
         conv = self.create_conversation(conversation_type=u'dummy')
         response = self.client.get(self.get_view_url(conv, 'dashboard'))
 
         self.assertEqual(
             self.error_log,
-            ['Dashboard sync failed: 404 Client Error: '
+            ['Dashboard sync failed: '
              '{"message": ":(", "success": false}'])
 
         self.assertEqual(json.loads(response.context['model_data']), None)
