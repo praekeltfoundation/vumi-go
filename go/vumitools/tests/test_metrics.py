@@ -3,8 +3,8 @@ from mock import patch
 from twisted.internet.defer import succeed, inlineCallbacks, returnValue
 
 from vumi.blinkenlights.metrics import LAST
-from vumi.worker import BaseWorker
 from vumi.tests.helpers import VumiTestCase
+from vumi.worker import BaseWorker
 
 from go.base.amqp import AmqpConnection
 from go.base.tests.helpers import GoDjangoTestCase

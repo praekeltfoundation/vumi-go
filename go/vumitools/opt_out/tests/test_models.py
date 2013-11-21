@@ -12,8 +12,6 @@ from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
 
 class TestOptOutStore(VumiTestCase):
 
-    use_riak = True
-
     @inlineCallbacks
     def setUp(self):
         self.vumi_helper = VumiApiHelper()
@@ -21,7 +19,6 @@ class TestOptOutStore(VumiTestCase):
         yield self.vumi_helper.setup_vumi_api()
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         user_account = yield self.user_helper.get_user_account()
-
         self.opt_out_store = OptOutStore.from_user_account(user_account)
         self.msg_helper = GoMessageHelper()
 

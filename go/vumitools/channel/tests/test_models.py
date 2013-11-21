@@ -4,7 +4,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+from vumi.tests.helpers import VumiTestCase
 
 from go.vumitools.channel.models import ChannelStore, CheapPlasticChannel
 from go.vumitools.tests.helpers import VumiApiHelper
