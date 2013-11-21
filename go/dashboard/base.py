@@ -1,11 +1,14 @@
 import json
-from urlparse import urljoin
+import logging
 from functools import wraps
 
 import requests
 from django.conf import settings
 
 from go.vumitools.metrics import ConversationMetric, AccountMetric
+
+
+logger = logging.getLogger('go')
 
 
 def is_collection(obj):
@@ -70,14 +73,22 @@ class DashboardParseError(Exception):
 
 
 class DiamondashApiClient(object):
-    def request(self, method, url, data=None):
-        url = urljoin(settings.DIAMONDASH_API_URL, url)
-        resp = requests.request(method, url, data=json.dumps(data))
+    def make_api_url(self, path):
+        return '/'.join(
+            p.strip('/')
+            for p in [settings.DIAMONDASH_API_URL, path])
+
+    def request(self, method, path, data=None):
+        resp = requests.request(
+            method,
+            self.make_api_url(path),
+            data=json.dumps(data))
+
         resp.raise_for_status()
         return resp.json['data']
 
     def replace_dashboard(self, config):
-        return self.request('put', '/dashboards', config)
+        return self.request('put', 'dashboards', config)
 
 
 class Dashboard(object):

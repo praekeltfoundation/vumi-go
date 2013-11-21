@@ -26,11 +26,16 @@ class TestDashboardApiClient(VumiGoDjangoTestCase):
         # not the methods that delegate to them
         self.client = FakeDiamondashApiClient()
 
+    def test_make_api_url(self):
+        self.assertEqual(
+            self.client.make_api_url('dashboards'),
+            'http://localhost:7115/api/dashboards')
+
     def test_replace_dashboard(self):
         self.client.replace_dashboard({'some': 'dashboard'})
         self.assertEqual(self.client.get_requests(), [{
             'method': 'put',
-            'url': '/dashboards',
+            'url': 'dashboards',
             'data': {'some': 'dashboard'},
         }])
 
