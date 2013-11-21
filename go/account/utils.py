@@ -1,6 +1,7 @@
 from operator import attrgetter
 
-from go.base.utils import vumi_api_for_user, configured_conversation_types
+from go.base.utils import vumi_api_for_user
+from go.config import configured_conversation_types
 from go.vumitools.conversation.models import CONVERSATION_RUNNING
 
 from django.core.mail import send_mail
