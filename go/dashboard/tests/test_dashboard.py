@@ -1,7 +1,7 @@
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.dashboard import client
 from go.dashboard.tests.utils import FakeDiamondashApiClient
-from go.dashboard.base import (
+from go.dashboard.dashboard import (
     DashboardSyncError, DashboardParseError,
     Dashboard, DashboardLayout,
     ConversationDashboardLayout, visit_dicts, ensure_handler_fields)

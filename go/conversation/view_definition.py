@@ -23,7 +23,7 @@ from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
                                    ConversationDetailForm)
 from go.conversation.tasks import export_conversation_messages
 from go.conversation.utils import PagedMessageCache
-from go.dashboard import Dashboard, ConversationDashboardLayout
+from go.dashboard.dashboard import Dashboard, ConversationDashboardLayout
 
 logger = logging.getLogger(__name__)
 

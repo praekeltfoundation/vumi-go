@@ -20,7 +20,9 @@ from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.vumitools.conversation.utils import ConversationWrapper
-from go.dashboard import Dashboard, DashboardLayout, DashboardParseError
+from go.dashboard.dashboard import (
+    Dashboard, DashboardLayout, DashboardParseError)
+from go.dashboard import client as dashboard_client
 from go.dashboard.tests.utils import FakeDiamondashApiClient
 
 
@@ -847,7 +849,11 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
             self.error_log.append(unicode(e))
 
         self.monkey_patch(logger, 'error', log_error)
-        self.monkey_patch(Dashboard, 'api_client', self.diamondash_api)
+
+        self.monkey_patch(
+            dashboard_client,
+            'get_diamondash_api',
+            lambda: self.diamondash_api)
 
     def tearDown(self):
         super(TestConversationDashboardView, self).tearDown()
