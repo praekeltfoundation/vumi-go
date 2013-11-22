@@ -35,16 +35,3 @@ def add_params(request, params=None, **kwargs):
         else:
             query[k] = v
     return query.urlencode(query)
-
-
-@register.assignment_tag
-def get_param(request, name, default=''):
-    """Get the URL parameter value.
-
-    If the value is list return a CSV string.
-    """
-    value = request.GET.getlist(name)
-    if value:
-        value.sort()
-        return ','.join(value)
-    return default

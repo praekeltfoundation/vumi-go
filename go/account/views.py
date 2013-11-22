@@ -179,16 +179,28 @@ def user_detail(request, user_id=None):
 @login_required
 def billing(request, template_name='account/billing.html'):
     """Display a list of available statements for the logged in user"""
-    try:
-        order_by = request.GET.getlist('o', ['-year', '-month'])
-        account = request.user.account_set.all()[0]
-        statement_list = Statement.objects\
-            .filter(account=account)\
-            .order_by(*order_by)
+    order_by = request.GET.get(
+        'o', billing_settings.STATEMENTS_DEFAULT_ORDER_BY)
 
-    except IndexError:
+    # Validate the order_by parameter by making sure the field exists
+    if order_by.startswith('-'):
+        field = order_by[1:]
+    else:
+        field = order_by
+    if not field in Statement._meta.get_all_field_names():
+        order_by = billing_settings.STATEMENTS_DEFAULT_ORDER_BY
+
+    # If the user has multiple accounts, take the first one
+    account_list = request.user.account_set.all()
+    if account_list:
+        statement_list = Statement.objects\
+            .filter(account=account_list[0])\
+            .order_by(order_by)
+
+    else:
         statement_list = []
 
+    # Paginate statements
     paginator = Paginator(statement_list,
                           billing_settings.STATEMENTS_PER_PAGE)
 
@@ -200,7 +212,6 @@ def billing(request, template_name='account/billing.html'):
         page = paginator.page(paginator.num_pages)
 
     context = {
-        'statement_list': statement_list,
         'paginator': paginator,
         'page': page,
     }
@@ -212,18 +223,18 @@ def statement_view(request, statement_id=None):
     """Send a CSV version of the statement with the given
        ``statement_id`` to the user's browser.
     """
-    monthly_statement = get_object_or_404(
+    statement = get_object_or_404(
         Statement, pk=statement_id, account__user=request.user)
 
     response = HttpResponse(mimetype='text/csv')
-    filename = "Vumi Go Statement (%s-%s).csv" % (monthly_statement.year,
-                                                  monthly_statement.month)
+    filename = "%s (%s).csv" % (statement.title,
+                                statement.from_date.strftime('%B %Y'))
 
     response['Content-Disposition'] = 'attachment; filename=%s' % (filename,)
     writer = csv.writer(response)
     headings = ["Tag pool name", "Tag name", "Message direction", "Total cost"]
     writer.writerow(headings)
-    line_item_list = monthly_statement.line_items.all()
+    line_item_list = statement.lineitem_set.all()
     for line_item in line_item_list:
         writer.writerow([
             line_item.tag_pool_name, line_item.tag_name,

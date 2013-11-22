@@ -18,6 +18,9 @@ MONTHLY_STATEMENT_TITLE = getattr(
 STATEMENTS_PER_PAGE = getattr(
     settings, 'BILLING_STATEMENTS_PER_PAGE', 12)
 
+STATEMENTS_DEFAULT_ORDER_BY = getattr(
+    settings, 'BILLING_STATEMENTS_DEFAULT_ORDER_BY', '-from_date')
+
 
 def get_user_table():
     """Return the name of the table used by the user model."""
