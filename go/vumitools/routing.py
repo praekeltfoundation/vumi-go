@@ -161,7 +161,7 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
     user_account_key = ConfigText(
         "Key of the user account the message is from.")
     unroutable_inbound_session_reply = ConfigText(
-        "Text to send on encounter unroutable inbound messages"
+        "Text to send in response to unroutable inbound messages"
         " that are part of a session.",
         static=True, required=False)
 
