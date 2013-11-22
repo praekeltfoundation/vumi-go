@@ -588,7 +588,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 return self.publish_unroutable_message_reply(
                     msg, connector_name,
                     config.default_unroutable_inbound_session_reply)
-        return self.default_errback(f, msg, connector_name)
+        return f
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
