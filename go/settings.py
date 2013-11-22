@@ -129,6 +129,7 @@ ROOT_URLCONF = 'go.urls'
 TEMPLATE_DIRS = (
     abspath("templates"),
     abspath("base", "templates"),
+    abspath("dashboard", "templates"),
     abspath("contacts", "templates"),
     abspath("account", "templates"),
     abspath("apps", "dialogue", "templates"),
