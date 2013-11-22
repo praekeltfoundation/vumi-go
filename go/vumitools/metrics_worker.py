@@ -89,8 +89,8 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         yield self.redis.close_manager()
         yield self._go_teardown_worker()
 
-    def bucket_for_conversation(self, key):
-        return hash(key) % self._num_buckets
+    def bucket_for_conversation(self, conv):
+        return hash(conv.key) % self._num_buckets
 
     @inlineCallbacks
     def populate_conversation_buckets(self):
