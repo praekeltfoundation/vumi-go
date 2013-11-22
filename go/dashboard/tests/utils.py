@@ -1,6 +1,6 @@
 import json
 
-from go.dashboard import DiamondashApiError, DiamondashApiClient
+from go.dashboard.client import DiamondashApiError, DiamondashApiClient
 
 
 class FakeDiamondashApiClient(DiamondashApiClient):

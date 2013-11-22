@@ -1,11 +1,9 @@
-import json
-import requests
-
 from go.base.tests.utils import VumiGoDjangoTestCase
+from go.dashboard import client
 from go.dashboard.tests.utils import FakeDiamondashApiClient
 from go.dashboard.base import (
-    DiamondashApiError, DashboardSyncError, DashboardParseError,
-    DiamondashApiClient, Dashboard, DashboardLayout,
+    DashboardSyncError, DashboardParseError,
+    Dashboard, DashboardLayout,
     ConversationDashboardLayout, visit_dicts, ensure_handler_fields)
 
 
@@ -17,98 +15,6 @@ class ToyDashboardLayout(DashboardLayout):
     @ensure_handler_fields('name')
     def handle_bar_metric(self, target):
         return "bar.%s" % target['name']
-
-
-class FakeResponse(object):
-    def __init__(self, content=""):
-        self.content = content
-
-    def raise_for_status(self):
-        pass
-
-    @property
-    def json(self):
-        return json.loads(self.content)
-
-
-class FakeErrorResponse(object):
-    def __init__(self, content):
-        self.content = content
-
-    def raise_for_status(self):
-        raise requests.exceptions.HTTPError(self.content)
-
-
-class TestDashboardApiClient(VumiGoDjangoTestCase):
-    def test_raw_request(self):
-        resp = FakeResponse()
-
-        def stubbed_request(method, url, data):
-            self.assertEqual(method, 'put')
-            self.assertEqual(url, 'http://localhost:7115/api/foo')
-            self.assertEqual(data, 'bar')
-            return resp
-
-        self.monkey_patch(requests, 'request', stubbed_request)
-
-        client = DiamondashApiClient()
-        self.assertEqual(client.raw_request('put', 'foo', 'bar'), resp)
-
-    def test_raw_request_for_error_responses(self):
-        resp = FakeErrorResponse(':(')
-        self.monkey_patch(requests, 'request', lambda *a, **kw: resp)
-
-        client = DiamondashApiClient()
-        self.assertRaises(
-            DiamondashApiError,
-            client.raw_request,
-            'put', 'foo', 'bar')
-
-    def test_request(self):
-        resp = FakeResponse(json.dumps({
-            'success': True,
-            'data': {'spam': 'ham'}
-        }))
-
-        def stubbed_request(method, url, data):
-            self.assertEqual(method, 'put')
-            self.assertEqual(url, 'http://localhost:7115/api/foo')
-            self.assertEqual(data, json.dumps({'bar': 'baz'}))
-            return resp
-
-        self.monkey_patch(requests, 'request', stubbed_request)
-
-        client = DiamondashApiClient()
-        self.assertEqual(
-            client.request('put', 'foo', {'bar': 'baz'}),
-            {'spam': 'ham'})
-
-    def test_request_for_error_responses(self):
-        resp = FakeErrorResponse(':(')
-        self.monkey_patch(requests, 'request', lambda *a, **kw: resp)
-
-        client = DiamondashApiClient()
-        self.assertRaises(
-            DiamondashApiError,
-            client.request,
-            'put', 'foo', 'bar')
-
-    def test_make_api_url(self):
-        client = DiamondashApiClient()
-
-        self.assertEqual(
-            client.make_api_url('dashboards'),
-            'http://localhost:7115/api/dashboards')
-
-    def test_replace_dashboard(self):
-        client = FakeDiamondashApiClient()
-        client.replace_dashboard({'some': 'dashboard'})
-
-        self.assertEqual(client.get_requests(), [{
-            'method': 'put',
-            'url': 'dashboards',
-            'data': {'some': 'dashboard'},
-        }])
 
 
 class TestDashboard(VumiGoDjangoTestCase):
@@ -134,7 +40,10 @@ class TestDashboard(VumiGoDjangoTestCase):
             },
         }])
 
-        self.monkey_patch(Dashboard, 'api_client', self.diamondash_api)
+        self.monkey_patch(
+            client,
+            'get_diamondash_api',
+            lambda: self.diamondash_api)
 
         self.dashboard = Dashboard(
             'ackbar-the-dashboard',

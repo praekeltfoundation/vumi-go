@@ -1,9 +1,6 @@
-import json
 from functools import wraps
 
-import requests
-from django.conf import settings
-
+from go.dashboard import client
 from go.vumitools.metrics import ConversationMetric, AccountMetric
 
 
@@ -55,13 +52,6 @@ def ensure_handler_fields(*fields):
     return decorator
 
 
-class DiamondashApiError(Exception):
-    """
-    Raised when we something goes wrong while trying to interact with
-    diamondash api.
-    """
-
-
 class DashboardSyncError(Exception):
     """
     Raised when we fail to sync the dashboard with diamondash.
@@ -75,35 +65,9 @@ class DashboardParseError(Exception):
     """
 
 
-class DiamondashApiClient(object):
-    def make_api_url(self, path):
-        return '/'.join(
-            p.strip('/')
-            for p in [settings.DIAMONDASH_API_URL, path])
-
-    def raw_request(self, method, path, content=""):
-        resp = requests.request(method, self.make_api_url(path), data=content)
-
-        try:
-            resp.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            raise DiamondashApiError(
-                "%s: %s" % (e, resp.content))
-
-        return resp
-
-    def request(self, method, path, data=None):
-        resp = self.raw_request(method, path, content=json.dumps(data))
-        return resp.json['data']
-
-    def replace_dashboard(self, config):
-        return self.request('put', 'dashboards', config)
-
-
 class Dashboard(object):
-    api_client = DiamondashApiClient()
-
     def __init__(self, name, title, layout):
+        self.diamondash_api = client.get_diamondash_api()
         self.name = name
         self.title = title
         self.layout = layout
@@ -122,7 +86,7 @@ class Dashboard(object):
         """
         try:
             raw_config = self._raw_serialize()
-            self.config = self.api_client.replace_dashboard(raw_config)
+            self.config = self.diamondash_api.replace_dashboard(raw_config)
         except Exception, e:
             raise DashboardSyncError("Dashboard sync failed: %s" % e)
 
