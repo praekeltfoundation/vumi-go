@@ -19,10 +19,8 @@ from go.account.forms import (EmailForm, AccountForm, UserAccountForm,
 from go.account.tasks import update_account_details
 from go.base.models import UserProfile
 from go.token.django_token_manager import DjangoTokenManager
-from go.billing.models import MonthlyStatement
-
-
-STATEMENTS_PER_PAGE = 12
+from go.billing import settings as billing_settings
+from go.billing.models import Statement
 
 
 class GoRegistrationView(RegistrationView):
@@ -184,14 +182,16 @@ def billing(request, template_name='account/billing.html'):
     try:
         order_by = request.GET.getlist('o', ['-year', '-month'])
         account = request.user.account_set.all()[0]
-        statement_list = MonthlyStatement.objects\
+        statement_list = Statement.objects\
             .filter(account=account)\
             .order_by(*order_by)
 
     except IndexError:
         statement_list = []
 
-    paginator = Paginator(statement_list, STATEMENTS_PER_PAGE)
+    paginator = Paginator(statement_list,
+                          billing_settings.STATEMENTS_PER_PAGE)
+
     try:
         page = paginator.page(request.GET.get('p', 1))
     except PageNotAnInteger:
@@ -213,7 +213,7 @@ def statement_view(request, statement_id=None):
        ``statement_id`` to the user's browser.
     """
     monthly_statement = get_object_or_404(
-        MonthlyStatement, pk=statement_id, account__user=request.user)
+        Statement, pk=statement_id, account__user=request.user)
 
     response = HttpResponse(mimetype='text/csv')
     filename = "Vumi Go Statement (%s-%s).csv" % (monthly_statement.year,
