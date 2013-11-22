@@ -86,7 +86,7 @@ class DiamondashApiClient(object):
 
         try:
             resp.raise_for_status()
-        except requests.exceptions.HTTPError, e:
+        except requests.exceptions.HTTPError as e:
             raise DiamondashApiError(
                 "%s: %s" % (e, resp.content))
 
