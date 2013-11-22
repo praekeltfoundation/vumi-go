@@ -631,12 +631,18 @@ class ConversationDashboardView(ConversationTemplateView):
             'type': 'diamondash.widgets.lvalue.LValueWidget',
             'time_range': '1d',
             'name': 'Messages Sent (24h)',
-            'target': 'messages_sent',
+            'target': {
+                'metric_type': 'conversation',
+                'name': 'messages_sent',
+            }
         }, {
             'type': 'diamondash.widgets.lvalue.LValueWidget',
             'time_range': '1d',
             'name': 'Messages Received (24h)',
-            'target': 'messages_received',
+            'target': {
+                'metric_type': 'conversation',
+                'name': 'messages_received',
+            }
         }, 'new_row', {
             'type': 'diamondash.widgets.graph.GraphWidget',
             'name': 'Messages Sent and Received (24h)',
@@ -695,11 +701,14 @@ class ConversationDashboardView(ConversationTemplateView):
 
             # give the dashboard to diamondash
             dashboard.sync()
+            success = True
         except Exception, e:
             self.on_error(e)
+            success = False
 
         model_data = json.dumps(dashboard.serialize() if dashboard else None)
         return self.render_to_response({
+            'success': success,
             'model_data': model_data,
         })
 
