@@ -876,7 +876,7 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
             self.msg_helper.make_inbound("foo", session_event='new'),
             tag=("badpool", "tag1"))
         yield self.dispatch_inbound(msg, 'sphex')
-        self.assert_unroutbale_reply(
+        self.assert_unroutable_reply(
             'sphex', msg, "Eep!", tag=("badpool", "tag1"))
 
     @inlineCallbacks
@@ -886,5 +886,5 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
             self.msg_helper.make_inbound("foo", session_event='new'),
             router=('router', 'badrouter'))
         yield self.dispatch_inbound(msg, 'router_ro')
-        self.assert_unroutbale_reply(
+        self.assert_unroutable_reply(
             'router_ro', msg, "Eep!", router=("router", "badrouter"))
