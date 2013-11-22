@@ -1,0 +1,18 @@
+{% extends "conversation/conversation_base.html" %}
+{% load conversation_tags %}
+
+{% block content_extraclass %}conversation dashboard{% endblock %}
+
+{% block content_main %}
+    {% if success %}
+        <div id="dashboard" class="diamondash dashboard"></div>
+    {% else %}
+        Something bad happened :(
+    {% endif %}
+{% endblock %}
+
+{% block ondomready %}
+    {% if success %}
+        {% include "dashboard/includes/dashboard.html" with model_data=model_data %}
+    {% endif %}
+{% endblock %}
