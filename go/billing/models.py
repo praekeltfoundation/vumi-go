@@ -116,28 +116,29 @@ class Transaction(models.Model):
         return unicode(self.pk)
 
 
-class MonthlyStatement(models.Model):
-    """Monthly account statement data"""
+class Statement(models.Model):
+    """Account statement for a period of time"""
 
-    account = models.ForeignKey(Account, related_name='monthly_statements')
-    year = models.PositiveIntegerField()
-    month = models.PositiveIntegerField()
+    account = models.ForeignKey(Account)
+    title = models.CharField(max_length=100)
+    from_date = models.DateField()
+    to_date = models.DateField()
     created = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
-        return u"%s (%d/%d)" % (self.account, self.year, self.month)
+        return u"%s for %s" % (self.title, self.account)
 
 
 class LineItem(models.Model):
-    """Monthly statement line item"""
+    """A line item of a statement"""
 
-    statement = models.ForeignKey(MonthlyStatement, related_name='line_items')
-    tag_pool_name = models.CharField(max_length=100, blank=True)
-    tag_name = models.CharField(max_length=100, blank=True)
-    message_direction = models.CharField(max_length=20, blank=True)
+    statement = models.ForeignKey(Statement)
+    tag_pool_name = models.CharField(max_length=100, blank=True, default='')
+    tag_name = models.CharField(max_length=100, blank=True, default='')
+    message_direction = models.CharField(max_length=20, blank=True,
+                                         default='')
+
     total_cost = models.IntegerField(default=0)
 
     def __unicode__(self):
-        return u"%s, %s, %s, %d credits" % (
-            self.tag_pool_name, self.tag_name,
-            self.message_direction, self.total_cost)
+        return u"%s line item" % (self.statement.title,)

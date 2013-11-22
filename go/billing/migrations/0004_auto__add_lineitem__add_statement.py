@@ -11,31 +11,32 @@ class Migration(SchemaMigration):
         # Adding model 'LineItem'
         db.create_table(u'billing_lineitem', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('statement', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['billing.MonthlyStatement'])),
-            ('tag_pool_name', self.gf('django.db.models.fields.CharField')(max_length=100, blank=True)),
-            ('tag_name', self.gf('django.db.models.fields.CharField')(max_length=100, blank=True)),
-            ('message_direction', self.gf('django.db.models.fields.CharField')(max_length=20, blank=True)),
+            ('statement', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['billing.Statement'])),
+            ('tag_pool_name', self.gf('django.db.models.fields.CharField')(default='', max_length=100, blank=True)),
+            ('tag_name', self.gf('django.db.models.fields.CharField')(default='', max_length=100, blank=True)),
+            ('message_direction', self.gf('django.db.models.fields.CharField')(default='', max_length=20, blank=True)),
             ('total_cost', self.gf('django.db.models.fields.IntegerField')(default=0)),
         ))
         db.send_create_signal(u'billing', ['LineItem'])
 
-        # Adding model 'MonthlyStatement'
-        db.create_table(u'billing_monthlystatement', (
+        # Adding model 'Statement'
+        db.create_table(u'billing_statement', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('account', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['billing.Account'])),
-            ('year', self.gf('django.db.models.fields.PositiveIntegerField')()),
-            ('month', self.gf('django.db.models.fields.PositiveIntegerField')()),
+            ('title', self.gf('django.db.models.fields.CharField')(max_length=100)),
+            ('from_date', self.gf('django.db.models.fields.DateField')()),
+            ('to_date', self.gf('django.db.models.fields.DateField')()),
             ('created', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
         ))
-        db.send_create_signal(u'billing', ['MonthlyStatement'])
+        db.send_create_signal(u'billing', ['Statement'])
 
 
     def backwards(self, orm):
         # Deleting model 'LineItem'
         db.delete_table(u'billing_lineitem')
 
-        # Deleting model 'MonthlyStatement'
-        db.delete_table(u'billing_monthlystatement')
+        # Deleting model 'Statement'
+        db.delete_table(u'billing_statement')
 
 
     models = {
@@ -71,7 +72,7 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'Account'},
             'account_number': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'}),
             'alert_credit_balance': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'alert_threshold': ('django.db.models.fields.DecimalField', [], {'default': '0.0', 'max_digits': '10', 'decimal_places': '2'}),
+            'alert_threshold': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'max_digits': '10', 'decimal_places': '2'}),
             'credit_balance': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -80,28 +81,29 @@ class Migration(SchemaMigration):
         u'billing.lineitem': {
             'Meta': {'object_name': 'LineItem'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'message_direction': ('django.db.models.fields.CharField', [], {'max_length': '20', 'blank': 'True'}),
-            'statement': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['billing.MonthlyStatement']"}),
-            'tag_name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
-            'tag_pool_name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
+            'message_direction': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '20', 'blank': 'True'}),
+            'statement': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['billing.Statement']"}),
+            'tag_name': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '100', 'blank': 'True'}),
+            'tag_pool_name': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '100', 'blank': 'True'}),
             'total_cost': ('django.db.models.fields.IntegerField', [], {'default': '0'})
         },
         u'billing.messagecost': {
             'Meta': {'object_name': 'MessageCost'},
             'account': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['billing.Account']", 'null': 'True', 'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'markup_percent': ('django.db.models.fields.DecimalField', [], {'default': '0.0', 'max_digits': '10', 'decimal_places': '2'}),
+            'markup_percent': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'max_digits': '10', 'decimal_places': '2'}),
             'message_cost': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
             'message_direction': ('django.db.models.fields.CharField', [], {'max_length': '20'}),
             'tag_pool': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['billing.TagPool']"})
         },
-        u'billing.monthlystatement': {
-            'Meta': {'object_name': 'MonthlyStatement'},
+        u'billing.statement': {
+            'Meta': {'object_name': 'Statement'},
             'account': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['billing.Account']"}),
             'created': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'from_date': ('django.db.models.fields.DateField', [], {}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'month': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'year': ('django.db.models.fields.PositiveIntegerField', [], {})
+            'title': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'to_date': ('django.db.models.fields.DateField', [], {})
         },
         u'billing.tagpool': {
             'Meta': {'object_name': 'TagPool'},

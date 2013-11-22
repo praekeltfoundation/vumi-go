@@ -12,6 +12,8 @@ ENDPOINT_DESCRIPTION_STRING = getattr(
     settings, 'BILLING_ENDPOINT_DESCRIPTION_STRING',
     "tcp:9090:interface=127.0.0.1")
 
+MONTHLY_STATEMENT_TITLE = "Monthly Statement"
+
 
 def get_user_table():
     """Return the name of the table used by the user model."""
