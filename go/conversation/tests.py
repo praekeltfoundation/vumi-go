@@ -856,7 +856,8 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.diamondash_api.set_response({'happy': 'dashboard'})
 
         conv = self.create_conversation(conversation_type=u'dummy')
-        response = self.client.get(self.get_view_url(conv, 'dashboard'))
+        response = self.client.get(
+            self.get_view_url(conv, 'conversation_dashboard'))
 
         [dd_request] = self.diamondash_api.get_requests()
         raw_dashboard = dd_request['data']
@@ -869,15 +870,16 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
             {'happy': 'dashboard'})
 
     def test_get_dashboard_for_sync_error_handling(self):
-        self.diamondash_api.set_error_response(':(')
+        self.diamondash_api.set_error_response(400, ':(')
 
         conv = self.create_conversation(conversation_type=u'dummy')
-        response = self.client.get(self.get_view_url(conv, 'dashboard'))
+        response = self.client.get(
+            self.get_view_url(conv, 'conversation_dashboard'))
 
         self.assertEqual(
             self.error_log,
             ['Dashboard sync failed: '
-             '{"message": ":(", "success": false}'])
+             '(400) {"message": ":(", "success": false}'])
 
         self.assertEqual(json.loads(response.context['model_data']), None)
 
@@ -888,6 +890,7 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.monkey_patch(DashboardLayout, 'add_entity', bad_add_entity)
         conv = self.create_conversation(conversation_type=u'dummy')
 
-        response = self.client.get(self.get_view_url(conv, 'dashboard'))
+        response = self.client.get(
+            self.get_view_url(conv, 'conversation_dashboard'))
         self.assertEqual(self.error_log, [':('])
         self.assertEqual(json.loads(response.context['model_data']), None)
