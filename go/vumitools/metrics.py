@@ -1,7 +1,7 @@
 from django.conf import settings
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.blinkenlights.metrics import Metric, Aggregator
+from vumi.blinkenlights.metrics import Metric, Aggregator, LAST
 
 from go.base import amqp
 
@@ -11,12 +11,12 @@ class GoMetric(object):
     Encapsulates name retrieval, value retrieval and publishing for Go metrics.
     """
 
-    AGGREGATORS = None
+    AGGREGATOR = LAST
 
-    def __init__(self, name, aggregators=None):
-        if aggregators is None:
-            aggregators = self.AGGREGATORS
-        self.metric = Metric(name, aggregators)
+    def __init__(self, name, aggregator=None):
+        if aggregator is None:
+            aggregator = self.AGGREGATOR
+        self.metric = Metric(name, [aggregator])
 
     def get_full_name(self):
         """
@@ -25,8 +25,17 @@ class GoMetric(object):
         """
         return settings.GO_METRICS_PREFIX + self.get_name()
 
+    def get_diamondash_target(self):
+        return "%s.%s" % (self.get_full_name(), self.get_aggregator_name())
+
     def get_name(self):
         return self.metric.name
+
+    def get_aggregator_name(self):
+        return self.metric.aggs[0]
+
+    def get_aggregator(self):
+        return Aggregator.from_name(self.get_aggregator_name())
 
     def get_value(self):
         """
@@ -34,9 +43,6 @@ class GoMetric(object):
         metric.
         """
         raise NotImplementedError("GoMetric.get_value() needs to be overriden")
-
-    def get_aggregators(self):
-        return [Aggregator.from_name(name) for name in self.metric.aggs]
 
     def publish_value(self, manager_or_connection, value):
         """
@@ -67,7 +73,7 @@ class DjangoMetric(GoMetric):
         """
         connection.publish_metric(
             self.get_full_name(),
-            self.get_aggregators(),
+            [self.get_aggregator()],
             value)
 
     def oneshot(self, value=None, connection=None, **kw):

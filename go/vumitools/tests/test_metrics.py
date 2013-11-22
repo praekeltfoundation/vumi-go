@@ -21,8 +21,6 @@ class ToyGoMetric(GoMetric):
 
 
 class ToyTxMetric(TxMetric):
-    AGGREGATORS = [LAST]
-
     def __init__(self, *a, **kw):
         super(ToyTxMetric, self).__init__(*a, **kw)
         self.value = None
@@ -77,6 +75,11 @@ class TestGoMetric(GoTestCase):
 
     def test_full_name_retrieval(self):
         self.assertEqual(self.metric.get_full_name(), 'go.some.random.metric')
+
+    def test_diamondash_target_name_retrieval(self):
+        self.assertEqual(
+            self.metric.get_diamondash_target(),
+            'go.some.random.metric.last')
 
 
 class TestDjangoMetric(VumiGoDjangoTestCase):
