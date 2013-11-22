@@ -1,14 +1,10 @@
 import json
-import logging
 from functools import wraps
 
 import requests
 from django.conf import settings
 
 from go.vumitools.metrics import ConversationMetric, AccountMetric
-
-
-logger = logging.getLogger('go')
 
 
 def is_collection(obj):
@@ -85,11 +81,8 @@ class DiamondashApiClient(object):
             p.strip('/')
             for p in [settings.DIAMONDASH_API_URL, path])
 
-    def request(self, method, path, data=None):
-        resp = requests.request(
-            method,
-            self.make_api_url(path),
-            data=json.dumps(data))
+    def raw_request(self, method, path, content=""):
+        resp = requests.request(method, self.make_api_url(path), data=content)
 
         try:
             resp.raise_for_status()
@@ -97,6 +90,10 @@ class DiamondashApiClient(object):
             raise DiamondashApiError(
                 "%s: %s" % (e, resp.content))
 
+        return resp
+
+    def request(self, method, path, data=None):
+        resp = self.raw_request(method, path, content=json.dumps(data))
         return resp.json['data']
 
     def replace_dashboard(self, config):
@@ -183,11 +180,13 @@ class ConversationDashboardLayout(DashboardLayout):
 
     @ensure_handler_fields('name')
     def handle_conversation_metric(self, target):
-        return ConversationMetric.make_name(self.conv, target['name'])
+        metric = ConversationMetric(self.conv, target['name'])
+        return metric.get_diamondash_target()
 
     @ensure_handler_fields('store', 'name')
     def handle_account_metric(self, target):
-        return AccountMetric.make_name(
+        metric = AccountMetric(
             self.conv.user_account.key,
             target['store'],
             target['name'])
+        return metric.get_diamondash_target()
