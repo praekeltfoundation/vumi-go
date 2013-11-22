@@ -5,7 +5,7 @@ from twisted.internet.task import LoopingCall
 
 from vumi import log
 from vumi.worker import BaseWorker
-from vumi.config import ConfigInt
+from vumi.config import ConfigInt, ConfigError
 from vumi.persist.model import Manager
 
 from go.vumitools.api import VumiApi, VumiApiCommand
@@ -13,11 +13,36 @@ from go.vumitools.app_worker import GoWorkerConfigMixin, GoWorkerMixin
 
 
 class GoMetricsWorkerConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+    """At the start of each `metrics_interval` the :class:`GoMetricsWorker`
+       collects a list of all active conversations and distributes them
+       into `metrics_interval / metrics_granularity` buckets.
+
+       Immediately afterwards and then after each `metrics_granulatiry`
+       interval, the metrics worker sends a `collect_metrics` command to each
+       of the conversations in the current bucket until all buckets have been
+       processed.
+
+       Once all buckets have been processed, active conversations are
+       collected again and the cycle repeats.
+       """
+
     metrics_interval = ConfigInt(
-        "How often (in seconds) the worker should send 'collect_metric' "
-        "api commands",
+        "How often (in seconds) the worker should send `collect_metrics` "
+        "commands for each conversation. Must be an integer multiple of "
+        "`metrics_granularity`.",
         default=300,
         static=True)
+
+    metrics_granularity = ConfigInt(
+        "How often (in seconds) the worker should process a bucket of "
+        "conversations.",
+        default=5,
+        static=True)
+
+    def post_validate(self):
+        if (self.metrics_interval % self.metrics_granularity != 0):
+            raise ConfigError("Metrics interval must be an integer multiple"
+                              " of metrics granularity.")
 
 
 class GoMetricsWorker(BaseWorker, GoWorkerMixin):
@@ -48,8 +73,13 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         self.command_publisher = yield self.publish_to(
             api_routing_config['routing_key'])
 
+        self._current_bucket = 0
+        self._num_buckets = (
+            config.metrics_interval // config.metrics_granularity)
+        self._buckets = dict((i, []) for i in range(self._num_buckets))
+
         self._looper = LoopingCall(self.metrics_loop_func)
-        self._looper.start(config.metrics_interval)
+        self._looper.start(config.metrics_granularity)
 
     @inlineCallbacks
     def teardown_worker(self):
@@ -59,20 +89,36 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         yield self.redis.close_manager()
         yield self._go_teardown_worker()
 
+    def bucket_for_conversation(self, key):
+        return hash(key) % self._num_buckets
+
     @inlineCallbacks
-    def metrics_loop_func(self):
+    def populate_conversation_buckets(self):
         account_keys = yield self.find_account_keys()
-        conversations = []
         # We deliberarely serialise this. We don't want to hit the datastore
         # too hard for metrics.
         for account_key in account_keys:
             convs = yield self.find_conversations_for_account(account_key)
-            conversations.extend(convs)
-        log.info(
-            "Processing metrics for %s conversations owned by %s users." % (
-                len(conversations), len(account_keys)))
-        for conversation in conversations:
+            for conversation in convs:
+                bucket = self.bucket_for_conversation(conversation)
+                self._buckets[bucket].append(conversation)
+
+    @inlineCallbacks
+    def process_bucket(self, bucket):
+        convs, self._buckets[bucket] = self._buckets[bucket], []
+        for conversation in convs:
             yield self.send_metrics_command(conversation)
+
+    def increment_bucket(self):
+        self._current_bucket += 1
+        self._current_bucket %= self._num_buckets
+
+    @inlineCallbacks
+    def metrics_loop_func(self):
+        if self._current_bucket == 0:
+            yield self.populate_conversation_buckets
+        yield self.process_bucket(self._current_bucket)
+        self.increment_bucket()
 
     def setup_connectors(self):
         pass
