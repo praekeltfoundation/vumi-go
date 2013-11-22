@@ -116,7 +116,7 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
     @inlineCallbacks
     def metrics_loop_func(self):
         if self._current_bucket == 0:
-            yield self.populate_conversation_buckets
+            yield self.populate_conversation_buckets()
         yield self.process_bucket(self._current_bucket)
         self.increment_bucket()
 
