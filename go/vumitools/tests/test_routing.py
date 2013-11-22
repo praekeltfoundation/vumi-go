@@ -3,8 +3,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.tests.helpers import MessageHelper
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError,
-    UnroutableMessageError)
+    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
 from go.vumitools.tests.utils import GoTestCase, AppWorkerTestCase
 from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.routing_table import RoutingTable
@@ -253,7 +252,10 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
         self.user_account_key = user_account.key
         self.user_api = self.vumi_api.get_user_api(self.user_account_key)
         tag1, tag2, tag3 = yield self.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"])
+            u"pool1", [u"1234", u"5678", u"9012"],
+            metadata={
+                "unroutable_reply": "Message to pool1 could not be routed",
+            })
         yield self.user_api.acquire_specific_tag(tag1)
         yield self.user_api.acquire_specific_tag(tag2)
         yield self.user_api.acquire_specific_tag(tag3)
@@ -829,7 +831,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
             "receive_outbound_connectors": [
                 "app1", "router_ri",
             ],
-            "unroutable_inbound_session_reply": "Eep!",
+            "send_unroutable_inbound_session_replies": True,
+            "default_unroutable_inbound_session_reply": "Eep!",
         }
         config.update(config_extras)
         dispatcher = yield super(
@@ -846,6 +849,15 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         expected["timestamp"] = reply["timestamp"]
         self.assertEqual(reply, expected)
 
+    def assert_unroutable_reply(self, connector_name, msg,
+                                reply_content, **md):
+        self.assert_rkeys_used(
+            '%s.inbound' % (connector_name,),
+            '%s.outbound' % (connector_name,))
+
+        [reply] = self.get_dispatched_outbound(connector_name)
+        self.assert_reply_matches(reply, msg, reply_content, **md)
+
     @inlineCallbacks
     def test_inbound_message_from_transport_to_unowned_tag(self):
         yield self.get_dispatcher()
@@ -853,23 +865,26 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
             self.msg_helper.make_inbound("foo", session_event='new'),
             tag=("pool1", "badtag"))
         yield self.dispatch_inbound(msg, 'sphex')
-        self.assert_rkeys_used(
-            'sphex.inbound', 'sphex.outbound')
+        self.assert_unroutable_reply(
+            'sphex', msg, "Message to pool1 could not be routed",
+            tag=("pool1", "badtag"))
 
-        [reply] = self.get_dispatched_outbound('sphex')
-        self.assert_reply_matches(reply, msg, "Eep!",
-                                  tag=("pool1", "badtag"))
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_unknown_pool(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("badpool", "tag1"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_unroutbale_reply(
+            'sphex', msg, "Eep!", tag=("badpool", "tag1"))
 
     @inlineCallbacks
     def test_inbound_message_from_router_to_unroutable(self):
         yield self.get_dispatcher()
-
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
             router=('router', 'badrouter'))
         yield self.dispatch_inbound(msg, 'router_ro')
-        self.assert_rkeys_used('router_ro.inbound', 'router_ro.outbound')
-
-        [reply] = self.get_dispatched_outbound('router_ro')
-        self.assert_reply_matches(reply, msg, "Eep!",
-                                  router=('router', 'badrouter'))
+        self.assert_unroutbale_reply(
+            'router_ro', msg, "Eep!", router=("router", "badrouter"))

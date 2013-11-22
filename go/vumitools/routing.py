@@ -3,7 +3,7 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.dispatchers.endpoint_dispatchers import RoutingTableDispatcher
-from vumi.config import ConfigDict, ConfigText
+from vumi.config import ConfigDict, ConfigText, ConfigBool
 from vumi.message import TransportEvent
 from vumi import log
 
@@ -160,9 +160,18 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         static=True, required=False)
     user_account_key = ConfigText(
         "Key of the user account the message is from.")
-    unroutable_inbound_session_reply = ConfigText(
-        "Text to send in response to unroutable inbound messages"
-        " that are part of a session.",
+    send_unroutable_inbound_session_replies = ConfigBool(
+        "If true, send a closing reply to unroutable inbound messages that"
+        " are part of a session. If the associated tag pool has an"
+        " `unroutable_reply` metadata key, it's value is sent as the reply."
+        " Otherwise the value of `default_unroutable_inbound_session_reply`"
+        " is sent instead.",
+        default=False, static=True, required=False)
+    default_unroutable_inbound_session_reply = ConfigText(
+        "Default text to send in response to unroutable inbound messages"
+        " that are part of a session if"
+        " `send_unroutable_inbound_session_replies` is set to true.",
+        default="Vumi Go could not route your message. Please try again soon.",
         static=True, required=False)
 
 
@@ -554,16 +563,31 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
+    @inlineCallbacks
+    def publish_unroutable_message_reply(self, msg, connector_name,
+                                         default_response):
+        msg_mdh = self.get_metadata_helper(msg)
+        if msg_mdh.tag is None:
+            # defend against messages without tags (these should not occur
+            # but this is an error path)
+            response = default_response
+        else:
+            tagpool_metadata = yield self.vumi_api.tpm.get_metadata(
+                msg_mdh.tag[0])
+            response = tagpool_metadata.get(
+                'unroutable_reply', default_response)
+        reply = msg.reply(response, continue_session=False)
+        self.publish_outbound(
+            reply, connector_name, msg.get_routing_endpoint())
+
     def errback_inbound(self, f, msg, connector_name):
         if (f.check(UnroutableMessageError)
                 and msg['session_event'] is not None):
             config = self.get_static_config()
-            response = config.unroutable_inbound_session_reply
-            if response is not None:
-                reply = msg.reply(response, continue_session=False)
-                self.publish_outbound(
-                    reply, connector_name, msg.get_routing_endpoint())
-                return
+            if config.send_unroutable_inbound_session_replies:
+                return self.publish_unroutable_message_reply(
+                    msg, connector_name,
+                    config.default_unroutable_inbound_session_reply)
         return self.default_errback(f, msg, connector_name)
 
     @inlineCallbacks
