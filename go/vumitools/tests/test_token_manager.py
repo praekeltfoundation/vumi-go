@@ -1,20 +1,21 @@
 from twisted.internet.defer import inlineCallbacks
 
-from go.vumitools.tests.utils import GoTestCase
-from go.vumitools.token_manager import (TokenManager, InvalidToken,
-                                        MalformedToken, TokenManagerException)
+from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+
+from go.vumitools.token_manager import (
+    TokenManager, InvalidToken, MalformedToken, TokenManagerException)
 
 from mock import patch
 
 
-class TokenManagerTestCase(GoTestCase):
+class TestTokenManager(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TokenManagerTestCase, self).setUp()
-        self.redis = yield self.get_redis_manager()
-        self.tm = TokenManager(
-                        self.redis.sub_manager('token_manager'))
+        self.persistence_helper = PersistenceHelper()
+        self.add_cleanup(self.persistence_helper.cleanup)
+        self.redis = yield self.persistence_helper.get_redis_manager()
+        self.tm = TokenManager(self.redis.sub_manager('token_manager'))
 
     @inlineCallbacks
     def test_token_generation(self):

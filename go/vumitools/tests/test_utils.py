@@ -2,25 +2,20 @@ from twisted.trial.unittest import SkipTest
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
+from vumi.tests.helpers import VumiTestCase
 
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.tests.utils import GoTestCase
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class MessageMetadataHelperTestCase(GoTestCase):
-    use_riak = True
+class TestMessageMetadataHelper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(MessageMetadataHelperTestCase, self).setUp()
-        self.vumi_api = yield self.get_vumi_api()
-        self.account = yield self.mk_user(self.vumi_api, u'user')
-        self.user_api = self.vumi_api.get_user_api(self.account.key)
-
-    def create_conversation(self, conversation_type=u'bulk_message',
-                            name=u'name', description=u'desc', config={}):
-        return self.user_api.new_conversation(
-            conversation_type, name, description, config)
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
 
     def mk_msg(self, go_metadata=None, optout_metadata=None):
         helper_metadata = {}
@@ -37,7 +32,7 @@ class MessageMetadataHelperTestCase(GoTestCase):
     def mk_md(self, message=None, go_metadata=None, optout_metadata=None):
         if message is None:
             message = self.mk_msg(go_metadata, optout_metadata)
-        return MessageMetadataHelper(self.vumi_api, message)
+        return MessageMetadataHelper(self.vumi_helper.get_vumi_api(), message)
 
     def test_is_sensitive(self):
         md = self.mk_md()
@@ -60,11 +55,11 @@ class MessageMetadataHelperTestCase(GoTestCase):
     def test_get_user_api(self):
         md = self.mk_md()
         self.assertRaises(KeyError, md.get_user_api)
-        md = self.mk_md(go_metadata={
-            'user_account': self.user_api.user_account_key})
+        md = self.mk_md(
+            go_metadata={'user_account': self.user_helper.account_key})
         user_api = md.get_user_api()
-        self.assertEqual(user_api.user_account_key,
-                         self.user_api.user_account_key)
+        self.assertEqual(
+            user_api.user_account_key, self.user_helper.account_key)
 
     def test_get_conversation_key(self):
         md = self.mk_md()
@@ -78,9 +73,10 @@ class MessageMetadataHelperTestCase(GoTestCase):
         self.assertRaises(KeyError, md.get_conversation)
         md = self.mk_md(go_metadata={'user_account': 'user-1'})
         self.assertRaises(KeyError, md.get_conversation)
-        conversation = yield self.create_conversation()
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
         md = self.mk_md(go_metadata={
-            'user_account': self.user_api.user_account_key,
+            'user_account': self.user_helper.account_key,
             'conversation_key': conversation.key,
         })
         md_conv = yield md.get_conversation()

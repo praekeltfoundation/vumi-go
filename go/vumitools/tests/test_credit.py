@@ -4,16 +4,18 @@ import uuid
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+
 from go.vumitools.credit import CreditManager
-from go.vumitools.tests.utils import GoTestCase
 
 
-class TestCreditManager(GoTestCase):
+class TestCreditManager(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestCreditManager, self).setUp()
-        redis = yield self.get_redis_manager()
+        self.persistence_helper = PersistenceHelper()
+        self.add_cleanup(self.persistence_helper.cleanup)
+        redis = yield self.persistence_helper.get_redis_manager()
         self.cm = CreditManager(redis)
         self.user_id = uuid.uuid4().hex
 

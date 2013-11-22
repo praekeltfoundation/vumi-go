@@ -8,28 +8,30 @@ from datetime import datetime
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.persist.model import ModelMigrationError
+from vumi.tests.helpers import VumiTestCase
 
-from go.vumitools.tests.utils import model_eq, GoTestCase
-from go.vumitools.account import AccountStore
+from go.vumitools.tests.utils import model_eq
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation.old_models import (
     ConversationVNone, ConversationV1, ConversationV2)
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class TestConversationStore(GoTestCase):
-    use_riak = True
+class TestConversationStore(VumiTestCase):
+    is_sync = False
 
     @inlineCallbacks
     def setUp(self):
-        super(TestConversationStore, self).setUp()
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.optout_store = OptOutStore.from_user_account(self.account)
-        self.conv_store = ConversationStore.from_user_account(self.account)
-        self.contact_store = ContactStore.from_user_account(self.account)
+        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        user_account = yield self.user_helper.get_user_account()
+        self.optout_store = OptOutStore.from_user_account(user_account)
+        self.conv_store = ConversationStore.from_user_account(user_account)
+        self.contact_store = ContactStore.from_user_account(user_account)
 
     def assert_models_equal(self, m1, m2):
         self.assertTrue(model_eq(m1, m2),

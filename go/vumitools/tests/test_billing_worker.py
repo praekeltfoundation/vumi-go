@@ -2,14 +2,14 @@ import json
 import decimal
 
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import TestCase
 from twisted.web.client import Agent, Request, Response
 
+from vumi.tests.helpers import VumiTestCase
 from vumi.utils import mkheaders, StringProducer
 
-from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools import billing_worker
 from go.vumitools.billing_worker import BillingApi, BillingDispatcher
+from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
 from go.vumitools.utils import MessageMetadataHelper
 
 from go.billing.api import BillingError
@@ -57,7 +57,7 @@ class HttpRequestMock(object):
         return self.response
 
 
-class TestBillingApi(TestCase):
+class TestBillingApi(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
@@ -141,59 +141,68 @@ class TestBillingApi(TestCase):
         yield self.assertFailure(d, BillingError)
 
 
-class TestBillingDispatcher(AppWorkerTestCase):
+class TestBillingDispatcher(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(TestBillingDispatcher, self).setUp()
-        self.dispatcher = yield self.get_dispatcher()
-        self.vumi_api = self.dispatcher.vumi_api
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.msg_helper = GoMessageHelper()
+        self.ri_helper = self.vumi_helper.get_worker_helper(
+            "billing_dispatcher_ri")
+        self.ro_helper = self.vumi_helper.get_worker_helper(
+            "billing_dispatcher_ro")
 
     @inlineCallbacks
     def get_dispatcher(self, **config_extras):
         config = {
-            "receive_inbound_connectors": [
-                "billing_dispatcher_ri"
-            ],
-            "receive_outbound_connectors": [
-                "billing_dispatcher_ro"
-            ],
+            "receive_inbound_connectors": ["billing_dispatcher_ri"],
+            "receive_outbound_connectors": ["billing_dispatcher_ro"],
             "api_url": "http://127.0.0.1:9090/",
-            "metrics_prefix": "bar"
+            "metrics_prefix": "bar",
         }
         config.update(config_extras)
-        billing_dispatcher = yield self.get_worker(
-            self.mk_config(config), BillingDispatcher)
+        billing_dispatcher = yield self.ri_helper.get_worker(
+            BillingDispatcher, self.vumi_helper.mk_config(config))
         billing_dispatcher.billing_api = BillingApiMock(config["api_url"])
         returnValue(billing_dispatcher)
 
-    def with_md(self, msg, user_account=None, tag=None, is_paid=False):
+    def add_md(self, msg, user_account=None, tag=None, is_paid=False):
         msg.payload.setdefault('helper_metadata', {})
-        md = MessageMetadataHelper(self.vumi_api, msg)
+        md = MessageMetadataHelper(self.vumi_helper.get_vumi_api(), msg)
         if user_account is not None:
             md.set_user_account(user_account)
         if tag is not None:
             md.set_tag(tag)
         if is_paid:
             md.set_paid()
-        return msg
+
+    def make_dispatch_inbound(self, content, user_account=None, tag=None,
+                              is_paid=False, **kw):
+        msg = self.msg_helper.make_inbound(content, **kw)
+        self.add_md(msg, user_account=user_account, tag=tag, is_paid=is_paid)
+        return self.ri_helper.dispatch_inbound(msg).addCallback(lambda _: msg)
+
+    def make_dispatch_outbound(self, content, user_account=None, tag=None,
+                               is_paid=False, **kw):
+        msg = self.msg_helper.make_outbound(content, **kw)
+        self.add_md(msg, user_account=user_account, tag=tag, is_paid=is_paid)
+        return self.ro_helper.dispatch_outbound(msg).addCallback(lambda _: msg)
 
     @inlineCallbacks
     def test_inbound_message(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), user_account="12345",
-                           tag=("pool1", "1234"))
+        msg = yield self.make_dispatch_inbound(
+            "inbound", user_account="12345", tag=("pool1", "1234"))
 
-        yield self.dispatch_inbound(msg, 'billing_dispatcher_ri')
-        self.with_md(msg, is_paid=True)
-        self.assertEqual(
-            [msg], self.get_dispatched_inbound('billing_dispatcher_ro'))
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
 
     @inlineCallbacks
     def test_inbound_message_without_user_account(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
-        yield self.dispatch_inbound(msg, 'billing_dispatcher_ri')
+        msg = yield self.make_dispatch_inbound("hi", tag=("pool1", "1234"))
         errors = self.flushLoggedErrors(BillingError)
         self.assertEqual(len(errors), 1)
         self.assertEqual(
@@ -201,14 +210,12 @@ class TestBillingDispatcher(AppWorkerTestCase):
             ["No account number found for message %s" %
                 (msg.get('message_id'))])
 
-        self.assertEqual(
-            [msg], self.get_dispatched_inbound('billing_dispatcher_ro'))
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
 
     @inlineCallbacks
     def test_inbound_message_without_tag(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), user_account="12345")
-        yield self.dispatch_inbound(msg, 'billing_dispatcher_ri')
+        msg = yield self.make_dispatch_inbound("inbound", user_account="12345")
         errors = self.flushLoggedErrors(BillingError)
         self.assertEqual(len(errors), 1)
         self.assertEqual(
@@ -216,25 +223,21 @@ class TestBillingDispatcher(AppWorkerTestCase):
             ["No tag found for message %s" %
                 (msg.get('message_id'))])
 
-        self.assertEqual(
-            [msg], self.get_dispatched_inbound('billing_dispatcher_ro'))
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
 
     @inlineCallbacks
     def test_outbound_message(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), user_account="12345",
-                           tag=("pool1", "1234"))
+        msg = yield self.make_dispatch_outbound(
+            "hi", user_account="12345", tag=("pool1", "1234"))
 
-        yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
-        self.with_md(msg, is_paid=True)
-        self.assertEqual(
-            [msg], self.get_dispatched_outbound('billing_dispatcher_ri'))
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
 
     @inlineCallbacks
     def test_outbound_message_without_user_account(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), tag=("pool1", "1234"))
-        yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
+        msg = yield self.make_dispatch_outbound("hi", tag=("pool1", "1234"))
         errors = self.flushLoggedErrors(BillingError)
         self.assertEqual(len(errors), 1)
         self.assertEqual(
@@ -242,14 +245,12 @@ class TestBillingDispatcher(AppWorkerTestCase):
             ["No account number found for message %s" %
                 (msg.get('message_id'))])
 
-        self.assertEqual(
-            [msg], self.get_dispatched_outbound('billing_dispatcher_ri'))
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
 
     @inlineCallbacks
     def test_outbound_message_without_tag(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), user_account="12345")
-        yield self.dispatch_outbound(msg, 'billing_dispatcher_ro')
+        msg = yield self.make_dispatch_outbound("hi", user_account="12345")
         errors = self.flushLoggedErrors(BillingError)
         self.assertEqual(len(errors), 1)
         self.assertEqual(
@@ -257,13 +258,11 @@ class TestBillingDispatcher(AppWorkerTestCase):
             ["No tag found for message %s" %
                 (msg.get('message_id'))])
 
-        self.assertEqual(
-            [msg], self.get_dispatched_outbound('billing_dispatcher_ri'))
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
 
     @inlineCallbacks
     def test_event_message(self):
         yield self.get_dispatcher()
-        ack = self.mkmsg_ack()
-        yield self.dispatch_event(ack, 'billing_dispatcher_ri')
-        self.assertEqual(
-            [ack], self.get_dispatched_events('billing_dispatcher_ro'))
+        ack = self.msg_helper.make_ack()
+        yield self.ri_helper.dispatch_event(ack)
+        self.assertEqual([ack], self.ro_helper.get_dispatched_events())
