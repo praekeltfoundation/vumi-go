@@ -26,11 +26,15 @@ class DiamondashApiClient(object):
             raise DiamondashApiError(
                 "%s: %s" % (e, resp.content))
 
-        return resp
+        return {
+            'code': resp.status_code,
+            'content': resp.content
+        }
 
     def request(self, method, path, data=None):
         resp = self.raw_request(method, path, content=json.dumps(data))
-        return resp.json['data']
+        resp_data = json.loads(resp['content'])
+        return resp_data['data']
 
     def replace_dashboard(self, config):
         return self.request('put', 'dashboards', config)

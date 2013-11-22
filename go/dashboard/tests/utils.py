@@ -6,7 +6,7 @@ from go.dashboard.client import DiamondashApiError, DiamondashApiClient
 class FakeDiamondashApiClient(DiamondashApiClient):
     def __init__(self):
         self.requests = []
-        self._response = None
+        self.set_response()
 
     @property
     def response(self):
@@ -23,20 +23,20 @@ class FakeDiamondashApiClient(DiamondashApiClient):
 
         self._response = DiamondashApiError("(%s) %s" % (code, data))
 
-    def set_response(self, response):
-        self._response = response
+    def set_raw_response(self, content="", code=200):
+        self._response = {
+            'code': code,
+            'content': content,
+        }
+
+    def set_response(self, data=None, code=200):
+        self.set_raw_response(code=code, content=json.dumps({
+            'success': True,
+            'data': data,
+        }))
 
     def get_requests(self):
         return self.requests
-
-    def request(self, method, url, data):
-        self.requests.append({
-            'method': method,
-            'url': url,
-            'data': data,
-        })
-
-        return self.response
 
     def raw_request(self, method, url, content=""):
         self.requests.append({
@@ -46,3 +46,13 @@ class FakeDiamondashApiClient(DiamondashApiClient):
         })
 
         return self.response
+
+    def request(self, method, url, data=None):
+        self.requests.append({
+            'method': method,
+            'url': url,
+            'data': data,
+        })
+
+        resp_data = json.loads(self.response['content'])
+        return resp_data['data']

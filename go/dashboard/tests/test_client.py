@@ -1,4 +1,5 @@
 import json
+
 import requests
 
 from go.base.tests.utils import VumiGoDjangoTestCase
@@ -7,15 +8,12 @@ from go.dashboard.tests.utils import FakeDiamondashApiClient
 
 
 class FakeResponse(object):
-    def __init__(self, content=""):
+    def __init__(self, content="", status_code=200):
+        self.status_code = status_code
         self.content = content
 
     def raise_for_status(self):
         pass
-
-    @property
-    def json(self):
-        return json.loads(self.content)
 
 
 class FakeErrorResponse(object):
@@ -28,7 +26,7 @@ class FakeErrorResponse(object):
 
 class TestDashboardApiClient(VumiGoDjangoTestCase):
     def test_raw_request(self):
-        resp = FakeResponse()
+        resp = FakeResponse('spam', 201)
 
         def stubbed_request(method, url, data):
             self.assertEqual(method, 'put')
@@ -39,7 +37,10 @@ class TestDashboardApiClient(VumiGoDjangoTestCase):
         self.monkey_patch(requests, 'request', stubbed_request)
 
         client = DiamondashApiClient()
-        self.assertEqual(client.raw_request('put', 'foo', 'bar'), resp)
+        self.assertEqual(client.raw_request('put', 'foo', 'bar'), {
+            'code': 201,
+            'content': 'spam'
+        })
 
     def test_raw_request_for_error_responses(self):
         resp = FakeErrorResponse(':(')
