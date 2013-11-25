@@ -865,7 +865,9 @@ class TestConversationReportsView(BaseConversationViewTestCase):
 
         [dd_request] = self.diamondash_api.get_requests()
         raw_dashboard = dd_request['data']
-        self.assertEqual(raw_dashboard['name'], conv.key)
+        self.assertEqual(
+            raw_dashboard['name'],
+            "go.conversations.%s" % conv.key)
         self.assertTrue('widgets' in raw_dashboard)
 
         self.assertEqual(

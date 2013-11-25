@@ -696,8 +696,9 @@ class ConversationReportsView(ConversationTemplateView):
 
         try:
             # build the dashboard
+            name = "go.conversations.%s" % conversation.key
             layout = self.build_layout(conversation)
-            dashboard = Dashboard(conversation.key, layout)
+            dashboard = Dashboard(name, layout)
 
             # give the dashboard to diamondash
             dashboard.sync()
