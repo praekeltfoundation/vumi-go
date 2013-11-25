@@ -710,6 +710,7 @@ class ConversationDashboardView(ConversationTemplateView):
         return self.render_to_response({
             'success': success,
             'model_data': model_data,
+            'conversation': conversation,
         })
 
 
