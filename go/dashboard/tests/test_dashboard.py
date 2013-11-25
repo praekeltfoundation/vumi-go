@@ -2,7 +2,7 @@ from go.base.tests.utils import VumiGoDjangoTestCase
 from go.dashboard import client
 from go.dashboard.tests.utils import FakeDiamondashApiClient
 from go.dashboard.dashboard import (
-    DashboardSyncError, DashboardParseError,
+    DashboardError, DashboardSyncError, DashboardParseError,
     Dashboard, DashboardLayout,
     ConversationReportsLayout, visit_dicts, ensure_handler_fields)
 
@@ -51,10 +51,10 @@ class TestDashboard(VumiGoDjangoTestCase):
         super(TestDashboard, self).setUp()
 
     def test_sync(self):
-        self.assertEqual(self.dashboard.get_config(), None)
         self.diamondash_api.set_response({'happy': 'config'})
 
         self.dashboard.sync()
+
         [request] = self.diamondash_api.get_requests()
 
         self.assertEqual(request['data'], {
@@ -76,6 +76,9 @@ class TestDashboard(VumiGoDjangoTestCase):
     def test_sync_for_error_responses(self):
         self.diamondash_api.set_error_response(404, ':(')
         self.assertRaises(DashboardSyncError, self.dashboard.sync)
+
+    def get_config_before_sync(self):
+        self.assertRaises(self.dashboard.get_config, DashboardError)
 
 
 class TestDashboardLayout(VumiGoDjangoTestCase):

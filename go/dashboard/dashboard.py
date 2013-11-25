@@ -52,13 +52,19 @@ def ensure_handler_fields(*fields):
     return decorator
 
 
-class DashboardSyncError(Exception):
+class DashboardError(Exception):
+    """
+    Raised when an error is encountered while building or usnig a dashboard.
+    """
+
+
+class DashboardSyncError(DashboardError):
     """
     Raised when we fail to sync the dashboard with diamondash.
     """
 
 
-class DashboardParseError(Exception):
+class DashboardParseError(DashboardError):
     """
     Raised when dashboard data cannot be parsed into something that can be
     given to diamondash.
@@ -89,6 +95,11 @@ class Dashboard(object):
             raise DashboardSyncError("Dashboard sync failed: %s" % e)
 
     def get_config(self):
+        if self.config is None:
+            raise DashboardError(
+                "Could not retrieve dashboard config, "
+                "dashboard has not yet been synced")
+
         return self.config
 
 
