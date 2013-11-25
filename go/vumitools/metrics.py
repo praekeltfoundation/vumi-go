@@ -1,7 +1,7 @@
 from django.conf import settings
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.blinkenlights.metrics import Metric, Aggregator, LAST
+from vumi.blinkenlights.metrics import Metric, Aggregator, AVG
 
 from go.base import amqp
 
@@ -11,7 +11,7 @@ class GoMetric(object):
     Encapsulates name retrieval, value retrieval and publishing for Go metrics.
     """
 
-    AGGREGATOR = LAST
+    AGGREGATOR = AVG
 
     def __init__(self, name, aggregator=None):
         if aggregator is None:
