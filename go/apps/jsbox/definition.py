@@ -10,11 +10,17 @@ class ViewLogsAction(ConversationAction):
     redirect_to = 'jsbox_logs'
 
 
+class ExportAnswersAction(ConversationAction):
+    action_name = 'export_answers'
+    action_display_name = 'Export answers to CSV'
+    redirect_to = 'jsbox_answers'
+
+
 class ConversationDefinition(ConversationDefinitionBase):
     conversation_type = 'jsbox'
     conversation_display_name = 'Javascript App'
 
-    actions = (ViewLogsAction,)
+    actions = (ViewLogsAction, ExportAnswersAction)
 
     def configured_endpoints(self, config):
         # TODO: make jsbox apps define these explicitly and

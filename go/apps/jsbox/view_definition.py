@@ -1,9 +1,13 @@
+from StringIO import StringIO
+
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, ConversationTemplateView,
     EditConversationView)
 
 from go.apps.jsbox.forms import JsboxForm, JsboxAppConfigFormset
 from go.apps.jsbox.log import LogManager
+from go.apps.jsbox.kv import KeyValueManager
+from go.base.utils import UnicodeCSVWriter
 
 
 class JSBoxLogsView(ConversationTemplateView):
@@ -19,6 +23,52 @@ class JSBoxLogsView(ConversationTemplateView):
         return self.render_to_response({
             "conversation": conversation,
             "logs": logs,
+        })
+
+
+class JSBoxAnswersView(ConversationTemplateView):
+    view_name = 'jsbox_answers'
+    path_suffix = 'jsbox_answers/'
+
+    @staticmethod
+    def _answers_to_csv(answers):
+        io = StringIO()
+        writer = UnicodeCSVWriter(io)
+
+        fieldnames = set()
+        rows = []
+        for line in infile:
+            try:
+                data = json.loads(line)
+            except ValueError:
+                continue
+            if "key" not in data:
+                continue
+            if key_re.match(data["key"]) is None:
+                continue
+            row = flatten(json.loads(data["value"]))
+            rows.append(row)
+            fieldnames.update(row.keys())
+            row["key"] = data["key"]
+
+        fieldnames = ["key"] + sorted(fieldnames)
+        writer = csv.DictWriter(outfile, fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+
+    def get(self, request, conversation):
+        campaign_key = request.user_api.user_account_key
+        kv_manager = KeyValueManager(request.user_api.api.redis)
+        user_store = conversation.config.get("TODO")
+        answers = kv_manager.answers(campaign_key, user_store)
+
+
+
+        return self.render_to_response({
+            "conversation": conversation,
+            "answers": answers,
         })
 
 
