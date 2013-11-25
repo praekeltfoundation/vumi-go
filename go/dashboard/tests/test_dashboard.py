@@ -260,7 +260,7 @@ class TestConversationReportsLayout(VumiGoDjangoTestCase):
                 'metric_type': 'conversation',
                 'name': 'foo',
             }),
-            "go.campaigns.%s.conversations.%s.foo.avg" %
+            "go.campaigns.%s.conversations.%s.foo.last" %
             (self.conv.user_account.key, self.conv.key))
 
     def test_conversation_metric_handling_for_missing_fields(self):
@@ -276,7 +276,7 @@ class TestConversationReportsLayout(VumiGoDjangoTestCase):
                 'store': 'red',
                 'name': 'foo',
             }),
-            "go.campaigns.%s.stores.red.foo.avg" %
+            "go.campaigns.%s.stores.red.foo.last" %
             (self.conv.user_account.key))
 
     def test_account_metric_handling_for_missing_fields(self):

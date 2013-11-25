@@ -72,7 +72,7 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         [datapoint] = command['datapoints']
         self.assertEqual(datapoint[0],
             'go.django.django.contrib.auth.views.login.get')
-        self.assertEqual(datapoint[1], ['avg'])
+        self.assertEqual(datapoint[1], ['last'])
         self.assertTrue(datapoint[2])
         self.assertEqual(kwargs['routing_key'], 'vumi.metrics')
         exchange = kwargs['exchange']
