@@ -301,7 +301,7 @@ CELERYBEAT_SCHEDULE = {
     },
     'generate-monthly-account-statements': {
         'task': 'go.billing.tasks.generate_monthly_account_statements',
-        'schedule': crontab(hour=0, minute=0, day_of_week=1),
+        'schedule': crontab(day_of_month=1),
     },
 }
 
