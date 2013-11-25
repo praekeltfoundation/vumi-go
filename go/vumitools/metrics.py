@@ -58,9 +58,9 @@ class DjangoMetric(GoMetric):
     Base for a metric publised in *Django land*.
     """
 
-    def __init__(self, metric_name, aggregators=None):
+    def __init__(self, metric_name, aggregator=None):
         name = self.make_name(metric_name)
-        super(DjangoMetric, self).__init__(name, aggregators)
+        super(DjangoMetric, self).__init__(name, aggregator)
 
     @classmethod
     def make_name(self, metric_name):
@@ -103,9 +103,9 @@ class TxMetric(GoMetric):
 
 
 class AccountMetric(TxMetric):
-    def __init__(self, account_key, store_name, metric_name, aggregators=None):
+    def __init__(self, account_key, store_name, metric_name, aggregator=None):
         name = self.make_name(account_key, store_name, metric_name)
-        super(AccountMetric, self).__init__(name, aggregators)
+        super(AccountMetric, self).__init__(name, aggregator)
 
     @classmethod
     def make_name(self, account_key, store_name, metric_name):
