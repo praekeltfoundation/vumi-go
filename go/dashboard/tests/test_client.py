@@ -25,12 +25,16 @@ class FakeErrorResponse(object):
 
 
 class TestDashboardApiClient(VumiGoDjangoTestCase):
+    def setUp(self):
+        super(TestDashboardApiClient, self).setUp()
+        self.patch_settings(DIAMONDASH_API_URL='http://diamondash.moc/api')
+
     def test_raw_request(self):
         resp = FakeResponse('spam', 201)
 
         def stubbed_request(method, url, data):
             self.assertEqual(method, 'put')
-            self.assertEqual(url, 'http://localhost:7115/api/foo')
+            self.assertEqual(url, 'http://diamondash.moc/api/foo')
             self.assertEqual(data, 'bar')
             return resp
 
@@ -53,8 +57,6 @@ class TestDashboardApiClient(VumiGoDjangoTestCase):
             'put', 'foo', 'bar')
 
     def test_request(self):
-        self.patch_settings(DIAMONDASH_API_URL='http://diamondash.moc/api')
-
         resp = FakeResponse(json.dumps({
             'success': True,
             'data': {'spam': 'ham'}
@@ -88,7 +90,7 @@ class TestDashboardApiClient(VumiGoDjangoTestCase):
 
         self.assertEqual(
             client.make_api_url('dashboards'),
-            'http://localhost:7115/api/dashboards')
+            'http://diamondash.moc/api/dashboards')
 
     def test_replace_dashboard(self):
         client = FakeDiamondashApiClient()
