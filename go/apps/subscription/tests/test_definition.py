@@ -9,13 +9,14 @@ class TestSubscriptionConversationDefinition(VumiGoDjangoTestCase):
         super(TestSubscriptionConversationDefinition, self).setUp()
 
         self.setup_user_api()
-        self.conv = self.create_conversation(
+        wrapped_conv = self.create_conversation(
             conversation_type=u'subscription',
             config={
                 'handlers': [
                     {'campaign_name': 'campaign-1'},
                     {'campaign_name': 'campaign-2'}]
             })
+        self.conv = wrapped_conv.c
         self.conv_def = ConversationDefinition(self.conv)
 
     def test_metrics_retrieval(self):

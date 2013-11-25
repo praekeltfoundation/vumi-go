@@ -274,65 +274,6 @@ VUMI_API_CONFIG = {
     'riak_manager': {'bucket_prefix': 'vumigo.'},
     }
 
-VUMI_INSTALLED_APPS = {
-    'go.apps.bulk_message': {
-        'namespace': 'bulk_message',
-        'display_name': 'Group Message',
-    },
-    'go.apps.dialogue': {
-        'namespace': 'dialogue',
-        'display_name': 'Dialogue',
-    },
-    'go.apps.multi_surveys': {
-        'namespace': 'multi_survey',
-        'display_name': 'Old Multi Surveys',
-    },
-    'go.apps.surveys': {
-        'namespace': 'survey',
-        'display_name': 'Old Surveys',
-    },
-    'go.apps.opt_out': {
-        'namespace': 'opt_out',
-        'display_name': 'Opt Out Handler',
-    },
-    'go.apps.sequential_send': {
-        'namespace': 'sequential_send',
-        'display_name': 'Sequential Send',
-    },
-    'go.apps.subscription': {
-        'namespace': 'subscription',
-        'display_name': 'Subscription Manager',
-    },
-    'go.apps.wikipedia': {
-        'namespace': 'wikipedia',
-        'display_name': 'Wikipedia',
-    },
-    'go.apps.jsbox': {
-        'namespace': 'jsbox',
-        'display_name': 'Javascript App',
-    },
-    'go.apps.http_api': {
-        'namespace': 'http_api',
-        'display_name': 'HTTP API',
-    },
-    'go.apps.static_reply': {
-        'namespace': 'static_reply',
-        'display_name': 'Static Reply',
-    },
-}
-
-VUMI_OBSOLETE_APPS = [
-    'wikipedia_sms',
-    'wikipedia_ussd',
-]
-
-VUMI_INSTALLED_ROUTERS = {
-    'go.routers.keyword': {
-        'namespace': 'keyword',
-        'display_name': 'Keyword',
-    },
-}
-
 VXPOLLS_REDIS_CONFIG = {
     'key_prefix': 'vumigo',
     'db': 1
