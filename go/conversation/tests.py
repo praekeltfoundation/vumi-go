@@ -865,13 +865,15 @@ class TestConversationReportsView(BaseConversationViewTestCase):
 
         [dd_request] = self.diamondash_api.get_requests()
         raw_dashboard = dd_request['data']
+
         self.assertEqual(
             raw_dashboard['name'],
             "go.conversations.%s" % conv.key)
+
         self.assertTrue('widgets' in raw_dashboard)
 
         self.assertEqual(
-            json.loads(response.context['model_data']),
+            json.loads(response.context['dashboard_config']),
             {'happy': 'dashboard'})
 
     def test_get_dashboard_for_sync_error_handling(self):
@@ -879,20 +881,22 @@ class TestConversationReportsView(BaseConversationViewTestCase):
 
         conv = self.create_conversation(conversation_type=u'dummy')
         response = self.client.get(self.get_view_url(conv, 'reports'))
+
         self.assertEqual(
             self.error_log,
             ['Dashboard sync failed: '
              '(400) {"message": ":(", "success": false}'])
 
-        self.assertEqual(json.loads(response.context['model_data']), None)
+        self.assertEqual(response.context['dashboard_config'], None)
 
     def test_get_dashboard_for_parse_error_handling(self):
+        conv = self.create_conversation(conversation_type=u'dummy')
+
         def bad_add_entity(*a, **kw):
             raise DashboardParseError(':(')
 
         self.monkey_patch(DashboardLayout, 'add_entity', bad_add_entity)
-        conv = self.create_conversation(conversation_type=u'dummy')
-
         response = self.client.get(self.get_view_url(conv, 'reports'))
+
         self.assertEqual(self.error_log, [':('])
-        self.assertEqual(json.loads(response.context['model_data']), None)
+        self.assertEqual(response.context['dashboard_config'], None)

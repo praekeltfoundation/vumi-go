@@ -692,8 +692,6 @@ class ConversationReportsView(ConversationTemplateView):
         logger.error(e)
 
     def get(self, request, conversation):
-        dashboard = None
-
         try:
             # build the dashboard
             name = "go.conversations.%s" % conversation.key
@@ -702,16 +700,14 @@ class ConversationReportsView(ConversationTemplateView):
 
             # give the dashboard to diamondash
             dashboard.sync()
-            success = True
+            dashboard_config = json.dumps(dashboard.get_config())
         except Exception, e:
             self.on_error(e)
-            success = False
+            dashboard_config = None
 
-        model_data = json.dumps(dashboard.get_config() if dashboard else None)
         return self.render_to_response({
-            'success': success,
-            'model_data': model_data,
             'conversation': conversation,
+            'dashboard_config': dashboard_config,
         })
 
 

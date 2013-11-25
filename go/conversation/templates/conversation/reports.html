@@ -5,7 +5,7 @@
 {% block content_title %}{{ conversation.name }} reports{% endblock %}
 
 {% block content_main %}
-    {% if success %}
+    {% if dashboard_config %}
         <div id="dashboard" class="diamondash dashboard"></div>
     {% else %}
         <div class="row">
@@ -15,7 +15,7 @@
 {% endblock %}
 
 {% block ondomready %}
-    {% if success %}
-        {% include "dashboard/includes/dashboard.html" with model_data=model_data %}
+    {% if dashboard_config %}
+        {% include "dashboard/includes/dashboard.html" with dashboard_config=dashboard_config %}
     {% endif %}
 {% endblock %}
