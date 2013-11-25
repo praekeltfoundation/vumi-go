@@ -264,11 +264,6 @@ class TestConversationReportsLayout(VumiGoDjangoTestCase):
             (self.conv.user_account.key, self.conv.key))
 
     def test_conversation_metric_handling_for_missing_fields(self):
-        self.layout.handle_metric({
-            'metric_type': 'conversation',
-            'name': 'foo',
-        })
-
         self.assertRaises(
             DashboardParseError,
             self.layout.handle_metric,
@@ -285,12 +280,6 @@ class TestConversationReportsLayout(VumiGoDjangoTestCase):
             (self.conv.user_account.key))
 
     def test_account_metric_handling_for_missing_fields(self):
-        self.layout.handle_metric({
-            'metric_type': 'account',
-            'store': 'red',
-            'name': 'foo',
-        })
-
         self.assertRaises(
             DashboardParseError,
             self.layout.handle_metric,
