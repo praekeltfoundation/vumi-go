@@ -20,6 +20,9 @@ def diamondash_api_proxy(request):
     _, url = request.path.split('/diamondash/api', 1)
     response = api.raw_request(request.method, url, content=request.body)
 
+    # TODO for the case of snapshot requests, ensure the widgets requested are
+    # allowed for the given account
+
     return HttpResponse(
         response['content'],
         status=response['code'],
