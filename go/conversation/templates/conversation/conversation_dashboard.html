@@ -1,13 +1,16 @@
-{% extends "conversation/conversation_base.html" %}
+{% extends "app.html" %}
 {% load conversation_tags %}
 
 {% block content_extraclass %}conversation dashboard{% endblock %}
+{% block content_title %}{{ conversation.name }} Metrics{% endblock %}
 
 {% block content_main %}
     {% if success %}
         <div id="dashboard" class="diamondash dashboard"></div>
     {% else %}
-        Something bad happened :(
+        <div class="row">
+            <h3 class="text-center">Something went wrong</h3>
+        </div>
     {% endif %}
 {% endblock %}
 
