@@ -137,8 +137,7 @@ class MetricSet(object):
         self.extend(metrics or [])
 
     def __iter__(self):
-        for metric in self.metrics:
-            yield metric
+        return iter(self.metrics)
 
     def __getitem__(self, name):
         return self.get(name)
