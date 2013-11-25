@@ -86,16 +86,17 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
         super(TestDashboardLayout, self).setUp()
         self.layout = ToyDashboardLayout()
 
-    def test_visit_dicts(self):
-        def traverse(collection):
-            collection['visited'] = True
-            return collection
+    @staticmethod
+    def traverse(collection):
+        collection['visited'] = True
+        return collection
 
+    def test_visit_dicts(self):
         collection = {
             'a': 'cake',
             'b': {'foo': 'bar'},
         }
-        visit_dicts(collection, traverse)
+        visit_dicts(collection, self.traverse)
         self.assertEqual(collection, {
             'a': 'cake',
             'b': {
@@ -104,6 +105,7 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
             }
         })
 
+    def test_visit_dicts_for_lists(self):
         collection = [{
             'a': 'cake',
             'b': {'foo': 'bar'}
@@ -111,7 +113,7 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
             'c': 'fish',
             'd': {'baz': 'qux'}
         }]
-        visit_dicts(collection, traverse)
+        visit_dicts(collection, self.traverse)
         self.assertEqual(collection, [{
             'visited': True,
             'a': 'cake',
@@ -128,6 +130,7 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
             },
         }])
 
+    def test_visit_dicts_for_multiple_dict_nestings(self):
         collection = [{
             'a': 'cake',
             'b': {'foo': 'bar'}
@@ -139,7 +142,7 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
                 }]
             }
         }]
-        visit_dicts(collection, traverse)
+        visit_dicts(collection, self.traverse)
         self.assertEqual(collection, [{
             'visited': True,
             'a': 'cake',
