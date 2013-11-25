@@ -707,7 +707,7 @@ class ConversationReportsView(ConversationTemplateView):
             self.on_error(e)
             success = False
 
-        model_data = json.dumps(dashboard.serialize() if dashboard else None)
+        model_data = json.dumps(dashboard.get_config() if dashboard else None)
         return self.render_to_response({
             'success': success,
             'model_data': model_data,

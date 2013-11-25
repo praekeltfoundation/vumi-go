@@ -51,7 +51,7 @@ class TestDashboard(VumiGoDjangoTestCase):
         super(TestDashboard, self).setUp()
 
     def test_sync(self):
-        self.assertEqual(self.dashboard.serialize(), None)
+        self.assertEqual(self.dashboard.get_config(), None)
         self.diamondash_api.set_response({'happy': 'config'})
 
         self.dashboard.sync()
@@ -71,7 +71,7 @@ class TestDashboard(VumiGoDjangoTestCase):
                 'target': 'foo.ham',
             }]
         })
-        self.assertEqual(self.dashboard.serialize(), {'happy': 'config'})
+        self.assertEqual(self.dashboard.get_config(), {'happy': 'config'})
 
     def test_sync_for_error_responses(self):
         self.diamondash_api.set_error_response(404, ':(')
@@ -188,12 +188,12 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
             {'metric_type': 'bar'})
 
     def test_new_row_adding(self):
-        self.assertEqual(self.layout.serialize(), [])
+        self.assertEqual(self.layout.get_config(), [])
         self.layout.new_row()
-        self.assertEqual(self.layout.serialize(), ['new_row'])
+        self.assertEqual(self.layout.get_config(), ['new_row'])
 
     def test_widget_adding(self):
-        self.assertEqual(self.layout.serialize(), [])
+        self.assertEqual(self.layout.get_config(), [])
 
         self.layout.add_widget({
             'name': 'windu-the-widget',
@@ -218,7 +218,7 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
             }]
         })
 
-        self.assertEqual(self.layout.serialize(), [{
+        self.assertEqual(self.layout.get_config(), [{
             'name': 'windu-the-widget',
             'target': 'foo.spam',
         }, {

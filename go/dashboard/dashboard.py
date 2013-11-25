@@ -72,10 +72,10 @@ class Dashboard(object):
         self.layout = layout
         self.config = None
 
-    def _raw_serialize(self):
+    def _get_raw_config(self):
         return {
             'name': self.name,
-            'widgets': self.layout.serialize()
+            'widgets': self.layout.get_config()
         }
 
     def sync(self):
@@ -83,12 +83,12 @@ class Dashboard(object):
         Ensures the dashboard exists on diamondash's side
         """
         try:
-            raw_config = self._raw_serialize()
+            raw_config = self._get_raw_config()
             self.config = self.diamondash_api.replace_dashboard(raw_config)
-        except Exception, e:
+        except Exception as e:
             raise DashboardSyncError("Dashboard sync failed: %s" % e)
 
-    def serialize(self):
+    def get_config(self):
         return self.config
 
 
@@ -131,7 +131,7 @@ class DashboardLayout(object):
         else:
             self.add_widget(entity)
 
-    def serialize(self):
+    def get_config(self):
         return self.entities
 
 
