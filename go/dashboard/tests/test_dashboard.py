@@ -45,10 +45,7 @@ class TestDashboard(VumiGoDjangoTestCase):
             'get_diamondash_api',
             lambda: self.diamondash_api)
 
-        self.dashboard = Dashboard(
-            'ackbar-the-dashboard',
-            'Ackbar the Dashboard',
-            layout)
+        self.dashboard = Dashboard('ackbar-the-dashboard', layout)
 
     def tearDown(self):
         super(TestDashboard, self).setUp()
@@ -62,7 +59,6 @@ class TestDashboard(VumiGoDjangoTestCase):
 
         self.assertEqual(request['data'], {
             'name': 'ackbar-the-dashboard',
-            'title': 'Ackbar the Dashboard',
             'widgets': [{
                 'type': 'lvalue',
                 'time_range': '1d',

@@ -66,17 +66,15 @@ class DashboardParseError(Exception):
 
 
 class Dashboard(object):
-    def __init__(self, name, title, layout):
+    def __init__(self, name, layout):
         self.diamondash_api = client.get_diamondash_api()
         self.name = name
-        self.title = title
         self.layout = layout
         self.config = None
 
     def _raw_serialize(self):
         return {
             'name': self.name,
-            'title': self.title,
             'widgets': self.layout.serialize()
         }
 

@@ -697,7 +697,7 @@ class ConversationReportsView(ConversationTemplateView):
         try:
             # build the dashboard
             layout = self.build_layout(conversation)
-            dashboard = Dashboard(conversation.key, conversation.name, layout)
+            dashboard = Dashboard(conversation.key, layout)
 
             # give the dashboard to diamondash
             dashboard.sync()
