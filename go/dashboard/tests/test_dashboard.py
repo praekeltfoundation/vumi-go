@@ -4,7 +4,7 @@ from go.dashboard.tests.utils import FakeDiamondashApiClient
 from go.dashboard.dashboard import (
     DashboardSyncError, DashboardParseError,
     Dashboard, DashboardLayout,
-    ConversationDashboardLayout, visit_dicts, ensure_handler_fields)
+    ConversationReportsLayout, visit_dicts, ensure_handler_fields)
 
 
 class ToyDashboardLayout(DashboardLayout):
@@ -245,12 +245,12 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
             })
 
 
-class TestConversationDashboardLayout(VumiGoDjangoTestCase):
+class TestConversationReportsLayout(VumiGoDjangoTestCase):
     def setUp(self):
-        super(TestConversationDashboardLayout, self).setUp()
+        super(TestConversationReportsLayout, self).setUp()
         self.setup_user_api()
         self.conv = self.create_conversation()
-        self.layout = ConversationDashboardLayout(self.conv)
+        self.layout = ConversationReportsLayout(self.conv)
 
     def test_conversation_metric_handling(self):
         self.assertEqual(

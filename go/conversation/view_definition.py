@@ -23,7 +23,7 @@ from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
                                    ConversationDetailForm)
 from go.conversation.tasks import export_conversation_messages
 from go.conversation.utils import PagedMessageCache
-from go.dashboard.dashboard import Dashboard, ConversationDashboardLayout
+from go.dashboard.dashboard import Dashboard, ConversationReportsLayout
 
 logger = logging.getLogger(__name__)
 
@@ -617,9 +617,9 @@ class EditConversationGroupsView(ConversationTemplateView):
             content_type="application/json")
 
 
-class ConversationDashboardView(ConversationTemplateView):
-    view_name = 'conversation_dashboard'
-    path_suffix = 'dashboard/'
+class ConversationReportsView(ConversationTemplateView):
+    view_name = 'reports'
+    path_suffix = 'reports/'
 
     def build_layout(self, conversation):
         """
@@ -627,7 +627,7 @@ class ConversationDashboardView(ConversationTemplateView):
         Override to specialise dashboard building.
         """
 
-        return ConversationDashboardLayout(conversation, [{
+        return ConversationReportsLayout(conversation, [{
             'type': 'diamondash.widgets.lvalue.LValueWidget',
             'time_range': '1d',
             'name': 'Messages Sent (24h)',
@@ -739,7 +739,7 @@ class ConversationViewDefinitionBase(object):
         StopConversationView,
         ArchiveConversationView,
         AggregatesConversationView,
-        ConversationDashboardView
+        ConversationReportsView
     )
 
     def __init__(self, conv_def):

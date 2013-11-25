@@ -137,10 +137,10 @@ class DashboardLayout(object):
         return self.entities
 
 
-class ConversationDashboardLayout(DashboardLayout):
+class ConversationReportsLayout(DashboardLayout):
     def __init__(self, conv, entities=None):
         self.conv = conv
-        super(ConversationDashboardLayout, self).__init__(entities)
+        super(ConversationReportsLayout, self).__init__(entities)
 
     @ensure_handler_fields('name')
     def handle_conversation_metric(self, target):

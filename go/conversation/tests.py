@@ -20,8 +20,7 @@ from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.vumitools.conversation.utils import ConversationWrapper
-from go.dashboard.dashboard import (
-    Dashboard, DashboardLayout, DashboardParseError)
+from go.dashboard.dashboard import DashboardLayout, DashboardParseError
 from go.dashboard import client as dashboard_client
 from go.dashboard.tests.utils import FakeDiamondashApiClient
 
@@ -837,9 +836,9 @@ class TestConversationTemplateTags(BaseConversationViewTestCase):
         raise NotImplementedError("TODO")
 
 
-class TestConversationDashboardView(BaseConversationViewTestCase):
+class TestConversationReportsView(BaseConversationViewTestCase):
     def setUp(self):
-        super(TestConversationDashboardView, self).setUp()
+        super(TestConversationReportsView, self).setUp()
         self.diamondash_api = FakeDiamondashApiClient()
 
         self.error_log = []
@@ -856,14 +855,13 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
             lambda: self.diamondash_api)
 
     def tearDown(self):
-        super(TestConversationDashboardView, self).tearDown()
+        super(TestConversationReportsView, self).tearDown()
 
     def test_get_dashboard(self):
         self.diamondash_api.set_response({'happy': 'dashboard'})
 
         conv = self.create_conversation(conversation_type=u'dummy')
-        response = self.client.get(
-            self.get_view_url(conv, 'conversation_dashboard'))
+        response = self.client.get(self.get_view_url(conv, 'reports'))
 
         [dd_request] = self.diamondash_api.get_requests()
         raw_dashboard = dd_request['data']
@@ -879,9 +877,7 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.diamondash_api.set_error_response(400, ':(')
 
         conv = self.create_conversation(conversation_type=u'dummy')
-        response = self.client.get(
-            self.get_view_url(conv, 'conversation_dashboard'))
-
+        response = self.client.get(self.get_view_url(conv, 'reports'))
         self.assertEqual(
             self.error_log,
             ['Dashboard sync failed: '
@@ -896,7 +892,6 @@ class TestConversationDashboardView(BaseConversationViewTestCase):
         self.monkey_patch(DashboardLayout, 'add_entity', bad_add_entity)
         conv = self.create_conversation(conversation_type=u'dummy')
 
-        response = self.client.get(
-            self.get_view_url(conv, 'conversation_dashboard'))
+        response = self.client.get(self.get_view_url(conv, 'reports'))
         self.assertEqual(self.error_log, [':('])
         self.assertEqual(json.loads(response.context['model_data']), None)
