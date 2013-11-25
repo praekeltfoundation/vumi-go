@@ -3,7 +3,6 @@ from mock import patch
 from twisted.internet.defer import succeed, inlineCallbacks
 
 from vumi.worker import BaseWorker
-from vumi.blinkenlights.metrics import LAST
 
 from go.base.amqp import AmqpConnection
 from go.vumitools.metrics import (
@@ -33,8 +32,6 @@ class ToyTxMetric(TxMetric):
 
 
 class ToyDjangoMetric(DjangoMetric):
-    AGGREGATORS = [LAST]
-
     def __init__(self, *a, **kw):
         super(ToyDjangoMetric, self).__init__(*a, **kw)
         self.value = None
