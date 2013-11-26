@@ -112,8 +112,12 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
             2: [conversations["conv2a"], conversations["conv2b"]],
             4: [conversations["conv4"]],
         })
+        # We may have tombstone keys from accounts created (and deleted) by
+        # previous tests, so we replace the account count in the log message
+        # we're asserting on.
+        log_msg = re.sub(r'in \d account', 'in 1 account', log_msg)
         self.assertEqual(log_msg, "Scheduled metrics commands for"
-                         " 4 conversations in 2 accounts.")
+                         " 4 conversations in 1 accounts.")
 
     @inlineCallbacks
     def test_process_bucket(self):
