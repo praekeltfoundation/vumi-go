@@ -10,7 +10,7 @@ South==0.8.2
 psycopg2==2.4
 Fabric==1.2.2
 celery==3.0.23
-django-celery==3.0
+django-celery==3.0.23
 django-celery-email
 https://github.com/praekelt/vumi/tarball/develop#egg=vumi-dev
 https://github.com/praekelt/vxpolls/tarball/develop#egg=vxpolls-dev
