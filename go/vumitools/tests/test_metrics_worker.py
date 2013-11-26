@@ -9,6 +9,8 @@ from twisted.internet.task import Clock, LoopingCall
 from go.vumitools.tests.utils import GoWorkerTestCase
 from go.vumitools import metrics_worker
 
+from vumi.tests.utils import LogCatcher
+
 
 class GoMetricsWorkerTestCase(GoWorkerTestCase):
     worker_class = metrics_worker.GoMetricsWorker
@@ -102,12 +104,16 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
             self.start_conv(conv)
 
         self.assert_conversations_bucketed(worker, {})
-        yield worker.populate_conversation_buckets()
+        with LogCatcher(message='Scheduled') as lc:
+            yield worker.populate_conversation_buckets()
+            [log_msg] = lc.messages()
         self.assert_conversations_bucketed(worker, {
             1: [conversations["conv1"]],
             2: [conversations["conv2a"], conversations["conv2b"]],
             4: [conversations["conv4"]],
         })
+        self.assertEqual(log_msg, "Scheduled metrics commands for"
+                         " 4 conversations in 2 accounts.")
 
     @inlineCallbacks
     def test_process_bucket(self):
