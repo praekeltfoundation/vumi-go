@@ -9,8 +9,8 @@ coverage==3.7
 South==0.8.2
 psycopg2==2.4
 Fabric==1.2.2
-celery==3.1.5
-django-celery==3.1.1
+celery==3.0.0
+django-celery==2.5.5
 django-celery-email
 https://github.com/praekelt/vumi/tarball/develop#egg=vumi-dev
 https://github.com/praekelt/vxpolls/tarball/develop#egg=vxpolls-dev
