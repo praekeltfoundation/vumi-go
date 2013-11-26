@@ -19,6 +19,7 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
         super(GoMetricsWorkerTestCase, self).setUp()
         self.clock = Clock()
         self.patch(metrics_worker, 'LoopingCall', self.looping_call)
+        self.conversation_names = {}
 
     def get_metrics_worker(self, config=None, start=True,
                            needs_looping=False, needs_hash=False):
@@ -43,8 +44,9 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
     def no_looping(self, *args, **kw):
         return self.looping_call(lambda: None)
 
-    def dummy_bucket_for_conversation(self, conv):
-        digits = re.sub('[^0-9]', '', conv.name) or '0'
+    def dummy_bucket_for_conversation(self, conv_key):
+        conv_name = self.conversation_names[conv_key]
+        digits = re.sub('[^0-9]', '', conv_name) or '0'
         return int(digits) % 60
 
     def make_account(self, worker, username):
@@ -71,6 +73,7 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
             user_api = worker.vumi_api.get_user_api(account.key)
             for conv_name in convs:
                 conv = yield self.make_conv(user_api, unicode(conv_name))
+                self.conversation_names[conv.key] = conv.name
                 conversations[conv_name] = conv
 
         returnValue((accounts, conversations))
@@ -80,15 +83,17 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
         worker = yield self.get_metrics_worker(needs_hash=True)
         accounts, conversations = yield self.make_accounts_and_conversations(
             worker, acc1=["conv1"])
-        bucket = worker.bucket_for_conversation(conversations["conv1"])
+        bucket = worker.bucket_for_conversation(conversations["conv1"].key)
         self.assertEqual(bucket, hash(conversations["conv1"].key) % 60)
 
     def assert_conversations_bucketed(self, worker, expected):
         expected = copy.deepcopy(expected)
         buckets = copy.deepcopy(worker._buckets)
         for key in range(60):
-            buckets[key] = sorted(c.key for c in buckets[key])
-            expected[key] = sorted(c.key for c in expected.get(key, []))
+            buckets[key] = sorted(buckets[key])
+            expected[key] = sorted(
+                (c.user_account.key, c.key, u'my_conv_application')
+                for c in expected.get(key, []))
             if buckets[key] == expected[key]:
                 del buckets[key]
                 del expected[key]
@@ -187,8 +192,7 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
 
         active_conversations = yield worker.find_conversations_for_account(
             accounts["acc1"].key)
-        self.assertEqual([c.key for c in active_conversations],
-                         [conversations["conv2"].key])
+        self.assertEqual(active_conversations, [conversations["conv2"].key])
 
     @inlineCallbacks
     def test_send_metrics_command(self):
@@ -197,7 +201,9 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
             worker, acc1=["conv1"])
 
         yield self.start_conv(conversations["conv1"])
-        yield worker.send_metrics_command(conversations["conv1"])
+        conv = conversations["conv1"]
+        yield worker.send_metrics_command(
+            conv.user_account.key, conv.key, 'my_conv_application')
         [cmd] = self._get_dispatched('vumi.api')
 
         self.assertEqual(cmd['worker_name'], 'my_conv_application')

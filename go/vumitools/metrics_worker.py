@@ -77,6 +77,7 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         self._num_buckets = (
             config.metrics_interval // config.metrics_granularity)
         self._buckets = dict((i, []) for i in range(self._num_buckets))
+        self._conversation_workers = {}
 
         self._looper = LoopingCall(self.metrics_loop_func)
         self._looper.start(config.metrics_granularity)
@@ -89,8 +90,8 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         yield self.redis.close_manager()
         yield self._go_teardown_worker()
 
-    def bucket_for_conversation(self, conv):
-        return hash(conv.key) % self._num_buckets
+    def bucket_for_conversation(self, conv_key):
+        return hash(conv_key) % self._num_buckets
 
     @inlineCallbacks
     def populate_conversation_buckets(self):
@@ -99,11 +100,18 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         # We deliberarely serialise this. We don't want to hit the datastore
         # too hard for metrics.
         for account_key in account_keys:
-            convs = yield self.find_conversations_for_account(account_key)
-            num_conversations += len(convs)
-            for conversation in convs:
-                bucket = self.bucket_for_conversation(conversation)
-                self._buckets[bucket].append(conversation)
+            conv_keys = yield self.find_conversations_for_account(account_key)
+            num_conversations += len(conv_keys)
+            for conv_key in conv_keys:
+                bucket = self.bucket_for_conversation(conv_key)
+                if conv_key not in self._conversation_workers:
+                    # TODO: Clear out archived conversations
+                    user_api = self.vumi_api.get_user_api(account_key)
+                    conv = yield user_api.get_wrapped_conversation(conv_key)
+                    self._conversation_workers[conv_key] = conv.worker_name
+                worker_name = self._conversation_workers[conv_key]
+                self._buckets[bucket].append(
+                    (account_key, conv_key, worker_name))
         log.info(
             "Scheduled metrics commands for %d conversations in %d accounts."
             % (num_conversations, len(account_keys)))
@@ -111,8 +119,9 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
     @inlineCallbacks
     def process_bucket(self, bucket):
         convs, self._buckets[bucket] = self._buckets[bucket], []
-        for conversation in convs:
-            yield self.send_metrics_command(conversation)
+        for account_key, conversation_key, worker_name in convs:
+            yield self.send_metrics_command(
+                account_key, conversation_key, worker_name)
 
     def increment_bucket(self):
         self._current_bucket += 1
@@ -136,15 +145,12 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
 
     def find_conversations_for_account(self, account_key):
         user_api = self.vumi_api.get_user_api(account_key)
-        return user_api.running_conversations()
+        return user_api.conversation_store.list_running_conversations()
 
-    def send_metrics_command(self, conversation):
-        user_api = self.vumi_api.get_user_api(conversation.user_account.key)
-        conversation = user_api.wrap_conversation(conversation)
-
+    def send_metrics_command(self, account_key, conversation_key, worker_name):
         cmd = VumiApiCommand.command(
-            conversation.worker_name,
+            worker_name,
             'collect_metrics',
-            conversation_key=conversation.key,
-            user_account_key=conversation.user_account.key)
+            conversation_key=conversation_key,
+            user_account_key=account_key)
         return self.command_publisher.publish_message(cmd)
