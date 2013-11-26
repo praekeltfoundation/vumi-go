@@ -76,7 +76,7 @@ class TestGoMetric(GoTestCase):
     def test_diamondash_target_name_retrieval(self):
         self.assertEqual(
             self.metric.get_diamondash_target(),
-            'go.some.random.metric.last')
+            'go.some.random.metric.avg')
 
 
 class TestDjangoMetric(VumiGoDjangoTestCase):
@@ -115,7 +115,7 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 23)])])
+            [('go.django.luke', ('avg',), [(1985, 23)])])
 
     def make_connection(self):
         connection = AmqpConnection()
@@ -130,7 +130,7 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 23)])])
+            [('go.django.luke', ('avg',), [(1985, 23)])])
 
     def test_oneshot_with_value(self):
         self.assertEqual(self.msgs, [])
@@ -139,7 +139,7 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 22)])])
+            [('go.django.luke', ('avg',), [(1985, 22)])])
 
 
 class TestTxMetric(TxMetricTestBase):
@@ -159,7 +159,7 @@ class TestTxMetric(TxMetricTestBase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 23)])])
+            [('go.some.random.metric', ('avg',), [(1985, 23)])])
 
     @inlineCallbacks
     def test_oneshot_for_deferred_values(self):
@@ -173,7 +173,7 @@ class TestTxMetric(TxMetricTestBase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 42)])])
+            [('go.some.random.metric', ('avg',), [(1985, 42)])])
 
     def test_oneshot_with_value(self):
         self.metric.oneshot(self.metrics_manager, value=9)
@@ -185,7 +185,7 @@ class TestTxMetric(TxMetricTestBase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 9)])])
+            [('go.some.random.metric', ('avg',), [(1985, 9)])])
 
 
 class TestConversationMetric(TxMetricTestBase):
