@@ -44,6 +44,8 @@ urlpatterns = patterns(
     # proxy API calls
     url(r'^api/', include('go.api.urls', namespace='api')),
 
+    # proxy diamondash calls
+    url(r'^diamondash/', include('go.dashboard.urls', namespace='dashboard')),
 )
 
 urlpatterns += patterns('django.contrib.flatpages.views',

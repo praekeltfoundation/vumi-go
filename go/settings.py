@@ -129,6 +129,7 @@ ROOT_URLCONF = 'go.urls'
 TEMPLATE_DIRS = (
     abspath("templates"),
     abspath("base", "templates"),
+    abspath("dashboard", "templates"),
     abspath("contacts", "templates"),
     abspath("account", "templates"),
     abspath("apps", "dialogue", "templates"),
@@ -285,6 +286,7 @@ GOOGLE_ANALYTICS_UA = None
 
 MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
 GO_API_URL = 'http://localhost:8001/api/v1/go/api'
+DIAMONDASH_API_URL = 'http://localhost:7115/api/'
 
 from celery.schedules import crontab
 CELERYBEAT_SCHEDULE = {
