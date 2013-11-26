@@ -95,13 +95,18 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
     @inlineCallbacks
     def populate_conversation_buckets(self):
         account_keys = yield self.find_account_keys()
+        num_conversations = 0
         # We deliberarely serialise this. We don't want to hit the datastore
         # too hard for metrics.
         for account_key in account_keys:
             convs = yield self.find_conversations_for_account(account_key)
+            num_conversations += len(convs)
             for conversation in convs:
                 bucket = self.bucket_for_conversation(conversation)
                 self._buckets[bucket].append(conversation)
+        log.info(
+            "Scheduled metrics commands for %d conversations in %d accounts."
+            % (num_conversations, len(account_keys)))
 
     @inlineCallbacks
     def process_bucket(self, bucket):
