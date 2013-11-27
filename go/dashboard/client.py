@@ -18,9 +18,21 @@ class DiamondashApiClient(object):
             for p in [settings.DIAMONDASH_API_URL, path])
 
     def get_api_auth(self):
-        return (
-            settings.DIAMONDASH_API_USERNAME,
-            settings.DIAMONDASH_API_PASSWORD)
+        username = None
+        password = None
+
+        if hasattr(settings, 'DIAMONDASH_API_USERNAME'):
+            username = settings.DIAMONDASH_API_USERNAME
+
+        if hasattr(settings, 'DIAMONDASH_API_PASSWORD'):
+            password = settings.DIAMONDASH_API_PASSWORD
+
+        if username is not None and password is not None:
+            auth = (username, password)
+        else:
+            auth = None
+
+        return auth
 
     def raw_request(self, method, path, content=""):
         resp = requests.request(
