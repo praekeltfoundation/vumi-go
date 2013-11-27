@@ -1,9 +1,31 @@
+from go.dashboard.dashboard import ConversationReportsLayout
 from go.conversation.view_definition import (
-    ConversationViewDefinitionBase, ConversationTemplateView,
-    EditConversationView)
+    ConversationViewDefinitionBase, ConversationReportsView,
+    ConversationTemplateView, EditConversationView)
 
 from go.apps.jsbox.forms import JsboxForm, JsboxAppConfigFormset
 from go.apps.jsbox.log import LogManager
+
+
+class JSBoxReportsView(ConversationReportsView):
+    def _get_reports_config(self, conversation):
+        app_config = conversation.config.get('jsbox_app_config', {})
+        return app_config.get('reports', {}).get('value', {})
+
+    def build_layout(self, conversation):
+        """
+        Returns a conversation's dashboard widget data.
+        Override to specialise dashboard building.
+        """
+        reports_config = self._get_reports_config(conversation)
+        layout_config = reports_config.get('layout')
+
+        if layout_config is None:
+            layout = super(JSBoxReportsView, self).build_layout(conversation)
+        else:
+            layout = ConversationReportsLayout(conversation, layout_config)
+
+        return layout
 
 
 class JSBoxLogsView(ConversationTemplateView):
