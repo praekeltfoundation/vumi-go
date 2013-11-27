@@ -672,7 +672,7 @@ class ConversationReportsView(ConversationTemplateView):
                 'name': 'Messagent Sent',
                 'target': {
                     'metric_type': 'conversation',
-                    'name': 'messages_received',
+                    'name': 'messages_sent',
                 },
             }, {
                 'name': 'Messagent Received',
