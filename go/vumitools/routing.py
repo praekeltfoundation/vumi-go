@@ -558,9 +558,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def handle_unroutable_inbound_message(self, f, msg, connector_name):
-        """Send a reply to the unroutable `msg` if the tagpool ask for one.
+        """Send a reply to the unroutable `msg` if the tagpool asks for one.
 
-        If we can't find a the tagpool or the tagpool isn't configured for
+        If we can't find the tagpool or the tagpool isn't configured for
         replies to unroutable messages, the original exception is reraised.
         """
         msg_mdh = self.get_metadata_helper(msg)
