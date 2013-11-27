@@ -17,8 +17,23 @@ class DiamondashApiClient(object):
             p.strip('/')
             for p in [settings.DIAMONDASH_API_URL, path])
 
+    def get_api_auth(self):
+        username = getattr(settings, 'DIAMONDASH_API_USERNAME', None)
+        password = getattr(settings, 'DIAMONDASH_API_PASSWORD', None)
+
+        if username is not None and password is not None:
+            auth = (username, password)
+        else:
+            auth = None
+
+        return auth
+
     def raw_request(self, method, path, content=""):
-        resp = requests.request(method, self.make_api_url(path), data=content)
+        resp = requests.request(
+            method,
+            data=content,
+            url=self.make_api_url(path),
+            auth=self.get_api_auth())
 
         try:
             resp.raise_for_status()
