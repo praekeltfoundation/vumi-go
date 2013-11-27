@@ -27,15 +27,19 @@ class FakeErrorResponse(object):
 class TestDashboardApiClient(VumiGoDjangoTestCase):
     def setUp(self):
         super(TestDashboardApiClient, self).setUp()
-        self.patch_settings(DIAMONDASH_API_URL='http://diamondash.moc/api')
+        self.patch_settings(
+            DIAMONDASH_API_URL='http://diamondash.moc/api',
+            DIAMONDASH_API_USERNAME='username',
+            DIAMONDASH_API_PASSWORD='password')
 
     def test_raw_request(self):
         resp = FakeResponse('spam', 201)
 
-        def stubbed_request(method, url, data):
+        def stubbed_request(method, url, data, auth):
             self.assertEqual(method, 'put')
             self.assertEqual(url, 'http://diamondash.moc/api/foo')
             self.assertEqual(data, 'bar')
+            self.assertEqual(auth, ('username', 'password'))
             return resp
 
         self.monkey_patch(requests, 'request', stubbed_request)
@@ -62,10 +66,11 @@ class TestDashboardApiClient(VumiGoDjangoTestCase):
             'data': {'spam': 'ham'}
         }))
 
-        def stubbed_request(method, url, data):
+        def stubbed_request(method, url, data, auth):
             self.assertEqual(method, 'put')
             self.assertEqual(url, 'http://diamondash.moc/api/foo')
             self.assertEqual(data, json.dumps({'bar': 'baz'}))
+            self.assertEqual(auth, ('username', 'password'))
             return resp
 
         self.monkey_patch(requests, 'request', stubbed_request)
