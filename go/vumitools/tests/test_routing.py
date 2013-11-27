@@ -252,10 +252,7 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
         self.user_account_key = user_account.key
         self.user_api = self.vumi_api.get_user_api(self.user_account_key)
         tag1, tag2, tag3 = yield self.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"],
-            metadata={
-                "unroutable_reply": "Message to pool1 could not be routed",
-            })
+            u"pool1", [u"1234", u"5678", u"9012"])
         yield self.user_api.acquire_specific_tag(tag1)
         yield self.user_api.acquire_specific_tag(tag2)
         yield self.user_api.acquire_specific_tag(tag3)
@@ -832,7 +829,7 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
                 "app1", "router_ri",
             ],
             "send_unroutable_inbound_session_replies": True,
-            "default_unroutable_inbound_session_reply": "Eep!",
+            "default_unroutable_inbound_reply": "Eep!",
         }
         config.update(config_extras)
         dispatcher = yield super(
@@ -859,32 +856,104 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         self.assert_reply_matches(reply, msg, reply_content, **md)
 
     @inlineCallbacks
-    def test_inbound_message_from_transport_to_unowned_tag(self):
-        yield self.get_dispatcher()
-        msg = self.with_md(
-            self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("pool1", "badtag"))
-        yield self.dispatch_inbound(msg, 'sphex')
-        self.assert_unroutable_reply(
-            'sphex', msg, "Message to pool1 could not be routed",
-            tag=("pool1", "badtag"))
-
-    @inlineCallbacks
-    def test_inbound_message_from_transport_to_unknown_pool(self):
+    def test_unroutable_inbound_from_transport_to_unknown_pool(self):
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
             tag=("badpool", "tag1"))
         yield self.dispatch_inbound(msg, 'sphex')
-        self.assert_unroutable_reply(
-            'sphex', msg, "Eep!", tag=("badpool", "tag1"))
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            'Message received for unowned tag.', failure.value.args[0])
 
     @inlineCallbacks
-    def test_inbound_message_from_router_to_unroutable(self):
+    def test_unroutable_inbound_from_transport_no_config(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            'Message received for unowned tag.', failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_no_reply(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": False,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            'Message received for unowned tag.', failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_default_reply(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_unroutable_reply(
+            'router_ro', msg, "Eep!", tag=("pool1", "tag1"))
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_default_reply_no_session(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_unroutable_reply(
+            'router_ro', msg, "Eep!", tag=("pool1", "tag1"))
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_custom_reply(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+            "unroutable_inbound_reply": "Custom Eep!",
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_unroutable_reply(
+            'router_ro', msg, "Custom Eep!", tag=("pool1", "tag1"))
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_router_no_config(self):
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
             router=('router', 'badrouter'))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            "No target found for inbound message from 'router_ro'",
+            failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_router_default_reply(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"), router=('router', 'badrouter'))
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_unroutable_reply(
             'router_ro', msg, "Eep!", router=("router", "badrouter"))
