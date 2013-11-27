@@ -810,3 +810,150 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
                      ], outbound_hops_from=msg)
 
         self.assertEqual([ack], self.get_dispatched_events('app1'))
+
+
+class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestUnroutableSessionResponse, self).setUp()
+        yield self.setup_routing_table_dispatcher_test()
+
+    @inlineCallbacks
+    def get_dispatcher(self, **config_extras):
+        config = {
+            "receive_inbound_connectors": [
+                "sphex", "router_ro",
+            ],
+            "receive_outbound_connectors": [
+                "app1", "router_ri",
+            ],
+            "send_unroutable_inbound_session_replies": True,
+            "default_unroutable_inbound_reply": "Eep!",
+        }
+        config.update(config_extras)
+        dispatcher = yield super(
+            TestUnroutableSessionResponse, self).get_dispatcher(**config)
+
+        returnValue(dispatcher)
+
+    def assert_reply_matches(self, reply, msg, content,
+                             session_event='close', **md):
+        expected = msg.reply(content, session_event=session_event)
+        expected = self.with_md(expected, **md)
+
+        expected["message_id"] = reply["message_id"]
+        expected["timestamp"] = reply["timestamp"]
+        self.assertEqual(reply, expected)
+
+    def assert_unroutable_reply(self, connector_name, msg,
+                                reply_content, **md):
+        self.assert_rkeys_used(
+            '%s.inbound' % (connector_name,),
+            '%s.outbound' % (connector_name,))
+
+        [reply] = self.get_dispatched_outbound(connector_name)
+        self.assert_reply_matches(reply, msg, reply_content, **md)
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_to_unknown_pool(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("badpool", "tag1"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            'Message received for unowned tag.', failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_no_config(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            'Message received for unowned tag.', failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_no_reply(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": False,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            'Message received for unowned tag.', failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_default_reply(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_unroutable_reply(
+            'router_ro', msg, "Eep!", tag=("pool1", "tag1"))
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_default_reply_no_session(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_unroutable_reply(
+            'router_ro', msg, "Eep!", tag=("pool1", "tag1"))
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_custom_reply(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+            "unroutable_inbound_reply": "Custom Eep!",
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_unroutable_reply(
+            'router_ro', msg, "Custom Eep!", tag=("pool1", "tag1"))
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_router_no_config(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            router=('router', 'badrouter'))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            "No target found for inbound message from 'router_ro'",
+            failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_router_default_reply(self):
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "tag1"), router=('router', 'badrouter'))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_unroutable_reply(
+            'router_ro', msg, "Eep!", router=("router", "badrouter"))
