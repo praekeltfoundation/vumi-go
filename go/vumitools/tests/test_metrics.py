@@ -3,12 +3,12 @@ from mock import patch
 from twisted.internet.defer import succeed, inlineCallbacks
 
 from vumi.worker import BaseWorker
-from vumi.blinkenlights.metrics import LAST
 
 from go.base.amqp import AmqpConnection
 from go.vumitools.metrics import (
     GoMetric, DjangoMetric, TxMetric, ConversationMetric, AccountMetric,
-    MessagesSentMetric, MessagesReceivedMetric)
+    MetricSet, ConversationMetricSet, MessagesSentMetric,
+    MessagesReceivedMetric)
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.tests.utils import TxMetricTestBase, GoTestCase
 from go.vumitools.tests.helpers import GoMessageHelper
@@ -20,8 +20,6 @@ class ToyGoMetric(GoMetric):
 
 
 class ToyTxMetric(TxMetric):
-    AGGREGATORS = [LAST]
-
     def __init__(self, *a, **kw):
         super(ToyTxMetric, self).__init__(*a, **kw)
         self.value = None
@@ -34,8 +32,6 @@ class ToyTxMetric(TxMetric):
 
 
 class ToyDjangoMetric(DjangoMetric):
-    AGGREGATORS = [LAST]
-
     def __init__(self, *a, **kw):
         super(ToyDjangoMetric, self).__init__(*a, **kw)
         self.value = None
@@ -77,6 +73,11 @@ class TestGoMetric(GoTestCase):
     def test_full_name_retrieval(self):
         self.assertEqual(self.metric.get_full_name(), 'go.some.random.metric')
 
+    def test_diamondash_target_name_retrieval(self):
+        self.assertEqual(
+            self.metric.get_diamondash_target(),
+            'go.some.random.metric.avg')
+
 
 class TestDjangoMetric(VumiGoDjangoTestCase):
     def setUp(self):
@@ -114,7 +115,7 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 23)])])
+            [('go.django.luke', ('avg',), [(1985, 23)])])
 
     def make_connection(self):
         connection = AmqpConnection()
@@ -129,7 +130,7 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 23)])])
+            [('go.django.luke', ('avg',), [(1985, 23)])])
 
     def test_oneshot_with_value(self):
         self.assertEqual(self.msgs, [])
@@ -138,7 +139,7 @@ class TestDjangoMetric(VumiGoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 22)])])
+            [('go.django.luke', ('avg',), [(1985, 22)])])
 
 
 class TestTxMetric(TxMetricTestBase):
@@ -158,7 +159,7 @@ class TestTxMetric(TxMetricTestBase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 23)])])
+            [('go.some.random.metric', ('avg',), [(1985, 23)])])
 
     @inlineCallbacks
     def test_oneshot_for_deferred_values(self):
@@ -172,7 +173,7 @@ class TestTxMetric(TxMetricTestBase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 42)])])
+            [('go.some.random.metric', ('avg',), [(1985, 42)])])
 
     def test_oneshot_with_value(self):
         self.metric.oneshot(self.metrics_manager, value=9)
@@ -184,7 +185,7 @@ class TestTxMetric(TxMetricTestBase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 9)])])
+            [('go.some.random.metric', ('avg',), [(1985, 9)])])
 
 
 class TestConversationMetric(TxMetricTestBase):
@@ -261,3 +262,88 @@ class TestMessagesReceivedMetric(TxMetricTestBase):
 
         self.assertEqual(
             (yield self.metric.get_value(self.user_api)), 2)
+
+
+class TestMetricSet(GoTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestMetricSet, self).setUp()
+
+        self.metric_a = ToyGoMetric('a')
+        self.metric_b = ToyGoMetric('b')
+        self.metric_c = ToyGoMetric('c')
+
+        self.metrics = MetricSet([
+            self.metric_a,
+            self.metric_b,
+            self.metric_c
+        ])
+
+    def test_item_getting(self):
+        self.assertEqual(self.metric_a, self.metrics['a'])
+
+    def test_iteration(self):
+        metrics = []
+
+        for metric in self.metrics:
+            metrics.append(metric)
+
+        self.assertEqual(self.metrics.values(), [
+            self.metric_a,
+            self.metric_b,
+            self.metric_c
+        ])
+
+    def test_get(self):
+        self.assertEqual(self.metric_a, self.metrics.get('a'))
+
+    def test_values(self):
+        self.assertEqual(self.metrics.values(), [
+            self.metric_a,
+            self.metric_b,
+            self.metric_c
+        ])
+
+    def test_append(self):
+        metric_d = ToyGoMetric('d')
+        self.metrics.append(metric_d)
+
+        self.assertEqual(self.metrics.values(), [
+            self.metric_a,
+            self.metric_b,
+            self.metric_c,
+            metric_d
+        ])
+
+        self.assertEqual(self.metrics['d'], metric_d)
+
+    def test_extend(self):
+        metric_d = ToyGoMetric('d')
+        metric_e = ToyGoMetric('e')
+        self.metrics.extend([metric_d, metric_e])
+
+        self.assertEqual(self.metrics.values(), [
+            self.metric_a,
+            self.metric_b,
+            self.metric_c,
+            metric_d,
+            metric_e,
+        ])
+
+        self.assertEqual(self.metrics['d'], metric_d)
+        self.assertEqual(self.metrics['e'], metric_e)
+
+
+class TestConversationMetricSet(TxMetricTestBase):
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestConversationMetricSet, self).setUp()
+
+        self.conv = yield self.create_conversation(
+            conversation_type=u'some_conversation')
+
+        self.metric_a = ToyConversationMetric(self.conv, metric_name='a')
+        self.metrics = ConversationMetricSet(self.conv, [self.metric_a])
+
+    def test_get(self):
+        self.assertEqual(self.metric_a, self.metrics.get('a'))
