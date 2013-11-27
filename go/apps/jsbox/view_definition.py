@@ -68,4 +68,5 @@ class ConversationViewDefinition(ConversationViewDefinitionBase):
 
     extra_views = (
         JSBoxLogsView,
+        JSBoxReportsView,
     )
