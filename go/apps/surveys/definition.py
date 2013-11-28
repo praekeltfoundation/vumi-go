@@ -1,6 +1,5 @@
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
-from go.apps.surveys.tasks import export_vxpolls_data
 
 
 class SendSurveyAction(ConversationAction):
@@ -30,6 +29,8 @@ class DownloadUserDataAction(ConversationAction):
     action_display_verb = 'Send CSV via e-mail'
 
     def perform_action(self, action_data):
+        # This is Django-only, but the module get imported in vumi-land.
+        from go.apps.surveys.tasks import export_vxpolls_data
         return export_vxpolls_data.delay(self._conv.user_account.key,
                                          self._conv.key)
 
