@@ -104,7 +104,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.conversation.config['jsbox_app_config'] = {
             'reports': {
                 'key': 'reports',
-                'value': {
+                'value': json.dumps({
                     'layout': [{
                         'type': 'diamondash.widgets.lvalue.LValueWidget',
                         'time_range': '1d',
@@ -114,7 +114,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
                             'name': 'messages_received',
                         }
                     }]
-                }
+                })
             }
         }
 
