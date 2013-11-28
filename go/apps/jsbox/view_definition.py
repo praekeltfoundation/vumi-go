@@ -12,13 +12,8 @@ from go.apps.jsbox.log import LogManager
 class JSBoxReportsView(ConversationReportsView):
     def _get_reports_config(self, conversation):
         app_config = conversation.config.get('jsbox_app_config', {})
-
-        try:
-            reports_config = json.loads(app_config['reports']['value'])
-        except:
-            reports_config = {}
-
-        return reports_config
+        reports_config = app_config.get('reports', {}).get('value', 'null')
+        return json.loads(reports_config)
 
     def build_layout(self, conversation):
         """
@@ -26,13 +21,11 @@ class JSBoxReportsView(ConversationReportsView):
         Override to specialise dashboard building.
         """
         reports_config = self._get_reports_config(conversation)
+        if reports_config is None:
+            return super(JSBoxReportsView, self).build_layout(conversation)
+
         layout_config = reports_config.get('layout')
-
-        if layout_config is None:
-            layout = super(JSBoxReportsView, self).build_layout(conversation)
-        else:
-            layout = ConversationReportsLayout(conversation, layout_config)
-
+        layout = ConversationReportsLayout(conversation, layout_config)
         return layout
 
 
