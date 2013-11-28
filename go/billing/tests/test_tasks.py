@@ -2,6 +2,8 @@ import mock
 
 from datetime import date
 
+from decimal import Decimal
+
 from dateutil.relativedelta import relativedelta
 
 from go.base.tests.utils import VumiGoDjangoTestCase
@@ -35,7 +37,7 @@ class TestMonthlyStatementTask(VumiGoDjangoTestCase):
                         tag_name="tag1",
                         message_direction=MessageCost.DIRECTION_INBOUND,
                         message_cost=100, markup_percent=10.0,
-                        credit_factor=0.25, credit_amount=27.5,
+                        credit_factor=0.25, credit_amount=28,
                         status=Transaction.STATUS_COMPLETED, **kwargs):
         transaction = Transaction(
             account_number=account_number,
@@ -43,8 +45,8 @@ class TestMonthlyStatementTask(VumiGoDjangoTestCase):
             tag_name=tag_name,
             message_direction=message_direction,
             message_cost=message_cost,
-            markup_percent=markup_percent,
-            credit_factor=credit_factor,
+            markup_percent=Decimal(str(markup_percent)),
+            credit_factor=Decimal(str(credit_factor)),
             credit_amount=credit_amount,
             status=status, **kwargs)
 
