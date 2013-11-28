@@ -97,7 +97,7 @@
 .diamondash .graph .legend {
   text-align: left;
 }
-.diamondash .graph .legend .legend-items .swatch {
+.diamondash .graph .legend .legend-item .swatch {
   display: inline-block;
   vertical-align: middle;
   width: 14px;
@@ -105,10 +105,10 @@
   margin: 0 4px;
   border-radius: 4px;
 }
-.diamondash .graph .legend .legend-items .value {
+.diamondash .graph .legend .legend-item .value {
   font-weight: bold;
 }
-.diamondash .graph .legend.hover .legend-items .value {
+.diamondash .graph .legend.hover .legend-item .value {
   color: #555;
 }
 .diamondash .graph .dot,
