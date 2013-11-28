@@ -650,13 +650,13 @@ class ConversationReportsView(ConversationTemplateView):
             'time_range': '24h',
             'bucket_size': '15m',
             'metrics': [{
-                'name': 'Messagent Sent',
+                'name': 'Messages Sent',
                 'target': {
                     'metric_type': 'conversation',
                     'name': 'messages_sent',
                 }
             }, {
-                'name': 'Messagent Received',
+                'name': 'Messages Received',
                 'target': {
                     'metric_type': 'conversation',
                     'name': 'messages_received',
@@ -669,13 +669,13 @@ class ConversationReportsView(ConversationTemplateView):
             'time_range': '30d',
             'bucket_size': '1d',
             'metrics': [{
-                'name': 'Messagent Sent',
+                'name': 'Messages Sent',
                 'target': {
                     'metric_type': 'conversation',
                     'name': 'messages_sent',
                 },
             }, {
-                'name': 'Messagent Received',
+                'name': 'Messages Received',
                 'target': {
                     'metric_type': 'conversation',
                     'name': 'messages_received',
