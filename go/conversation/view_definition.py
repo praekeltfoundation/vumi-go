@@ -3,6 +3,7 @@ import json
 import logging
 import functools
 import re
+import sys
 from StringIO import StringIO
 
 from django.conf import settings
@@ -683,13 +684,13 @@ class ConversationReportsView(ConversationTemplateView):
             }]
         }])
 
-    def on_error(self, e):
+    def on_error(self, e, exc_info):
         """
         Hook for doing things when a errors are encountered while parsing the
         dashboard layout and syncing the dashboard with diamondash. Logs
         the error by default.
         """
-        logger.error(e)
+        logger.error(e, exc_info=exc_info)
 
     def get(self, request, conversation):
         try:
@@ -702,7 +703,7 @@ class ConversationReportsView(ConversationTemplateView):
             dashboard.sync()
             dashboard_config = json.dumps(dashboard.get_config())
         except Exception, e:
-            self.on_error(e)
+            self.on_error(e, sys.exc_info())
             dashboard_config = None
 
         return self.render_to_response({
