@@ -844,7 +844,9 @@ class TestConversationReportsView(BaseConversationViewTestCase):
         self.error_log = []
         logger = logging.getLogger('go.conversation.view_definition')
 
-        def log_error(e):
+        def log_error(e, exc_info):
+            exc_type, exc_value, exc_traceback = exc_info
+            self.assertEqual(e, exc_value)
             self.error_log.append(unicode(e))
 
         self.monkey_patch(logger, 'error', log_error)
