@@ -225,15 +225,15 @@ LOGGING = {
         },
     },
     'loggers': {
-        '': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-        },
         'go': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
         },
+    },
+    'root': {
+        'handlers': ['mail_admins'],
+        'level': 'ERROR',
     },
 }
 
