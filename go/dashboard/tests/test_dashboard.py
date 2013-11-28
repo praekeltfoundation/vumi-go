@@ -279,6 +279,17 @@ class TestConversationReportsLayout(VumiGoDjangoTestCase):
             "go.campaigns.%s.stores.red.foo.avg" %
             (self.conv.user_account.key))
 
+    def test_account_metric_handling_with_agg_method(self):
+        self.assertEqual(
+            self.layout.handle_metric({
+                'metric_type': 'account',
+                'store': 'red',
+                'name': 'foo',
+                'aggregator': 'max'
+            }),
+            "go.campaigns.%s.stores.red.foo.max" %
+            (self.conv.user_account.key))
+
     def test_account_metric_handling_for_missing_fields(self):
         self.assertRaises(
             DashboardParseError,
