@@ -225,7 +225,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'root': {
+        '': {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
         },
