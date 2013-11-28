@@ -31,6 +31,7 @@ def generate_monthly_account_statements():
         statement = Statement(
             account=account,
             title=settings.MONTHLY_STATEMENT_TITLE,
+            type=Statement.TYPE_MONTHLY,
             from_date=from_date,
             to_date=to_date)
 

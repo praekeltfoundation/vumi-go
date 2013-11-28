@@ -119,8 +119,14 @@ class Transaction(models.Model):
 class Statement(models.Model):
     """Account statement for a period of time"""
 
+    TYPE_MONTHLY = 'Monthly'
+    TYPE_CHOICES = (
+        (TYPE_MONTHLY, TYPE_MONTHLY),
+    )
+
     account = models.ForeignKey(Account)
-    title = models.CharField(max_length=100)
+    title = models.CharField(max_length=255)
+    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
     from_date = models.DateField()
     to_date = models.DateField()
     created = models.DateTimeField(auto_now_add=True)
