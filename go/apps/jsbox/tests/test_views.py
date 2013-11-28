@@ -104,7 +104,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.conversation.config['jsbox_app_config'] = {
             'reports': {
                 'key': 'reports',
-                'value': {
+                'value': json.dumps({
                     'layout': [{
                         'type': 'diamondash.widgets.lvalue.LValueWidget',
                         'time_range': '1d',
@@ -114,7 +114,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
                             'name': 'messages_received',
                         }
                     }]
-                }
+                })
             }
         }
 
@@ -129,6 +129,24 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
                 "go.campaigns.%s.conversations.%s.messages_received.avg" %
                 (self.conversation.user_account.key, self.conversation.key))
         }])
+
+    def test_jsbox_report_layout_building_for_bad_reports_config(self):
+        self.setup_conversation()
+
+        self.conversation.config['jsbox_app_config'] = {
+            'reports': {
+                'key': 'reports',
+                'value': {'bad': 'yes'}
+            }
+        }
+
+        default_reports_view = ConversationReportsView()
+        default_layout = default_reports_view.build_layout(self.conversation)
+
+        view = JSBoxReportsView()
+        layout = view.build_layout(self.conversation)
+
+        self.assertEqual(layout.get_config(), default_layout.get_config())
 
     def test_jsbox_report_layout_building_for_no_report_config(self):
         self.setup_conversation()

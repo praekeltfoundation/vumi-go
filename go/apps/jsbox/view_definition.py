@@ -1,3 +1,5 @@
+import json
+
 from go.dashboard.dashboard import ConversationReportsLayout
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, ConversationReportsView,
@@ -10,7 +12,13 @@ from go.apps.jsbox.log import LogManager
 class JSBoxReportsView(ConversationReportsView):
     def _get_reports_config(self, conversation):
         app_config = conversation.config.get('jsbox_app_config', {})
-        return app_config.get('reports', {}).get('value', {})
+
+        try:
+            reports_config = json.loads(app_config['reports']['value'])
+        except:
+            reports_config = {}
+
+        return reports_config
 
     def build_layout(self, conversation):
         """
