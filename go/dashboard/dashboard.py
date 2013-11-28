@@ -1,5 +1,7 @@
 from functools import wraps
 
+from vumi.blinkenlights.metrics import Aggregator
+
 from go.dashboard import client
 from go.vumitools.metrics import ConversationMetric, AccountMetric
 
@@ -151,6 +153,11 @@ class ConversationReportsLayout(DashboardLayout):
         self.conv = conv
         super(ConversationReportsLayout, self).__init__(entities)
 
+    @classmethod
+    def aggregator_from_target(cls, target):
+        agg_name = target.get('aggregator')
+        return Aggregator.from_name(agg_name) if agg_name is not None else None
+
     @ensure_handler_fields('name')
     def handle_conversation_metric(self, target):
         metric = ConversationMetric(self.conv, target['name'])
@@ -158,8 +165,10 @@ class ConversationReportsLayout(DashboardLayout):
 
     @ensure_handler_fields('store', 'name')
     def handle_account_metric(self, target):
+        agg = self.aggregator_from_target(target)
         metric = AccountMetric(
             self.conv.user_account.key,
             target['store'],
-            target['name'])
+            target['name'],
+            agg)
         return metric.get_diamondash_target()
