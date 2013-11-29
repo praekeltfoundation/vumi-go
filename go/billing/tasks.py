@@ -2,7 +2,7 @@ from datetime import date
 
 from dateutil.relativedelta import relativedelta
 
-from celery.task import task
+from celery.task import task, group
 
 from django.db.models import Sum
 
@@ -10,7 +10,7 @@ from go.billing import settings
 from go.billing.models import Account, Transaction, Statement, LineItem
 
 
-@task(ignore_result=True)
+@task()
 def generate_monthly_statement(account_id, from_date, to_date):
     """Generate a new *Monthly* ``Statement`` for the given ``account_id``
        between the given ``from_date`` and ``to_date``.
@@ -42,9 +42,10 @@ def generate_monthly_statement(account_id, from_date, to_date):
             total_cost=transaction.get('total_cost', 0)))
 
     statement.lineitem_set.bulk_create(line_item_list)
+    return statement
 
 
-@task(ignore_result=True)
+@task()
 def generate_monthly_account_statements():
     """Spawn sub-tasks to generate a *Monthly* ``Statement`` for accounts
        without a *Monthly* statement.
@@ -58,5 +59,9 @@ def generate_monthly_account_statements():
         statement__from_date=from_date,
         statement__to_date=to_date)
 
+    task_list = []
     for account in account_list:
-        generate_monthly_statement.delay(account.id, from_date, to_date)
+        task_list.append(
+            generate_monthly_statement.s(account.id, from_date, to_date))
+
+    return group(task_list)()
