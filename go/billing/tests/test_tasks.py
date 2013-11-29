@@ -12,13 +12,6 @@ from go.billing.models import MessageCost, Account, Transaction, Statement
 from go.billing import tasks
 
 
-class TaskMock(object):
-
-    def delay(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-
-
 class TestMonthlyStatementTask(VumiGoDjangoTestCase):
 
     def setUp(self):
@@ -53,9 +46,9 @@ class TestMonthlyStatementTask(VumiGoDjangoTestCase):
         transaction.save()
         return transaction
 
-    @mock.patch('go.billing.tasks.generate_monthly_statement',
-                new_callable=TaskMock)
-    def test_generate_monthly_statements(self, task):
+    @mock.patch('go.billing.tasks.generate_monthly_statement.s',
+                new_callable=mock.MagicMock)
+    def test_generate_monthly_statements(self, s):
         account = self._mk_account()
         today = date.today()
         last_month = today - relativedelta(months=1)
@@ -68,12 +61,10 @@ class TestMonthlyStatementTask(VumiGoDjangoTestCase):
             created=last_month, last_modified=last_month)
 
         tasks.generate_monthly_account_statements()
-        self.assertEqual(len(task.args), 3)
-        self.assertEqual(task.args[0], account.id)
+
         from_date = date(last_month.year, last_month.month, 1)
         to_date = date(today.year, today.month, 1) - relativedelta(days=1)
-        self.assertEqual(task.args[1], from_date)
-        self.assertEqual(task.args[2], to_date)
+        s.assert_called_with(account.id, from_date, to_date)
 
     def test_generate_monthly_statement(self):
         account = self._mk_account()
@@ -88,9 +79,11 @@ class TestMonthlyStatementTask(VumiGoDjangoTestCase):
         to_date = (date(next_month.year, next_month.month, 1)
                    - relativedelta(days=1))
 
-        tasks.generate_monthly_statement(account.id, from_date, to_date)
+        result = tasks.generate_monthly_statement(account.id, from_date,
+                                                  to_date)
 
         statement = Statement.objects.get(account=account,
                                           type=Statement.TYPE_MONTHLY)
 
+        self.assertEqual(result, statement)
         self.assertEqual(statement.lineitem_set.count(), 2)
