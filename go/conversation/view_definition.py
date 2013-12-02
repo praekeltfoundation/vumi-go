@@ -3,6 +3,7 @@ import json
 import logging
 import functools
 import re
+import sys
 from StringIO import StringIO
 
 from django.conf import settings
@@ -23,6 +24,7 @@ from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
                                    ConversationDetailForm)
 from go.conversation.tasks import export_conversation_messages
 from go.conversation.utils import PagedMessageCache
+from go.dashboard.dashboard import Dashboard, ConversationReportsLayout
 
 logger = logging.getLogger(__name__)
 
@@ -616,6 +618,100 @@ class EditConversationGroupsView(ConversationTemplateView):
             content_type="application/json")
 
 
+class ConversationReportsView(ConversationTemplateView):
+    view_name = 'reports'
+    path_suffix = 'reports/'
+
+    def build_layout(self, conversation):
+        """
+        Returns a conversation's dashboard widget data.
+        Override to specialise dashboard building.
+        """
+
+        return ConversationReportsLayout(conversation, [{
+            'type': 'diamondash.widgets.lvalue.LValueWidget',
+            'time_range': '1d',
+            'name': 'Messages Sent (24h)',
+            'target': {
+                'metric_type': 'conversation',
+                'name': 'messages_sent',
+            }
+        }, {
+            'type': 'diamondash.widgets.lvalue.LValueWidget',
+            'time_range': '1d',
+            'name': 'Messages Received (24h)',
+            'target': {
+                'metric_type': 'conversation',
+                'name': 'messages_received',
+            }
+        }, 'new_row', {
+            'type': 'diamondash.widgets.graph.GraphWidget',
+            'name': 'Messages Sent and Received (24h)',
+            'width': 6,
+            'time_range': '24h',
+            'bucket_size': '15m',
+            'metrics': [{
+                'name': 'Messages Sent',
+                'target': {
+                    'metric_type': 'conversation',
+                    'name': 'messages_sent',
+                }
+            }, {
+                'name': 'Messages Received',
+                'target': {
+                    'metric_type': 'conversation',
+                    'name': 'messages_received',
+                }
+            }]
+        }, {
+            'type': 'diamondash.widgets.graph.GraphWidget',
+            'name': 'Messages Sent and Received (30d)',
+            'width': 6,
+            'time_range': '30d',
+            'bucket_size': '1d',
+            'metrics': [{
+                'name': 'Messages Sent',
+                'target': {
+                    'metric_type': 'conversation',
+                    'name': 'messages_sent',
+                },
+            }, {
+                'name': 'Messages Received',
+                'target': {
+                    'metric_type': 'conversation',
+                    'name': 'messages_received',
+                }
+            }]
+        }])
+
+    def on_error(self, e, exc_info):
+        """
+        Hook for doing things when a errors are encountered while parsing the
+        dashboard layout and syncing the dashboard with diamondash. Logs
+        the error by default.
+        """
+        logger.error(e, exc_info=exc_info)
+
+    def get(self, request, conversation):
+        try:
+            # build the dashboard
+            name = "go.conversations.%s" % conversation.key
+            layout = self.build_layout(conversation)
+            dashboard = Dashboard(name, layout)
+
+            # give the dashboard to diamondash
+            dashboard.sync()
+            dashboard_config = json.dumps(dashboard.get_config())
+        except Exception, e:
+            self.on_error(e, sys.exc_info())
+            dashboard_config = None
+
+        return self.render_to_response({
+            'conversation': conversation,
+            'dashboard_config': dashboard_config,
+        })
+
+
 class ConversationViewDefinitionBase(object):
     """Definition of conversation UI.
 
@@ -641,6 +737,7 @@ class ConversationViewDefinitionBase(object):
         StopConversationView,
         ArchiveConversationView,
         AggregatesConversationView,
+        ConversationReportsView
     )
 
     def __init__(self, conv_def):
@@ -675,6 +772,9 @@ class ConversationViewDefinitionBase(object):
     @property
     def is_editable(self):
         return self.edit_view is not None
+
+    def get_metrics(self):
+        return self._conv_def.get_metrics()
 
     def get_actions(self):
         return self._conv_def.get_actions()

@@ -1,0 +1,9 @@
+diamondash.config.set('url_prefix', 'diamondash');
+
+var dashboard = new diamondash.dashboard.DashboardView({
+el: '#dashboard',
+model: new diamondash.dashboard.DashboardModel({{ dashboard_config|safe }})
+});
+
+dashboard.render();
+dashboard.model.poll();

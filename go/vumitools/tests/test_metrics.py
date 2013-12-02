@@ -2,7 +2,6 @@ import time
 from mock import patch
 from twisted.internet.defer import succeed, inlineCallbacks, returnValue
 
-from vumi.blinkenlights.metrics import LAST
 from vumi.tests.helpers import VumiTestCase
 from vumi.worker import BaseWorker
 
@@ -10,7 +9,8 @@ from go.base.amqp import AmqpConnection
 from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.metrics import (
     GoMetric, DjangoMetric, TxMetric, ConversationMetric, AccountMetric,
-    MessagesSentMetric, MessagesReceivedMetric)
+    MetricSet, ConversationMetricSet, MessagesSentMetric,
+    MessagesReceivedMetric)
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
 
@@ -20,8 +20,6 @@ class ToyGoMetric(GoMetric):
 
 
 class ToyTxMetric(TxMetric):
-    AGGREGATORS = [LAST]
-
     def __init__(self, *a, **kw):
         super(ToyTxMetric, self).__init__(*a, **kw)
         self.value = None
@@ -34,8 +32,6 @@ class ToyTxMetric(TxMetric):
 
 
 class ToyDjangoMetric(DjangoMetric):
-    AGGREGATORS = [LAST]
-
     def __init__(self, *a, **kw):
         super(ToyDjangoMetric, self).__init__(*a, **kw)
         self.value = None
@@ -74,6 +70,11 @@ class TestGoMetric(VumiTestCase):
         metric = ToyGoMetric('some.random.metric')
         self.assertEqual(metric.get_full_name(), 'go.some.random.metric')
 
+    def test_diamondash_target_name_retrieval(self):
+        metric = ToyGoMetric('some.random.metric')
+        self.assertEqual(
+            metric.get_diamondash_target(), 'go.some.random.metric.avg')
+
 
 class TestDjangoMetric(GoDjangoTestCase):
     def setUp(self):
@@ -110,7 +111,7 @@ class TestDjangoMetric(GoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 23)])])
+            [('go.django.luke', ('avg',), [(1985, 23)])])
 
     def make_connection(self):
         connection = AmqpConnection()
@@ -125,7 +126,7 @@ class TestDjangoMetric(GoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 23)])])
+            [('go.django.luke', ('avg',), [(1985, 23)])])
 
     def test_oneshot_with_value(self):
         self.assertEqual(self.msgs, [])
@@ -134,7 +135,7 @@ class TestDjangoMetric(GoDjangoTestCase):
         [msg] = self.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.django.luke', ('last',), [(1985, 22)])])
+            [('go.django.luke', ('avg',), [(1985, 22)])])
 
 
 class TestTxMetrics(VumiTestCase):
@@ -169,7 +170,7 @@ class TestTxMetrics(VumiTestCase):
         [msg] = metric_manager.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 23)])])
+            [('go.some.random.metric', ('avg',), [(1985, 23)])])
 
     @inlineCallbacks
     def test_oneshot_for_deferred_values(self):
@@ -184,7 +185,7 @@ class TestTxMetrics(VumiTestCase):
         [msg] = metric_manager.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 42)])])
+            [('go.some.random.metric', ('avg',), [(1985, 42)])])
 
     @inlineCallbacks
     def test_oneshot_with_value(self):
@@ -198,7 +199,7 @@ class TestTxMetrics(VumiTestCase):
         [msg] = metric_manager.msgs
         self.assertEqual(
             msg['datapoints'],
-            [('go.some.random.metric', ('last',), [(1985, 9)])])
+            [('go.some.random.metric', ('avg',), [(1985, 9)])])
 
     @inlineCallbacks
     def test_conversation_metric_name_construction(self):
@@ -240,3 +241,95 @@ class TestTxMetrics(VumiTestCase):
 
         self.assertEqual(
             (yield metric.get_value(self.user_helper.user_api)), 2)
+
+
+class TestMetricSet(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.msg_helper = GoMessageHelper(self.vumi_helper.get_vumi_api().mdb)
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        self.patch(time, 'time', lambda: 1985)
+
+        self.metric_a = ToyGoMetric('a')
+        self.metric_b = ToyGoMetric('b')
+        self.metric_c = ToyGoMetric('c')
+
+        self.metrics = MetricSet([
+            self.metric_a,
+            self.metric_b,
+            self.metric_c
+        ])
+
+    def test_item_getting(self):
+        self.assertEqual(self.metric_a, self.metrics['a'])
+
+    def test_iteration(self):
+        metrics = []
+
+        for metric in self.metrics:
+            metrics.append(metric)
+
+        self.assertEqual(self.metrics.values(), [
+            self.metric_a,
+            self.metric_b,
+            self.metric_c
+        ])
+
+    def test_get(self):
+        self.assertEqual(self.metric_a, self.metrics.get('a'))
+
+    def test_values(self):
+        self.assertEqual(self.metrics.values(), [
+            self.metric_a,
+            self.metric_b,
+            self.metric_c
+        ])
+
+    def test_append(self):
+        metric_d = ToyGoMetric('d')
+        self.metrics.append(metric_d)
+
+        self.assertEqual(self.metrics.values(), [
+            self.metric_a,
+            self.metric_b,
+            self.metric_c,
+            metric_d
+        ])
+
+        self.assertEqual(self.metrics['d'], metric_d)
+
+    def test_extend(self):
+        metric_d = ToyGoMetric('d')
+        metric_e = ToyGoMetric('e')
+        self.metrics.extend([metric_d, metric_e])
+
+        self.assertEqual(self.metrics.values(), [
+            self.metric_a,
+            self.metric_b,
+            self.metric_c,
+            metric_d,
+            metric_e,
+        ])
+
+        self.assertEqual(self.metrics['d'], metric_d)
+        self.assertEqual(self.metrics['e'], metric_e)
+
+
+class TestConversationMetricSet(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        self.vumi_helper = VumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        yield self.vumi_helper.setup_vumi_api()
+        self.msg_helper = GoMessageHelper(self.vumi_helper.get_vumi_api().mdb)
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        self.conv = yield self.user_helper.create_conversation(
+            conversation_type=u'some_conversation')
+
+    def test_get(self):
+        metric_a = ToyConversationMetric(self.conv, metric_name='a')
+        metrics = ConversationMetricSet(self.conv, [metric_a])
+        self.assertEqual(metric_a, metrics.get('a'))

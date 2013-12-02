@@ -5,6 +5,7 @@ import random
 from twisted.internet.defer import inlineCallbacks, maybeDeferred
 from twisted.internet.error import DNSLookupError
 from twisted.web import http
+from twisted.web.error import SchemeNotSupported
 
 from vumi.config import ConfigInt, ConfigText
 from vumi.utils import http_request_full, HttpTimeoutError
@@ -175,6 +176,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
             if resp.code != http.OK:
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, url))
+        except SchemeNotSupported:
+            log.warning('Unsupported scheme for URL: %s' % (url,))
         except HttpTimeoutError:
             log.warning("Timeout pushing message to %s" % (url,))
         except DNSLookupError:

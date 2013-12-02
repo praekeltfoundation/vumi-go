@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date
 from StringIO import StringIO
 from zipfile import ZipFile
@@ -18,6 +19,9 @@ from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.tests.helpers import GoMessageHelper
+from go.dashboard.dashboard import DashboardLayout, DashboardParseError
+from go.dashboard import client as dashboard_client
+from go.dashboard.tests.utils import FakeDiamondashApiClient
 
 
 class EnabledAction(ConversationAction):
@@ -159,7 +163,7 @@ class BaseConversationViewTestCase(GoDjangoTestCase):
         return go.base.utils.connection.get_commands()
 
 
-class TestConversationDashboardView(BaseConversationViewTestCase):
+class TestConversationsDashboardView(BaseConversationViewTestCase):
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
@@ -770,3 +774,69 @@ class TestConversationTemplateTags(BaseConversationViewTestCase):
     @skip("TODO")
     def test_get_reply_form_for_message(self):
         raise NotImplementedError("TODO")
+
+
+class TestConversationReportsView(BaseConversationViewTestCase):
+    def setUp(self):
+        super(TestConversationReportsView, self).setUp()
+        self.diamondash_api = FakeDiamondashApiClient()
+
+        self.error_log = []
+        logger = logging.getLogger('go.conversation.view_definition')
+
+        def log_error(e, exc_info):
+            exc_type, exc_value, exc_traceback = exc_info
+            self.assertEqual(e, exc_value)
+            self.error_log.append(unicode(e))
+
+        self.vumi_helper.monkey_patch(logger, 'error', log_error)
+
+        self.vumi_helper.monkey_patch(
+            dashboard_client,
+            'get_diamondash_api',
+            lambda: self.diamondash_api)
+
+    def test_get_dashboard(self):
+        self.diamondash_api.set_response({'happy': 'dashboard'})
+
+        conv = self.user_helper.create_conversation(u'dummy')
+        response = self.client.get(self.get_view_url(conv, 'reports'))
+
+        [dd_request] = self.diamondash_api.get_requests()
+        raw_dashboard = dd_request['data']
+
+        self.assertEqual(
+            raw_dashboard['name'],
+            "go.conversations.%s" % conv.key)
+
+        self.assertTrue('widgets' in raw_dashboard)
+
+        self.assertEqual(
+            json.loads(response.context['dashboard_config']),
+            {'happy': 'dashboard'})
+
+    def test_get_dashboard_for_sync_error_handling(self):
+        self.diamondash_api.set_error_response(400, ':(')
+
+        conv = self.user_helper.create_conversation(u'dummy')
+        response = self.client.get(self.get_view_url(conv, 'reports'))
+
+        self.assertEqual(
+            self.error_log,
+            ['Dashboard sync failed: '
+             '(400) {"message": ":(", "success": false}'])
+
+        self.assertEqual(response.context['dashboard_config'], None)
+
+    def test_get_dashboard_for_parse_error_handling(self):
+        conv = self.user_helper.create_conversation(u'dummy')
+
+        def bad_add_entity(*a, **kw):
+            raise DashboardParseError(':(')
+
+        self.vumi_helper.monkey_patch(
+            DashboardLayout, 'add_entity', bad_add_entity)
+        response = self.client.get(self.get_view_url(conv, 'reports'))
+
+        self.assertEqual(self.error_log, [':('])
+        self.assertEqual(response.context['dashboard_config'], None)

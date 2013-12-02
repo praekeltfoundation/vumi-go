@@ -2,6 +2,8 @@ import json
 import logging
 
 from go.apps.jsbox.log import LogManager
+from go.apps.jsbox.view_definition import (
+    JSBoxReportsView, ConversationReportsView)
 from go.apps.tests.view_helpers import AppViewsHelper
 from go.base.tests.helpers import GoDjangoTestCase
 
@@ -106,3 +108,47 @@ class TestJsBoxViews(GoDjangoTestCase):
         response = self.client.get(
             conv_helper.get_action_view_url('view_logs'))
         self.assertRedirects(response, conv_helper.get_view_url('jsbox_logs'))
+
+    def test_jsbox_report_layout_building(self):
+        conv_helper = self.app_helper.create_conversation()
+        conversation = conv_helper.get_conversation()
+        conversation.config['jsbox_app_config'] = {
+            'reports': {
+                'key': 'reports',
+                'value': json.dumps({
+                    'layout': [{
+                        'type': 'diamondash.widgets.lvalue.LValueWidget',
+                        'time_range': '1d',
+                        'name': 'Messages Received (24h)',
+                        'target': {
+                            'metric_type': 'conversation',
+                            'name': 'messages_received',
+                        }
+                    }]
+                })
+            }
+        }
+
+        view = JSBoxReportsView()
+        layout = view.build_layout(conversation)
+
+        self.assertEqual(layout.get_config(), [{
+            'type': 'diamondash.widgets.lvalue.LValueWidget',
+            'name': 'Messages Received (24h)',
+            'time_range': '1d',
+            'target': (
+                "go.campaigns.%s.conversations.%s.messages_received.avg" %
+                (conversation.user_account.key, conversation.key))
+        }])
+
+    def test_jsbox_report_layout_building_for_no_report_config(self):
+        conv_helper = self.app_helper.create_conversation()
+        conversation = conv_helper.get_conversation()
+
+        default_reports_view = ConversationReportsView()
+        default_layout = default_reports_view.build_layout(conversation)
+
+        view = JSBoxReportsView()
+        layout = view.build_layout(conversation)
+
+        self.assertEqual(layout.get_config(), default_layout.get_config())

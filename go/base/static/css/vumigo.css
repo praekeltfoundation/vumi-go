@@ -795,3 +795,20 @@ table tbody.loading td {
   font-size: 2.5em;
   color: #f2f1ed;
 }
+.diamondash.dashboard {
+  background: transparent;
+}
+.diamondash.dashboard .widget .widget-head {
+  color: #2f3436;
+  background: #d2d0c7;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+}
+.diamondash.dashboard .widget .widget-head h4 {
+  padding: 6px;
+  font-size: 16px;
+}

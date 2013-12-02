@@ -23,6 +23,12 @@ class TestAccountViews(GoDjangoTestCase):
         url = urlparse.urlsplit(token_url)
         return self.client.get(url.path, follow=True)
 
+    def test_view_details(self):
+        response = self.client.get(reverse('account:details'))
+
+        self.assertContains(response, "Account key")
+        self.assertContains(response, self.user_helper.account_key)
+
     def test_update_details(self):
         response = self.client.post(reverse('account:details'), {
             'name': 'foo',

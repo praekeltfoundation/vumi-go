@@ -32,6 +32,9 @@ client:
       - 'go/base/static/vendor/backbone-relational/js/backbone-relational.js'
       - 'go/base/static/vendor/bootstrap/js/bootstrap.js'
       - 'go/base/static/vendor/bootbox/js/bootbox.js'
+      - 'go/base/static/vendor/d3/js/d3.js'
+      - 'go/base/static/vendor/backbone.babysitter/js/backbone.babysitter.js'
+      - 'go/base/static/vendor/diamondash/js/diamondash.js'
     go:
       - 'go/base/static/js/src/go.js'
       - 'go/base/static/js/src/utils.js'
@@ -87,6 +90,7 @@ client:
   styles:
     vendor:
       - 'go/base/static/vendor/bootstrap/css/bootstrap.css'
+      - 'go/base/static/vendor/diamondash/css/diamondash.css'
     go:
       - 'go/base/static/css/vumigo.css'
 
