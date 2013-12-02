@@ -3,6 +3,7 @@ import json
 
 from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.internet.error import DNSLookupError
+from twisted.web.error import SchemeNotSupported
 from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
@@ -561,6 +562,21 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         def raiser(*args, **kw):
             raise exception_class()
         self.patch(vumi_app, 'http_request_full', raiser)
+
+    @inlineCallbacks
+    def test_post_inbound_message_unsupported_scheme(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        self.conversation.config['http_api'].update({
+            'push_message_url': 'example.com',
+        })
+        yield self.conversation.save()
+
+        self._patch_http_request_full(SchemeNotSupported)
+        msg = self.msg_helper.make_inbound('in 1', message_id='1')
+        with LogCatcher(message='Unsupported') as lc:
+            yield self.dispatch_to_conv(msg, self.conversation)
+            [unsupported_scheme_log] = lc.messages()
+        self.assertTrue('example.com' in unsupported_scheme_log)
 
     @inlineCallbacks
     def test_post_inbound_message_timeout(self):

@@ -1,0 +1,175 @@
+.diamondash {
+  padding-top: 60px;
+  background-color: #fdfdfd;
+}
+.diamondash a {
+  color: #555;
+}
+.diamondash a:hover {
+  color: #333;
+}
+.diamondash .navbar {
+  background: #222;
+}
+.diamondash .navbar .brand {
+  font-family: georgia;
+  font-size: 21px;
+  color: #ddd;
+  line-height: 46px;
+}
+.diamondash .navbar .brand:hover {
+  text-decoration: none;
+}
+.diamondash.index .dashboard-list {
+  list-style-type: none;
+}
+.diamondash.index .dashboard-list .dashboard-list-item {
+  margin: 8px 2px;
+}
+.diamondash.index .dashboard-list .dashboard-list-item a:hover {
+  text-decoration: none;
+}
+.diamondash.error .error-header {
+  margin: auto 0;
+  text-align: center;
+}
+.diamondash.error .error-header #title {
+  font-size: 80px;
+  line-height: 80px;
+  font-family: "Lucida Console", Monaco, monospace;
+}
+.diamondash.error .error-header #message {
+  font-size: 22px;
+  line-height: 21px;
+  font-family: "Trebuchet MS", Helvetica, sans-serif;
+}
+.diamondash.error .error-header #brand * {
+  color: #222;
+  font-weight: normal;
+  font-family: georgia;
+  font-size: 34px;
+  line-height: 120px;
+}
+.diamondash.error .error-details {
+  background-color: #222;
+  color: #fdfdfd;
+}
+.diamondash.dashboard {
+  margin-bottom: 2.5em;
+}
+.diamondash.dashboard .widget {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.diamondash.dashboard .widget .widget-head {
+  color: #eee;
+  background-color: #333;
+  text-align: center;
+}
+.diamondash.dashboard .widget .widget-head h4 {
+  padding: 4px;
+}
+.diamondash .graph .chart *,
+.diamondash .graph .axis * {
+  pointer-events: none;
+}
+.diamondash .graph .axis path,
+.diamondash .graph .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+.diamondash .graph .axis text {
+  font-family: sans-serif;
+  font-size: 11px;
+}
+.diamondash .graph .axis g {
+  -webkit-transition: fill-opacity 250ms linear;
+  -moz-transition: fill-opacity 250ms linear;
+  -o-transition: fill-opacity 250ms linear;
+  transition: fill-opacity 250ms linear;
+}
+.diamondash .graph .metric-line {
+  fill: none;
+  stroke-width: 1.5px;
+  pointer-events: none;
+}
+.diamondash .graph .legend {
+  text-align: left;
+}
+.diamondash .graph .legend .legend-item .swatch {
+  display: inline-block;
+  vertical-align: middle;
+  width: 14px;
+  height: 14px;
+  margin: 0 4px;
+  border-radius: 4px;
+}
+.diamondash .graph .legend .legend-item .value {
+  font-weight: bold;
+}
+.diamondash .graph .legend.hover .legend-item .value {
+  color: #555;
+}
+.diamondash .graph .dot,
+.diamondash .graph .hover-dot {
+  pointer-events: none;
+}
+.diamondash .graph .dot {
+  stroke: none;
+}
+.diamondash .graph .hover-dot {
+  fill: none;
+  stroke-width: 1.5px;
+}
+.diamondash .graph .hover-marker line {
+  stroke: #555;
+}
+.diamondash .graph .hover-marker text {
+  fill: #555;
+}
+.diamondash .lvalue .widget-body {
+  padding: 0;
+  text-align: center;
+}
+.diamondash .lvalue .last {
+  margin: 10px auto;
+  text-align: center;
+  height: 44px;
+}
+.diamondash .lvalue .last.short {
+  font-size: 44px;
+}
+.diamondash .lvalue .last.long {
+  font-size: 24px;
+  color: #555;
+}
+.diamondash .lvalue .time {
+  font-size: 12px;
+  text-align: right;
+  color: #808080;
+}
+.diamondash .lvalue .time .from,
+.diamondash .lvalue .time .to {
+  display: block;
+}
+.diamondash .lvalue .change {
+  margin: 8px auto;
+  font-size: 20px;
+  margin-left: 5px;
+}
+.diamondash .lvalue .change.good {
+  color: #2ca02c;
+}
+.diamondash .lvalue .change.bad {
+  color: #d62728;
+}
+.diamondash .lvalue .change span {
+  display: block;
+}
+.diamondash .text-widget-text {
+  margin: 0 auto;
+  text-align: center;
+  font-size: 55px;
+  line-height: 60px;
+}

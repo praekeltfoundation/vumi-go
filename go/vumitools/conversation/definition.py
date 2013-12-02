@@ -1,4 +1,5 @@
-from go.vumitools.metrics import MessagesSentMetric, MessagesReceivedMetric
+from go.vumitools.metrics import (
+    ConversationMetricSet, MessagesSentMetric, MessagesReceivedMetric)
 
 
 class ConversationDefinitionBase(object):
@@ -31,7 +32,9 @@ class ConversationDefinitionBase(object):
         return [action(self.conv) for action in self.actions]
 
     def get_metrics(self):
-        return [metric(self.conv) for metric in self.metrics]
+        return ConversationMetricSet(
+            self.conv,
+            [metric(self.conv) for metric in self.metrics])
 
     def configured_endpoints(self, config):
         return []

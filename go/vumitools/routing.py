@@ -160,6 +160,12 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         static=True, required=False)
     user_account_key = ConfigText(
         "Key of the user account the message is from.")
+    default_unroutable_inbound_reply = ConfigText(
+        "Default text to send in response to unroutable inbound messages"
+        " if the tagpool specifies `reply_to_unroutable_inbound` but not"
+        " `unroutable_inbound_reply`.",
+        default="Vumi Go could not route your message. Please try again soon.",
+        static=True, required=False)
 
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
@@ -551,6 +557,35 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
+    def handle_unroutable_inbound_message(self, f, msg, connector_name):
+        """Send a reply to the unroutable `msg` if the tagpool asks for one.
+
+        If we can't find the tagpool or the tagpool isn't configured for
+        replies to unroutable messages, the original exception is reraised.
+        """
+        msg_mdh = self.get_metadata_helper(msg)
+        if msg_mdh.tag is None:
+            # defend against messages without tags (these should not occur
+            # but this is an error path)
+            f.raiseException()
+
+        tagpool_metadata = yield self.vumi_api.tpm.get_metadata(msg_mdh.tag[0])
+        if not tagpool_metadata.get('reply_to_unroutable_inbound'):
+            f.raiseException()
+
+        config = self.get_static_config()
+        default_response = config.default_unroutable_inbound_reply
+        response = tagpool_metadata.get(
+            'unroutable_inbound_reply', default_response)
+        reply = msg.reply(response, continue_session=False)
+        self.publish_outbound(
+            reply, connector_name, msg.get_routing_endpoint())
+
+    def errback_inbound(self, f, msg, connector_name):
+        f.trap(UnroutableMessageError)  # Reraise any other exception types.
+        return self.handle_unroutable_inbound_message(f, msg, connector_name)
+
+    @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
         """Process an inbound message.
 
@@ -588,9 +623,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
-            log.debug("No target found for message from '%s': %s" % (
-                connector_name, msg))
-            return
+            raise UnroutableMessageError(
+                "No target found for inbound message from %r"
+                % (connector_name,), msg)
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.INBOUND)
@@ -638,9 +673,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
-            log.debug("No target found for message from '%s': %s" % (
-                connector_name, msg))
-            return
+            raise UnroutableMessageError(
+                "No target found for outbound message from '%s': %s" % (
+                    connector_name, msg))
 
         if self.billing_outbound_connector:
             target_conn = GoConnector.parse(target[0])

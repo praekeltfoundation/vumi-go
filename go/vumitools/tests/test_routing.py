@@ -223,7 +223,23 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
         self.user_account_key = self.user_helper.account_key
 
         user_account = yield self.user_helper.get_user_account()
-        user_account.routing_table = RoutingTable({
+        user_account.routing_table = self.get_routing_table()
+        yield user_account.save()
+
+        tag1, tag2, tag3 = yield self.vumi_helper.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"], metadata={
+                "transport_name": "sphex",
+            })
+        yield self.user_helper.add_tagpool_permission(u"pool1")
+        yield self.user_helper.user_api.acquire_specific_tag(tag1)
+        yield self.user_helper.user_api.acquire_specific_tag(tag2)
+        yield self.user_helper.user_api.acquire_specific_tag(tag3)
+        # We use vumi's MessageHelper here rather than our own GoMessageHelper
+        # because we want to handle all the Go metadata stuff ourselves.
+        self.msg_helper = MessageHelper()
+
+    def get_routing_table(self):
+        return RoutingTable({
             # Transport side
             "TRANSPORT_TAG:pool1:1234": {
                 "default": ["CONVERSATION:app1:conv1", "default"]},
@@ -250,19 +266,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
                 "other": ["CONVERSATION:app2:conv2", "yet-another"],
             },
         })
-        yield user_account.save()
 
-        tag1, tag2, tag3 = yield self.vumi_helper.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"], metadata={
-                "transport_name": "sphex",
-            })
-        yield self.user_helper.add_tagpool_permission(u"pool1")
-        yield self.user_helper.user_api.acquire_specific_tag(tag1)
-        yield self.user_helper.user_api.acquire_specific_tag(tag2)
-        yield self.user_helper.user_api.acquire_specific_tag(tag3)
-        # We use vumi's MessageHelper here rather than our own GoMessageHelper
-        # because we want to handle all the Go metadata stuff ourselves.
-        self.msg_helper = MessageHelper()
 
     def with_md(self, msg, user_account=None, conv=None, router=None,
                 endpoint=None, tag=None, hops=None, outbound_hops_from=None,
@@ -843,3 +847,159 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
                      ], outbound_hops_from=msg)
 
         self.assertEqual([ack], self.get_dispatched_events('app1'))
+
+
+class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
+
+    def get_routing_table(self):
+        return RoutingTable({})
+
+    def get_dispatcher(self):
+        config = self.vumi_helper.mk_config({
+            "receive_inbound_connectors": [
+                "sphex", "router_ro",
+            ],
+            "receive_outbound_connectors": [
+                "app1", "router_ri",
+            ],
+            "metrics_prefix": "foo",
+            "application_connector_mapping": {
+                "app1": "app1",
+            },
+            "router_inbound_connector_mapping": {
+                "router": "router_ro",
+            },
+            "router_outbound_connector_mapping": {
+                "router": "router_ri",
+            },
+            "opt_out_connector": "optout",
+            "default_unroutable_inbound_reply": "Eep!",
+        })
+        return self.vumi_helper.get_worker_helper().get_worker(
+            AccountRoutingTableDispatcher, config)
+
+    def assert_reply_matches(self, reply, msg, content,
+                             session_event='close', **md):
+        expected = msg.reply(content, session_event=session_event)
+        expected = self.with_md(expected, **md)
+
+        expected["message_id"] = reply["message_id"]
+        expected["timestamp"] = reply["timestamp"]
+        self.assertEqual(reply, expected)
+
+    def assert_unroutable_reply(self, connector_name, msg,
+                                reply_content, **md):
+        self.assert_rkeys_used(
+            '%s.inbound' % (connector_name,),
+            '%s.outbound' % (connector_name,))
+
+        [reply] = self.get_dispatched_outbound(connector_name)
+        self.assert_reply_matches(reply, msg, reply_content, **md)
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_to_unknown_pool(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("badpool", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            'Message received for unowned tag.', failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_no_config(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            "No target found for inbound message from 'sphex'",
+            failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_no_reply(self):
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": False,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            "No target found for inbound message from 'sphex'",
+            failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_default_reply(self):
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_unroutable_reply(
+            'sphex', msg, "Eep!", tag=("pool1", "1234"),
+            user_account=self.user_helper.account_key)
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_default_reply_no_session(self):
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_unroutable_reply(
+            'sphex', msg, "Eep!", tag=("pool1", "1234"),
+            user_account=self.user_helper.account_key)
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_transport_custom_reply(self):
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+            "unroutable_inbound_reply": "Custom Eep!",
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_unroutable_reply(
+            'sphex', msg, "Custom Eep!", tag=("pool1", "1234"),
+            user_account=self.user_helper.account_key)
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_router_no_config(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            router=('router', 'badrouter'))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(
+            "No target found for inbound message from 'router_ro'",
+            failure.value.args[0])
+
+    @inlineCallbacks
+    def test_unroutable_inbound_from_router_default_reply(self):
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
+            "reply_to_unroutable_inbound": True,
+        })
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "1234"), router=('router', 'badrouter'))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_unroutable_reply(
+            'router_ro', msg, "Eep!", router=("router", "badrouter"))

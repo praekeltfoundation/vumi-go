@@ -265,8 +265,7 @@ class GoWorkerMixin(object):
         self.app_event_publisher.publish_message(event)
 
     def publish_account_metric(self, acc_key, store, name, value, agg=None):
-        aggs = [agg] if agg is not None else None
-        metric = AccountMetric(acc_key, store, name, aggs)
+        metric = AccountMetric(acc_key, store, name, agg)
         metric.oneshot(self.metrics, value)
 
     @inlineCallbacks

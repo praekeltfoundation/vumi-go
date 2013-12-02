@@ -1,0 +1,21 @@
+{% extends "app.html" %}
+{% load conversation_tags %}
+
+{% block content_extraclass %}conversation reports{% endblock %}
+{% block content_title %}{{ conversation.name }} reports{% endblock %}
+
+{% block content_main %}
+    {% if dashboard_config %}
+        <div id="dashboard" class="diamondash dashboard"></div>
+    {% else %}
+        <div class="row">
+            <h3 class="text-center">Something went wrong</h3>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block ondomready %}
+    {% if dashboard_config %}
+        {% include "dashboard/includes/dashboard.html" with dashboard_config=dashboard_config %}
+    {% endif %}
+{% endblock %}
