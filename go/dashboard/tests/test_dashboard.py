@@ -47,9 +47,6 @@ class TestDashboard(VumiGoDjangoTestCase):
 
         self.dashboard = Dashboard('ackbar-the-dashboard', layout)
 
-    def tearDown(self):
-        super(TestDashboard, self).setUp()
-
     def test_sync(self):
         self.diamondash_api.set_response({'happy': 'config'})
 
