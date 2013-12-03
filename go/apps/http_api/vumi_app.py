@@ -2,8 +2,9 @@
 from collections import defaultdict
 import random
 
-from twisted.internet.defer import inlineCallbacks, maybeDeferred
+from twisted.internet.defer import inlineCallbacks, maybeDeferred, returnValue
 from twisted.internet.error import DNSLookupError
+from twisted.internet import reactor
 from twisted.web import http
 
 from vumi.config import ConfigInt, ConfigText
@@ -80,12 +81,15 @@ class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
     timeout = ConfigInt(
         "How long to wait for a response from a server when posting "
         "messages or events", default=5, static=True)
+    cache_lifetime = ConfigInt(
+        'How long to cache a conversation key for', default=0, static=True)
 
 
 class StreamingHTTPWorker(GoApplicationWorker):
 
     worker_name = 'http_api_worker'
     CONFIG_CLASS = StreamingHTTPWorkerConfig
+    CLOCK = reactor
 
     @inlineCallbacks
     def setup_application(self):
@@ -95,11 +99,13 @@ class StreamingHTTPWorker(GoApplicationWorker):
         self.web_port = config.web_port
         self.health_path = config.health_path
         self.metrics_prefix = config.metrics_prefix
+        self.cache_lifetime = config.cache_lifetime
 
         # Set these to empty dictionaries because we're not interested
         # in using any of the helper functions at this point.
         self._event_handlers = {}
         self._session_handlers = {}
+        self._conversation_cache = {}
         self.client_manager = StreamingClientManager(
             self.redis.sub_manager('http_api:message_cache'))
 
@@ -126,12 +132,34 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def get_api_config(self, conversation, key):
         return conversation.config.get('http_api', {}).get(key)
 
+    def get_current_time(self):
+        return self.CLOCK.seconds()
+
+    def cache_timestamp(self, conv_key):
+        cached = self._conversation_cache.get(conv_key)
+        if cached is None:
+            return
+
+        timestamp, cached_conv = cached
+        return timestamp
+
+    @inlineCallbacks
+    def get_cached_conversation(self, user_api, conv_key):
+        if self.cache_timestamp(conv_key) is not None:
+            timestamp, cached_conv = self._conversation_cache[conv_key]
+            if self.get_current_time() - timestamp < self.cache_lifetime:
+                returnValue(cached_conv)
+        conversation = yield user_api.get_wrapped_conversation(conv_key)
+        self._conversation_cache[conv_key] = (
+            self.get_current_time(), conversation)
+        returnValue(conversation)
+
     @inlineCallbacks
     def consume_user_message(self, message):
         msg_mdh = self.get_metadata_helper(message)
         user_api = msg_mdh.get_user_api()
         conv_key = msg_mdh.get_conversation_key()
-        conversation = yield user_api.get_wrapped_conversation(conv_key)
+        conversation = yield self.get_cached_conversation(user_api, conv_key)
         if conversation is None:
             log.warning("Cannot find conversation for message: %r" % (
                 message,))
