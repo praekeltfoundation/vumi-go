@@ -7,6 +7,7 @@ from twisted.web.error import SchemeNotSupported
 from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
+from twisted.internet.task import Clock
 
 from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.message import TransportUserMessage, TransportEvent
@@ -26,11 +27,15 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(StreamingHTTPWorkerTestCase, self).setUp()
+        self.clock = Clock()
+        self.patch(StreamingHTTPWorker, 'get_current_time',
+                   lambda _: self.clock.seconds())
         self.config = self.mk_config({
             'health_path': '/health/',
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
+            'cache_lifetime': 2,
         })
         self.app = yield self.get_application(self.config)
         self.addr = self.app.webserver.getHost()
@@ -744,3 +749,25 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_conversation_caching(self):
+        self.assertEqual(None, self.app.cache_timestamp(self.conversation.key))
+        self.clock.advance(1)
+        conv = yield self.app.get_cached_conversation(
+            self.user_api, self.conversation.key)
+        self.assertEqual(conv.key, self.conversation.key)
+        self.assertEqual(1, self.app.cache_timestamp(self.conversation.key))
+
+        self.clock.advance(1)
+        conv = yield self.app.get_cached_conversation(
+            self.user_api, self.conversation.key)
+        self.assertEqual(conv.key, self.conversation.key)
+        self.assertEqual(1, self.app.cache_timestamp(self.conversation.key))
+
+        self.clock.advance(1)
+        conv = yield self.app.get_cached_conversation(
+            self.user_api, self.conversation.key)
+        self.assertEqual(conv.key, self.conversation.key)
+        self.assertEqual(3, self.app.cache_timestamp(self.conversation.key))
+
