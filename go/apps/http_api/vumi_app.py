@@ -130,9 +130,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
     @inlineCallbacks
     def consume_user_message(self, message):
         msg_mdh = self.get_metadata_helper(message)
-        user_api = msg_mdh.get_user_api()
-        conv_key = msg_mdh.get_conversation_key()
-        conversation = yield user_api.get_wrapped_conversation(conv_key)
+        conversation = yield msg_mdh.get_conversation()
         if conversation is None:
             log.warning("Cannot find conversation for message: %r" % (
                 message,))
