@@ -43,6 +43,14 @@ class MessageMetadataHelper(object):
         # If we don't have a tag, we want to blow up early in some places.
         self.tag = TaggingMiddleware.map_msg_to_tag(message)
 
+    def clear_object_cache(self):
+        """Clear any cached objects we might have.
+
+        This forces the next get call to fetch the object from the datastore
+        again.
+        """
+        self._store_objects.clear()
+
     def is_sensitive(self):
         """
         Returns True if the contents of the message have been marked as

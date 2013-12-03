@@ -86,6 +86,36 @@ class MessageMetadataHelperTestCase(GoTestCase):
         md_conv = yield md.get_conversation()
         self.assertEqual(md_conv.key, conversation.key)
 
+    @inlineCallbacks
+    def test_get_cached_conversation(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_conversation)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertRaises(KeyError, md.get_conversation)
+        conversation = yield self.create_conversation()
+        md = self.mk_md(go_metadata={
+            'user_account': self.user_api.user_account_key,
+            'conversation_key': conversation.key,
+        })
+        md_conv = yield md.get_conversation()
+        self.assertEqual(md_conv.key, conversation.key)
+        self.assertEqual(md_conv.status, conversation.status)
+
+        # Modify the conversation and get it from md again, making sure we
+        # still have cached data.
+        conversation.set_status_starting()
+        yield conversation.save()
+        md_conv = yield md.get_conversation()
+        self.assertEqual(md_conv.key, conversation.key)
+        self.assertNotEqual(md_conv.status, conversation.status)
+
+        # Clear the stored object cache and get the conversation from md again,
+        # making sure we have new data now.
+        md.clear_object_cache()
+        md_conv = yield md.get_conversation()
+        self.assertEqual(md_conv.key, conversation.key)
+        self.assertEqual(md_conv.status, conversation.status)
+
     def test_get_conversation_info(self):
         md = self.mk_md()
         self.assertEqual(md.get_conversation_info(), None)
