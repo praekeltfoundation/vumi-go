@@ -856,9 +856,6 @@ class TestConversationReportsView(BaseConversationViewTestCase):
             'get_diamondash_api',
             lambda: self.diamondash_api)
 
-    def tearDown(self):
-        super(TestConversationReportsView, self).tearDown()
-
     def test_get_dashboard(self):
         self.diamondash_api.set_response({'happy': 'dashboard'})
 

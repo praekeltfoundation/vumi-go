@@ -108,7 +108,8 @@ def details(request):
     return render(request, 'account/details.html', {
         'email_form': email_form,
         'account_form': account_form,
-        'password_change_form': password_change_form
+        'password_change_form': password_change_form,
+        'account_key': request.user_api.user_account_key,
     })
 
 
