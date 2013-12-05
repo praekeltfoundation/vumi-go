@@ -40,3 +40,14 @@ class HttpApiNoStreamTestCase(DjangoGoApplicationTestCase):
                 'api_tokens': ['token'],
             }
         })
+        self.assertEqual(self.conversation.config, {})
+        response = self.client.get(self.get_view_url('edit'))
+        self.assertContains(response, 'http://events/')
+        self.assertContains(response, 'http://messages/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_edit_view_no_config(self):
+        self.setup_conversation(started=True)
+        self.assertEqual(self.conversation.config, {})
+        response = self.client.get(self.get_view_url('edit'))
+        self.assertEqual(response.status_code, 200)

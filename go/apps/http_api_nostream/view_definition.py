@@ -21,8 +21,8 @@ class TokenForm(forms.Form):
         return {
             'api_tokens': (data['api_tokens'][0]
                             if data['api_tokens'] else None),
-            'push_message_url': data['push_message_url'],
-            'push_event_url': data['push_event_url'],
+            'push_message_url': data.get('push_message_url', None),
+            'push_event_url': data.get('push_event_url', None),
         }
 
     def to_config(self):
