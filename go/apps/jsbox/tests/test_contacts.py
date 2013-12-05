@@ -489,6 +489,30 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_save_for_nonexistent_contacts(self):
         return self.assert_bad_command('save', contact={'key': u'213123'})
 
+    @inlineCallbacks
+    def test_handle_search(self):
+        contact = yield self.new_contact(
+            surname=u'Jackal',
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b'])
+        reply = yield self.dispatch_command('search', query=u'surname:Jack*')
+        self.assertTrue(reply['success'])
+        [contact_data] = reply['contacts']
+        self.assertEqual(contact_data['key'], contact.key)
+
+    @inlineCallbacks
+    def test_bad_query_handle_search(self):
+        reply = yield self.dispatch_command(
+            'search', query=u'name:[BAD_QUERY!]')
+        self.assertFalse(reply['success'])
+        self.assertTrue('Error running MapReduce' in reply['reason'])
+
+    @inlineCallbacks
+    def test_no_results_handle_search(self):
+        reply = yield self.dispatch_command('search', query=u'name:foo*')
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['contacts'], [])
+
 
 class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
     use_riak = True

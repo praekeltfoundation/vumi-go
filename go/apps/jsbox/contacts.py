@@ -419,6 +419,59 @@ class ContactsResource(SandboxResource):
             success=True,
             contact=contact.get_data()))
 
+    @inlineCallbacks
+    def handle_search(self, api, command):
+        """
+        Search for contacts
+
+        Command fields:
+            - ``query``: The Lucene search query to perform.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contacts``: A list of dictionaries with contact information.
+
+        Note:   If no matches are found ``contacts`` will be an empty list.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+
+        .. code-block:: javascript
+
+            api.request(
+                'contacts.search', {
+                     query: 'name:"My Name"',
+                },
+                function(reply) { api.log_info(reply.contacts); });
+        """
+        try:
+            contact_store = self._contact_store_for_api(api)
+            keys = yield contact_store.contacts.raw_search(
+                command['query']).get_keys()
+            contacts = []
+            for contact_bunch in contact_store.contacts.load_all_bunches(keys):
+                contacts.extend((yield contact_bunch))
+
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (Exception,) as e:
+            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
+            #       a MapReduce error.
+            if 'MapReduce' not in str(e):
+                raise
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            contacts=[contact.get_data() for contact in contacts]))
+
+
 
 class GroupsResource(SandboxResource):
     """
