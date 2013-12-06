@@ -396,10 +396,10 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         msg = self.msg_helper.make_inbound('in 1', message_id='1')
-        with LogCatcher(message='URL not configured') as lc:
+        with LogCatcher(message='push_message_url not configured') as lc:
             yield self.dispatch_to_conv(msg, self.conversation)
             [url_not_configured_log] = lc.messages()
-        self.assertTrue('push_message_url' in url_not_configured_log)
+        self.assertTrue(self.conversation.key in url_not_configured_log)
 
     @inlineCallbacks
     def test_post_inbound_message_unsupported_scheme(self):
@@ -457,10 +457,10 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         msg1 = yield self.msg_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
         ack1 = self.msg_helper.make_ack(msg1)
-        with LogCatcher(message='URL not configured') as lc:
+        with LogCatcher(message='push_event_url not configured') as lc:
             yield self.dispatch_event_to_conv(ack1, self.conversation)
             [url_not_configured_log] = lc.messages()
-        self.assertTrue('push_event_url' in url_not_configured_log)
+        self.assertTrue(self.conversation.key in url_not_configured_log)
 
     @inlineCallbacks
     def test_post_inbound_event_timeout(self):
