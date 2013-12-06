@@ -1,5 +1,7 @@
 # -*- test-case-name: go.vumitools.tests.test_utils -*-
 
+from twisted.internet.defer import succeed
+
 from vumi.middleware.tagger import TaggingMiddleware
 from go.vumitools.middleware import OptOutMiddleware
 
@@ -41,6 +43,14 @@ class MessageMetadataHelper(object):
         # If we don't have a tag, we want to blow up early in some places.
         self.tag = TaggingMiddleware.map_msg_to_tag(message)
 
+    def clear_object_cache(self):
+        """Clear any cached objects we might have.
+
+        This forces the next get call to fetch the object from the datastore
+        again.
+        """
+        self._store_objects.clear()
+
     def is_sensitive(self):
         """
         Returns True if the contents of the message have been marked as
@@ -72,8 +82,15 @@ class MessageMetadataHelper(object):
         return self._go_metadata['conversation_key']
 
     def get_conversation(self):
+        if 'conversation' in self._store_objects:
+            return succeed(self._store_objects['conversation'])
+
+        def stash_and_return_conv(conv):
+            self._store_objects['conversation'] = conv
+            return conv
+
         return self.get_user_api().get_wrapped_conversation(
-            self.get_conversation_key())
+            self.get_conversation_key()).addCallback(stash_and_return_conv)
 
     def get_conversation_info(self):
         conversation_info = {}

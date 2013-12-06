@@ -187,29 +187,24 @@ class TestSurveysViews(GoDjangoTestCase):
         self.assertEqual([], self.app_helper.get_api_commands_sent())
         self.assertContains(response, '>Send CSV via e-mail</button>')
 
-    def test_action_export_user_data_post(self):
-        conv_helper = self.app_helper.create_conversation()
-        conversation = conv_helper.get_conversation()
-        pm, poll = self.create_poll(conversation, questions=[{
-                'copy': 'question-1',
-                'label': 'label-1',
-            }, {
-                'copy': 'question-2',
-                'label': 'label-2',
-            }])
+    def setup_poll(self, conv, questions=2, answer=False, user='user-1'):
+        question_numbers = list(range(1, 1 + questions))
+        pm, poll = self.create_poll(conv, questions=[
+            {
+                'copy': 'question-%d' % i,
+                'label': 'label-%d' % i,
+            } for i in question_numbers
+        ])
 
-        participant = pm.get_participant(poll.poll_id, 'user-1')
-        participant.has_unanswered_question = True
-        participant.set_last_question_index(0)
-        poll.submit_answer(participant, 'answer 1')
-        participant.set_last_question_index(1)
-        poll.submit_answer(participant, 'answer 2')
+        if answer:
+            participant = pm.get_participant(poll.poll_id, user)
+            participant.has_unanswered_question = True
+            participant.set_last_question_index(0)
+            for i in question_numbers:
+                poll.submit_answer(participant, 'answer %d' % i)
+                participant.set_last_question_index(i)
 
-        response = self.client.post(
-            conv_helper.get_action_view_url('download_user_data'))
-
-        self.assertRedirects(response, conv_helper.get_view_url('show'))
-
+    def check_csv_email(self, headers, answers, user='user-1'):
         [email] = mail.outbox
         [(file_name, contents, mime_type)] = email.attachments
 
@@ -219,6 +214,41 @@ class TestSurveysViews(GoDjangoTestCase):
         csv_contents = zipfile.open('survey-data-export.csv', 'r').read()
 
         lines = csv_contents.split('\r\n')
-        self.assertEqual(lines[0], 'user_id,user_timestamp,label-1,label-2')
-        self.assertTrue(lines[1].startswith('user-1'))
-        self.assertTrue(lines[1].endswith(',answer 1,answer 2'))
+        self.assertEqual(lines[0], ','.join(headers))
+        self.assertTrue(lines[1].startswith('user-1,'))
+        self.assertTrue(lines[1].endswith(',' + ','.join(answers)))
+
+    def test_action_export_user_data_post(self):
+        conv_helper = self.app_helper.create_conversation()
+        conversation = conv_helper.get_conversation()
+        self.setup_poll(conversation, questions=2, answer=True)
+
+        response = self.client.post(
+            conv_helper.get_action_view_url('download_user_data'))
+
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        self.check_csv_email(
+            headers=['user_id', 'user_timestamp', 'label-1', 'label-2'],
+            answers=['answer 1', 'answer 2'],
+        )
+
+    def test_action_export_user_data_post_with_old_questions(self):
+        conv_helper = self.app_helper.create_conversation()
+        conversation = conv_helper.get_conversation()
+        self.setup_poll(conversation, questions=2, answer=True)
+
+        # overwrite poll
+        pm, poll = self.create_poll(conversation, questions=[{
+                'copy': 'question-1',
+                'label': 'label-1',
+            }])
+
+        response = self.client.post(
+            conv_helper.get_action_view_url('download_user_data'),
+            {'include_old_questions': True})
+
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        self.check_csv_email(
+            headers=['user_id', 'user_timestamp', 'label-1', 'label-2'],
+            answers=['answer 1', 'answer 2'],
+        )

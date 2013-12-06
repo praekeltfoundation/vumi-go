@@ -82,6 +82,52 @@ class TestMessageMetadataHelper(VumiTestCase):
         md_conv = yield md.get_conversation()
         self.assertEqual(md_conv.key, conversation.key)
 
+    @inlineCallbacks
+    def test_clear_object_cache(self):
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
+        md = self.mk_md(go_metadata={
+            'user_account': conversation.user_account.key,
+            'conversation_key': conversation.key,
+        })
+        self.assertEqual(md._store_objects, {})
+        md_conv = yield md.get_conversation()
+        self.assertEqual(md._store_objects, {'conversation': md_conv})
+        md.clear_object_cache()
+        self.assertEqual(md._store_objects, {})
+
+    @inlineCallbacks
+    def test_conversation_caching(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_conversation)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertRaises(KeyError, md.get_conversation)
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
+        md = self.mk_md(go_metadata={
+            'user_account': conversation.user_account.key,
+            'conversation_key': conversation.key,
+        })
+        md_conv = yield md.get_conversation()
+        self.assertEqual(md_conv.key, conversation.key)
+        self.assertEqual(md_conv.status, conversation.status)
+
+        # Modify the conversation and get it from md again, making sure we
+        # still have cached data.
+        conversation.set_status_starting()
+        yield conversation.save()
+        md_conv2 = yield md.get_conversation()
+        self.assertIdentical(md_conv, md_conv2)
+        self.assertNotEqual(md_conv2.status, conversation.status)
+
+        # Clear the stored object cache and get the conversation from md again,
+        # making sure we have new data now.
+        md.clear_object_cache()
+        md_conv3 = yield md.get_conversation()
+        self.assertEqual(md_conv3.key, conversation.key)
+        self.assertEqual(md_conv3.status, conversation.status)
+        self.assertNotIdentical(md_conv, md_conv3)
+
     def test_get_conversation_info(self):
         md = self.mk_md()
         self.assertEqual(md.get_conversation_info(), None)

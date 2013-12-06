@@ -8,6 +8,7 @@ from vumi_wikipedia.tests.test_wikipedia_api import (
 
 from go.apps.tests.helpers import AppWorkerHelper
 from go.apps.wikipedia.vumi_app import WikipediaApplication
+from go.vumitools.metrics import ConversationMetric
 
 
 class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
@@ -56,3 +57,10 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
         [sms_msg] = self.get_outbound_msgs('sms_content')
         self.assertEqual(tw.CTHULHU_SMS, sms_msg['content'])
         self.assertEqual('+41791234567', sms_msg['to_addr'])
+
+        metric_names = [name for name, _ in
+                        self.app_helper.get_published_metrics(self.app)]
+        self.assertEqual(metric_names, [
+            ConversationMetric.make_name(self.conv, name) for name in [
+                'wikipedia_search_call', 'wikipedia_extract_call',
+                'wikipedia_extract_call']])

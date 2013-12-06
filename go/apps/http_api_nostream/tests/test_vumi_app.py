@@ -4,27 +4,24 @@ import json
 from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.internet.error import DNSLookupError
 from twisted.web.error import SchemeNotSupported
-from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
-from vumi.config import ConfigContext
-from vumi.message import TransportUserMessage, TransportEvent
-from vumi.tests.helpers import VumiTestCase
-from vumi.tests.utils import MockHttpServer, LogCatcher
-from vumi.transports.vumi_bridge.client import StreamingClient
 from vumi.utils import http_request_full, HttpTimeoutError
+from vumi.message import TransportUserMessage, TransportEvent
+from vumi.tests.utils import MockHttpServer, LogCatcher
+from vumi.tests.helpers import VumiTestCase
 
-from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.resource import StreamResource, ConversationResource
+from go.apps.http_api_nostream.vumi_app import NoStreamingHTTPWorker
+from go.apps.http_api_nostream.resource import ConversationResource
 from go.apps.tests.helpers import AppWorkerHelper
 
 
-class TestStreamingHTTPWorker(VumiTestCase):
+class TestNoStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = AppWorkerHelper(StreamingHTTPWorker)
+        self.app_helper = AppWorkerHelper(NoStreamingHTTPWorker)
         self.add_cleanup(self.app_helper.cleanup)
 
         self.config = {
@@ -38,13 +35,21 @@ class TestStreamingHTTPWorker(VumiTestCase):
         self.url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['web_path'])
 
+        # Mock server to test HTTP posting of inbound messages & events
+        self.mock_push_server = MockHttpServer(self.handle_request)
+        yield self.mock_push_server.start()
+        self.add_cleanup(self.mock_push_server.stop)
+        self.push_calls = DeferredQueue()
+
         conv_config = {
-            'http_api': {
+            'http_api_nostream': {
                 'api_tokens': [
                     'token-1',
                     'token-2',
                     'token-3',
                 ],
+                'push_message_url': self.mock_push_server.url,
+                'push_event_url': self.mock_push_server.url,
                 'metrics_store': 'metrics_store',
             }
         }
@@ -59,13 +64,6 @@ class TestStreamingHTTPWorker(VumiTestCase):
                 conversation.user_account.key, 'token-1'))],
         }
 
-        self.client = StreamingClient()
-
-        # Mock server to test HTTP posting of inbound messages & events
-        self.mock_push_server = MockHttpServer(self.handle_request)
-        yield self.mock_push_server.start()
-        self.add_cleanup(self.mock_push_server.stop)
-        self.push_calls = DeferredQueue()
         self._setup_wait_for_request()
         self.add_cleanup(self._wait_for_requests)
 
@@ -99,27 +97,6 @@ class TestStreamingHTTPWorker(VumiTestCase):
         self.push_calls.put(request)
         return NOT_DONE_YET
 
-    @inlineCallbacks
-    def pull_message(self, count=1):
-        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-
-        messages = DeferredQueue()
-        errors = DeferredQueue()
-        receiver = self.client.stream(
-            TransportUserMessage, messages.put, errors.put, url,
-            Headers(self.auth_headers))
-
-        received_messages = []
-        for msg_id in range(count):
-            yield self.app_helper.make_dispatch_inbound(
-                'in %s' % (msg_id,), message_id=str(msg_id),
-                conv=self.conversation)
-            recv_msg = yield messages.get()
-            received_messages.append(recv_msg)
-
-        receiver.disconnect()
-        returnValue((receiver, received_messages))
-
     def assert_bad_request(self, response, reason):
         self.assertEqual(response.code, http.BAD_REQUEST)
         data = json.loads(response.delivered_body)
@@ -129,91 +106,15 @@ class TestStreamingHTTPWorker(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_proxy_buffering_headers_off(self):
-        receiver, received_messages = yield self.pull_message()
-        headers = receiver._response.headers
-        self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['no'])
-
-    @inlineCallbacks
-    def test_proxy_buffering_headers_on(self):
-        StreamResource.proxy_buffering = True
-        receiver, received_messages = yield self.pull_message()
-        headers = receiver._response.headers
-        self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['yes'])
-
-    @inlineCallbacks
-    def test_content_type(self):
-        receiver, received_messages = yield self.pull_message()
-        headers = receiver._response.headers
-        self.assertEqual(
-            headers.getRawHeaders('content-type'),
-            ['application/json; charset=utf-8'])
-
-    @inlineCallbacks
-    def test_messages_stream(self):
-        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-
-        messages = DeferredQueue()
-        errors = DeferredQueue()
-        receiver = self.client.stream(
-            TransportUserMessage, messages.put, errors.put, url,
-            Headers(self.auth_headers))
-
-        msg1 = yield self.app_helper.make_dispatch_inbound(
-            'in 1', message_id='1', conv=self.conversation)
-
-        msg2 = yield self.app_helper.make_dispatch_inbound(
-            'in 2', message_id='2', conv=self.conversation)
-
-        rm1 = yield messages.get()
-        rm2 = yield messages.get()
-
-        receiver.disconnect()
-
-        # Sometimes messages arrive out of order if we're hitting real redis.
-        rm1, rm2 = sorted([rm1, rm2], key=lambda m: m['message_id'])
-
-        self.assertEqual(msg1['message_id'], rm1['message_id'])
-        self.assertEqual(msg2['message_id'], rm2['message_id'])
-        self.assertEqual(errors.size, None)
-
-    @inlineCallbacks
-    def test_events_stream(self):
-        url = '%s/%s/events.json' % (self.url, self.conversation.key)
-
-        events = DeferredQueue()
-        errors = DeferredQueue()
-        receiver = yield self.client.stream(TransportEvent, events.put,
-                                            events.put, url,
-                                            Headers(self.auth_headers))
-
-        msg1 = yield self.app_helper.make_stored_outbound(
-            self.conversation, 'out 1', message_id='1')
-        ack1 = yield self.app_helper.make_dispatch_ack(
-            msg1, conv=self.conversation)
-
-        msg2 = yield self.app_helper.make_stored_outbound(
-            self.conversation, 'out 2', message_id='2')
-        ack2 = yield self.app_helper.make_dispatch_ack(
-            msg2, conv=self.conversation)
-
-        ra1 = yield events.get()
-        ra2 = yield events.get()
-
-        receiver.disconnect()
-
-        self.assertEqual(ack1['event_id'], ra1['event_id'])
-        self.assertEqual(ack2['event_id'], ra2['event_id'])
-        self.assertEqual(errors.size, None)
-
-    @inlineCallbacks
     def test_missing_auth(self):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-
-        queue = DeferredQueue()
-        receiver = self.client.stream(
-            TransportUserMessage, queue.put, queue.put, url)
-        response = yield receiver.get_response()
+        msg = {
+            'to_addr': '+2345',
+            'content': 'foo',
+            'message_id': 'evil_id',
+        }
+        response = yield http_request_full(url, json.dumps(msg), {},
+                                           method='PUT')
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
             'basic realm="Conversation Realm"'])
@@ -221,16 +122,16 @@ class TestStreamingHTTPWorker(VumiTestCase):
     @inlineCallbacks
     def test_invalid_auth(self):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-
-        queue = DeferredQueue()
-
-        headers = Headers({
+        msg = {
+            'to_addr': '+2345',
+            'content': 'foo',
+            'message_id': 'evil_id',
+        }
+        auth_headers = {
             'Authorization': ['Basic %s' % (base64.b64encode('foo:bar'),)],
-        })
-
-        receiver = self.client.stream(
-            TransportUserMessage, queue.put, queue.put, url, headers)
-        response = yield receiver.get_response()
+        }
+        response = yield http_request_full(url, json.dumps(msg), auth_headers,
+                                           method='PUT')
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
             'basic realm="Conversation Realm"'])
@@ -257,7 +158,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
                 'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
+                'conversation_type': 'http_api_nostream',
                 'user_account': self.conversation.user_account.key,
             },
         })
@@ -307,6 +208,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
 
+        print repr(response.delivered_body)
         put_msg = json.loads(response.delivered_body)
         self.assertEqual(response.code, http.OK)
 
@@ -315,7 +217,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
                 'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
+                'conversation_type': 'http_api_nostream',
                 'user_account': self.conversation.user_account.key,
             },
         })
@@ -354,7 +256,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_invalid_in_reply_to_with_missing_conversation_key(self):
-        # create a message with no conversation
+        # create a message with no (None) conversation
         inbound_msg = self.app_helper.make_inbound('in 1', message_id='msg-1')
         vumi_api = self.app_helper.vumi_helper.get_vumi_api()
         yield vumi_api.mdb.add_inbound_message(inbound_msg)
@@ -441,111 +343,31 @@ class TestStreamingHTTPWorker(VumiTestCase):
              ("%s.vumi.test.v2" % prefix, 3456)])
 
     @inlineCallbacks
-    def test_concurrency_limits(self):
-        config = yield self.app.get_config(None)
-        concurrency = config.concurrency_limit
-        queue = DeferredQueue()
-        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        max_receivers = [self.client.stream(
-            TransportUserMessage, queue.put, queue.put, url,
-            Headers(self.auth_headers)) for _ in range(concurrency)]
-
-        for i in range(concurrency):
-            msg = yield self.app_helper.make_dispatch_inbound(
-                'in %s' % (i,), message_id=str(i), conv=self.conversation)
-            received = yield queue.get()
-            self.assertEqual(msg['message_id'], received['message_id'])
-
-        maxed_out_resp = yield http_request_full(
-            url, method='GET', headers=self.auth_headers)
-
-        self.assertEqual(maxed_out_resp.code, 403)
-        self.assertTrue(
-            'Too many concurrent connections' in maxed_out_resp.delivered_body)
-
-        [r.disconnect() for r in max_receivers]
-
-    @inlineCallbacks
-    def test_disabling_concurrency_limit(self):
-        conv_resource = ConversationResource(self.app, self.conversation.key)
-        # negative concurrency limit disables it
-        ctxt = ConfigContext(user_account=self.conversation.user_account.key,
-                             concurrency_limit=-1)
-        config = yield self.app.get_config(msg=None, ctxt=ctxt)
-        self.assertTrue(
-            (yield conv_resource.is_allowed(
-                config, self.conversation.user_account.key)))
-
-    @inlineCallbacks
-    def test_backlog_on_connect(self):
-        for i in range(10):
-            yield self.app_helper.make_dispatch_inbound(
-                'in %s' % (i,), message_id=str(i), conv=self.conversation)
-
-        queue = DeferredQueue()
-        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        receiver = self.client.stream(
-            TransportUserMessage, queue.put, queue.put, url,
-            Headers(self.auth_headers))
-
-        for i in range(10):
-            received = yield queue.get()
-            self.assertEqual(received['message_id'], str(i))
-
-        receiver.disconnect()
-
-    @inlineCallbacks
     def test_health_response(self):
         health_url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['health_path'])
 
         response = yield http_request_full(health_url, method='GET')
-        self.assertEqual(response.delivered_body, '0')
-
-        yield self.app_helper.make_dispatch_inbound(
-            'in 1', message_id='1', conv=self.conversation)
-
-        queue = DeferredQueue()
-        stream_url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        stream_receiver = self.client.stream(
-            TransportUserMessage, queue.put, queue.put, stream_url,
-            Headers(self.auth_headers))
-
-        yield queue.get()
-
-        response = yield http_request_full(health_url, method='GET')
-        self.assertEqual(response.delivered_body, '1')
-
-        stream_receiver.disconnect()
-
-        response = yield http_request_full(health_url, method='GET')
-        self.assertEqual(response.delivered_body, '0')
-
-        self.assertEqual(self.app.client_manager.clients, {
-            'sphex.stream.message.%s' % (self.conversation.key,): []
-        })
+        self.assertEqual(response.delivered_body, 'OK')
 
     @inlineCallbacks
     def test_post_inbound_message(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
-            'push_message_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
         msg_d = self.app_helper.make_dispatch_inbound(
             'in 1', message_id='1', conv=self.conversation)
 
         req = yield self.push_calls.get()
-        posted_json_data = req.content.read()
+        posted_json = req.content.read()
+        self.assertEqual(
+            req.requestHeaders.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
         req.finish()
         msg = yield msg_d
 
-        posted_msg = TransportUserMessage.from_json(posted_json_data)
+        posted_msg = TransportUserMessage.from_json(posted_json)
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
 
     def _patch_http_request_full(self, exception_class):
-        from go.apps.http_api import vumi_app
+        from go.apps.http_api_nostream import vumi_app
 
         def raiser(*args, **kw):
             raise exception_class()
@@ -554,7 +376,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
     @inlineCallbacks
     def test_post_inbound_message_unsupported_scheme(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
+        self.conversation.config['http_api_nostream'].update({
             'push_message_url': 'example.com',
         })
         yield self.conversation.save()
@@ -569,7 +391,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
     @inlineCallbacks
     def test_post_inbound_message_timeout(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
+        self.conversation.config['http_api_nostream'].update({
             'push_message_url': self.mock_push_server.url,
         })
         yield self.conversation.save()
@@ -584,7 +406,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
     @inlineCallbacks
     def test_post_inbound_message_dns_lookup_error(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
+        self.conversation.config['http_api_nostream'].update({
             'push_message_url': self.mock_push_server.url,
         })
         yield self.conversation.save()
@@ -599,56 +421,59 @@ class TestStreamingHTTPWorker(VumiTestCase):
     @inlineCallbacks
     def test_post_inbound_event(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
+        self.conversation.config['http_api_nostream'].update({
             'push_event_url': self.mock_push_server.url,
         })
         yield self.conversation.save()
 
-        msg = yield self.app_helper.make_stored_outbound(
+        msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
         event_d = self.app_helper.make_dispatch_ack(
-            msg, conv=self.conversation)
+            msg1, conv=self.conversation)
 
         req = yield self.push_calls.get()
         posted_json_data = req.content.read()
+        self.assertEqual(
+            req.requestHeaders.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
         req.finish()
-        ack = yield event_d
+        ack1 = yield event_d
 
-        self.assertEqual(TransportEvent.from_json(posted_json_data), ack)
+        self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
 
     @inlineCallbacks
     def test_post_inbound_event_timeout(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
+        self.conversation.config['http_api_nostream'].update({
             'push_event_url': self.mock_push_server.url,
         })
         yield self.conversation.save()
 
-        msg = yield self.app_helper.make_stored_outbound(
+        msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
         self._patch_http_request_full(HttpTimeoutError)
         with LogCatcher(message='Timeout') as lc:
             yield self.app_helper.make_dispatch_ack(
-                msg, conv=self.conversation)
+                msg1, conv=self.conversation)
             [timeout_log] = lc.messages()
         self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
 
     @inlineCallbacks
     def test_post_inbound_event_dns_lookup_error(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
+        self.conversation.config['http_api_nostream'].update({
             'push_event_url': self.mock_push_server.url,
         })
         yield self.conversation.save()
 
-        msg = yield self.app_helper.make_stored_outbound(
+        msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
         self._patch_http_request_full(DNSLookupError)
         with LogCatcher(message='DNS lookup error') as lc:
             yield self.app_helper.make_dispatch_ack(
-                msg, conv=self.conversation)
+                msg1, conv=self.conversation)
             [dns_log] = lc.messages()
         self.assertTrue(self.mock_push_server.url in dns_log)
 

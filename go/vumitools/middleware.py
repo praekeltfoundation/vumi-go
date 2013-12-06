@@ -78,7 +78,6 @@ class OptOutMiddleware(BaseMiddleware):
         tag = TaggingMiddleware.map_msg_to_tag(message)
         if tag is not None:
             tagpool_metadata = yield self.vumi_api.tpm.get_metadata(tag[0])
-            print self.config
             optout_disabled = tagpool_metadata.get(
                 'disable_global_opt_out', False)
         keyword = (message['content'] or '').strip()

@@ -1,4 +1,4 @@
-from django.forms import Form
+from django.forms import BooleanField, Form
 from django.conf import settings
 from django.contrib import messages
 
@@ -98,12 +98,20 @@ class SurveyEditView(ConversationTemplateView):
         })
 
 
+class DownloadUserDataForm(Form):
+    include_old_questions = BooleanField(
+        label="Include old questions",
+        help_text=("Whether to include answers to old questions that were"
+                   " once part of the poll but are no longer."),
+        initial=False, required=False)
+
+
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     edit_view = SurveyEditView
 
     action_forms = {
-        # TODO: These are both work-arounds for not being able to directly
-        #       trigger POSTs via conversation action buttons
+        # TODO: The empty send_survey form is a work-around for not being able
+        #       to directly trigger POSTs via conversation action buttons
         'send_survey': Form,
-        'download_user_data': Form,
+        'download_user_data': DownloadUserDataForm,
     }
