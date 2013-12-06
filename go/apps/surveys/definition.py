@@ -31,8 +31,9 @@ class DownloadUserDataAction(ConversationAction):
     def perform_action(self, action_data):
         # This is Django-only, but the module get imported in vumi-land.
         from go.apps.surveys.tasks import export_vxpolls_data
-        return export_vxpolls_data.delay(self._conv.user_account.key,
-                                         self._conv.key)
+        return export_vxpolls_data.delay(
+            self._conv.user_account.key, self._conv.key,
+            include_old_questions=action_data['include_old_questions'])
 
 
 class ConversationDefinition(ConversationDefinitionBase):

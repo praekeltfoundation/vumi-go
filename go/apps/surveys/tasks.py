@@ -13,7 +13,7 @@ from go.apps.surveys.view_definition import get_poll_config
 
 
 @task(ignore_result=True)
-def export_vxpolls_data(account_key, conversation_key):
+def export_vxpolls_data(account_key, conversation_key, include_old_questions):
     """
     Export the data from a vxpoll and send it as a zipped attachment
     via email.
@@ -25,7 +25,8 @@ def export_vxpolls_data(account_key, conversation_key):
     poll_id = 'poll-%s' % (conversation.key,)
     pm, poll_data = get_poll_config(poll_id)
     poll = pm.get(poll_id)
-    csv_data = pm.export_user_data_as_csv(poll)
+    csv_data = pm.export_user_data_as_csv(
+        poll, include_old_questions=include_old_questions)
     email = EmailMessage(
         'Survey export for: %s' % (conversation.name,),
         'Please find the data for the survey %s attached.\n' % (
