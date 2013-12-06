@@ -1,7 +1,7 @@
 import base64
 import json
 
-from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
+from twisted.internet.defer import inlineCallbacks, DeferredQueue
 from twisted.internet.error import DNSLookupError
 from twisted.web.error import SchemeNotSupported
 from twisted.web import http
@@ -374,8 +374,20 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
         self.patch(vumi_app, 'http_request_full', raiser)
 
     @inlineCallbacks
+    def test_post_inbound_message_no_url(self):
+        self.conversation.config['http_api_nostream'].update({
+            'push_message_url': None,
+        })
+        yield self.conversation.save()
+
+        with LogCatcher(message='push_message_url not configured') as lc:
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
+            [url_not_configured_log] = lc.messages()
+        self.assertTrue(self.conversation.key in url_not_configured_log)
+
+    @inlineCallbacks
     def test_post_inbound_message_unsupported_scheme(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
         self.conversation.config['http_api_nostream'].update({
             'push_message_url': 'example.com',
         })
@@ -390,12 +402,6 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_post_inbound_message_timeout(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api_nostream'].update({
-            'push_message_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
         self._patch_http_request_full(HttpTimeoutError)
         with LogCatcher(message='Timeout') as lc:
             yield self.app_helper.make_dispatch_inbound(
@@ -405,12 +411,6 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_post_inbound_message_dns_lookup_error(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api_nostream'].update({
-            'push_message_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
         self._patch_http_request_full(DNSLookupError)
         with LogCatcher(message='DNS lookup error') as lc:
             yield self.app_helper.make_dispatch_inbound(
@@ -420,12 +420,6 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_post_inbound_event(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api_nostream'].update({
-            'push_event_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
         event_d = self.app_helper.make_dispatch_ack(
@@ -442,13 +436,23 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
         self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
 
     @inlineCallbacks
-    def test_post_inbound_event_timeout(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
+    def test_post_inbound_event_no_url(self):
         self.conversation.config['http_api_nostream'].update({
-            'push_event_url': self.mock_push_server.url,
+            'push_event_url': None,
         })
         yield self.conversation.save()
 
+        msg1 = yield self.app_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+
+        with LogCatcher(message='push_event_url not configured') as lc:
+            yield self.app_helper.make_dispatch_ack(
+                msg1, conv=self.conversation)
+            [url_not_configured_log] = lc.messages()
+        self.assertTrue(self.conversation.key in url_not_configured_log)
+
+    @inlineCallbacks
+    def test_post_inbound_event_timeout(self):
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
@@ -461,12 +465,6 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_post_inbound_event_dns_lookup_error(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api_nostream'].update({
-            'push_event_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
