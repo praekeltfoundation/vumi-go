@@ -73,6 +73,11 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
 
         push_message_url = self.get_api_config(conversation,
                                                'push_message_url')
+        if push_message_url is None:
+            log.warning(
+                "push_message_url not configured for conversation: %s" % (
+                    conversation.key))
+            return
         yield self.push(push_message_url, message)
 
     @inlineCallbacks
@@ -89,6 +94,11 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         config = yield self.get_message_config(event)
         conversation = config.get_conversation()
         push_event_url = self.get_api_config(conversation, 'push_event_url')
+        if push_event_url is None:
+            log.warning(
+                "push_event_url not configured for conversation: %s" % (
+                    conversation.key))
+            return
         yield self.push(push_event_url, event)
 
     @inlineCallbacks
