@@ -43,6 +43,8 @@ class GoUserAdmin(UserAdmin):
 
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'organisation', 'is_admin')
+    search_fields = ('user__email', 'user__first_name', 'user__last_name',
+                     'organisation')
 
 
 admin.site.register(GoUser, GoUserAdmin)
