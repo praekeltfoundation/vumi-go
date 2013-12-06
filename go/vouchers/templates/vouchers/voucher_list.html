@@ -1,0 +1,115 @@
+{% extends "account/base.html" %}
+{% load go_tags %}
+{% load crispy_forms_tags %}
+
+{% block content_extraclass %}vouchers list{% endblock %}
+{% block content_title %}Airtime vouchers & unique codes{% endblock %}
+
+{% block content_main %}
+<div class="row main-content">
+    <div class="col-md-12">
+        <table class="table" id="airtime-voucher-pool">
+            <thead>
+                <tr>
+                    <th>Airtime pool</th>
+                    <th>Vouchers</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if airtime_voucher_pool_list %}
+                    {% for airtime_voucher_pool in airtime_voucher_pool_list %}
+                        <tr>
+                            <td>{{ airtime_voucher_pool.pool_name }}</td>
+                            <td></td>
+                            <td>
+                                <a href="#" title="Import airtime vouchers">Import</a>&nbsp;
+                                <a href="#" title="Export airtime vouchers">Export</a>&nbsp;
+                                <a href="#" title="Query airtime vouchers">Query</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="2">You don't have any airtime yet.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        <a href="#" title="Add airtime to your account"
+           data-toggle="modal" data-target="#airtime-voucher-modal">
+            <i class="glyphicon glyphicon-plus"></i>
+            <span>Add airtime to your account<span>
+        </a>
+        <hr/>
+        <table class="table" id="unique-code-pool">
+            <thead>
+                <tr>
+                    <th>Unique code pool</th>
+                    <th>Vouchers</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if unique_code_pool_list %}
+                    {% for unique_code_pool in unique_code_pool_list %}
+                        <tr>
+                            <td>{{ unique_code_pool.name }}</td>
+                            <td></td>
+                            <td>
+                                <a href="#" title="Import unique codes">Import</a>&nbsp;
+                                <a href="#" title="Export unique codes">Export</a>&nbsp;
+                                <a href="#" title="Query unique codes">Query</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="2">You don't have any unique codes yet.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        <a href="#" title="Add unique codes to your account">
+            <i class="glyphicon glyphicon-plus"></i>
+            <span>Add unique codes to your account<span>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="airtime-voucher-modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">Upload airtime vouchers</h4>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {% for field in airtime_voucher_pool_form %}
+                    <div class="form-group{% if field.errors %} error{% endif %}">
+                        <label class="control-label" for="id_{{ field.name }}">{{ forloop.counter }}) {{ field.label }}</label>
+                        <div class="controls">
+                            {{ field|attr_class:"form-control" }}
+                            {% if field.errors %}
+                            <span class="help-block">{{ field.errors }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="help-text">{% autoescape off %}{{ field.help_text }}{% endautoescape %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="upload-airtime-vouchers" class="btn btn-primary">Upload vouchers</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </form>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+{% endblock %}
+
+{% block ondomready %}
+    {% if airtime_voucher_pool_form.errors %}
+        $('#airtime-voucher-modal').modal('show');
+    {% endif %}
+{% endblock %}
