@@ -84,9 +84,10 @@ class TestMessageMetadataHelper(VumiTestCase):
 
     @inlineCallbacks
     def test_clear_object_cache(self):
-        conversation = yield self.create_conversation()
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
         md = self.mk_md(go_metadata={
-            'user_account': self.user_api.user_account_key,
+            'user_account': conversation.user_account.key,
             'conversation_key': conversation.key,
         })
         self.assertEqual(md._store_objects, {})
@@ -101,9 +102,10 @@ class TestMessageMetadataHelper(VumiTestCase):
         self.assertRaises(KeyError, md.get_conversation)
         md = self.mk_md(go_metadata={'user_account': 'user-1'})
         self.assertRaises(KeyError, md.get_conversation)
-        conversation = yield self.create_conversation()
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
         md = self.mk_md(go_metadata={
-            'user_account': self.user_api.user_account_key,
+            'user_account': conversation.user_account.key,
             'conversation_key': conversation.key,
         })
         md_conv = yield md.get_conversation()
