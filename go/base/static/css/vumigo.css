@@ -37,14 +37,25 @@ button {
   height: 39px;
   padding: 0 15px;
 }
-.main-nav .nav a {
+.main-nav .nav li span.status {
+  display: block;
+  padding: 3px 20px;
+  clear: both;
+  font-weight: normal;
+  line-height: 1.428571429;
+  color: #333333;
+  white-space: nowrap;
+}
+.main-nav .nav a,
+.main-nav .nav span.status {
   color: #0bcac3 !important;
   text-shadow: none !important;
   outline: none;
   padding-top: 10px;
   padding-bottom: 10px;
 }
-.main-nav .nav a:hover {
+.main-nav .nav a:hover,
+.main-nav .nav span.status:hover {
   background: transparent;
   color: #fff !important;
 }
@@ -327,6 +338,19 @@ button {
 }
 .popover.notifier.info.bottom .arrow:after {
   border-bottom-color: #d9edf7;
+}
+.menu-contextual {
+  background: #fff;
+  padding: 10px;
+  margin: 0 15px;
+}
+.menu-contextual h4 {
+  font-weight: bold;
+}
+.menu-contextual h4,
+.menu-contextual p {
+  border-bottom: 1px dotted #ccc;
+  padding-bottom: 10px;
 }
 .registration {
   color: #c1c1c1;
