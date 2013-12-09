@@ -30,3 +30,24 @@ class AirtimeVoucherService(object):
         response = requests.put(url, content, headers=headers)
         if response.status_code not in [200, 201]:
             raise AirtimeVoucherServiceError(response.text)
+
+    def voucher_counts(self, pool_name):
+        """Return voucher counts for the pool with the given `pool_name`"""
+        url = urljoin(settings.AIRTIME_VOUCHER_SERVICE_URL,
+                      '%s/voucher_counts' % (pool_name,))
+
+        response = requests.get(url)
+        if response.status_code not in [200, 201]:
+            raise AirtimeVoucherServiceError(response.text)
+        result = response.json
+        return result.get('voucher_counts', [])
+
+    def total_vouchers(self, pool_name):
+        """Return the total number of vouchers in the pool with
+        the given `pool_name`.
+        """
+        voucher_counts = self.voucher_counts(pool_name)
+        total_vouchers = 0
+        for voucher in voucher_counts:
+            total_vouchers += voucher.get('count', 0)
+        return total_vouchers

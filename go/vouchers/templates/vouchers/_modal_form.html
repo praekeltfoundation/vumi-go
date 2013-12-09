@@ -1,0 +1,34 @@
+{% load go_tags %}
+
+<div class="modal fade" id="{{ modal_id }}">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% firstof post_url request.get_full_path %}"
+                  enctype="multipart/form-data">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">{{ modal_title }}</h4>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {% for field in modal_form %}
+                    <div class="form-group{% if field.errors %} error{% endif %}">
+                        <label class="control-label" for="id_{{ field.name }}">{{ forloop.counter }}) {{ field.label }}</label>
+                        <div class="controls">
+                            {{ field|attr_class:"form-control" }}
+                            {% if field.errors %}
+                            <span class="help-block">{{ field.errors }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="help-text">{% autoescape off %}{{ field.help_text }}{% endautoescape %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

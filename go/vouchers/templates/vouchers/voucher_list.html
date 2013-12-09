@@ -21,9 +21,13 @@
                     {% for airtime_voucher_pool in airtime_voucher_pool_list %}
                         <tr>
                             <td>{{ airtime_voucher_pool.pool_name }}</td>
-                            <td></td>
+                            <td>{{ airtime_voucher_pool.total_vouchers }}</td>
                             <td>
-                                <a href="#" title="Import airtime vouchers">Import</a>&nbsp;
+                                <a href="#" title="Import airtime vouchers"
+                                   data-toggle="modal"
+                                   data-target="#airtime-voucher-import-modal"
+                                   data-url="{% url "vouchers:airtime_import" airtime_voucher_pool.id  %}">
+                                    Import</a>&nbsp;
                                 <a href="#" title="Export airtime vouchers">Export</a>&nbsp;
                                 <a href="#" title="Query airtime vouchers">Query</a>
                             </td>
@@ -75,41 +79,22 @@
 {% endblock %}
 
 {% block modals %}
-<div class="modal fade" id="airtime-voucher-modal">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="" enctype="multipart/form-data">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                    <h4 class="modal-title">Upload airtime vouchers</h4>
-                </div>
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {% for field in airtime_voucher_pool_form %}
-                    <div class="form-group{% if field.errors %} error{% endif %}">
-                        <label class="control-label" for="id_{{ field.name }}">{{ forloop.counter }}) {{ field.label }}</label>
-                        <div class="controls">
-                            {{ field|attr_class:"form-control" }}
-                            {% if field.errors %}
-                            <span class="help-block">{{ field.errors }}</span>
-                            {% endif %}
-                        </div>
-                        <p class="help-text">{% autoescape off %}{{ field.help_text }}{% endautoescape %}</p>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" name="upload-airtime-vouchers" class="btn btn-primary">Upload vouchers</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                </div>
-            </form>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
+    {% url "vouchers:airtime_add" as airtime_add_url %}
+    {% include "vouchers/_modal_form.html" with modal_id="airtime-voucher-modal" post_url=airtime_add_url modal_form=airtime_voucher_pool_form modal_title="Upload airtime vouchers" submit_label="Upload vouchers" %}
+    {% include "vouchers/_modal_form.html" with modal_id="airtime-voucher-import-modal" modal_form=airtime_voucher_import_form modal_title="Upload airtime vouchers" submit_label="Upload vouchers" %}
 {% endblock %}
 
 {% block ondomready %}
     {% if airtime_voucher_pool_form.errors %}
         $('#airtime-voucher-modal').modal('show');
     {% endif %}
+    {% if airtime_voucher_import_form.errors %}
+        $('#airtime-voucher-import-modal').modal('show');
+    {% endif %}
+    $('div.modal').on('show.bs.modal', function (e) {
+        if (e.relatedTarget) {
+            var url = $(e.relatedTarget).data('url');
+            $(e.target).find('form').attr('action', url);
+        }
+    });
 {% endblock %}

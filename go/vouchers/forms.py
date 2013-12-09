@@ -41,8 +41,9 @@ class AirtimeVoucherPoolForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super(AirtimeVoucherPoolForm, self).__init__(*args, **kwargs)
-        self.fields['pool_name'].label = \
-            "Provide a name for your airtime voucher pool"
+        if 'pool_name' in self.fields:
+            self.fields['pool_name'].label = \
+                "Provide a name for your airtime voucher pool"
 
         self.airtime_voucher_service = AirtimeVoucherService()
 
@@ -223,15 +224,24 @@ class AirtimeVoucherPoolForm(forms.ModelForm):
         does not exist.
         """
         kwargs['commit'] = False
-        airtime_voucher_pool = super(AirtimeVoucherPoolForm, self).save(
+        instance = super(AirtimeVoucherPoolForm, self).save(
             *args, **kwargs)
 
-        pool_name = self.cleaned_data.get('pool_name')
-        ext_pool_name = self._make_ext_pool_name(pool_name)
-        self._import_vouchers(ext_pool_name)
+        if not instance.id:
+            instance.user = self.user
+            pool_name = self.cleaned_data.get('pool_name')
+            instance.ext_pool_name = self._make_ext_pool_name(pool_name)
 
-        airtime_voucher_pool.user = self.user
-        airtime_voucher_pool.ext_pool_name = ext_pool_name
-        airtime_voucher_pool.save()
+        instance.save()
 
-        return airtime_voucher_pool
+        self._import_vouchers(instance.ext_pool_name)
+
+        return instance
+
+
+class AirtimeVoucherImportForm(AirtimeVoucherPoolForm):
+    """A form used for importing airtime vouchers into an existing pool"""
+
+    class Meta:
+        model = AirtimeVoucherPool
+        exclude = ['user', 'pool_name', 'ext_pool_name', 'date_created']
