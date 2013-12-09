@@ -1,3 +1,4 @@
+import json
 from optparse import make_option
 from pprint import pformat
 
@@ -18,7 +19,8 @@ class Command(BaseGoAccountCommand):
         make_command_option('start', help='Start a conversation'),
         make_command_option('stop', help='Stop a conversation'),
         make_command_option('archive', help='Archive a conversation'),
-
+        make_command_option('export', help='Export a conversation definition'),
+        make_command_option('import', help='Import a conversation definition'),
         make_option('--conversation-key',
                     dest='conversation_key',
                     help='The conversation key'),
@@ -82,3 +84,7 @@ class Command(BaseGoAccountCommand):
         self.stdout.write("Archiving conversation...\n")
         conversation.archive_conversation()
         self.stdout.write("Conversation archived\n")
+
+    def handle_command_export(self, *apps, **options):
+        conversation = self.get_conversation(options)
+        self.stdout.write(json.dumps(conversation.get_data()))

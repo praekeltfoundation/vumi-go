@@ -1,3 +1,4 @@
+import json
 from pprint import pformat
 
 from mock import patch
@@ -89,3 +90,8 @@ class TestGoManageConversation(GoAccountCommandTestCase):
 
         conv = self.user_api.get_wrapped_conversation(conv.key)
         self.assertEqual(conv.archive_status, 'archived')
+
+    def test_export(self):
+        conv = self.create_conversation()
+        self.assert_command_output(json.dumps(
+            conv.get_data()), 'export', conversation_key=conv.key)
