@@ -1,20 +1,28 @@
 import re
 import csv
-import requests
 import xlrd
 import StringIO
 
-from hashlib import md5
-
 from django import forms
 
+from go.vouchers import settings
 from go.vouchers.models import AirtimeVoucherPool
-
-API_URL = 'http://127.0.0.1:8888'
+from go.vouchers.services import AirtimeVoucherService
 
 
 class AirtimeVoucherPoolForm(forms.ModelForm):
     """``ModelForm`` for ``go.vouchers.models.AirtimeVoucherPool``"""
+
+    EXCEL_CONTENT_TYPES = (
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+    CSV_CONTENT_TYPES = (
+        'text/csv'
+    )
+
+    REQUIRED_COLUMNS = ('operator', 'denomination', 'voucher')
 
     class Meta:
         model = AirtimeVoucherPool
@@ -36,59 +44,64 @@ class AirtimeVoucherPoolForm(forms.ModelForm):
         self.fields['pool_name'].label = \
             "Provide a name for your airtime voucher pool"
 
-    def clean_vouchers_file(self):
-        """Ensure that the uploaded file is either a CSV file or an Excel
-        spreadsheet and validate the file format.
-        """
-        vouchers_file = self.cleaned_data['vouchers_file']
-        excel_content_types = [
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        ]
-        csv_content_types = [
-            'text/csv'
-        ]
-        if vouchers_file.content_type in csv_content_types:
-            # Validate the CSV file format and read its contents
+        self.airtime_voucher_service = AirtimeVoucherService()
+
+    def _validate_csv_format(self, vouchers_file):
+        """Validate the CSV file format"""
+        if (hasattr(vouchers_file, 'temporary_file_path')):
+            with open(vouchers_file.temporary_file_path, 'rb') as csvfile:
+                reader = csv.reader(csvfile)
+                row = reader.next()
+        else:  # File is stored in memory
             csvfile = StringIO.StringIO(vouchers_file.read())
-            reader = csv.reader(csvfile)
-            row = reader.next()
-            if (len(row) < 3 or row[0] != 'operator'
-                    or row[1] != 'denomination' or row[2] != 'voucher'):
-                raise forms.ValidationError(
-                    "Invalid file format.")
+            try:
+                reader = csv.reader(csvfile)
+                row = reader.next()
+            finally:
+                csvfile.close()
+        if (len(row) < len(self.REQUIRED_COLUMNS)
+                or row[0] != self.REQUIRED_COLUMNS[0]
+                or row[1] != self.REQUIRED_COLUMNS[1]
+                or row[2] != self.REQUIRED_COLUMNS[2]):
+            raise forms.ValidationError(
+                "Invalid file format.")
 
-            self.file_content = csvfile.getvalue()
-
-        elif vouchers_file.content_type in excel_content_types:
-            # Validate the Excel spreadsheet format and read its contents
+    def _validate_excel_format(self, vouchers_file):
+        """Validate the Excel spreadsheet format"""
+        if (hasattr(vouchers_file, 'temporary_file_path')):
+            book = xlrd.open_workbook(vouchers_file.temporary_file_path)
+        else:  # File is stored in memory
             book = xlrd.open_workbook(file_contents=vouchers_file.read())
+        try:
             sheets = book.sheets()
             if not sheets:
                 raise forms.ValidationError(
                     "The file is empty.")
 
-            first_sheet = sheets[0]
-            if (first_sheet.cell(0, 0).value != 'operator'
-                    or first_sheet.cell(0, 1).value != 'denomination'
-                    or first_sheet.cell(0, 2).value != 'voucher'):
+            sheet = sheets[0]
+            if (sheet.cell(0, 0).value != self.REQUIRED_COLUMNS[0]
+                    or sheet.cell(0, 1).value != self.REQUIRED_COLUMNS[1]
+                    or sheet.cell(0, 2).value != self.REQUIRED_COLUMNS[2]):
                 raise forms.ValidationError(
                     "Invalid file format.")
+        finally:
+            book.release_resources()
 
-            csvfile = StringIO.StringIO()
-            writer = csv.writer(csvfile)
-            for row in xrange(0, first_sheet.nrows):
-                writer.writerow([
-                    first_sheet.cell(row, 0).value,
-                    first_sheet.cell(row, 1).value,
-                    first_sheet.cell(row, 2).value])
+    def clean_vouchers_file(self):
+        """Ensure that the uploaded file is either a CSV file or an Excel
+        spreadsheet and validate the file format.
+        """
+        vouchers_file = self.cleaned_data['vouchers_file']
+        if vouchers_file.content_type in self.CSV_CONTENT_TYPES:
+            self._validate_csv_format(vouchers_file)
 
-            self.file_content = csvfile.getvalue()
-            csvfile.close()
+        elif vouchers_file.content_type in self.EXCEL_CONTENT_TYPES:
+            self._validate_excel_format(vouchers_file)
 
         else:
             raise forms.ValidationError(
                 "Please select either a CSV file or an Excel spreadsheet.")
+
         return vouchers_file
 
     def clean_pool_name(self):
@@ -110,13 +123,100 @@ class AirtimeVoucherPoolForm(forms.ModelForm):
         return "user_%d_%s" % (self.user.id,
                                re.sub(r'\W+', '_', pool_name))
 
-    def _upload_vouchers(self, pool_name):
-        """Upload the vouchers to the Airtime Voucher service"""
-        content_md5 = md5(self.file_content).hexdigest().lower()
-        url = '%s/%s/import/req-0' % (API_URL, pool_name)
-        headers = {'Content-MD5': content_md5}
-        requests.put(url, self.file_content, headers=headers)
-        # TODO: Validate service response
+    def _import_csv_file(self, pool_name, vouchers_file):
+        """Import the voucher CSV into the Airtime Voucher service.
+
+        The value of ``go.vouchers.settings.REQUEST_RECORD_LIMIT`` dictates
+        when to split the import into multiple requests.
+        """
+        if (hasattr(vouchers_file, 'temporary_file_path')):
+            filepath = vouchers_file.temporary_file_path()
+            csvfile = open(filepath, 'rb')
+        else:  # File is stored in memory
+            csvfile = StringIO.StringIO(vouchers_file.read())
+        try:
+            reader = csv.reader(csvfile)
+            headings = reader.next()
+
+            content = StringIO.StringIO()
+            writer = csv.writer(content)
+            writer.writerow(headings)
+            record_count = 0
+            for row in reader:
+                writer.writerow(row)
+                record_count += 1
+                if record_count >= settings.REQUEST_RECORD_LIMIT:
+                    self.airtime_voucher_service.import_vouchers(
+                        pool_name, content.getvalue())
+                    content.close()
+                    content = StringIO.StringIO()
+                    writer = csv.writer(content)
+                    writer.writerow(headings)
+                    record_count = 0
+
+            if record_count > 0:
+                self.airtime_voucher_service.import_vouchers(
+                    pool_name, content.getvalue())
+            content.close()
+
+        finally:
+            csvfile.close()
+
+    def _import_excel_file(self, pool_name, vouchers_file):
+        """Import the voucher Excel sheet into the Airtime Voucher service.
+
+        The value of ``go.vouchers.settings.REQUEST_RECORD_LIMIT`` dictates
+        when to split the import into multiple requests.
+        """
+        if (hasattr(vouchers_file, 'temporary_file_path')):
+            filepath = vouchers_file.temporary_file_path()
+            book = xlrd.open_workbook(filepath)
+        else:  # File is stored in memory
+            book = xlrd.open_workbook(file_contents=vouchers_file.read())
+        try:
+            sheet = book.sheets()[0]
+            headings = [
+                sheet.cell(0, 0).value,
+                sheet.cell(0, 1).value,
+                sheet.cell(0, 2).value]
+
+            content = StringIO.StringIO()
+            writer = csv.writer(content)
+            writer.writerow(headings)
+            record_count = 0
+            for row in xrange(1, sheet.nrows):
+                writer.writerow([
+                    sheet.cell(row, 0).value,
+                    sheet.cell(row, 1).value,
+                    sheet.cell(row, 2).value])
+
+                record_count += 1
+                if record_count >= settings.REQUEST_RECORD_LIMIT:
+                    self.airtime_voucher_service.import_vouchers(
+                        pool_name, content.getvalue())
+                    content.close()
+                    content = StringIO.StringIO()
+                    writer = csv.writer(content)
+                    writer.writerow(headings)
+                    record_count = 0
+
+            if record_count > 0:
+                self.airtime_voucher_service.import_vouchers(
+                    pool_name, content.getvalue())
+            content.close()
+
+        finally:
+            book.release_resources()
+
+    def _import_vouchers(self, pool_name):
+        """Import the vouchers from the uploaded file"""
+        vouchers_file = self.cleaned_data['vouchers_file']
+        vouchers_file.seek(0)
+        if vouchers_file.content_type in self.CSV_CONTENT_TYPES:
+            self._import_csv_file(pool_name, vouchers_file)
+
+        elif vouchers_file.content_type in self.EXCEL_CONTENT_TYPES:
+            self._import_excel_file(pool_name, vouchers_file)
 
     def save(self, *args, **kwargs):
         """Upload the vouchers and create a new Airtime Voucher pool if one
@@ -128,7 +228,7 @@ class AirtimeVoucherPoolForm(forms.ModelForm):
 
         pool_name = self.cleaned_data.get('pool_name')
         ext_pool_name = self._make_ext_pool_name(pool_name)
-        self._upload_vouchers(ext_pool_name)
+        self._import_vouchers(ext_pool_name)
 
         airtime_voucher_pool.user = self.user
         airtime_voucher_pool.ext_pool_name = ext_pool_name
