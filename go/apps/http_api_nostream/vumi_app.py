@@ -1,8 +1,6 @@
-# -*- test-case-name: go.apps.http_api.tests.test_vumi_app -*-
-from collections import defaultdict
-import random
+# -*- test-case-name: go.apps.http_api_nostream.tests.test_vumi_app -*-
 
-from twisted.internet.defer import inlineCallbacks, maybeDeferred
+from twisted.internet.defer import inlineCallbacks
 from twisted.internet.error import DNSLookupError
 from twisted.web import http
 from twisted.web.error import SchemeNotSupported
@@ -13,56 +11,10 @@ from vumi.transports.httprpc import httprpc
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
-from go.apps.http_api.resource import (AuthorizedResource, MessageStream,
-                                       EventStream)
+from go.apps.http_api_nostream.resource import AuthorizedResource
 
 
-class StreamingClientManager(object):
-
-    MAX_BACKLOG_SIZE = 100
-    CLIENT_PREFIX = 'clients'
-
-    def __init__(self, redis):
-        self.redis = redis
-        self.clients = defaultdict(list)
-
-    def client_key(self, *args):
-        return u':'.join([self.CLIENT_PREFIX] + map(unicode, args))
-
-    def backlog_key(self, key):
-        return self.client_key('backlog', key)
-
-    @inlineCallbacks
-    def flush_backlog(self, key, message_class, callback):
-        backlog_key = self.backlog_key(key)
-        while True:
-            obj = yield self.redis.rpop(backlog_key)
-            if obj is None:
-                break
-            yield maybeDeferred(callback, message_class.from_json(obj))
-
-    def start(self, key, message_class, callback):
-        self.clients[key].append(callback)
-
-    def stop(self, key, callback):
-        self.clients[key].remove(callback)
-
-    def publish(self, key, msg):
-        callbacks = self.clients[key]
-        if callbacks:
-            callback = random.choice(callbacks)
-            return maybeDeferred(callback, msg)
-        else:
-            return self.queue_in_backlog(key, msg)
-
-    @inlineCallbacks
-    def queue_in_backlog(self, key, msg):
-        backlog_key = self.backlog_key(key)
-        yield self.redis.lpush(backlog_key, msg.to_json())
-        yield self.redis.ltrim(backlog_key, 0, self.MAX_BACKLOG_SIZE - 1)
-
-
-class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
+class NoStreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
     """Configuration options for StreamingHTTPWorker."""
 
     web_path = ConfigText(
@@ -83,14 +35,14 @@ class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         "messages or events", default=5, static=True)
 
 
-class StreamingHTTPWorker(GoApplicationWorker):
+class NoStreamingHTTPWorker(GoApplicationWorker):
 
-    worker_name = 'http_api_worker'
-    CONFIG_CLASS = StreamingHTTPWorkerConfig
+    worker_name = 'http_api_nostream_worker'
+    CONFIG_CLASS = NoStreamingHTTPWorkerConfig
 
     @inlineCallbacks
     def setup_application(self):
-        yield super(StreamingHTTPWorker, self).setup_application()
+        yield super(NoStreamingHTTPWorker, self).setup_application()
         config = self.get_static_config()
         self.web_path = config.web_path
         self.web_port = config.web_port
@@ -101,31 +53,14 @@ class StreamingHTTPWorker(GoApplicationWorker):
         # in using any of the helper functions at this point.
         self._event_handlers = {}
         self._session_handlers = {}
-        self.client_manager = StreamingClientManager(
-            self.redis.sub_manager('http_api:message_cache'))
 
         self.webserver = self.start_web_resources([
             (AuthorizedResource(self), self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),
         ], self.web_port)
 
-    def stream(self, stream_class, conversation_key, message):
-        # Publish the message by manually specifying the routing key
-        rk = stream_class.routing_key % {
-            'transport_name': self.transport_name,
-            'conversation_key': conversation_key,
-        }
-        return self.client_manager.publish(rk, message)
-
-    def register_client(self, key, message_class, callback):
-        self.client_manager.start(key, message_class, callback)
-        return self.client_manager.flush_backlog(key, message_class, callback)
-
-    def unregister_client(self, conversation_key, callback):
-        self.client_manager.stop(conversation_key, callback)
-
     def get_api_config(self, conversation, key):
-        return conversation.config.get('http_api', {}).get(key)
+        return conversation.config.get('http_api_nostream', {}).get(key)
 
     @inlineCallbacks
     def consume_user_message(self, message):
@@ -138,10 +73,12 @@ class StreamingHTTPWorker(GoApplicationWorker):
 
         push_message_url = self.get_api_config(conversation,
                                                'push_message_url')
-        if push_message_url:
-            yield self.push(push_message_url, message)
-        else:
-            yield self.stream(MessageStream, conversation.key, message)
+        if push_message_url is None:
+            log.warning(
+                "push_message_url not configured for conversation: %s" % (
+                    conversation.key))
+            return
+        yield self.push(push_message_url, message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
@@ -157,10 +94,12 @@ class StreamingHTTPWorker(GoApplicationWorker):
         config = yield self.get_message_config(event)
         conversation = config.get_conversation()
         push_event_url = self.get_api_config(conversation, 'push_event_url')
-        if push_event_url:
-            yield self.push(push_event_url, event)
-        else:
-            yield self.stream(EventStream, conversation.key, event)
+        if push_event_url is None:
+            log.warning(
+                "push_event_url not configured for conversation: %s" % (
+                    conversation.key))
+            return
+        yield self.push(push_event_url, event)
 
     @inlineCallbacks
     def push(self, url, vumi_message):
@@ -182,10 +121,9 @@ class StreamingHTTPWorker(GoApplicationWorker):
             log.warning("DNS lookup error pushing message to %s" % (url,))
 
     def get_health_response(self):
-        return str(sum([len(callbacks) for callbacks in
-                   self.client_manager.clients.values()]))
+        return "OK"
 
     @inlineCallbacks
     def teardown_application(self):
-        yield super(StreamingHTTPWorker, self).teardown_application()
+        yield super(NoStreamingHTTPWorker, self).teardown_application()
         yield self.webserver.loseConnection()

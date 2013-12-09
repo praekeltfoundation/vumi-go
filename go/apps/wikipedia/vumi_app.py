@@ -1,9 +1,10 @@
 # -*- test-case-name: go.apps.wikipedia.tests.test_vumi_app -*-
 from twisted.internet.defer import inlineCallbacks
 
-from vumi_wikipedia.wikipedia import WikipediaWorker
+from vumi_wikipedia.wikipedia import WikipediaWorker, TimerWrapper
 
 from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
+from go.vumitools.metrics import ConversationMetric
 
 
 class WikipediaConfig(WikipediaWorker.CONFIG_CLASS, GoWorkerConfigMixin):
@@ -31,9 +32,15 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         yield super(WikipediaApplication, self).teardown_application()
         yield self._go_teardown_worker()
 
-    def fire_metric(self, metric_name, metric_suffix=None, value=1):
+    def fire_metric(self, config, metric_name, metric_suffix=None, value=1):
         # Don't try to collect metrics.
         pass
+
+    def get_timer_metric(self, config, metric_name):
+        metric = ConversationMetric(config.get_conversation(), metric_name)
+        # TODO: Make this less horrible.
+        metric.set = lambda value: metric.oneshot(self.metrics, value)
+        return TimerWrapper(metric)
 
     def get_config(self, msg):
         return self.get_message_config(msg)
