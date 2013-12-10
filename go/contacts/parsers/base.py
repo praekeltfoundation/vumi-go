@@ -236,6 +236,7 @@ class ContactFileParser(object):
 
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
+        print has_header
         data_dictionaries = self.read_data_from_file(
             file_path,
             [info.field for info in fields],
@@ -247,6 +248,7 @@ class ContactFileParser(object):
             # contact to be saved
             contact_dictionary = {}
             for key, value in data_dictionary.items():
+                print "%s %s\n" % (key, value)
                 contact_field = field_map[key].contact_field
                 if contact_field is None:
                     continue

@@ -454,8 +454,8 @@ class ContactsTestCase(BaseContactsTestCase):
         response = self.specify_columns(group_key=group.key, columns={
             'column-0': 'name',
             'column-1': 'surname',
-            'column-2': 'integer',
-            'column-3': 'float',
+            'column-2': 'extra',
+            'column-3': 'extra',
             'column-4': 'msisdn',
             'normalize-0': 'string',
             'normalize-1': 'string',

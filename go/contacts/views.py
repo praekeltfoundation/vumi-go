@@ -36,6 +36,15 @@ def index(request):
     return redirect(reverse('contacts:groups'))
 
 
+def filter_field(field, parser):
+    """
+    Sanitises the field mapping choice from the user.
+    """
+    if field in parser.SETTABLE_ATTRIBUTES:
+        return field
+    return None
+
+
 @login_required
 def groups(request, type=None):
     contact_store = request.user_api.contact_store
@@ -191,9 +200,17 @@ def _static_group(request, contact_store, group):
                 normalizers = [request.POST.get('normalize-%s' % i, '')
                                for i in range(len(sample_row))]
 
+                # filter field mapping choice
+                field_names = [filter_field(x, parser) for x in field_names]
+
                 # Based on the user input, construct FieldInfo objects
                 # for each column in the input file
-                zipped = zip(sample_row.keys(), field_names, normalizers)
+                if has_header:
+                    zipped = zip(sample_row.keys(), field_names, normalizers)
+                else:
+                    zipped = zip([None] * len(sample_row),
+                                 field_names, normalizers)
+
                 fields = [FieldInfo(f, cf or None, nr) for f, cf, nr in zipped]
 
                 tasks.import_contacts_file.delay(
