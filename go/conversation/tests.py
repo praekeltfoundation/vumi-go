@@ -132,8 +132,8 @@ class FakeConversationPackage(object):
 
 class BaseConversationViewTestCase(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper = self.add_helper(
+            DjangoVumiApiHelper(), setup_vumi_api=False)
         self.vumi_helper.monkey_patch(
             go.base.utils, 'get_conversation_pkg', self._get_conversation_pkg)
         self.vumi_helper.patch_config(
@@ -303,8 +303,8 @@ class TestNewConversationView(BaseConversationViewTestCase):
 class TestConversationViews(BaseConversationViewTestCase):
     def setUp(self):
         super(TestConversationViews, self).setUp()
-        self.msg_helper = GoMessageHelper(
-            mdb=self.vumi_helper.get_vumi_api().mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(mdb=self.vumi_helper.get_vumi_api().mdb))
 
     def test_show_no_content_block(self):
         conv = self.user_helper.create_conversation(u'dummy')

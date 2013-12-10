@@ -8,9 +8,7 @@ from go.vumitools.routing_table import GoConnector
 class TestGoManageRoutingTableCommand(GoDjangoTestCase):
 
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
 
         self.command = go_manage_routing_table.Command()

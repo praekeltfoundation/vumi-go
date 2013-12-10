@@ -17,8 +17,7 @@ class TestOptOutApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = AppWorkerHelper(OptOutApplication)
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppWorkerHelper(OptOutApplication))
         self.app = yield self.app_helper.get_app_worker({})
 
         conv = yield self.app_helper.create_conversation()

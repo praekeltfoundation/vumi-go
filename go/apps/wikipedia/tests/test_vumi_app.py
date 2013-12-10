@@ -15,9 +15,8 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = AppWorkerHelper(WikipediaApplication)
-        self.add_cleanup(self.app_helper.cleanup)
-
+        self.app_helper = self.add_helper(
+            AppWorkerHelper(WikipediaApplication))
         self.app = yield self.app_helper.get_app_worker({
             "secret_key": "s3cr3t",
         })

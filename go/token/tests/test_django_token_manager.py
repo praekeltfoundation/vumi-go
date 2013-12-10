@@ -12,9 +12,7 @@ from go.token.django_token_manager import DjangoTokenManager
 class TestDjangoTokenManager(GoDjangoTestCase):
 
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
         self.user_pk = self.user_helper.get_django_user().pk
         self.client = Client()

@@ -6,8 +6,7 @@ from go.vumitools.api import VumiApiCommand
 class KeywordViewTests(GoDjangoTestCase):
 
     def setUp(self):
-        self.app_helper = RouterViewsHelper(u'keyword')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(RouterViewsHelper(u'keyword'))
         self.user_helper = self.app_helper.vumi_helper.get_or_create_user()
         self.client = self.app_helper.get_client()
 

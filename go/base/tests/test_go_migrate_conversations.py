@@ -15,9 +15,7 @@ from go.vumitools.tests.helpers import GoMessageHelper
 class TestGoMigrateConversationsCommand(GoDjangoTestCase):
 
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_api = self.vumi_helper.make_django_user().user_api
 
         conv_store = self.user_api.conversation_store

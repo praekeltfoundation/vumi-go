@@ -10,8 +10,7 @@ from go.vumitools.tests.helpers import PatchHelper
 
 class TestConversationDefinitionHelpers(GoDjangoTestCase):
     def setUp(self):
-        self.patch_helper = PatchHelper()
-        self.add_cleanup(self.patch_helper.cleanup)
+        self.patch_helper = self.add_helper(PatchHelper())
 
     def test_get_conversation_view_definition(self):
         view_def = get_conversation_view_definition('bulk_message')
@@ -39,8 +38,7 @@ class TestConversationDefinitionHelpers(GoDjangoTestCase):
 
 class TestRouterDefinitionHelpers(GoDjangoTestCase):
     def setUp(self):
-        self.patch_helper = PatchHelper()
-        self.add_cleanup(self.patch_helper.cleanup)
+        self.patch_helper = self.add_helper(PatchHelper())
 
     def test_get_router_view_definition(self):
         view_def = get_router_view_definition('keyword')

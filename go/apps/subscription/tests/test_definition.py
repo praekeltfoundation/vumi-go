@@ -7,9 +7,7 @@ from go.vumitools.tests.helpers import VumiApiHelper
 
 class TestSubscriptionConversationDefinition(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = VumiApiHelper(is_sync=True)
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(VumiApiHelper(is_sync=True))
         self.user_helper = self.vumi_helper.get_or_create_user()
 
         wrapped_conv = self.user_helper.create_conversation(

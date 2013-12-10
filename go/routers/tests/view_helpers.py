@@ -1,6 +1,8 @@
 from django.core.urlresolvers import reverse
 
-from vumi.tests.helpers import generate_proxies
+from zope.interface import implements
+
+from vumi.tests.helpers import generate_proxies, IHelper
 
 from go.base import utils as base_utils
 from go.base.tests.helpers import DjangoVumiApiHelper
@@ -9,6 +11,8 @@ from .helpers import RouterHelper
 
 
 class RouterViewsHelper(object):
+    implements(IHelper)
+
     def __init__(self, router_type):
         self.router_type = router_type
 
@@ -24,6 +28,9 @@ class RouterViewsHelper(object):
         # Proxy methods from our helpers.
         generate_proxies(self, self._app_helper)
         generate_proxies(self, self.vumi_helper)
+
+    def setup(self):
+        pass
 
     def cleanup(self):
         return self.vumi_helper.cleanup()

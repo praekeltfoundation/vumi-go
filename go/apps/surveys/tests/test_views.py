@@ -12,8 +12,7 @@ from go.vumitools.api import VumiApiCommand
 class TestSurveysViews(GoDjangoTestCase):
 
     def setUp(self):
-        self.app_helper = AppViewsHelper(u'survey')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppViewsHelper(u'survey'))
         self.client = self.app_helper.get_client()
         redis_config = self.app_helper.mk_config({})['redis_manager']
         self.app_helper.patch_settings(VXPOLLS_REDIS_CONFIG=redis_config)

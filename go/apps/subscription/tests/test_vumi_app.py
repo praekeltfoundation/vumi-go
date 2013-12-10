@@ -14,8 +14,8 @@ class TestSubscriptionApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = AppWorkerHelper(SubscriptionApplication)
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(
+            AppWorkerHelper(SubscriptionApplication))
         self.app = yield self.app_helper.get_app_worker({})
 
         self.contact = yield self.app_helper.create_contact(

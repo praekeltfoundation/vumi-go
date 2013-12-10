@@ -13,9 +13,7 @@ class TestYoPaymentHandler(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.eh_helper = EventHandlerHelper()
-        self.add_cleanup(self.eh_helper.cleanup)
-
+        self.eh_helper = self.add_helper(EventHandlerHelper())
         yield self.eh_helper.setup_event_dispatcher(
             'afropinions', YoPaymentHandler, {
                 'poll_manager_prefix': 'vumigo.',

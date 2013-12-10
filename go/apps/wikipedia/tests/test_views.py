@@ -5,8 +5,7 @@ from go.base.tests.helpers import GoDjangoTestCase
 class TestWikipediaViews(GoDjangoTestCase):
 
     def setUp(self):
-        self.app_helper = AppViewsHelper(u'wikipedia')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppViewsHelper(u'wikipedia'))
         self.client = self.app_helper.get_client()
 
     def test_new_conversation(self):

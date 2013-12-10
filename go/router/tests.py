@@ -10,9 +10,7 @@ from go.vumitools.router.models import ROUTER_ARCHIVED
 class TestRouterViews(GoDjangoTestCase):
 
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
         self.client = self.vumi_helper.get_client()
 

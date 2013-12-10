@@ -26,9 +26,7 @@ class FakeErrorResponse(object):
 
 class TestDashboardApiClient(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.vumi_helper.patch_settings(
             DIAMONDASH_API_URL='http://diamondash.moc/api')
 

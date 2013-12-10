@@ -23,8 +23,7 @@ class TestDialogueApplication(VumiTestCase):
         if DialogueApplication.find_nodejs() is None:
             raise SkipTest("No node.js executable found.")
 
-        self.app_helper = AppWorkerHelper(DialogueApplication)
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppWorkerHelper(DialogueApplication))
 
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')

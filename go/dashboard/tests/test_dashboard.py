@@ -19,9 +19,7 @@ class ToyDashboardLayout(DashboardLayout):
 
 class TestDashboard(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.diamondash_api = FakeDiamondashApiClient()
 
         layout = ToyDashboardLayout([{
@@ -82,9 +80,7 @@ class TestDashboard(GoDjangoTestCase):
 
 class TestDashboardLayout(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.layout = ToyDashboardLayout()
 
     @staticmethod
@@ -250,9 +246,7 @@ class TestDashboardLayout(GoDjangoTestCase):
 
 class TestConversationReportsLayout(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
         self.conv = self.user_helper.create_conversation(u'dummy')
         self.layout = ConversationReportsLayout(self.conv)

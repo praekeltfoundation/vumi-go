@@ -14,9 +14,7 @@ class ToySubscriptionMetric(SubscriptionMetric):
 class TestSubscriptionMetric(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.get_or_create_user()
 
         self.conv = yield self.user_helper.create_conversation(

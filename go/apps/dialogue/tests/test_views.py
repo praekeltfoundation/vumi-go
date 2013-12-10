@@ -9,8 +9,7 @@ from go.vumitools.api import VumiApiCommand
 class TestDialogueViews(GoDjangoTestCase):
 
     def setUp(self):
-        self.app_helper = AppViewsHelper(u'dialogue')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppViewsHelper(u'dialogue'))
         self.client = self.app_helper.get_client()
         self.mock_rpc = MockRpc()
         self.add_cleanup(self.mock_rpc.tearDown)

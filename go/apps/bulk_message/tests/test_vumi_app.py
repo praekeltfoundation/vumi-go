@@ -19,8 +19,8 @@ class TestBulkMessageApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = AppWorkerHelper(BulkMessageApplication)
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(
+            AppWorkerHelper(BulkMessageApplication))
 
         # Patch the clock so we can control time
         self.clock = Clock()

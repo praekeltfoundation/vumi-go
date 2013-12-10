@@ -14,9 +14,7 @@ from go.billing import tasks
 class TestMonthlyStatementTask(GoDjangoTestCase):
 
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
 
     def _mk_account(self):

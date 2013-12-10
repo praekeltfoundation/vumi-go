@@ -17,9 +17,8 @@ class TestSequentialSendApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = AppWorkerHelper(SequentialSendApplication)
-        self.add_cleanup(self.app_helper.cleanup)
-
+        self.app_helper = self.add_helper(
+            AppWorkerHelper(SequentialSendApplication))
         self.clock = Clock()
         self.patch(sequential_send_module, 'LoopingCall', self.looping_call)
         self.app = yield self.app_helper.get_app_worker({})

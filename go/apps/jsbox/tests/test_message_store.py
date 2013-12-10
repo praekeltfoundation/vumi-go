@@ -26,11 +26,8 @@ class TestMessageStoreResource(ResourceTestCaseBase):
     def setUp(self):
         super(TestMessageStoreResource, self).setUp()
 
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.msg_helper = GoMessageHelper()
-
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.msg_helper = self.add_helper(GoMessageHelper())
         self.user_helper = yield self.vumi_helper.make_user(u"user")
         self.app_worker.user_api = self.user_helper.user_api
 

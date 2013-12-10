@@ -9,7 +9,10 @@ from django.test import TestCase
 from django.test.client import Client
 from django.test.utils import override_settings
 
-from vumi.tests.helpers import generate_proxies, proxyable
+from zope.interface import implements
+
+from vumi.tests.helpers import (
+    generate_proxies, proxyable, IHelper, IHelperEnabledTestCase)
 
 from go.base import models as base_models
 from go.base import utils as base_utils
@@ -17,6 +20,7 @@ from go.vumitools.tests.helpers import VumiApiHelper
 
 
 class GoDjangoTestCase(TestCase):
+    implements(IHelperEnabledTestCase)
 
     _cleanup_funcs = None
 
@@ -31,8 +35,19 @@ class GoDjangoTestCase(TestCase):
             self._cleanup_funcs = []
         self._cleanup_funcs.append((func, args, kw))
 
+    def add_helper(self, helper_object, *args, **kw):
+        if not IHelper.providedBy(helper_object):
+            raise ValueError(
+                "Helper object does not provide the IHelper interface: %s" % (
+                    helper_object,))
+        self.add_cleanup(helper_object.cleanup)
+        helper_object.setup(*args, **kw)
+        return helper_object
+
 
 class DjangoVumiApiHelper(object):
+    implements(IHelper)
+
     is_sync = True  # For when we're being treated like a VumiApiHelper.
 
     def __init__(self, use_riak=True):
@@ -43,6 +58,10 @@ class DjangoVumiApiHelper(object):
         # TODO: Better/more generic way to do this patching?
         self._settings_patches = []
         self.replace_django_bits()
+
+    def setup(self, setup_vumi_api=True):
+        if setup_vumi_api:
+            self.setup_vumi_api()
 
     def cleanup(self):
         self._vumi_helper.cleanup()
@@ -139,9 +158,7 @@ class GoAccountCommandTestCase(GoDjangoTestCase):
 
     def setup_command(self, command_class):
         self.command_class = command_class
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
         self.command = self.command_class()
         self.command.stdout = StringIO()

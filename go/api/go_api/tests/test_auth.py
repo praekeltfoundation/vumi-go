@@ -44,8 +44,8 @@ class TestGoUserRealm(VumiTestCase):
 class TestGoUserSessionAccessChecker(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        self.persistence_helper = PersistenceHelper(is_sync=False)
-        self.add_cleanup(self.persistence_helper.cleanup)
+        self.persistence_helper = self.add_helper(
+            PersistenceHelper(is_sync=False))
         self.redis = yield self.persistence_helper.get_redis_manager()
         self.sm = SessionManager(self.redis)
 
@@ -88,9 +88,7 @@ class TestGoUserAuthSessionWrapper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.vumi_api = yield self.vumi_helper.get_vumi_api()
 
     def mk_request(self, user=None, password=None):

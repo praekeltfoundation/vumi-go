@@ -21,8 +21,8 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = AppWorkerHelper(NoStreamingHTTPWorker)
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(
+            AppWorkerHelper(NoStreamingHTTPWorker))
 
         self.config = {
             'health_path': '/health/',

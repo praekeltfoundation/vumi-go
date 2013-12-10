@@ -11,8 +11,7 @@ from go.base.tests.helpers import GoDjangoTestCase
 class TestMultiSurveyViews(GoDjangoTestCase):
 
     def setUp(self):
-        self.app_helper = AppViewsHelper(u'multi_survey')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppViewsHelper(u'multi_survey'))
         self.client = self.app_helper.get_client()
 
     def add_tagpool_to_conv(self):

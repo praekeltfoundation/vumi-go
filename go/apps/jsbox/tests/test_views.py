@@ -11,8 +11,7 @@ from go.base.tests.helpers import GoDjangoTestCase
 class TestJsBoxViews(GoDjangoTestCase):
 
     def setUp(self):
-        self.app_helper = AppViewsHelper(u'jsbox')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppViewsHelper(u'jsbox'))
         self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):

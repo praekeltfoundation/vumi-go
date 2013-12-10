@@ -21,10 +21,7 @@ class TestGoApiServer(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
-
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         self.user_api = self.user_helper.user_api
         self.campaign_key = self.user_helper.account_key
@@ -430,8 +427,8 @@ class TestGoApiServer(VumiTestCase):
 class TestGoApiWorker(VumiTestCase):
 
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper = self.add_helper(
+            VumiApiHelper(), setup_vumi_api=False)
 
     @inlineCallbacks
     def get_api_worker(self, config=None, start=True, auth=True):

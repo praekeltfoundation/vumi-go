@@ -57,8 +57,7 @@ class TestGoApplicationWorker(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = AppWorkerHelper(DummyApplication)
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppWorkerHelper(DummyApplication))
 
         self.patch(
             app_worker,

@@ -6,8 +6,7 @@ from go.base.tests.helpers import GoDjangoTestCase
 
 class TestSubscriptionViews(GoDjangoTestCase):
     def setUp(self):
-        self.app_helper = AppViewsHelper(u'subscription')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppViewsHelper(u'subscription'))
         self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):

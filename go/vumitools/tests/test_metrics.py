@@ -141,10 +141,9 @@ class TestDjangoMetric(GoDjangoTestCase):
 class TestTxMetrics(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
-        self.msg_helper = GoMessageHelper(self.vumi_helper.get_vumi_api().mdb)
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         self.patch(time, 'time', lambda: 1985)
 
@@ -246,10 +245,9 @@ class TestTxMetrics(VumiTestCase):
 class TestMetricSet(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
-        self.msg_helper = GoMessageHelper(self.vumi_helper.get_vumi_api().mdb)
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         self.patch(time, 'time', lambda: 1985)
 
@@ -321,10 +319,9 @@ class TestMetricSet(VumiTestCase):
 class TestConversationMetricSet(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
-        self.msg_helper = GoMessageHelper(self.vumi_helper.get_vumi_api().mdb)
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         self.conv = yield self.user_helper.create_conversation(
             conversation_type=u'some_conversation')

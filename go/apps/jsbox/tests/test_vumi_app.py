@@ -24,9 +24,7 @@ class TestJsBoxApplication(VumiTestCase):
 
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')
-        self.app_helper = AppWorkerHelper(JsBoxApplication)
-        self.add_cleanup(self.app_helper.cleanup)
-
+        self.app_helper = self.add_helper(AppWorkerHelper(JsBoxApplication))
         self.app = yield self.app_helper.get_app_worker({
             'args': [sandboxer_js],
             'timeout': 10,

@@ -11,8 +11,7 @@ from go.vumitools.token_manager import TokenManager
 class TestBulkMessageViews(GoDjangoTestCase):
 
     def setUp(self):
-        self.app_helper = AppViewsHelper(u'bulk_message')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(AppViewsHelper(u'bulk_message'))
         self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):

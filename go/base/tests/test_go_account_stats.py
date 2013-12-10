@@ -9,9 +9,7 @@ from go.vumitools.tests.helpers import GoMessageHelper
 
 class TestGoAccountStatsCommand(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
         self.user_email = self.user_helper.get_django_user().email
 

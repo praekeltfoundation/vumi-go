@@ -6,9 +6,7 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 class TestGoCreateUserCommand(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.command = go_create_user.Command()
 
     def test_user_creation(self):

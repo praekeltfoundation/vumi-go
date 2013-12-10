@@ -4,8 +4,8 @@ from go.base.tests.helpers import GoDjangoTestCase
 
 class TestSequentialSendViews(GoDjangoTestCase):
     def setUp(self):
-        self.app_helper = AppViewsHelper(u'sequential_send')
-        self.add_cleanup(self.app_helper.cleanup)
+        self.app_helper = self.add_helper(
+            AppViewsHelper(u'sequential_send'))
         self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):

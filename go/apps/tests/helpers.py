@@ -1,18 +1,25 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from zope.interface import implements
+
 from vumi.tests.helpers import (
-    MessageDispatchHelper, proxyable, generate_proxies, maybe_async)
+    MessageDispatchHelper, proxyable, generate_proxies, maybe_async, IHelper)
 
 from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
 
 
 class ApplicationHelper(object):
+    implements(IHelper)
+
     def __init__(self, conversation_type, vumi_helper):
         self.is_sync = vumi_helper.is_sync
         self._conversation_type = conversation_type
         self.vumi_helper = vumi_helper
         self.conversation_wrapper = None
+
+    def setup(self):
+        pass
 
     def cleanup(self):
         pass
@@ -84,6 +91,8 @@ class ApplicationHelper(object):
 
 
 class AppWorkerHelper(object):
+    implements(IHelper)
+
     def __init__(self, worker_class, **msg_helper_args):
         self._worker_class = worker_class
         msg_helper_kw = {}
@@ -113,6 +122,9 @@ class AppWorkerHelper(object):
         # This is a guess based on worker_name.
         # We need a better way to do this.
         return self._worker_name().rpartition('_')[0].decode('utf-8')
+
+    def setup(self):
+        pass
 
     def cleanup(self):
         return self.vumi_helper.cleanup()

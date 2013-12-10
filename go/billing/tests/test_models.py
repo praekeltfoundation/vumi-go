@@ -10,9 +10,7 @@ class TestTagPool(GoDjangoTestCase):
 
 class TestAccount(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
 
     def test_unicode(self):
@@ -27,9 +25,7 @@ class TestAccount(GoDjangoTestCase):
 
 class TestMessageCost(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
 
     def mk_msg_cost(self, account=None, tag_pool=None, **kw):

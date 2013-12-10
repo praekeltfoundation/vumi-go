@@ -27,11 +27,8 @@ class TestOptOutResource(ResourceTestCaseBase):
     def setUp(self):
         super(TestOptOutResource, self).setUp()
 
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.msg_helper = GoMessageHelper()
-
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.msg_helper = self.add_helper(GoMessageHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         user_account = yield self.user_helper.get_user_account()
         user_account.can_manage_optouts = True

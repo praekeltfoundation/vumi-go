@@ -47,8 +47,7 @@ class LogCheckerMixin(object):
 class TestTxLogManager(VumiTestCase, LogCheckerMixin):
     @inlineCallbacks
     def setUp(self):
-        self.persistence_helper = PersistenceHelper()
-        self.add_cleanup(self.persistence_helper.cleanup)
+        self.persistence_helper = self.add_helper(PersistenceHelper())
         self.parent_redis = yield self.persistence_helper.get_redis_manager()
         self.redis = self.parent_redis.sub_manager(
             LogManager.DEFAULT_SUB_STORE)
@@ -108,8 +107,7 @@ class TestGoLoggingResource(ResourceTestCaseBase, LogCheckerMixin):
     @inlineCallbacks
     def setUp(self):
         super(TestGoLoggingResource, self).setUp()
-        self.persistence_helper = PersistenceHelper()
-        self.add_cleanup(self.persistence_helper.cleanup)
+        self.persistence_helper = self.add_helper(PersistenceHelper())
         self.parent_redis = yield self.persistence_helper.get_redis_manager()
         self.redis = self.parent_redis.sub_manager(
             LogManager.DEFAULT_SUB_STORE)

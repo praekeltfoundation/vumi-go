@@ -13,9 +13,7 @@ from go.conversation.view_definition import ConversationViewDefinitionBase
 class TestAuthentication(GoDjangoTestCase):
 
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user = self.vumi_helper.make_django_user().get_django_user()
 
     def test_user_account_created(self):
@@ -51,9 +49,7 @@ class FakeTemplateToken(object):
 class TestUtils(GoDjangoTestCase):
 
     def setUp(self):
-        self.vumi_helper = DjangoVumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user = self.vumi_helper.make_django_user().get_django_user()
 
     def test_vumi_api_for_user(self):
