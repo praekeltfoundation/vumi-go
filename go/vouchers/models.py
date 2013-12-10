@@ -2,49 +2,55 @@ import logging
 
 from django.conf import settings
 from django.db import models
-
-from go.vouchers.services import (
-    AirtimeVoucherService,
-    AirtimeVoucherServiceError)
-
+from django.utils.translation import ugettext_lazy as _
 
 logger = logging.getLogger(__name__)
 
 
-class AirtimeVoucherPool(models.Model):
-    """Represents an Airtime Voucher pool"""
+class VoucherPool(models.Model):
+    """Refers to a pool of Airtime Vouchers or Unique Codes.
+
+    The actual airtime vouchers/unique codes are stored in an external system.
+    """
+
+    POOL_TYPE_AIRTIME = 'Airtime'
+    POOL_TYPE_UNIQUE_CODE = 'Unique code'
+    POOL_TYPE_CHOICES = (
+        (POOL_TYPE_AIRTIME, POOL_TYPE_AIRTIME),
+        (POOL_TYPE_UNIQUE_CODE, POOL_TYPE_UNIQUE_CODE),
+    )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     pool_name = models.CharField(max_length=100)
     ext_pool_name = models.CharField(
         max_length=255, unique=True,
-        help_text="Pool name in the Airtime Voucher Service")
+        help_text=_("Pool name in the external system"))
 
-    date_created = models.DateTimeField(auto_now_add=True)
-
-    @property
-    def total_vouchers(self):
-        airtime_voucher_service = AirtimeVoucherService()
-        try:
-            return airtime_voucher_service.total_vouchers(self.ext_pool_name)
-        except AirtimeVoucherServiceError as error:
-            logger.exception(error)
-        return 0
-
-    def __unicode__(self):
-        return self.pool_name
-
-
-class UniqueCodePool(models.Model):
-    """Represents an Unique Code pool"""
-
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    pool_name = models.CharField(max_length=100)
-    ext_pool_name = models.CharField(
-        max_length=255, unique=True,
-        help_text="Pool name in the Unique Code Service")
-
+    pool_type = models.CharField(max_length=20, choices=POOL_TYPE_CHOICES)
     date_created = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
         return self.pool_name
+
+
+class BulkImport(models.Model):
+    """Keep a log of voucher import attempts"""
+
+    STATUS_PENDING = 'Pending'
+    STATUS_COMPLETED = 'Completed'
+    STATUS_FAILED = 'Failed'
+    STATUS_CHOICES = (
+        (STATUS_PENDING, STATUS_PENDING),
+        (STATUS_COMPLETED, STATUS_COMPLETED),
+        (STATUS_FAILED, STATUS_FAILED),
+    )
+
+    voucher_pool = models.ForeignKey(VoucherPool, related_name='imports')
+    filename = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES,
+                              default=STATUS_PENDING)
+
+    date_imported = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return self.filename

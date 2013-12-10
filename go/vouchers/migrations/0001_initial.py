@@ -8,33 +8,34 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'AirtimeVoucherPool'
-        db.create_table(u'vouchers_airtimevoucherpool', (
+        # Adding model 'VoucherPool'
+        db.create_table(u'vouchers_voucherpool', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['base.GoUser'])),
             ('pool_name', self.gf('django.db.models.fields.CharField')(max_length=100)),
             ('ext_pool_name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
+            ('pool_type', self.gf('django.db.models.fields.CharField')(max_length=20)),
             ('date_created', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
         ))
-        db.send_create_signal(u'vouchers', ['AirtimeVoucherPool'])
+        db.send_create_signal(u'vouchers', ['VoucherPool'])
 
-        # Adding model 'UniqueCodePool'
-        db.create_table(u'vouchers_uniquecodepool', (
+        # Adding model 'BulkImport'
+        db.create_table(u'vouchers_bulkimport', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['base.GoUser'])),
-            ('pool_name', self.gf('django.db.models.fields.CharField')(max_length=100)),
-            ('ext_pool_name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
-            ('date_created', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
+            ('voucher_pool', self.gf('django.db.models.fields.related.ForeignKey')(related_name='imports', to=orm['vouchers.VoucherPool'])),
+            ('filename', self.gf('django.db.models.fields.CharField')(max_length=255)),
+            ('status', self.gf('django.db.models.fields.CharField')(default='Pending', max_length=20)),
+            ('date_imported', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
         ))
-        db.send_create_signal(u'vouchers', ['UniqueCodePool'])
+        db.send_create_signal(u'vouchers', ['BulkImport'])
 
 
     def backwards(self, orm):
-        # Deleting model 'AirtimeVoucherPool'
-        db.delete_table(u'vouchers_airtimevoucherpool')
+        # Deleting model 'VoucherPool'
+        db.delete_table(u'vouchers_voucherpool')
 
-        # Deleting model 'UniqueCodePool'
-        db.delete_table(u'vouchers_uniquecodepool')
+        # Deleting model 'BulkImport'
+        db.delete_table(u'vouchers_bulkimport')
 
 
     models = {
@@ -73,20 +74,21 @@ class Migration(SchemaMigration):
             'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         },
-        u'vouchers.airtimevoucherpool': {
-            'Meta': {'object_name': 'AirtimeVoucherPool'},
-            'date_created': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'ext_pool_name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+        u'vouchers.bulkimport': {
+            'Meta': {'object_name': 'BulkImport'},
+            'date_imported': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'filename': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'pool_name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['base.GoUser']"})
+            'status': ('django.db.models.fields.CharField', [], {'default': "'Pending'", 'max_length': '20'}),
+            'voucher_pool': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'imports'", 'to': u"orm['vouchers.VoucherPool']"})
         },
-        u'vouchers.uniquecodepool': {
-            'Meta': {'object_name': 'UniqueCodePool'},
+        u'vouchers.voucherpool': {
+            'Meta': {'object_name': 'VoucherPool'},
             'date_created': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'ext_pool_name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'pool_name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'pool_type': ('django.db.models.fields.CharField', [], {'max_length': '20'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['base.GoUser']"})
         }
     }

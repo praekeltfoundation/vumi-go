@@ -1,6 +1,8 @@
 {% extends "account/base.html" %}
+
 {% load go_tags %}
 {% load crispy_forms_tags %}
+{% load vouchers_tags %}
 
 {% block content_extraclass %}vouchers list{% endblock %}
 {% block content_title %}Airtime vouchers & unique codes{% endblock %}
@@ -18,18 +20,26 @@
             </thead>
             <tbody>
                 {% if airtime_voucher_pool_list %}
-                    {% for airtime_voucher_pool in airtime_voucher_pool_list %}
+                    {% for voucher_pool in airtime_voucher_pool_list %}
                         <tr>
-                            <td>{{ airtime_voucher_pool.pool_name }}</td>
-                            <td>{{ airtime_voucher_pool.total_vouchers }}</td>
+                            <td>{{ voucher_pool.pool_name }}</td>
+                            <td>{% total_vouchers voucher_pool %}</td>
                             <td>
-                                <a href="#" title="Import airtime vouchers"
+                                <a href="#"
+                                   title="Import airtime vouchers"
                                    data-toggle="modal"
                                    data-target="#airtime-voucher-import-modal"
-                                   data-url="{% url "vouchers:airtime_import" airtime_voucher_pool.id  %}">
+                                   data-url="{% url "vouchers:airtime_import" voucher_pool.id  %}">
                                     Import</a>&nbsp;
-                                <a href="#" title="Export airtime vouchers">Export</a>&nbsp;
-                                <a href="#" title="Query airtime vouchers">Query</a>
+
+                                <a href="{% url "vouchers:airtime_export" voucher_pool.id  %}"
+                                   title="Export airtime vouchers">Export</a>&nbsp;
+
+                                <a href="#"
+                                   title="Query airtime vouchers"
+                                   data-toggle="modal"
+                                   data-target="#airtime-voucher-query-modal"
+                                   data-url="{% url "vouchers:airtime_query" voucher_pool.id  %}">Query</a>
                             </td>
                         </tr>
                     {% endfor %}
@@ -79,17 +89,18 @@
 {% endblock %}
 
 {% block modals %}
-    {% url "vouchers:airtime_add" as airtime_add_url %}
-    {% include "vouchers/_modal_form.html" with modal_id="airtime-voucher-modal" post_url=airtime_add_url modal_form=airtime_voucher_pool_form modal_title="Upload airtime vouchers" submit_label="Upload vouchers" %}
-    {% include "vouchers/_modal_form.html" with modal_id="airtime-voucher-import-modal" modal_form=airtime_voucher_import_form modal_title="Upload airtime vouchers" submit_label="Upload vouchers" %}
+    {% include "vouchers/_airtime_voucher_pool_form.html" with modal_form=airtime_voucher_pool_form %}
+    {% include "vouchers/_airtime_voucher_import_form.html" with modal_form=airtime_voucher_import_form %}
+    {% include "vouchers/_airtime_voucher_query_form.html" with modal_form=airtime_voucher_query_form %}
 {% endblock %}
 
 {% block ondomready %}
     {% if airtime_voucher_pool_form.errors %}
         $('#airtime-voucher-modal').modal('show');
-    {% endif %}
-    {% if airtime_voucher_import_form.errors %}
+    {% elif airtime_voucher_import_form.errors %}
         $('#airtime-voucher-import-modal').modal('show');
+    {% elif airtime_voucher_query_form.errors or airtime_voucher_query_form.messages %}
+        $('#airtime-voucher-query-modal').modal('show');
     {% endif %}
     $('div.modal').on('show.bs.modal', function (e) {
         if (e.relatedTarget) {

@@ -1,19 +1,24 @@
 {% load go_tags %}
 
-<div class="modal fade" id="{{ modal_id }}">
+<div class="modal fade" id="{% block modal_id %}{% endblock %}">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% firstof post_url request.get_full_path %}"
+            <form method="{% block form_method %}POST{% endblock %}"
+                  action="{% block form_action %}{{ request.get_full_path }}{% endblock %}"
                   enctype="multipart/form-data">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                    <h4 class="modal-title">{{ modal_title }}</h4>
+                    <h4 class="modal-title">{% block modal_title %}{% endblock %}</h4>
                 </div>
                 <div class="modal-body">
                     {% csrf_token %}
-                    {% for field in modal_form %}
+                    {% for field in modal_form.hidden_fields %}{{ field }}{% endfor %}
+                    {% for field in modal_form.visible_fields %}
                     <div class="form-group{% if field.errors %} error{% endif %}">
-                        <label class="control-label" for="id_{{ field.name }}">{{ forloop.counter }}) {{ field.label }}</label>
+                        <label class="control-label" for="id_{{ field.name }}">
+                            {% if modal_form.visible_fields|length > 1 %}{{ forloop.counter }})&nbsp;{% endif %}
+                            {{ field.label }}
+                        </label>
                         <div class="controls">
                             {{ field|attr_class:"form-control" }}
                             {% if field.errors %}
@@ -23,9 +28,16 @@
                         <p class="help-text">{% autoescape off %}{{ field.help_text }}{% endautoescape %}</p>
                     </div>
                     {% endfor %}
+                    {% if modal_form.messages %}
+                    <ul class="messages">
+                        {% for message in modal_form.messages %}
+                        <li>{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+                    <button type="submit" class="btn btn-primary">{% block submit_label %}{% endblock %}</button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                 </div>
             </form>
