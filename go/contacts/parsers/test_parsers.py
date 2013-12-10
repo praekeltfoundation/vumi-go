@@ -81,6 +81,41 @@ class CSVParserTestCase(ParserTestCase):
                 'name': 'Name 3'},
             ])
 
+    def test_contacts_parsing_into_extra(self):
+        csv_file = self.fixture(
+            'sample-contacts-with-unrecognized-headers.csv'
+        )
+        fp = default_storage.open(csv_file, 'rU')
+        fields = [FieldInfo(f, cf, nr) for f, cf, nr in
+                  zip(['manager_name', 'manager_surname', 'manager_msisdn'],
+                      ['name', 'surname', 'extra'],
+                      ['string', 'string', 'msisdn_za'])]
+        contacts = list(self.parser.parse_file(fp, fields, has_header=True))
+        self.assertEqual(contacts, [
+            {
+                'surname': 'Surname 1',
+                'name': 'Name 1',
+                'extra': {
+                    'manager_msisdn': '+27761234561'
+                }
+            },
+            {
+                'surname': 'Surname 2',
+                'name': 'Name 2',
+                'extra': {
+                    'manager_msisdn': '+27761234562'
+                }
+            },
+            {
+                'surname': 'Surname 3',
+                'name': 'Name 3',
+                'extra': {
+                    'manager_msisdn': '+27761234563'
+                }
+
+            },
+        ])
+
     def test_contacts_with_none_entries(self):
         csv_file = self.fixture('sample-contacts-with-headers-and-none.csv')
         fp = default_storage.open(csv_file, 'rU')
