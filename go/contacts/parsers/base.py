@@ -1,5 +1,5 @@
 import os.path
-from collections import NamedTuple
+from collections import namedtuple
 
 from django.core.files.storage import default_storage
 
@@ -7,13 +7,13 @@ from vumi.utils import load_class, normalize_msisdn
 
 
 # Information required to import a specific CSV column
-# `field_name`         - The original header field in the CSV or XSL data
-# `contact_field_name` - the field to map to in the Contact dict
-# `normalizer`         - The name of the normalizer function to apply
-FieldInfo = NamedTuple('FieldInfo',
+# field              - The original field name in the tabular data
+# contact_field      - the field to map to in the Contact dict
+# normalizer         - The name of the normalizer function to apply
+FieldInfo = namedtuple('FieldInfo',
                        [
-                           'field_name'
-                           'contact_field_name',
+                           'field',
+                           'contact_field',
                            'normalizer'
                        ])
 
@@ -231,16 +231,15 @@ class ContactFileParser(object):
         SETTABLE_ATTRIBUTES list, which defaults to the DEFAULT_HEADERS keys.
         """
 
-        # get the actual field_names which were previously detected.
-        field_names = [field.field_name for field in fields]
-
-        # build a dictionary of field_names to FieldInfo objects
-        field_map = dict([(field.field_name, field) for field in fields])
+        # build a dictionary of field names to FieldInfo objects
+        field_map = dict([(info.field, info) for info in fields])
 
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
         data_dictionaries = self.read_data_from_file(
-            file_path, field_names, has_header
+            file_path,
+            [info.field for info in fields],
+            has_header
         )
         for data_dictionary in data_dictionaries:
 
@@ -248,9 +247,9 @@ class ContactFileParser(object):
             # contact to be saved
             contact_dictionary = {}
             for key, value in data_dictionary.items():
-                if field_map[key].contact_field is None:
-                    continue
                 contact_field = field_map[key].contact_field
+                if contact_field is None:
+                    continue
                 normalizer = field_map[key].normalizer
                 value = self.normalizer.normalize(normalizer, value)
 
@@ -268,7 +267,7 @@ class ContactFileParser(object):
                 # programmer error, rather than runtime errors.
                 assert contact_field in self.SETTABLE_ATTRIBUTES
 
-                if contact_field:
+                if contact_field not in ('extra',):
                     contact_dictionary[contact_field] = value
                 else:
                     extra = contact_dictionary.setdefault('extra', {})
