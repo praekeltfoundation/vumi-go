@@ -143,6 +143,7 @@ class ContactFileParser(object):
         'facebook_id': 'Facebook ID',
         'twitter_handle': 'Twitter handle',
         'email_address': 'Email address',
+        'extra_field': "Add as extra data",
     }
 
     ENCODING = 'utf-8'
