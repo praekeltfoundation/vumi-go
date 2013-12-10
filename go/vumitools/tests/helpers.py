@@ -263,6 +263,14 @@ class FakeAmqpConnection(object):
 
 class VumiApiHelper(object):
     # TODO: Clear bucket properties.
+    #       We need two things for this:
+    #        * The ability to clear bucket properties in our Riak layer.
+    #        * Tracking accounts created so we know which buckets to clear.
+    #
+    #       The first needs to happen in vumi and requires an updated Riak
+    #       client. The second isn't really worth doing unitl the first is
+    #       done.
+
     def __init__(self, is_sync=False, use_riak=True):
         self.is_sync = is_sync
         self._patch_helper = PatchHelper()
@@ -410,6 +418,7 @@ class UserApiHelper(object):
     @proxyable
     @maybe_async
     def add_app_permission(self, application):
+        # TODO: Move this into the API rather than the test helper.
         account_store = self.user_api.api.account_store
         permission = account_store.application_permissions(
             uuid.uuid4().hex, application=application)
