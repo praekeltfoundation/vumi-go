@@ -139,10 +139,6 @@
                               <tr>
                                   <td>{{ value }}</td>
                                   <td>
-                                      <!--Name of original CSV field-->
-                                      <input type="hidden"
-                                             name="csv-field-name-{{ forloop.counter0 }}"
-                                             value="{{ name }}" />
                                       <select class="form-control" name="column-{{ forloop.counter0 }}">
                                           <option value="" disabled>Please select:</option>
                                           <!--Insert option for each Contact header-->
