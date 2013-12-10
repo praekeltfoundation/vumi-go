@@ -44,9 +44,14 @@ class BaseResource(Resource):
 
         """
         if result is not None:
-            request.setResponseCode(200)  # OK
-            request.setHeader('Content-Type', 'application/json')
-            request.write(json.dumps(result, cls=JSONEncoder))
+            try:
+                data = json.dumps(result, cls=JSONEncoder)
+                request.setResponseCode(200)  # OK
+                request.setHeader('Content-Type', 'application/json')
+                request.write(data)
+            except Exception:
+                log.err()
+                request.setResponseCode(500)  # Internal Server Error
         else:
             request.setResponseCode(404)  # Not Found
         request.finish()

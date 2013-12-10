@@ -19,7 +19,13 @@ class JSONEncoder(json.JSONEncoder):
 
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
-            return float(obj.quantize(decimal.Decimal('.000001')))
+            val = obj.quantize(
+                decimal.Decimal('.000001'),
+                context=decimal.Context(
+                    traps=[decimal.Inexact, decimal.Underflow]))
+
+            return float(val)
+
         elif isinstance(obj, datetime.datetime):
             return obj.isoformat()
         else:
@@ -34,7 +40,9 @@ class JSONDecoder(json.JSONDecoder):
         super(JSONDecoder, self).__init__(*args, **kwargs)
 
     def parse_float_str(self, num_str):
-        return decimal.Decimal(num_str).quantize(decimal.Decimal('.01'))
+        return decimal.Decimal(num_str).quantize(
+            decimal.Decimal('.000001'), context=decimal.Context(
+                traps=[decimal.Inexact, decimal.Underflow]))
 
 
 def real_dict_connect(*args, **kwargs):
