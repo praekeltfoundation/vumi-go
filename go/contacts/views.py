@@ -193,9 +193,8 @@ def _static_group(request, contact_store, group):
 
                 # Based on the user input, construct FieldInfo objects
                 # for each column in the input file
-                fields = []
                 zipped = zip(sample_row.keys(), field_names, normalizers)
-                fields = [FieldInfo(f, cf, nr) for f, cf, nr in zipped]
+                fields = [FieldInfo(f, cf or None, nr) for f, cf, nr in zipped]
 
                 tasks.import_contacts_file.delay(
                     request.user_api.user_account_key, group.key, file_name,

@@ -264,7 +264,10 @@ class ContactFileParser(object):
                 if value is None or value == '':
                     continue
 
+                # This is a static-style assertion to guard against
+                # programmer error, rather than runtime errors.
                 assert contact_field in self.SETTABLE_ATTRIBUTES
+
                 if contact_field:
                     contact_dictionary[contact_field] = value
                 else:
