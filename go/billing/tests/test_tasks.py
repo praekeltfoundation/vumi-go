@@ -6,22 +6,23 @@ from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
 
-from go.base.tests.utils import VumiGoDjangoTestCase
-
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import MessageCost, Account, Transaction, Statement
 from go.billing import tasks
 
 
-class TestMonthlyStatementTask(VumiGoDjangoTestCase):
+class TestMonthlyStatementTask(GoDjangoTestCase):
 
     def setUp(self):
-        super(TestMonthlyStatementTask, self).setUp()
-        self.setup_user_api()
+        self.vumi_helper = DjangoVumiApiHelper()
+        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
 
     def _mk_account(self):
         account = Account(
-            user=self.django_user,
-            account_number=self.user_api.user_account_key)
+            user=self.user_helper.get_django_user(),
+            account_number=self.user_helper.account_key)
 
         account.save()
         return account
