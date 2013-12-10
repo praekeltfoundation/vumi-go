@@ -79,7 +79,8 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.conversation = yield self.create_conversation()
         self.conversation.add_group(self.group)
         yield self.conversation.save()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     @inlineCallbacks
     def create_group(self, name):

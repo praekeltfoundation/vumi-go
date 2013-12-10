@@ -22,9 +22,8 @@ class TestTxVumiApi(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(
+            VumiApiHelper(is_sync=self.is_sync))
         self.vumi_api = self.vumi_helper.get_vumi_api()
 
     @inlineCallbacks
@@ -56,9 +55,8 @@ class TestTxVumiUserApi(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(
+            VumiApiHelper(is_sync=self.is_sync))
         self.vumi_api = self.vumi_helper.get_vumi_api()
         self.user_helper = yield self.vumi_helper.make_user(u'Buster')
         self.user_api = self.user_helper.user_api
@@ -352,9 +350,8 @@ class TestTxVumiRouterApi(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(
+            VumiApiHelper(is_sync=self.is_sync))
         self.user_helper = yield self.vumi_helper.make_user(u'Buster')
         self.user_api = self.user_helper.user_api
 

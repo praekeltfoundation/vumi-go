@@ -5,10 +5,12 @@ from twisted.internet.defer import (
     inlineCallbacks, returnValue, Deferred, gatherResults)
 from twisted.python.monkey import MonkeyPatcher
 
+from zope.interface import implements
+
 from vumi.blinkenlights.metrics import MetricMessage
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
-    generate_proxies)
+    generate_proxies, IHelper)
 
 import go.config
 from go.vumitools.api import VumiApi, VumiApiEvent, VumiApiCommand
@@ -17,8 +19,13 @@ from go.vumitools.utils import MessageMetadataHelper
 
 
 class PatchHelper(object):
+    implements(IHelper)
+
     def __init__(self):
         self._monkey_patches = []
+
+    def setup(self):
+        pass
 
     def cleanup(self):
         for patch in reversed(self._monkey_patches):
@@ -38,10 +45,18 @@ class PatchHelper(object):
 
 
 class GoMessageHelper(object):
+    implements(IHelper)
+
     def __init__(self, mdb=None, **kw):
         self._msg_helper = MessageHelper(**kw)
         self.transport_name = self._msg_helper.transport_name
         self.mdb = mdb
+
+    def setup(self):
+        pass
+
+    def cleanup(self):
+        return self._msg_helper.cleanup()
 
     @proxyable
     def add_router_metadata(self, msg, router):
@@ -271,6 +286,8 @@ class VumiApiHelper(object):
     #       client. The second isn't really worth doing unitl the first is
     #       done.
 
+    implements(IHelper)
+
     def __init__(self, is_sync=False, use_riak=True):
         self.is_sync = is_sync
         self._patch_helper = PatchHelper()
@@ -287,6 +304,10 @@ class VumiApiHelper(object):
         self._vumi_api = None
 
         generate_proxies(self, self._persistence_helper)
+
+    def setup(self, setup_vumi_api=True):
+        if setup_vumi_api:
+            return self.setup_vumi_api()
 
     @maybe_async
     def cleanup(self):
@@ -388,6 +409,8 @@ class VumiApiHelper(object):
 
 
 class UserApiHelper(object):
+    implements(IHelper)
+
     def __init__(self, vumi_helper, account_key):
         self.is_sync = vumi_helper.is_sync
         self._vumi_helper = vumi_helper
@@ -396,6 +419,9 @@ class UserApiHelper(object):
 
         # Easier access to these stores is useful.
         self.contact_store = self.user_api.contact_store
+
+    def setup(self):
+        pass
 
     def cleanup(self):
         pass
@@ -465,9 +491,18 @@ class UserApiHelper(object):
 
 
 class EventHandlerHelper(object):
+    # TODO: This class probably doesn't belong here, but there isn't really
+    #       anywhere better to put it. It needs to be available to
+    #       go.vumitools.tests.test_handler as well as various event handler
+    #       tests in go.apps.
+    implements(IHelper)
+
     def __init__(self):
         self.vumi_helper = VumiApiHelper()
         self.worker_helper = self.vumi_helper.get_worker_helper()
+
+    def setup(self):
+        pass
 
     def cleanup(self):
         return self.vumi_helper.cleanup()

@@ -41,9 +41,8 @@ class TestChannelStore(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper(is_sync=self.is_sync)
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(
+            VumiApiHelper(is_sync=self.is_sync))
         self.user_helper = yield self.vumi_helper.get_or_create_user()
         user_account = yield self.user_helper.get_user_account()
         self.channel_store = ChannelStore.from_user_account(user_account)

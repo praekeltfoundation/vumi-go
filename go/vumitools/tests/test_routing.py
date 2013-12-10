@@ -216,9 +216,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'testuser')
         self.user_account_key = self.user_helper.account_key
 
@@ -236,7 +234,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
         yield self.user_helper.user_api.acquire_specific_tag(tag3)
         # We use vumi's MessageHelper here rather than our own GoMessageHelper
         # because we want to handle all the Go metadata stuff ourselves.
-        self.msg_helper = MessageHelper()
+        self.msg_helper = self.add_helper(MessageHelper())
 
     def get_routing_table(self):
         return RoutingTable({

@@ -3,9 +3,11 @@ import time
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from zope.interface import implements
+
 from vumi.transports.failures import FailureMessage
 from vumi.middleware.tagger import TaggingMiddleware
-from vumi.tests.helpers import VumiTestCase, generate_proxies
+from vumi.tests.helpers import VumiTestCase, generate_proxies, IHelper
 from vumi.worker import BaseWorker
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
@@ -33,6 +35,8 @@ class ToyWorker(BaseWorker, GoWorkerMixin):
 
 
 class MiddlewareHelper(object):
+    implements(IHelper)
+
     def __init__(self, middleware_class):
         self._vumi_helper = VumiApiHelper()
         self._msg_helper = GoMessageHelper()
@@ -41,6 +45,9 @@ class MiddlewareHelper(object):
 
         generate_proxies(self, self._vumi_helper)
         generate_proxies(self, self._msg_helper)
+
+    def setup(self):
+        pass
 
     @inlineCallbacks
     def cleanup(self):
@@ -67,8 +74,8 @@ class TestNormalizeMisdnMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.mw_helper = MiddlewareHelper(NormalizeMsisdnMiddleware)
-        self.add_cleanup(self.mw_helper.cleanup)
+        self.mw_helper = self.add_helper(
+            MiddlewareHelper(NormalizeMsisdnMiddleware))
         self.mw = yield self.mw_helper.create_middleware({
             'country_code': '256',
         })
@@ -84,8 +91,7 @@ class TestOptOutMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.mw_helper = MiddlewareHelper(OptOutMiddleware)
-        self.add_cleanup(self.mw_helper.cleanup)
+        self.mw_helper = self.add_helper(MiddlewareHelper(OptOutMiddleware))
         yield self.mw_helper.setup_vumi_api()
         self.config = {
             'optout_keywords': ['STOP', 'HALT', 'QUIT']
@@ -164,8 +170,7 @@ class TestOptOutMiddleware(VumiTestCase):
 class TestMetricsMiddleware(VumiTestCase):
 
     def setUp(self):
-        self.mw_helper = MiddlewareHelper(MetricsMiddleware)
-        self.add_cleanup(self.mw_helper.cleanup)
+        self.mw_helper = self.add_helper(MiddlewareHelper(MetricsMiddleware))
 
     def get_middleware(self, config):
         default_config = {
@@ -333,8 +338,8 @@ class TestConversationStoringMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.mw_helper = MiddlewareHelper(ConversationStoringMiddleware)
-        self.add_cleanup(self.mw_helper.cleanup)
+        self.mw_helper = self.add_helper(
+            MiddlewareHelper(ConversationStoringMiddleware))
         self.mw = yield self.mw_helper.create_middleware()
         yield self.mw_helper.setup_vumi_api()
         self.user_helper = yield self.mw_helper.make_user(u'user')
@@ -361,8 +366,8 @@ class TestRouterStoringMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.mw_helper = MiddlewareHelper(RouterStoringMiddleware)
-        self.add_cleanup(self.mw_helper.cleanup)
+        self.mw_helper = self.add_helper(
+            MiddlewareHelper(RouterStoringMiddleware))
         self.mw = yield self.mw_helper.create_middleware()
         yield self.mw_helper.setup_vumi_api()
         self.user_helper = yield self.mw_helper.make_user(u'user')

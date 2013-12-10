@@ -17,8 +17,8 @@ class TestCommandDispatcher(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper = self.add_helper(
+            VumiApiHelper(), setup_vumi_api=False)
         self.worker_helper = self.vumi_helper.get_worker_helper()
         self.api = yield self.worker_helper.get_worker(
             CommandDispatcher, self.vumi_helper.mk_config({
@@ -72,8 +72,8 @@ class TestEventDispatcher(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper = self.add_helper(
+            VumiApiHelper(), setup_vumi_api=False)
         self.worker_helper = self.vumi_helper.get_worker_helper()
         self.ed = yield self.worker_helper.get_worker(
             EventDispatcher, self.vumi_helper.mk_config({
@@ -140,8 +140,8 @@ class TestEventDispatcher(VumiTestCase):
 class TestSendingEventDispatcher(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
+        self.vumi_helper = self.add_helper(
+            VumiApiHelper(), setup_vumi_api=False)
         self.worker_helper = self.vumi_helper.get_worker_helper()
         self.ed = yield self.worker_helper.get_worker(
             EventDispatcher, self.vumi_helper.mk_config({
