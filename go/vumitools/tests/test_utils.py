@@ -12,9 +12,7 @@ class TestMessageMetadataHelper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'user')
 
     def mk_msg(self, go_metadata=None, optout_metadata=None):

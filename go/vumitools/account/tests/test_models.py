@@ -12,8 +12,8 @@ from go.vumitools.routing_table import RoutingTable
 class TestUserAccount(VumiTestCase):
 
     def setUp(self):
-        self.persistence_helper = PersistenceHelper(use_riak=True)
-        self.add_cleanup(self.persistence_helper.cleanup)
+        self.persistence_helper = self.add_helper(
+            PersistenceHelper(use_riak=True))
         riak_manager = self.persistence_helper.get_riak_manager()
         self.store = AccountStore(riak_manager)
 

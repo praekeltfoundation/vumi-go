@@ -13,12 +13,10 @@ class TestConversationWrapper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'username')
-        self.msg_helper = GoMessageHelper(self.vumi_helper.get_vumi_api().mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
 
         self.conv = yield self.user_helper.create_conversation(u'dummy')
         yield self.vumi_helper.setup_tagpool(

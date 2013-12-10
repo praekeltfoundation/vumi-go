@@ -145,10 +145,8 @@ class TestBillingDispatcher(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
-        self.msg_helper = GoMessageHelper()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.msg_helper = self.add_helper(GoMessageHelper())
         self.ri_helper = self.vumi_helper.get_worker_helper(
             "billing_dispatcher_ri")
         self.ro_helper = self.vumi_helper.get_worker_helper(

@@ -18,9 +18,7 @@ class TestGoMetricsWorker(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = VumiApiHelper()
-        self.add_cleanup(self.vumi_helper.cleanup)
-        yield self.vumi_helper.setup_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.clock = Clock()
         self.patch(metrics_worker, 'LoopingCall', self.looping_call)
         self.conversation_names = {}
