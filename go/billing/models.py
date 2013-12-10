@@ -114,3 +114,37 @@ class Transaction(models.Model):
 
     def __unicode__(self):
         return unicode(self.pk)
+
+
+class Statement(models.Model):
+    """Account statement for a period of time"""
+
+    TYPE_MONTHLY = 'Monthly'
+    TYPE_CHOICES = (
+        (TYPE_MONTHLY, TYPE_MONTHLY),
+    )
+
+    account = models.ForeignKey(Account)
+    title = models.CharField(max_length=255)
+    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+    from_date = models.DateField()
+    to_date = models.DateField()
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return u"%s for %s" % (self.title, self.account)
+
+
+class LineItem(models.Model):
+    """A line item of a statement"""
+
+    statement = models.ForeignKey(Statement)
+    tag_pool_name = models.CharField(max_length=100, blank=True, default='')
+    tag_name = models.CharField(max_length=100, blank=True, default='')
+    message_direction = models.CharField(max_length=20, blank=True,
+                                         default='')
+
+    total_cost = models.IntegerField(default=0)
+
+    def __unicode__(self):
+        return u"%s line item" % (self.statement.title,)

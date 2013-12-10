@@ -1,5 +1,7 @@
 {% extends "app.html" %}
 
+{% load go_tags %}
+
 {% block content_extraclass %}account{% endblock %}
 {% block content_title %}Statements{% endblock %}
 
@@ -8,18 +10,23 @@
     <div class="col-md-12">
         <div class="indent">
             {% include "base/includes/messages.html" %}
-            <table class="table">
+            <table class="table table-form-view">
                 <thead>
                     <tr>
-                        <th>Date</th>
+                        <th></th>
+                        <th>
+                            <a href="?{% if request.GET.o == 'from_date' %}{% add_params request o='-from_date' %}{% else %}{% add_params request o='from_date' %}{% endif %}">Date</a>
+                            <span class="glyphicon {% if request.GET.o == 'from_date' %}glyphicon-chevron-up{% elif request.GET.o == '-from_date' %}glyphicon-chevron-down{% endif %}"></span>
+                        </th>
                         <th>Statement</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for statement in statement_list %}
+                    {% for statement in page %}
                     <tr>
-                        <td>{{ statement.date }}</td>
-                        <td><a href="{% url 'todo' %}">View</a></td>
+                        <td></td>
+                        <td>{{ statement.from_date|date:"F Y" }}</td>
+                        <td><a href="{% url 'account:statement_view' statement.id %}">View</a></td>
                     </tr>
                     {% empty %}
                     <tr>
