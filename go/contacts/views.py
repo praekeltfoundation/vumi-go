@@ -17,7 +17,7 @@ from go.contacts.forms import (
     SelectContactGroupForm)
 from go.contacts import tasks, utils
 from go.contacts.parsers import ContactFileParser, ContactParserException
-from go.contacts.parsers.base import FieldNormalizer
+from go.contacts.parsers.base import FieldInfo, FieldNormalizer
 from go.vumitools.contact import ContactError
 
 
@@ -186,15 +186,20 @@ def _static_group(request, contact_store, group):
                 # Grab the selected field names from the submitted form
                 # by looping over the expect n number of `column-n` keys being
                 # posted
-                field_names = [request.POST.get('column-%s' % i) for i in
-                               range(len(sample_row))]
+                field_names = [request.POST.get('column-%s' % i, '')
+                               for i in range(len(sample_row))]
                 normalizers = [request.POST.get('normalize-%s' % i, '')
                                for i in range(len(sample_row))]
-                fields = zip(field_names, normalizers)
+
+                # Based on the user input, construct FieldInfo objects
+                # for each column in the input file
+                fields = []
+                zipped = zip(sample_row.keys(), field_names, normalizers)
+                fields = [FieldInfo(f, cf, nr) for f, cf, nr in zipped]
 
                 tasks.import_contacts_file.delay(
                     request.user_api.user_account_key, group.key, file_name,
-                    file_path, fields, has_header)
+                    file_path, tuple(fields), has_header)
 
                 messages.info(
                     request, 'The contacts are being imported. '

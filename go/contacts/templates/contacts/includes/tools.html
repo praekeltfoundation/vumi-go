@@ -127,29 +127,40 @@
                         <tbody>
                             <thead>
                             <tr>
-                                <th>Field</th>
-                                <th>Mapping</th>
+                                <th>CSV Field</th>
+                                <th>Contact Field</th>
                                 <th>Format</th>
                             </tr>
                             </thead>
+                            <!-- Insert mapping and normalization choices for each column in the CSV
+                                 column: field name of the csv column 
+                              -->
                             {% for column, value in contact_data_row.items %}
                               <tr>
-                                <td>{{ value }}</td>
+                                  <td>{{ value }}</td>
                                   <td>
-                                    <select class="form-control" name="column-{{ forloop.counter0 }}">
-                                        <option value="" disabled>Please Select:</option>
-                                        {% for header, label in contact_data_headers.items %}
-                                        <option {% if header == column %}selected="true"{% endif %}value="{{ header }}">{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>
-                                    <select class="form-control" name="normalize-{{ forloop.counter0 }}">
-                                      <option value="" disabled>Please Select:</option>
-                                      {% for name, label in field_normalizer %}
-                                      <option value="{{name}}">{{label}}</option>
-                                      {% endfor %}
-                                    </select>
+                                      <!--Name of original CSV field-->
+                                      <input type="hidden"
+                                             name="csv-field-name-{{ forloop.counter0 }}"
+                                             value="{{ name }}" />
+                                      <select class="form-control" name="column-{{ forloop.counter0 }}">
+                                          <option value="" disabled>Please select:</option>
+                                          <!--Insert option for each Contact header-->
+                                          {% for header, label in contact_data_headers.items %}
+                                          <option {% if header == column %}selected="true"{% endif %}
+                                                  value="{{ header }}">
+                                              {{ label }}
+                                          </option>
+                                          {% endfor %}
+                                      </select>
+                                  </td>
+                                  <td>
+                                      <select class="form-control" name="normalize-{{ forloop.counter0 }}">
+                                          <option value="" disabled>Please select:</option>
+                                          {% for name, label in field_normalizer %}
+                                          <option value="{{name}}">{{label}}</option>
+                                          {% endfor %}
+                                      </select>
                                 </td>
                               </tr>
                             {% endfor %}

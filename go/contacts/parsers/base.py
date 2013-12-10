@@ -1,8 +1,21 @@
 import os.path
+from collections import NamedTuple
 
 from django.core.files.storage import default_storage
 
 from vumi.utils import load_class, normalize_msisdn
+
+
+# Information required to import a specific CSV column
+# `field_name`         - The original header field in the CSV or XSL data
+# `contact_field_name` - the field to map to in the Contact dict
+# `normalizer`         - The name of the normalizer function to apply
+FieldInfo = NamedTuple('FieldInfo',
+                       [
+                           'field_name'
+                           'contact_field_name',
+                           'normalizer'
+                       ])
 
 
 class ContactParserException(Exception):
@@ -143,7 +156,7 @@ class ContactFileParser(object):
         'facebook_id': 'Facebook ID',
         'twitter_handle': 'Twitter handle',
         'email_address': 'Email address',
-        'extra_field': "Add as extra data",
+        'extra': "Extra",
     }
 
     ENCODING = 'utf-8'
@@ -210,28 +223,37 @@ class ContactFileParser(object):
     def parse_file(self, file_path, fields, has_header):
         """
         Parses the file and returns dictionaries ready to be fed
-        the ContactStore.new_contact method.
+        the ContactStore.new_contact method. The `fields' parameter
+        is a list of `FieldInfo' records.
 
         We need to know what we cannot set to avoid a file import overwriting
         things like account details. Attributes that can be set are in the
         SETTABLE_ATTRIBUTES list, which defaults to the DEFAULT_HEADERS keys.
         """
-        # We receive the fields as list of tuples, not a dict because the
-        # order is important and needs to stay intact while being encoded
-        # and decoded as JSON
-        field_names = [field[0] for field in fields]
-        field_map = dict(fields)
+
+        # get the actual field_names which were previously detected.
+        field_names = [field.field_name for field in fields]
+
+        # build a dictionary of field_names to FieldInfo objects
+        field_map = dict([(field.field_name, field) for field in fields])
+
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
         data_dictionaries = self.read_data_from_file(
-            file_path, field_names, has_header)
+            file_path, field_names, has_header
+        )
         for data_dictionary in data_dictionaries:
 
             # Populate this with whatever we'll be sending to the
             # contact to be saved
             contact_dictionary = {}
             for key, value in data_dictionary.items():
-                value = self.normalizer.normalize(field_map[key], value)
+                if field_map[key].contact_field is None:
+                    continue
+                contact_field = field_map[key].contact_field
+                normalizer = field_map[key].normalizer
+                value = self.normalizer.normalize(normalizer, value)
+
                 if not isinstance(value, basestring):
                     value = unicode(str(value), self.ENCODING,
                                     self.ENCODING_ERRORS)
@@ -242,8 +264,9 @@ class ContactFileParser(object):
                 if value is None or value == '':
                     continue
 
-                if key in self.SETTABLE_ATTRIBUTES:
-                    contact_dictionary[key] = value
+                assert contact_field in self.SETTABLE_ATTRIBUTES
+                if contact_field:
+                    contact_dictionary[contact_field] = value
                 else:
                     extra = contact_dictionary.setdefault('extra', {})
                     extra[key] = value
