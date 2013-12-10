@@ -223,7 +223,7 @@ class CostTestCase(unittest.TestCase):
         content = {
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound",
-            'message_cost': 90,
+            'message_cost': 0.9,
             'markup_percent': 20.0,
         }
 
@@ -234,9 +234,15 @@ class CostTestCase(unittest.TestCase):
         self.assertEqual(response.responseCode, 200)
         base_cost = json.loads(response.value(), parse_float=decimal.Decimal)
         self.assertTrue('credit_amount' in base_cost)
-        credit_factor = float(app_settings.CREDIT_CONVERSION_FACTOR)
-        credit_amount = round((90 + (90 * 20.0 / 100.0)) * credit_factor)
-        self.assertEqual(base_cost.get('credit_amount'), int(credit_amount))
+        credit_factor = decimal.Decimal(app_settings.CREDIT_CONVERSION_FACTOR)
+        message_cost = decimal.Decimal(0.9)
+        markup_percent = decimal.Decimal(20.0)
+        credit_amount = (message_cost
+                         + (message_cost * markup_percent
+                            / decimal.Decimal(100.0))) * credit_factor
+
+        credit_amount = credit_amount.quantize(decimal.Decimal('0.000001'))
+        self.assertEqual(base_cost.get('credit_amount'), credit_amount)
 
         # Get the message cost
         args = {
@@ -257,7 +263,7 @@ class CostTestCase(unittest.TestCase):
             'account_number': account.get('account_number'),
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound",
-            'message_cost': 50,
+            'message_cost': 0.5,
             'markup_percent': 10.0,
         }
 
@@ -270,7 +276,13 @@ class CostTestCase(unittest.TestCase):
                                    parse_float=decimal.Decimal)
 
         self.assertTrue('credit_amount' in base_cost)
-        credit_amount = (50 + (50 * 10.0 / 100.0)) * credit_factor
+        message_cost = decimal.Decimal(0.5)
+        markup_percent = decimal.Decimal(10.0)
+        credit_amount = (message_cost
+                         + (message_cost * markup_percent
+                            / decimal.Decimal(100.0))) * credit_factor
+
+        credit_amount = credit_amount.quantize(decimal.Decimal('0.000001'))
         self.assertEqual(cost_override.get('credit_amount'), credit_amount)
 
         # Get the message cost again
@@ -344,7 +356,7 @@ class TransactionTestCase(unittest.TestCase):
         content = {
             'tag_pool_name': "test_pool2",
             'message_direction': "Inbound",
-            'message_cost': 60,
+            'message_cost': 0.6,
             'markup_percent': 10.0,
         }
 
@@ -354,9 +366,15 @@ class TransactionTestCase(unittest.TestCase):
 
         self.assertEqual(response.responseCode, 200)
         cost = json.loads(response.value(), parse_float=decimal.Decimal)
-        credit_factor = float(app_settings.CREDIT_CONVERSION_FACTOR)
-        credit_amount = round((60 + (60 * 10.0 / 100.0)) * credit_factor)
-        self.assertEqual(cost.get('credit_amount'), int(credit_amount))
+        credit_factor = decimal.Decimal(app_settings.CREDIT_CONVERSION_FACTOR)
+        message_cost = decimal.Decimal(0.6)
+        markup_percent = decimal.Decimal(10.0)
+        credit_amount = (message_cost
+                         + (message_cost * markup_percent
+                            / decimal.Decimal(100.0))) * credit_factor
+
+        credit_amount = credit_amount.quantize(decimal.Decimal('0.000001'))
+        self.assertEqual(cost.get('credit_amount'), credit_amount)
 
         # Create a transaction
         content = {

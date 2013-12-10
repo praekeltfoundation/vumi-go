@@ -414,9 +414,9 @@ class CostResource(BaseResource):
         query = """
             SELECT a.account_number, t.name AS tag_pool_name,
                    c.message_direction, c.message_cost, c.markup_percent,
-                   CAST((c.message_cost +
-                         (c.message_cost * c.markup_percent / 100.0))
-                         * %(credit_factor)s AS INT) AS credit_amount
+                   (c.message_cost
+                    + (c.message_cost * c.markup_percent / 100.0))
+                   * %(credit_factor)s AS credit_amount
             FROM billing_messagecost c
                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
                  LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
@@ -495,9 +495,8 @@ class CostResource(BaseResource):
                     %(account_number)s AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
                     message_direction, message_cost, markup_percent,
-                    CAST((message_cost +
-                          (message_cost * markup_percent / 100.0))
-                          * %(credit_factor)s AS INT) AS credit_amount
+                    (message_cost + (message_cost * markup_percent / 100.0))
+                    * %(credit_factor)s AS credit_amount
             """
 
             params = {
@@ -521,9 +520,8 @@ class CostResource(BaseResource):
                     NULL AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
                     message_direction, message_cost, markup_percent,
-                    CAST((message_cost +
-                          (message_cost * markup_percent / 100.0))
-                          * %(credit_factor)s AS INT) AS credit_amount
+                    (message_cost + (message_cost * markup_percent / 100.0))
+                    * %(credit_factor)s AS credit_amount
             """
 
             params = {
@@ -604,9 +602,9 @@ class TransactionResource(BaseResource):
         query = """
             SELECT t.account_number, t.tag_pool_name, t.message_direction,
                    t.message_cost, t.markup_percent,
-                   CAST((t.message_cost +
-                         (t.message_cost * t.markup_percent / 100.0))
-                         * %(credit_factor)s AS INT) AS credit_amount
+                   (t.message_cost +
+                    (t.message_cost * t.markup_percent / 100.0))
+                   * %(credit_factor)s AS credit_amount
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
                          c.message_direction, c.message_cost, c.markup_percent
                   FROM billing_messagecost c

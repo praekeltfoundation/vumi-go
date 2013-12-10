@@ -23,13 +23,16 @@ class Account(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     account_number = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
-    credit_balance = models.IntegerField(default=0)
+    credit_balance = models.DecimalField(max_digits=20, decimal_places=6,
+                                         default=Decimal('0.0'))
+
     alert_threshold = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("Low-credits notification will be sent when the "
                     "credit balance reaches the alert threshold percentage"))
 
-    alert_credit_balance = models.IntegerField(default=0)
+    alert_credit_balance = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'))
 
     def __unicode__(self):
         return u"{0} ({1})".format(self.account_number, self.user.email)
@@ -55,8 +58,9 @@ class MessageCost(models.Model):
     message_direction = models.CharField(max_length=20,
                                          choices=DIRECTION_CHOICES)
 
-    message_cost = models.IntegerField(
-        default=0, help_text=_("The base message cost in cents."))
+    message_cost = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The base message cost in cents."))
 
     markup_percent = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.0'),
@@ -65,8 +69,10 @@ class MessageCost(models.Model):
     @property
     def resulting_price(self):
         """Return the resulting price in cents"""
-        markup = self.message_cost * self.markup_percent / Decimal('100.0')
-        return self.message_cost + markup.to_integral_value()
+        markup_amount = (self.message_cost
+                         * self.markup_percent / Decimal('100.0'))
+
+        return self.message_cost + markup_amount
 
     @property
     def credit_cost(self):
@@ -74,7 +80,7 @@ class MessageCost(models.Model):
         credit_cost = self.resulting_price * Decimal(
             app_settings.CREDIT_CONVERSION_FACTOR)
 
-        return credit_cost.quantize(Decimal('1'))
+        return credit_cost.quantize(Decimal('.000001'))
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
@@ -105,7 +111,9 @@ class Transaction(models.Model):
     credit_factor = models.DecimalField(max_digits=10, decimal_places=2,
                                         blank=True, null=True)
 
-    credit_amount = models.IntegerField()
+    credit_amount = models.DecimalField(max_digits=20, decimal_places=6,
+                                        default=Decimal('0.0'))
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES,
                               default=STATUS_PENDING)
 
