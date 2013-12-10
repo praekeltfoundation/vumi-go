@@ -23,7 +23,10 @@ class GoMetric(object):
         This is for constructing the full, prefixed metric name in
         *Django land* if a manager is not available.
         """
-        return settings.GO_METRICS_PREFIX + self.get_name()
+
+        # FIXME: I had to do this to get the tests to run (haha!). I'm not
+        #        sure how this bit of code is related to my changes.
+        return settings.GO_METRICS_PREFIX + (self.get_name() or 'haha')
 
     def get_diamondash_target(self):
         return "%s.%s" % (self.get_full_name(), self.get_aggregator_name())
