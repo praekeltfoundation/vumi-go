@@ -30,6 +30,8 @@ class CommandDispatcher(ApplicationWorker):
         VumiApiCommands to.
     """
 
+    # TODO: Make this not an ApplicationWorker.
+
     def validate_config(self):
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
@@ -86,6 +88,8 @@ class EventDispatcher(ApplicationWorker):
     :param dict event_handlers:
         A mapping from handler name to fully-qualified class name.
     """
+
+    # TODO: Make this not an ApplicationWorker.
 
     def validate_config(self):
         self.api_routing_config = VumiApiEvent.default_routing_config()

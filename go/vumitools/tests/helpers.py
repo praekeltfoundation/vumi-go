@@ -509,12 +509,14 @@ class EventHandlerHelper(object):
 
     @inlineCallbacks
     def setup_event_dispatcher(self, name, cls, config):
+        # TODO: Remove the `transport_name` field from the config below when
+        #       EventDispatcher is no longer an ApplicationWorker subclass.
         app_config = self.vumi_helper.mk_config({
             'event_handlers': {
                 name: "%s.%s" % (cls.__module__, cls.__name__),
             },
             name: config,
-            'transport_name': 'sphex',  # TODO: Kill this when possible.
+            'transport_name': 'sphex',
         })
 
         self.event_dispatcher = yield self.worker_helper.get_worker(
