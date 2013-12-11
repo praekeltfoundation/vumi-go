@@ -5,6 +5,8 @@ from datetime import datetime
 
 from mock import patch
 
+from django.core.management.base import CommandError
+
 from go.base.tests.utils import GoAccountCommandTestCase
 from go.base.management.commands import go_manage_conversation
 
@@ -103,7 +105,7 @@ class TestGoManageConversation(GoAccountCommandTestCase):
     def test_import(self):
         original = {
             "status": "running",
-            "conversation_type": "test_conversation_type",
+            "conversation_type": "bulk_message",
             "extra_endpoints": [],
             "description": "hello world",
             "archive_status": "active",
@@ -142,3 +144,18 @@ class TestGoManageConversation(GoAccountCommandTestCase):
         self.assertNotEqual(batch, original['batch'])
         self.assertNotEqual(key, original['key'])
         self.assertEqual(user_account, self.user_api.user_account_key)
+
+    def test_import_invalid_conv_type(self):
+        original = {
+            "status": "running",
+            "conversation_type": "foo",
+            "description": "hello world",
+            "name": "conversation name",
+            "config": {},
+        }
+
+        self.command.load_file = lambda *a: StringIO(json.dumps(original))
+
+        self.assertRaisesRegexp(
+            CommandError, 'Invalid conversation_type: foo',
+            self.call_command, 'import', file='foo.json')

@@ -5,6 +5,7 @@ from pprint import pformat
 from django.core.management.base import CommandError
 
 from go.base.command_utils import BaseGoAccountCommand, make_command_option
+from go import config
 
 
 class Command(BaseGoAccountCommand):
@@ -104,9 +105,13 @@ class Command(BaseGoAccountCommand):
             'description',
             'name',
             'config',
-            ]
+        ]
 
         new_conv_data = dict([(key, raw_conv_data[key]) for key in
                               allowed_keys])
+        conversation_type = new_conv_data['conversation_type']
+        if conversation_type not in config.configured_conversation_types():
+            raise CommandError('Invalid conversation_type: %s' % (
+                conversation_type,))
         conversation = self.user_api.new_conversation(**new_conv_data)
         self.stdout.write(json.dumps(conversation.get_data()))
