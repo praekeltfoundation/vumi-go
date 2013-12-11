@@ -18,6 +18,18 @@ from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.utils import MessageMetadataHelper
 
 
+def maybe_async_return(value, maybe_deferred):
+    """Return `value` or a deferred that fires with it.
+
+    This is useful in cases where we're performing a potentially async
+    operation but don't necessarily have enough information to use
+    `maybe_async`.
+    """
+    if isinstance(maybe_deferred, Deferred):
+        return maybe_deferred.addCallback(lambda r: value)
+    return value
+
+
 class PatchHelper(object):
     implements(IHelper)
 
@@ -134,52 +146,27 @@ class GoMessageHelper(object):
     @proxyable
     def make_stored_inbound(self, conv, content, **kw):
         msg = self.make_inbound(content, conv=conv, **kw)
-        d = self.store_inbound(conv, msg)
-        if isinstance(d, Deferred):
-            # We're async, return a deferred
-            return d.addCallback(lambda _: msg)
-        else:
-            return msg
+        return maybe_async_return(msg, self.store_inbound(conv, msg))
 
     @proxyable
     def make_stored_outbound(self, conv, content, **kw):
         msg = self.make_outbound(content, conv=conv, **kw)
-        d = self.store_outbound(conv, msg)
-        if isinstance(d, Deferred):
-            # We're async, return a Deferred.
-            return d.addCallback(lambda _: msg)
-        else:
-            return msg
+        return maybe_async_return(msg, self.store_outbound(conv, msg))
 
     @proxyable
     def make_stored_ack(self, conv, msg, **kw):
         event = self.make_ack(msg, conv=conv, **kw)
-        d = self.store_event(event)
-        if isinstance(d, Deferred):
-            # We're async, return a Deferred.
-            return d.addCallback(lambda _: event)
-        else:
-            return event
+        return maybe_async_return(event, self.store_event(event))
 
     @proxyable
     def make_stored_nack(self, conv, msg, **kw):
         event = self.make_nack(msg, conv=conv, **kw)
-        d = self.store_event(event)
-        if isinstance(d, Deferred):
-            # We're async, return a Deferred.
-            return d.addCallback(lambda _: event)
-        else:
-            return event
+        return maybe_async_return(event, self.store_event(event))
 
     @proxyable
     def make_stored_delivery_report(self, conv, msg, **kw):
         event = self.make_delivery_report(msg, conv=conv, **kw)
-        d = self.store_event(event)
-        if isinstance(d, Deferred):
-            # We're async, return a Deferred.
-            return d.addCallback(lambda _: event)
-        else:
-            return event
+        return maybe_async_return(event, self.store_event(event))
 
     @proxyable
     def add_inbound_to_conv(self, conv, count, start_date=None,
@@ -192,8 +179,8 @@ class GoMessageHelper(object):
             messages.append(self.make_stored_inbound(
                 conv, "inbound %s" % (i,), from_addr='from-%s' % (i,),
                 timestamp=timestamp))
+        # We can't use `maybe_async_return` here because we need gatherResults.
         if isinstance(messages[0], Deferred):
-            # We're async, return a Deferred.
             return gatherResults(messages)
         else:
             return messages
@@ -209,8 +196,8 @@ class GoMessageHelper(object):
             messages.append(self.make_stored_outbound(
                 conv, "outbound %s" % (i,), to_addr='to-%s' % (i,),
                 timestamp=timestamp))
+        # We can't use `maybe_async_return` here because we need gatherResults.
         if isinstance(messages[0], Deferred):
-            # We're async, return a Deferred.
             return gatherResults(messages)
         else:
             return messages
@@ -224,9 +211,8 @@ class GoMessageHelper(object):
             reply = self.make_reply(msg, "reply", timestamp=timestamp)
             messages.append(reply)
             ds.append(self.store_outbound(conv, reply))
-
+        # We can't use `maybe_async_return` here because we need gatherResults.
         if isinstance(ds[0], Deferred):
-            # We're async, return a Deferred.
             return gatherResults(ds).addCallback(lambda r: messages)
         else:
             return messages
