@@ -28,7 +28,8 @@ class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
         yield self.setup_tagpools()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     @inlineCallbacks
     def tearDown(self):
