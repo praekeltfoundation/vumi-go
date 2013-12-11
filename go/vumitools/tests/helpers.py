@@ -10,24 +10,12 @@ from zope.interface import implements
 from vumi.blinkenlights.metrics import MetricMessage
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
-    generate_proxies, IHelper)
+    generate_proxies, IHelper, maybe_async_return)
 
 import go.config
 from go.vumitools.api import VumiApi, VumiApiEvent, VumiApiCommand
 from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.utils import MessageMetadataHelper
-
-
-def maybe_async_return(value, maybe_deferred):
-    """Return `value` or a deferred that fires with it.
-
-    This is useful in cases where we're performing a potentially async
-    operation but don't necessarily have enough information to use
-    `maybe_async`.
-    """
-    if isinstance(maybe_deferred, Deferred):
-        return maybe_deferred.addCallback(lambda r: value)
-    return value
 
 
 class PatchHelper(object):
