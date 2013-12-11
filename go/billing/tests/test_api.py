@@ -235,11 +235,11 @@ class CostTestCase(unittest.TestCase):
         base_cost = json.loads(response.value(), parse_float=decimal.Decimal)
         self.assertTrue('credit_amount' in base_cost)
         credit_factor = decimal.Decimal(app_settings.CREDIT_CONVERSION_FACTOR)
-        message_cost = decimal.Decimal(0.9)
-        markup_percent = decimal.Decimal(20.0)
+        message_cost = decimal.Decimal('0.9')
+        markup_percent = decimal.Decimal('20.0')
         credit_amount = (message_cost
                          + (message_cost * markup_percent
-                            / decimal.Decimal(100.0))) * credit_factor
+                            / decimal.Decimal('100.0'))) * credit_factor
 
         credit_amount = credit_amount.quantize(decimal.Decimal('0.000001'))
         self.assertEqual(base_cost.get('credit_amount'), credit_amount)
@@ -367,11 +367,11 @@ class TransactionTestCase(unittest.TestCase):
         self.assertEqual(response.responseCode, 200)
         cost = json.loads(response.value(), parse_float=decimal.Decimal)
         credit_factor = decimal.Decimal(app_settings.CREDIT_CONVERSION_FACTOR)
-        message_cost = decimal.Decimal(0.6)
-        markup_percent = decimal.Decimal(10.0)
+        message_cost = decimal.Decimal('0.6')
+        markup_percent = decimal.Decimal('10.0')
         credit_amount = (message_cost
                          + (message_cost * markup_percent
-                            / decimal.Decimal(100.0))) * credit_factor
+                            / decimal.Decimal('100.0'))) * credit_factor
 
         credit_amount = credit_amount.quantize(decimal.Decimal('0.000001'))
         self.assertEqual(cost.get('credit_amount'), credit_amount)
