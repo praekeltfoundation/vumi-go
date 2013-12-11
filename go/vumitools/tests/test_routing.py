@@ -265,7 +265,6 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
             },
         })
 
-
     def with_md(self, msg, user_account=None, conv=None, router=None,
                 endpoint=None, tag=None, hops=None, outbound_hops_from=None,
                 is_paid=False):

@@ -39,5 +39,6 @@ class EditHttpApiView(EditConversationView):
         ('http_api', TokenForm),
     )
 
+
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     edit_view = EditHttpApiView

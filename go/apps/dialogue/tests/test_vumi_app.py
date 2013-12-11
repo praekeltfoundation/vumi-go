@@ -3,7 +3,6 @@
 """Tests for go.apps.dialogue.vumi_app"""
 
 import pkg_resources
-import uuid
 import os
 
 from twisted.internet.defer import inlineCallbacks, returnValue
