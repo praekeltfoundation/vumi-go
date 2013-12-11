@@ -48,11 +48,13 @@ class GoDjangoTestCase(TestCase):
 class DjangoVumiApiHelper(object):
     implements(IHelper)
 
-    is_sync = True  # For when we're being treated like a VumiApiHelper.
-
     def __init__(self, use_riak=True):
-        self.use_riak = use_riak
+        # Note: We pass `is_sync=True` to the VumiApiHelper because a Django
+        #       test case cannot be async. We define a property lower down that
+        #       proxies `is_sync` from the VumiApiHelper we're wrapping so that
+        #       we can be used by other helpers more easily.
         self._vumi_helper = VumiApiHelper(is_sync=True, use_riak=use_riak)
+        self.use_riak = use_riak  # So create_user_profile() knows what to do.
 
         generate_proxies(self, self._vumi_helper)
         # TODO: Better/more generic way to do this patching?
@@ -69,25 +71,35 @@ class DjangoVumiApiHelper(object):
         for patch in reversed(self._settings_patches):
             patch.disable()
 
+    @property
+    def is_sync(self):
+        return self._vumi_helper.is_sync
+
     def replace_django_bits(self):
+        self._replace_settings()
+        self._replace_post_save_hooks()
+
+    def _replace_settings(self):
         # We do this redis manager hackery here because we might use it from
         # Django-land before setting (or without) up a vumi_api.
         # TODO: Find a nicer way to give everything the same fake redis.
         pcfg = self._vumi_helper._persistence_helper._config_overrides
         pcfg['redis_manager']['FAKE_REDIS'] = self.get_redis_manager()
 
-        vumi_config = settings.VUMI_API_CONFIG.copy()
-        vumi_config.update(self.mk_config({}))
+        vumi_config = self.mk_config(settings.VUMI_API_CONFIG)
         self.patch_settings(VUMI_API_CONFIG=vumi_config)
 
+    def _replace_post_save_hooks(self):
         has_listeners = lambda: post_save.has_listeners(get_user_model())
-        assert has_listeners(), "User model has no listeners. Aborting."
+        assert has_listeners(), (
+            "User model has no post_save listeners. Make sure"
+            " DjangoVumiApiHelper is cleaned up properly in earlier tests.")
         post_save.disconnect(
             sender=get_user_model(),
             dispatch_uid='go.base.models.create_user_profile')
         assert not has_listeners(), (
-            "User model still has listeners. Make sure DjangoVumiApiHelper"
-            " is cleaned up properly.")
+            "User model still has post_save listeners. Make sure"
+            " DjangoVumiApiHelper is cleaned up properly in earlier tests.")
         post_save.connect(
             self.create_user_profile,
             sender=get_user_model(),
