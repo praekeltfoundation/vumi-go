@@ -49,7 +49,7 @@ class BaseResource(Resource):
                 request.setResponseCode(200)  # OK
                 request.setHeader('Content-Type', 'application/json')
                 request.write(data)
-            except Exception:
+            except JSONEncoder.EncodeError:
                 log.err()
                 request.setResponseCode(500)  # Internal Server Error
         else:
@@ -65,8 +65,11 @@ class BaseResource(Resource):
         """
         content_type = request.getHeader('Content-Type')
         if request.method == 'POST' and content_type == 'application/json':
-            return json.loads(request.content.read(), cls=JSONDecoder)
-
+            try:
+                content = request.content.read()
+                return json.loads(content, cls=JSONDecoder)
+            except JSONDecoder.DecodeError:
+                log.err()
         return None
 
 

@@ -1,4 +1,4 @@
-from decimal import Decimal, Context, Inexact, Underflow
+from decimal import Decimal
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -80,9 +80,7 @@ class MessageCost(models.Model):
         credit_cost = self.resulting_price * Decimal(
             app_settings.CREDIT_CONVERSION_FACTOR)
 
-        return credit_cost.quantize(Decimal('.000001'),
-                                    context=Context(
-                                        traps=[Inexact, Underflow]))
+        return credit_cost.quantize(Decimal('.000001'))
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
