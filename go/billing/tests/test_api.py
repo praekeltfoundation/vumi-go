@@ -268,11 +268,11 @@ class CostTestCase(unittest.TestCase):
         self.assertEqual(response.responseCode, 200)
         cost_override = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue('credit_amount' in base_cost)
-        message_cost = decimal.Decimal(0.5)
-        markup_percent = decimal.Decimal(10.0)
+        message_cost = decimal.Decimal('0.5')
+        markup_percent = decimal.Decimal('10.0')
         credit_amount = (message_cost
                          + (message_cost * markup_percent
-                            / decimal.Decimal(100.0))) * credit_factor
+                            / decimal.Decimal('100.0'))) * credit_factor
 
         credit_amount = credit_amount.quantize(decimal.Decimal('0.000001'))
         self.assertEqual(cost_override.get('credit_amount'), credit_amount)
