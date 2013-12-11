@@ -73,7 +73,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.mock_push_server.start()
         self.push_calls = DeferredQueue()
         self._setup_wait_for_request()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     @inlineCallbacks
     def tearDown(self):

@@ -4,29 +4,28 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from go.vumitools.tests.utils import model_eq, GoTestCase
-from go.vumitools.account import AccountStore
+from vumi.tests.helpers import VumiTestCase
+
+from go.vumitools.tests.utils import model_eq
 from go.vumitools.contact import (
     ContactStore, ContactError, ContactNotFoundError)
 from go.vumitools.opt_out import OptOutStore
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class TestContactStore(GoTestCase):
-    use_riak = True
+class TestContactStore(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestContactStore, self).setUp()
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        # We pass `self` in as the VumiApi object here, because mk_user() just
-        # grabs .account_store off it.
-        self.account = yield self.mk_user(self, u'user')
-        self.account_alt = yield self.mk_user(self, u'other_user')
-        self.store = ContactStore.from_user_account(self.account)
-        self.store_alt = ContactStore.from_user_account(self.account_alt)
-        yield self.store.contacts.enable_search()
-        yield self.store_alt.contacts.enable_search()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        user_account = yield self.user_helper.get_user_account()
+        self.store = ContactStore.from_user_account(user_account)
+
+        self.alt_user_helper = yield self.vumi_helper.make_user(u'other_user')
+        alt_user_account = yield self.alt_user_helper.get_user_account()
+        self.store_alt = ContactStore.from_user_account(alt_user_account)
 
     def assert_models_equal(self, m1, m2):
         self.assertTrue(model_eq(m1, m2),
@@ -199,7 +198,8 @@ class TestContactStore(GoTestCase):
             name=u'J Random', surname=u'Person', msisdn=u'27830000000')
 
         # Opt out the first contact
-        optout_store = OptOutStore.from_user_account(self.account)
+        user_account = yield self.user_helper.get_user_account()
+        optout_store = OptOutStore.from_user_account(user_account)
         yield optout_store.new_opt_out(u'msisdn', contact1.msisdn, {
             'message_id': u'the-message-id'
         })
@@ -232,7 +232,8 @@ class TestContactStore(GoTestCase):
         @inlineCallbacks
         def check_new_contact_for_addr(deliv_class, addr, **kw):
             contact = yield self.store.new_contact_for_addr(deliv_class, addr)
-            self.assertEqual(contact.user_account.key, self.account.key)
+            self.assertEqual(
+                contact.user_account.key, self.user_helper.account_key)
             for field, expected_value in kw.iteritems():
                 self.assertEqual(getattr(contact, field), expected_value)
 
@@ -281,7 +282,8 @@ class TestContactStore(GoTestCase):
         @inlineCallbacks
         def check_contact_for_addr(deliv_class, addr, **kw):
             contact = yield self.store.contact_for_addr(deliv_class, addr)
-            self.assertEqual(contact.user_account.key, self.account.key)
+            self.assertEqual(
+                contact.user_account.key, self.user_helper.account_key)
             for field, expected_value in kw.iteritems():
                 self.assertEqual(getattr(contact, field), expected_value)
 
