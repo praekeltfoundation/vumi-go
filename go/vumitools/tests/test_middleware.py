@@ -1,96 +1,119 @@
 """Tests for go.vumitools.middleware"""
 import time
 
-from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
+from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.tests.test_base import DummyApplicationWorker
+from zope.interface import implements
+
 from vumi.transports.failures import FailureMessage
 from vumi.middleware.tagger import TaggingMiddleware
+from vumi.tests.helpers import VumiTestCase, generate_proxies, IHelper
+from vumi.worker import BaseWorker
 
-from go.vumitools.tests.utils import AppWorkerTestCase, GoRouterWorkerTestMixin
-from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
-    OptOutMiddleware, MetricsMiddleware, ConversationStoringMiddleware,
-    RouterStoringMiddleware)
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
+from go.vumitools.middleware import (
+    NormalizeMsisdnMiddleware, OptOutMiddleware, MetricsMiddleware,
+    ConversationStoringMiddleware, RouterStoringMiddleware)
+from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
 
 
-class MiddlewareTestCase(AppWorkerTestCase):
+class ToyWorkerConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+    pass
 
-    application_class = DummyApplicationWorker
 
-    @inlineCallbacks
-    def setUp(self):
-        yield super(MiddlewareTestCase, self).setUp()
-        self.default_config = self.mk_config({})
+class ToyWorker(BaseWorker, GoWorkerMixin):
+    CONFIG_CLASS = ToyWorkerConfig
+
+    def setup_worker(self):
+        return self._go_setup_worker()
+
+    def teardown_worker(self):
+        return self._go_teardown_worker()
+
+    def setup_connectors(self):
+        pass
+
+
+class MiddlewareHelper(object):
+    implements(IHelper)
+
+    def __init__(self, middleware_class):
+        self._vumi_helper = VumiApiHelper()
+        self._msg_helper = GoMessageHelper()
+        self.middleware_class = middleware_class
         self._middlewares = []
 
-    @inlineCallbacks
-    def tearDown(self):
-        for mw in self._middlewares:
-            yield maybeDeferred(mw.teardown_middleware)
-        yield super(MiddlewareTestCase, self).tearDown()
+        generate_proxies(self, self._vumi_helper)
+        generate_proxies(self, self._msg_helper)
+
+    def setup(self):
+        pass
 
     @inlineCallbacks
-    def create_middleware(self, middleware_class, name='dummy_middleware',
-                          config=None):
-        dummy_worker = yield self.get_application({})
-        mw = middleware_class(
-            name, config or self.default_config, dummy_worker)
+    def cleanup(self):
+        for mw in self._middlewares:
+            yield mw.teardown_middleware()
+        yield self._vumi_helper.cleanup()
+
+    @inlineCallbacks
+    def create_middleware(self, config=None, middleware_class=None,
+                          name='dummy_middleware'):
+        worker_helper = self._vumi_helper.get_worker_helper()
+        dummy_worker = yield worker_helper.get_worker(
+            ToyWorker, self.mk_config({}))
+        config = self.mk_config(config or {})
+        if middleware_class is None:
+            middleware_class = self.middleware_class
+        mw = middleware_class(name, config, dummy_worker)
+        self._middlewares.append(mw)
         yield mw.setup_middleware()
         returnValue(mw)
 
-    @inlineCallbacks
-    def get_middleware(self, config=None, mw_class=MetricsMiddleware):
-        default_config = self.mk_config({
-            'manager_name': 'metrics_manager',
-            'count_suffix': 'counter',
-            'response_time_suffix': 'timer',
-        })
-        if config is not None:
-            default_config.update(config)
-        mw = yield self.create_middleware(MetricsMiddleware,
-            config=default_config)
-        self._middlewares.append(mw)
-        returnValue(mw)
 
-
-class NormalizeMisdnMiddlewareTestCase(MiddlewareTestCase):
+class TestNormalizeMisdnMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(NormalizeMisdnMiddlewareTestCase, self).setUp()
-        self.mw = yield self.create_middleware(NormalizeMsisdnMiddleware,
-            config={'country_code': '256'})
-        self.msg_helper = GoMessageHelper()
+        self.mw_helper = self.add_helper(
+            MiddlewareHelper(NormalizeMsisdnMiddleware))
+        self.mw = yield self.mw_helper.create_middleware({
+            'country_code': '256',
+        })
 
     def test_normalization(self):
-        msg = self.msg_helper.make_inbound(
+        msg = self.mw_helper.make_inbound(
             "foo", to_addr='8007', from_addr='256123456789')
         msg = self.mw.handle_inbound(msg, 'dummy_endpoint')
         self.assertEqual(msg['from_addr'], '+256123456789')
 
 
-class OptOutMiddlewareTestCase(MiddlewareTestCase):
+class TestOptOutMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(OptOutMiddlewareTestCase, self).setUp()
-        self.config = self.default_config.copy()
-        self.config.update({
+        self.mw_helper = self.add_helper(MiddlewareHelper(OptOutMiddleware))
+        yield self.mw_helper.setup_vumi_api()
+        self.config = {
             'optout_keywords': ['STOP', 'HALT', 'QUIT']
-        })
-        self.mw = yield self.create_middleware(OptOutMiddleware,
-            config=self.config)
-        yield self.mw.vumi_api.tpm.declare_tags([("pool", "tag1")])
-        yield self.mw.vumi_api.tpm.set_metadata("pool", {
-                "transport_type": "other",
-                "msg_options": {"transport_name": "other_transport"},
-                })
-        self.msg_helper = GoMessageHelper(self.mw.vumi_api.mdb)
+        }
+
+    @inlineCallbacks
+    def get_middleware(self, extra_config={}, extra_tagpool_metadata={}):
+        config = self.config.copy()
+        config.update(extra_config)
+        mw = yield self.mw_helper.create_middleware(config)
+        tagpool_metadata = {
+            "transport_type": "other",
+            "msg_options": {"transport_name": "other_transport"},
+        }
+        tagpool_metadata.update(extra_tagpool_metadata)
+        yield self.mw_helper.setup_tagpool(
+            "pool", ["tag1"], metadata=tagpool_metadata)
+        returnValue(mw)
 
     @inlineCallbacks
     def send_keyword(self, mw, word, expected_response):
-        msg = self.msg_helper.make_inbound(
+        msg = self.mw_helper.make_inbound(
             word, to_addr='to@domain.org', from_addr='from@domain.org')
         TaggingMiddleware.add_tag_to_msg(msg, ("pool", "tag1"))
         yield mw.handle_inbound(msg, 'dummy_endpoint')
@@ -100,8 +123,9 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_optout_flag(self):
+        mw = yield self.get_middleware()
         for keyword in self.config['optout_keywords']:
-            yield self.send_keyword(self.mw, keyword, {
+            yield self.send_keyword(mw, keyword, {
                 'optout': {
                     'optout': True,
                     'optout_keyword': keyword.lower(),
@@ -110,40 +134,24 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_non_optout_keywords(self):
+        mw = yield self.get_middleware()
         for keyword in ['THESE', 'DO', 'NOT', 'OPT', 'OUT']:
-            yield self.send_keyword(self.mw, keyword, {
-                'optout': {
-                    'optout': False,
-                }
+            yield self.send_keyword(mw, keyword, {
+                'optout': {'optout': False},
             })
 
     @inlineCallbacks
     def test_disabled_by_tagpool(self):
-        yield self.mw.vumi_api.tpm.set_metadata("pool", {
-                "transport_type": "other",
-                "msg_options": {"transport_name": "other_transport"},
-                "disable_global_opt_out": True,
-                })
-        yield self.send_keyword(self.mw, 'STOP', {
-            'optout': {
-                'optout': False,
-            }
+        mw = yield self.get_middleware(extra_tagpool_metadata={
+            "disable_global_opt_out": True,
+        })
+        yield self.send_keyword(mw, 'STOP', {
+            'optout': {'optout': False},
         })
 
     @inlineCallbacks
     def test_case_sensitivity(self):
-        config = self.config.copy()
-        config.update({
-            'case_sensitive': True,
-        })
-
-        # This is a bit ugly. We get a new fakeredis here.
-        mw = yield self.create_middleware(OptOutMiddleware, config=config)
-        yield mw.vumi_api.tpm.declare_tags([("pool", "tag1")])
-        yield mw.vumi_api.tpm.set_metadata("pool", {
-                "transport_type": "other",
-                "msg_options": {"transport_name": "other_transport"},
-                })
+        mw = yield self.get_middleware({'case_sensitive': True})
 
         yield self.send_keyword(mw, 'STOP', {
             'optout': {
@@ -159,17 +167,26 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         })
 
 
-class MetricsMiddlewareTestCase(MiddlewareTestCase):
+class TestMetricsMiddleware(VumiTestCase):
+
     def setUp(self):
-        self.msg_helper = GoMessageHelper()
-        return super(MetricsMiddlewareTestCase, self).setUp()
+        self.mw_helper = self.add_helper(MiddlewareHelper(MetricsMiddleware))
+
+    def get_middleware(self, config):
+        default_config = {
+            'manager_name': 'metrics_manager',
+            'count_suffix': 'counter',
+            'response_time_suffix': 'timer',
+        }
+        default_config.update(config or {})
+        return self.mw_helper.create_middleware(default_config)
 
     @inlineCallbacks
     def test_active_inbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
-        msg1 = self.msg_helper.make_inbound("foo", transport_name='endpoint_0')
-        msg2 = self.msg_helper.make_inbound("foo", transport_name='endpoint_1')
-        msg3 = self.msg_helper.make_inbound("foo", transport_name='endpoint_1')
+        msg1 = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
+        msg2 = self.mw_helper.make_inbound("foo", transport_name='endpoint_1')
+        msg3 = self.mw_helper.make_inbound("foo", transport_name='endpoint_1')
         # The middleware inspects the message's transport_name value, not
         # the dispatcher endpoint it was received on.
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
@@ -185,7 +202,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_passive_inbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        msg1 = self.msg_helper.make_inbound("foo", transport_name='endpoint_0')
+        msg1 = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
         [metric] = mw.metric_manager['dummy_endpoint.inbound.counter'].poll()
         self.assertEqual(metric[1], 1)
@@ -193,9 +210,9 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_active_outbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
-        msg1 = self.msg_helper.make_outbound("x", transport_name='endpoint_0')
-        msg2 = self.msg_helper.make_outbound("x", transport_name='endpoint_1')
-        msg3 = self.msg_helper.make_outbound("x", transport_name='endpoint_1')
+        msg1 = self.mw_helper.make_outbound("x", transport_name='endpoint_0')
+        msg2 = self.mw_helper.make_outbound("x", transport_name='endpoint_1')
+        msg3 = self.mw_helper.make_outbound("x", transport_name='endpoint_1')
         # The middleware inspects the message's transport_name value, not
         # the dispatcher endpoint it was received on.
         yield mw.handle_outbound(msg1, 'dummy_endpoint')
@@ -211,7 +228,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_passive_outbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        msg1 = self.msg_helper.make_outbound("x", transport_name='endpoint_0')
+        msg1 = self.mw_helper.make_outbound("x", transport_name='endpoint_0')
         yield mw.handle_outbound(msg1, 'dummy_endpoint')
         [metric] = mw.metric_manager['dummy_endpoint.outbound.counter'].poll()
         self.assertEqual(metric[1], 1)
@@ -219,7 +236,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_active_response_time_inbound(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
-        msg = self.msg_helper.make_inbound("foo", transport_name='endpoint_0')
+        msg = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         key = mw.key('endpoint_0', msg['message_id'])
         timestamp = yield mw.redis.get(key)
@@ -228,7 +245,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_passive_response_time_inbound(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        msg = self.msg_helper.make_inbound("foo", transport_name='endpoint_0')
+        msg = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         key = mw.key('dummy_endpoint', msg['message_id'])
         timestamp = yield mw.redis.get(key)
@@ -237,7 +254,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_active_response_time_comparison_on_outbound(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
-        inbound_msg = self.msg_helper.make_inbound(
+        inbound_msg = self.mw_helper.make_inbound(
             "foo", transport_name='endpoint_0')
         key = mw.key('endpoint_0', inbound_msg['message_id'])
         # Fake it to be 10 seconds in the past
@@ -252,7 +269,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_passive_response_time_comparison_on_outbound(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        inbound_msg = self.msg_helper.make_inbound(
+        inbound_msg = self.mw_helper.make_inbound(
             "foo", transport_name='endpoint_0')
         key = mw.key('dummy_endpoint', inbound_msg['message_id'])
         # Fake it to be 10 seconds in the past
@@ -267,7 +284,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_ack_event(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
-        event = self.msg_helper.make_ack()
+        event = self.mw_helper.make_ack()
         mw.handle_event(event, 'dummy_endpoint')
         [count] = mw.metric_manager['dummy_endpoint.event.ack.counter'].poll()
         self.assertEqual(count[1], 1)
@@ -276,7 +293,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     def test_delivery_report_event(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         for status in ['delivered', 'failed']:
-            dr = self.msg_helper.make_delivery_report(delivery_status=status)
+            dr = self.mw_helper.make_delivery_report(delivery_status=status)
             mw.handle_event(dr, 'dummy_endpoint')
 
         def metric_name(status):
@@ -309,7 +326,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def test_expiry(self):
         mw = yield self.get_middleware({'max_lifetime': 10})
-        msg1 = self.msg_helper.make_inbound('foo', transport_name='endpoint_0')
+        msg1 = self.mw_helper.make_inbound('foo', transport_name='endpoint_0')
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
         key = mw.key('dummy_endpoint', msg1['message_id'])
         ttl = yield mw.redis.ttl(key)
@@ -317,66 +334,57 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
             0 < ttl <= 10, "Expected 0 < ttl <= 10, found: %r" % (ttl,))
 
 
-class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
-    @inlineCallbacks
-    def setUp(self):
-        yield super(ConversationStoringMiddlewareTestCase, self).setUp()
-        self.mw = yield self.create_middleware(ConversationStoringMiddleware)
-        self.vumi_api = self.mw.vumi_api  # yoink!
-        yield self.setup_user_api(self.vumi_api)
-        self.conv = yield self.create_conversation()
-        self.msg_helper = GoMessageHelper(self.vumi_api.mdb)
+class TestConversationStoringMiddleware(VumiTestCase):
 
     @inlineCallbacks
-    def tearDown(self):
-        yield self.mw.teardown_middleware()
-        yield super(ConversationStoringMiddlewareTestCase, self).tearDown()
+    def setUp(self):
+        self.mw_helper = self.add_helper(
+            MiddlewareHelper(ConversationStoringMiddleware))
+        self.mw = yield self.mw_helper.create_middleware()
+        yield self.mw_helper.setup_vumi_api()
+        self.user_helper = yield self.mw_helper.make_user(u'user')
+        self.conv = yield self.user_helper.create_conversation(u'dummy_conv')
 
     @inlineCallbacks
     def test_inbound_message(self):
-        msg = self.msg_helper.make_inbound("inbound", conv=self.conv)
+        msg = self.mw_helper.make_inbound("inbound", conv=self.conv)
         yield self.mw.handle_inbound(msg, 'default')
         batch_id = self.conv.batch.key
-        msg_ids = yield self.vumi_api.mdb.batch_inbound_keys(batch_id)
+        msg_ids = yield self.mw.vumi_api.mdb.batch_inbound_keys(batch_id)
         self.assertEqual(msg_ids, [msg['message_id']])
 
     @inlineCallbacks
     def test_outbound_message(self):
-        msg = self.msg_helper.make_outbound("outbound", conv=self.conv)
+        msg = self.mw_helper.make_outbound("outbound", conv=self.conv)
         yield self.mw.handle_outbound(msg, 'default')
         batch_id = self.conv.batch.key
-        msg_ids = yield self.vumi_api.mdb.batch_outbound_keys(batch_id)
+        msg_ids = yield self.mw.vumi_api.mdb.batch_outbound_keys(batch_id)
         self.assertEqual(msg_ids, [msg['message_id']])
 
 
-class RouterStoringMiddlewareTestCase(MiddlewareTestCase,
-                                      GoRouterWorkerTestMixin):
-    @inlineCallbacks
-    def setUp(self):
-        yield super(RouterStoringMiddlewareTestCase, self).setUp()
-        self.mw = yield self.create_middleware(RouterStoringMiddleware)
-        self.vumi_api = self.mw.vumi_api  # yoink!
-        yield self.setup_user_api(self.vumi_api)
-        self.router = yield self.create_router()
-        self.msg_helper = GoMessageHelper(self.vumi_api.mdb)
+class TestRouterStoringMiddleware(VumiTestCase):
 
     @inlineCallbacks
-    def tearDown(self):
-        yield self.mw.teardown_middleware()
-        yield super(RouterStoringMiddlewareTestCase, self).tearDown()
+    def setUp(self):
+        self.mw_helper = self.add_helper(
+            MiddlewareHelper(RouterStoringMiddleware))
+        self.mw = yield self.mw_helper.create_middleware()
+        yield self.mw_helper.setup_vumi_api()
+        self.user_helper = yield self.mw_helper.make_user(u'user')
+        self.router = yield self.user_helper.create_router(u'dummy_conv')
 
     @inlineCallbacks
     def test_inbound_message(self):
-        msg = self.msg_helper.make_inbound("inbound", router=self.router)
+        msg = self.mw_helper.make_inbound("inbound", router=self.router)
         yield self.mw.handle_inbound(msg, 'dummy_endpoint')
-        msg_ids = yield self.vumi_api.mdb.batch_inbound_keys(
+        msg_ids = yield self.mw.vumi_api.mdb.batch_inbound_keys(
             self.router.batch.key)
         self.assertEqual(msg_ids, [msg['message_id']])
 
     @inlineCallbacks
     def test_outbound_message(self):
-        msg = self.msg_helper.make_outbound("outbound", router=self.router)
+        msg = self.mw_helper.make_outbound("outbound", router=self.router)
         yield self.mw.handle_outbound(msg, 'dummy_endpoint')
-        msg_ids = yield self.vumi_api.mdb.batch_outbound_keys(
+        msg_ids = yield self.mw.vumi_api.mdb.batch_outbound_keys(
             self.router.batch.key)
         self.assertEqual(msg_ids, [msg['message_id']])

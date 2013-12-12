@@ -12,6 +12,9 @@ from vumi import log
 from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
 
 
+# TODO: None of these should be ApplicationWorker subclasses.
+
+
 class CommandDispatcher(ApplicationWorker):
     """
     An application worker that forwards commands arriving on the Vumi Api queue
@@ -26,6 +29,8 @@ class CommandDispatcher(ApplicationWorker):
         A list of known worker names that we can forward
         VumiApiCommands to.
     """
+
+    # TODO: Make this not an ApplicationWorker.
 
     def validate_config(self):
         self.api_routing_config = VumiApiCommand.default_routing_config()
@@ -83,6 +88,8 @@ class EventDispatcher(ApplicationWorker):
     :param dict event_handlers:
         A mapping from handler name to fully-qualified class name.
     """
+
+    # TODO: Make this not an ApplicationWorker.
 
     def validate_config(self):
         self.api_routing_config = VumiApiEvent.default_routing_config()

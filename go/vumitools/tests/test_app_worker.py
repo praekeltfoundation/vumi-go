@@ -74,7 +74,7 @@ class TestGoApplicationWorker(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         self.conv = yield self.create_conversation()
-        self.msg_helper = GoMessageHelper(self.vumi_api.mdb)
+        self.msg_helper = self.add_helper(GoMessageHelper(self.vumi_api.mdb))
 
     @inlineCallbacks
     def test_message_not_processed_while_stopped(self):

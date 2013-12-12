@@ -31,7 +31,7 @@ class MessageStoreResourceTestCase(ResourceTestCaseBase, GoAppWorkerTestMixin):
         super(MessageStoreResourceTestCase, self).setUp()
         yield self._persist_setUp()
 
-        self.msg_helper = GoMessageHelper()
+        self.msg_helper = self.add_helper(GoMessageHelper())
         self.vumi_api = yield self.get_vumi_api()
         self.message_store = self.vumi_api.mdb
         yield self.setup_user_api(self.vumi_api)

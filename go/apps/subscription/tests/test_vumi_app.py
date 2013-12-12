@@ -49,7 +49,8 @@ class TestSubscriptionApplication(AppWorkerTestCase):
                     mkhandler('stop', 'bar', 'unsubscribe', 'Unsubscribed.'),
                 ]})
         yield self.start_conversation(self.conv)
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     @inlineCallbacks
     def assert_subscription(self, contact, campaign_name, value):
