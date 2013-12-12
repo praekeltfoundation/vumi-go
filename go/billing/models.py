@@ -53,6 +53,18 @@ class MessageCost(models.Model):
         (DIRECTION_OUTBOUND, DIRECTION_OUTBOUND),
     )
 
+    @classmethod
+    def calculate_credit_cost(cls, message_cost, markup_percent):
+        """Return the credit cost for the given `message_cost` and
+        `markup_percent`.
+        """
+        markup_amount = (message_cost * markup_percent / Decimal('100.0'))
+        resulting_price = message_cost + markup_amount
+        credit_cost = (resulting_price
+                       * Decimal(app_settings.CREDIT_CONVERSION_FACTOR))
+
+        return credit_cost.quantize(app_settings.QUANTIZATION_EXPONENT)
+
     account = models.ForeignKey(Account, blank=True, null=True)
     tag_pool = models.ForeignKey(TagPool)
     message_direction = models.CharField(max_length=20,
@@ -77,10 +89,8 @@ class MessageCost(models.Model):
     @property
     def credit_cost(self):
         """Return the calculated cost in credits"""
-        credit_cost = self.resulting_price * Decimal(
-            app_settings.CREDIT_CONVERSION_FACTOR)
-
-        return credit_cost.quantize(Decimal('.000001'))
+        return self.calculate_credit_cost(self.message_cost,
+                                          self.markup_percent)
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
