@@ -296,7 +296,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if msg_mdh.has_user_account():
             user_account_key = msg_mdh.get_account_key()
         elif msg_mdh.tag is not None:
-            tag_info = yield self.vumi_api.mdb.get_tag_info(tuple(msg_mdh.tag))
+            tag_info = yield msg_mdh.get_tag_info()
             user_account_key = tag_info.metadata['user_account']
             if user_account_key is None:
                 raise UnroutableMessageError(
@@ -386,8 +386,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         elif conn.ctype == conn.TRANSPORT_TAG:
             msg_mdh.set_tag([conn.tagpool, conn.tagname])
-            tagpool_metadata = yield self.vumi_api.tpm.get_metadata(
-                conn.tagpool)
+            tagpool_metadata = yield msg_mdh.get_tagpool_metadata()
             transport_name = tagpool_metadata.get('transport_name')
             if transport_name is None:
                 raise UnroutableMessageError(
@@ -569,7 +568,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             # but this is an error path)
             f.raiseException()
 
-        tagpool_metadata = yield self.vumi_api.tpm.get_metadata(msg_mdh.tag[0])
+        tagpool_metadata = yield msg_mdh.get_tagpool_metadata()
         if not tagpool_metadata.get('reply_to_unroutable_inbound'):
             f.raiseException()
 

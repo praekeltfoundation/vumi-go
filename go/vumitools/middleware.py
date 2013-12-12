@@ -3,13 +3,15 @@ import time
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.middleware.message_storing import StoringMiddleware
 from vumi.utils import normalize_msisdn
 from vumi.blinkenlights.metrics import MetricManager, Count, Metric
 from vumi.persist.txredis_manager import TxRedisManager
 from vumi.errors import ConfigError
+
+from go.vumitools.api import VumiApi
+from go.vumitools.utils import MessageMetadataHelper
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -34,7 +36,6 @@ class OptOutMiddleware(BaseMiddleware):
 
     @inlineCallbacks
     def setup_middleware(self):
-        from go.vumitools.api import VumiApi
         self.vumi_api = yield VumiApi.from_config_async(self.config)
 
         self.case_sensitive = self.config.get('case_sensitive', False)
@@ -49,9 +50,9 @@ class OptOutMiddleware(BaseMiddleware):
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):
         optout_disabled = False
-        tag = TaggingMiddleware.map_msg_to_tag(message)
-        if tag is not None:
-            tagpool_metadata = yield self.vumi_api.tpm.get_metadata(tag[0])
+        msg_mdh = MessageMetadataHelper(self.vumi_api, message)
+        if msg_mdh.tag is not None:
+            tagpool_metadata = yield msg_mdh.get_tagpool_metadata()
             optout_disabled = tagpool_metadata.get(
                 'disable_global_opt_out', False)
         keyword = (message['content'] or '').strip()
@@ -216,7 +217,6 @@ class GoStoringMiddleware(StoringMiddleware):
     @inlineCallbacks
     def setup_middleware(self):
         yield super(GoStoringMiddleware, self).setup_middleware()
-        from go.vumitools.api import VumiApi
         self.vumi_api = yield VumiApi.from_config_async(self.config)
 
     @inlineCallbacks
@@ -243,8 +243,6 @@ class GoStoringMiddleware(StoringMiddleware):
 class ConversationStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
-        # MessageMetadataHelper is imported here to avoid a circular import
-        from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         conversation = yield mdh.get_conversation()
         returnValue(conversation.batch.key)
@@ -253,8 +251,6 @@ class ConversationStoringMiddleware(GoStoringMiddleware):
 class RouterStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
-        # MessageMetadataHelper is imported here to avoid a circular import
-        from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         router = yield mdh.get_router()
         returnValue(router.batch.key)

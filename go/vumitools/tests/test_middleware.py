@@ -119,6 +119,9 @@ class TestOptOutMiddleware(VumiTestCase):
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         expected_response = dict(expected_response,
                                  tag={'tag': ['pool', 'tag1']})
+        # MessageMetadataHelper can add 'go' metadata and we want to ignore it.
+        if 'go' in msg['helper_metadata']:
+            expected_response['go'] = msg['helper_metadata']['go']
         self.assertEqual(msg['helper_metadata'], expected_response)
 
     @inlineCallbacks

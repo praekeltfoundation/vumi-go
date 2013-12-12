@@ -3,7 +3,6 @@
 from twisted.internet.defer import succeed
 
 from vumi.middleware.tagger import TaggingMiddleware
-from go.vumitools.middleware import OptOutMiddleware
 
 
 class MessageMetadataHelper(object):
@@ -51,6 +50,16 @@ class MessageMetadataHelper(object):
         """
         self._store_objects.clear()
 
+    def _stash_and_return_object(self, obj, key):
+        self._store_objects[key] = obj
+        return obj
+
+    def _get_if_not_stashed(self, key, func, *args, **kw):
+        if key in self._store_objects:
+            return succeed(self._store_objects[key])
+        return func(*args, **kw).addCallback(
+            self._stash_and_return_object, key)
+
     def is_sensitive(self):
         """
         Returns True if the contents of the message have been marked as
@@ -82,15 +91,9 @@ class MessageMetadataHelper(object):
         return self._go_metadata['conversation_key']
 
     def get_conversation(self):
-        if 'conversation' in self._store_objects:
-            return succeed(self._store_objects['conversation'])
-
-        def stash_and_return_conv(conv):
-            self._store_objects['conversation'] = conv
-            return conv
-
-        return self.get_user_api().get_wrapped_conversation(
-            self.get_conversation_key()).addCallback(stash_and_return_conv)
+        return self._get_if_not_stashed(
+            'conversation', self.get_user_api().get_wrapped_conversation,
+            self.get_conversation_key())
 
     def get_conversation_info(self):
         conversation_info = {}
@@ -121,6 +124,8 @@ class MessageMetadataHelper(object):
         self._go_metadata.pop('is_paid', None)
 
     def is_optout_message(self):
+        # To avoid circular imports.
+        from go.vumitools.middleware import OptOutMiddleware
         return OptOutMiddleware.is_optout_message(self.message)
 
     def get_router_key(self):
@@ -151,3 +156,17 @@ class MessageMetadataHelper(object):
     def set_tag(self, tag):
         TaggingMiddleware.add_tag_to_msg(self.message, tag)
         self.tag = TaggingMiddleware.map_msg_to_tag(self.message)
+
+    def get_tag_info(self):
+        if self.tag is None:
+            raise ValueError("No tag to look up metadata for.")
+
+        return self._get_if_not_stashed(
+            'tag_info', self.vumi_api.mdb.get_tag_info, tuple(self.tag))
+
+    def get_tagpool_metadata(self):
+        if self.tag is None:
+            raise ValueError("No tag to look up metadata for.")
+
+        return self._get_if_not_stashed(
+            'tagpool_metadata', self.vumi_api.tpm.get_metadata, self.tag[0])
