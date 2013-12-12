@@ -3,7 +3,6 @@
 from twisted.internet.defer import succeed
 
 from vumi.middleware.tagger import TaggingMiddleware
-from go.vumitools.middleware import OptOutMiddleware
 
 
 class MessageMetadataHelper(object):
@@ -121,6 +120,8 @@ class MessageMetadataHelper(object):
         self._go_metadata.pop('is_paid', None)
 
     def is_optout_message(self):
+        # To avoid circular imports.
+        from go.vumitools.middleware import OptOutMiddleware
         return OptOutMiddleware.is_optout_message(self.message)
 
     def get_router_key(self):
