@@ -8,12 +8,15 @@ from django.contrib import admin
 from django.contrib import messages
 
 from go.billing.models import TagPool, Account, MessageCost, Transaction
-from go.billing.forms import CreditLoadForm, BaseCreditLoadFormSet
+from go.billing.forms import (CreditLoadForm,
+                              BaseCreditLoadFormSet,
+                              TagPoolForm)
 
 
 class TagPoolAdmin(admin.ModelAdmin):
     list_display = ('name', 'description')
     search_fields = ('name', 'description')
+    form = TagPoolForm
 
 
 class AccountAdmin(admin.ModelAdmin):
