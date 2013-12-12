@@ -6,6 +6,9 @@ from django.contrib.auth import get_user_model
 CREDIT_CONVERSION_FACTOR = getattr(
     settings, 'BILLING_CREDIT_CONVERSION_FACTOR', Decimal('0.25'))
 
+QUANTIZATION_EXPONENT = getattr(settings, 'BILLING_QUANTIZATION_EXPONENT',
+                                Decimal('.000001'))
+
 API_MIN_CONNECTIONS = getattr(settings, 'BILLING_API_MIN_CONNECTIONS', 10)
 
 ENDPOINT_DESCRIPTION_STRING = getattr(
