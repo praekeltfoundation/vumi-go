@@ -38,7 +38,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
         yield self.setup_tagpools()
         self._setup_wait_for_window_monitor()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     def _setup_wait_for_window_monitor(self):
         # Hackery to wait for the window manager on the app.

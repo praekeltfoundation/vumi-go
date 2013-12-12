@@ -1,6 +1,6 @@
 import copy
-from unittest import TestCase
 
+from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.routing_table import (
@@ -46,7 +46,7 @@ class FakePlasticChannel(object):
         return GoConnector.for_model(self)
 
 
-class RoutingTableTestCase(TestCase):
+class TestRoutingTable(VumiTestCase):
 
     CONV_1 = "CONVERSATION:dummy:1"
     CONV_2 = "CONVERSATION:dummy:2"
@@ -341,7 +341,7 @@ class RoutingTableTestCase(TestCase):
         self.assertRaises(ValueError, rt.validate_all_entries)
 
 
-class GoConnectorTestCase(TestCase):
+class TestGoConnector(VumiTestCase):
     def test_create_conversation_connector(self):
         c = GoConnector.for_conversation("conv_type_1", "12345")
         self.assertEqual(c.ctype, GoConnector.CONVERSATION)
