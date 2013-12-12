@@ -65,7 +65,6 @@ class TestSurveyApplication(VumiTestCase):
         config = yield self.pm.get_config(poll_id)
         config.update({
             'poll_id': poll_id,
-            # 'transport_name': self.transport_name,
             'questions': questions
         })
 

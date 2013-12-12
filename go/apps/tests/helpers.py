@@ -95,14 +95,11 @@ class AppWorkerHelper(object):
 
     def __init__(self, worker_class, **msg_helper_args):
         self._worker_class = worker_class
-        msg_helper_kw = {}
-        if msg_helper_args is not None:
-            msg_helper_kw.update(msg_helper_args)
 
         self.vumi_helper = VumiApiHelper()
         self._app_helper = ApplicationHelper(
             self._conversation_type(), self.vumi_helper)
-        self.msg_helper = GoMessageHelper(**msg_helper_kw)
+        self.msg_helper = GoMessageHelper(**msg_helper_args)
         self.transport_name = self.msg_helper.transport_name
         self.worker_helper = self.vumi_helper.get_worker_helper(
             self.transport_name)
@@ -120,7 +117,8 @@ class AppWorkerHelper(object):
 
     def _conversation_type(self):
         # This is a guess based on worker_name.
-        # We need a better way to do this.
+        # TODO: We need a better way to do this, probably involving either the
+        #       conversation definition or go.config.
         return self._worker_name().rpartition('_')[0].decode('utf-8')
 
     def setup(self):

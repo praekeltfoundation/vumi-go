@@ -84,7 +84,6 @@ class TestMessageStoreResource(ResourceTestCaseBase):
     @inlineCallbacks
     def test_handle_count_inbound_uniques(self):
         reply = yield self.dispatch_command('count_inbound_uniques')
-        print reply
         self.assertTrue(reply['success'])
         self.assertEqual(reply['count'], 1)
 
