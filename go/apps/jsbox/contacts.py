@@ -1,10 +1,14 @@
 # -*- test-case-name: go.apps.jsbox.tests.test_contacts -*-
 # -*- coding: utf-8 -*-
 
+import hashlib
+import random
+
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
 from vumi.application.sandbox import SandboxResource, SandboxError
+from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.contact import (
     Contact, ContactStore, ContactError, ContactNotFoundError)
@@ -18,6 +22,14 @@ class ContactsResource(SandboxResource):
     See :class:`go.vumitools.contact.Contact` for a look at the Contact model
     and its fields.
     """
+
+    @inlineCallbacks
+    def setup(self):
+        redis_config = self.config.get('redis_manager', {})
+        self.redis = yield TxRedisManager.from_config(redis_config)
+
+    def teardown(self):
+        return self.redis.close_manager()
 
     def _contact_store_for_api(self, api):
         return self.app_worker.user_api_for_api(api).contact_store
@@ -419,17 +431,96 @@ class ContactsResource(SandboxResource):
             success=True,
             contact=contact.get_data()))
 
+    def _token(self, query_id, batch_size):
+        """
+        Construct an opaque token for paging through results. Since the
+        token is opaque we can modify our search implementation without
+        having to change or break the JS Sandbox API.
+
+        ``query_id`` is a semi-unique ID identifying an initial
+        'contact.search' call performed by the user. Success calls
+        to ``contact.search`` with the same query string and nextToken
+        share the same query_id.
+
+        ``batch_size`` is the number of results which can be returned
+        by the next call to 'contact.search' for with same query string
+        and query_id
+        """
+        if batch_size == 0:
+            return False
+        return "%s:%s" % (query_id, batch_size,)
+
+    def _token_parse(self, token):
+        """Parse paging information from token"""
+        try:
+            query_id, batch_size = token.split(":")
+            return (int(query_id), int(batch_size),)
+        except (Exception, ValueError,) as e:
+            e.args = ("parameter value for 'nextToken' is invalid: %s"
+                      % e.args[0])
+            raise e
+
+    def _key_for_search_results(self, api, query_id, query):
+        """Construct a unique key for caching search results"""
+        prefix = "search:contacts"
+        return ("%s:%s:%s:%s" % (prefix,
+                                 api.sandbox_id,
+                                 query_id,
+                                 hashlib.sha1().update(query).hexdigest()))
+
+    @inlineCallbacks
+    def _setup_search_result_cache(self, api, query_id, query, keys):
+        """Caches search results"""
+        redis_key = self._key_for_search_results(api, query_id, query)
+
+        batch_size = self.config.max_batch_size
+        cur, remainder = (keys[0:batch_size], keys[batch_size:],)
+
+        if remainder:
+            yield self.redis.sadd(redis_key, remainder)
+            yield self.redis.expire(redis_key, self.config.search_cache_expiry)
+        else:
+            batch_size = 0
+        returnValue((cur, batch_size))
+
+    @inlineCallbacks
+    def _next_batch_of_keys(self, api, query_id, query, batch_size):
+        """
+        Remove ``batch_size`` keys from the cached search results
+        """
+        redis_key = self._key_for_search_results(api, query_id, query)
+
+        keys = yield self.redis.smembers(redis_key)
+        cur, remainder = (keys[0:batch_size], keys[batch_size:],)
+
+        if remainder:
+            batch_size = min(self.config.max_batch_size, len(remainder))
+            yield self.redis.delete(redis_key)
+            yield self.redis.sadd(redis_key, remainder)
+            yield self.redis.expire(redis_key, self.config.search_cache_expiry)
+        else:
+            batch_size = 0
+            yield self.redis.delete(redis_key)
+        returnValue((cur, batch_size))
+
     @inlineCallbacks
     def handle_search(self, api, command):
         """
         Search for contacts
 
         Command fields:
-            - ``query``: The Lucene search query to perform.
+            - ``query``: The Lucene search query to perform.  (required)
+            - ``nextToken``: Tell Go to deliver the next batch of results
 
         Success reply fields:
             - ``success``: set to ``true``
             - ``contacts``: A list of dictionaries with contact information.
+            - ``nextToken``: An opaque token that tells Go which batch of
+                             results to deliver next.
+                             If ``false`` There are no more results available,
+                             otherwise. Otherwise, if you want to fetch more
+                             results, you must include this value in your
+                             next call to the search API.
 
         Note:   If no matches are found ``contacts`` will be an empty list.
 
@@ -437,7 +528,9 @@ class ContactsResource(SandboxResource):
             - ``success``: set to ``false``
             - ``reason``: Reason for the failure
 
-        Example:
+        Examples:
+
+        Searching on a single contact field:
 
         .. code-block:: javascript
 
@@ -446,11 +539,52 @@ class ContactsResource(SandboxResource):
                      query: 'name:"My Name"',
                 },
                 function(reply) { api.log_info(reply.contacts); });
+
+        Paging over results:
+
+        .. code-block:: javascript
+
+            function fetch_and_process(reply) {
+               if (reply.success && reply.nextToken) {
+                   api.log_info(reply.contacts)
+                   api.request(
+                       'contacts.search', {
+                           query: 'surname:"Smith*"',
+                           nextToken: reply.nextToken,
+                       },
+                       function(reply) { fetch_and_process(reply); });
+               }
+            }
+
+            api.request(
+                'contacts.search', {
+                     query: 'surname:"Smith*"',
+                },
+                function(reply) { fetch_and_process(reply); });
+
+
         """
         try:
-            contact_store = self._contact_store_for_api(api)
-            keys = yield contact_store.contacts.raw_search(
-                command['query']).get_keys()
+            if 'nextToken' in command and command['nextToken']:
+                query_id, batch_size = self._token_parse(command['nextToken'])
+                keys, batch_size = yield self._next_batch_of_keys(
+                    api,
+                    command['query'],
+                    batch_size
+                )
+            else:
+                # create a semi-unique id for this query
+                query_id = random.randint(0, 1024 * 1024)
+                # go!
+                contact_store = self._contact_store_for_api(api)
+                keys = yield contact_store.contacts.raw_search(
+                    command['query']).get_keys()
+                # setup search result cache
+                keys, batch_size = yield self._cache_search_result(
+                    api,
+                    command['query'],
+                    keys
+                )
             contacts = []
             for contact_bunch in contact_store.contacts.load_all_bunches(keys):
                 contacts.extend((yield contact_bunch))
@@ -469,8 +603,8 @@ class ContactsResource(SandboxResource):
         returnValue(self.reply(
             command,
             success=True,
+            nextToken=self._token(query_id, batch_size),
             contacts=[contact.get_data() for contact in contacts]))
-
 
 
 class GroupsResource(SandboxResource):
