@@ -469,8 +469,12 @@ class ContactsResource(SandboxResource):
                                  hashlib.sha1().update(query).hexdigest()))
 
     @inlineCallbacks
-    def _setup_search_result_cache(self, api, query_id, query, keys):
-        """Caches search results"""
+    def _cache_search_result(self, api, query_id, query, keys):
+        """
+        Caches search results and returns the keys we can actually
+        return to the user right now, as well the number of results
+        we can return in the users next call to 'contact.search'.
+        """
         redis_key = self._key_for_search_results(api, query_id, query)
 
         batch_size = self.config.max_batch_size
@@ -582,6 +586,7 @@ class ContactsResource(SandboxResource):
                 # setup search result cache
                 keys, batch_size = yield self._cache_search_result(
                     api,
+                    query_id,
                     command['query'],
                     keys
                 )
