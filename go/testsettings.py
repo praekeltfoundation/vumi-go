@@ -65,3 +65,11 @@ STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'
 # disable console logging to avoid log messages messing up test output
 LOGGING['loggers']['go']['handlers'].remove('console')
 LOGGING['root']['handlers'].remove('mail_admins')
+
+# disable response-time middleware during tests
+DISALLOWED_MIDDLEWARE = set([
+    'go.base.middleware.ResponseTimeMiddleware'
+])
+MIDDLEWARE_CLASSES = tuple([x for x in MIDDLEWARE_CLASSES
+                            if x not in DISALLOWED_MIDDLEWARE])
+del DISALLOWED_MIDDLEWARE
