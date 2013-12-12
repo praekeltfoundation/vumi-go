@@ -15,11 +15,10 @@ def standard_forms(request):
 
 
 def credit(request):
+    # TODO: Fill this in with real data.
     if request.user.is_authenticated() and hasattr(request, 'user_api'):
-        profile = request.user.get_profile()
-        api = request.user_api.api
         return {
-            'account_credits': api.cm.get_credit(profile.user_account) or 0,
+            'account_credits': 0,
         }
     return {}
 
