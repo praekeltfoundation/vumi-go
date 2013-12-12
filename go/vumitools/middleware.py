@@ -76,9 +76,9 @@ class OptOutMiddleware(BaseMiddleware):
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):
         optout_disabled = False
-        tag = TaggingMiddleware.map_msg_to_tag(message)
-        if tag is not None:
-            tagpool_metadata = yield self.vumi_api.tpm.get_metadata(tag[0])
+        msg_mdh = MessageMetadataHelper(self.vumi_api, message)
+        if msg_mdh.tag is not None:
+            tagpool_metadata = yield msg_mdh.get_tagpool_metadata()
             optout_disabled = tagpool_metadata.get(
                 'disable_global_opt_out', False)
         keyword = (message['content'] or '').strip()
