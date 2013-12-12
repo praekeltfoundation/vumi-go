@@ -44,14 +44,10 @@ class BaseResource(Resource):
 
         """
         if result is not None:
-            try:
-                data = json.dumps(result, cls=JSONEncoder)
-                request.setResponseCode(200)  # OK
-                request.setHeader('Content-Type', 'application/json')
-                request.write(data)
-            except JSONEncoder.EncodeError:
-                log.err()
-                request.setResponseCode(500)  # Internal Server Error
+            data = json.dumps(result, cls=JSONEncoder)
+            request.setResponseCode(200)  # OK
+            request.setHeader('Content-Type', 'application/json')
+            request.write(data)
         else:
             request.setResponseCode(404)  # Not Found
         request.finish()
@@ -65,11 +61,8 @@ class BaseResource(Resource):
         """
         content_type = request.getHeader('Content-Type')
         if request.method == 'POST' and content_type == 'application/json':
-            try:
-                content = request.content.read()
-                return json.loads(content, cls=JSONDecoder)
-            except JSONDecoder.DecodeError:
-                log.err()
+            content = request.content.read()
+            return json.loads(content, cls=JSONDecoder)
         return None
 
 
