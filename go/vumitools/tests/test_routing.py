@@ -1,15 +1,15 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.tests.helpers import MessageHelper
+from vumi.tests.helpers import VumiTestCase, MessageHelper
 
 from go.vumitools.routing import (
     AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
-from go.vumitools.tests.utils import GoTestCase, AppWorkerTestCase
-from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.routing_table import RoutingTable
+from go.vumitools.tests.helpers import VumiApiHelper
+from go.vumitools.utils import MessageMetadataHelper
 
 
-class TestRoutingMetadata(GoTestCase):
+class TestRoutingMetadata(VumiTestCase):
     def mk_msg_rmeta(self, **routing_metadata):
         # We don't need a real message, just a container for routing_metadata.
         msg = {'routing_metadata': routing_metadata}
@@ -211,16 +211,33 @@ class TestRoutingMetadata(GoTestCase):
         ], 'se2')
 
 
-class RoutingTableDispatcherTestCase(AppWorkerTestCase):
+class RoutingTableDispatcherTestCase(VumiTestCase):
     """Base class for ``AccountRoutingTableDispatcher`` test cases"""
 
     @inlineCallbacks
-    def setup_routing_table_dispatcher_test(self):
-        self.dispatcher = yield self.get_dispatcher()
-        self.vumi_api = self.dispatcher.vumi_api
+    def setUp(self):
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u'testuser')
+        self.user_account_key = self.user_helper.account_key
 
-        user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        user_account.routing_table = RoutingTable({
+        user_account = yield self.user_helper.get_user_account()
+        user_account.routing_table = self.get_routing_table()
+        yield user_account.save()
+
+        tag1, tag2, tag3 = yield self.vumi_helper.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"], metadata={
+                "transport_name": "sphex",
+            })
+        yield self.user_helper.add_tagpool_permission(u"pool1")
+        yield self.user_helper.user_api.acquire_specific_tag(tag1)
+        yield self.user_helper.user_api.acquire_specific_tag(tag2)
+        yield self.user_helper.user_api.acquire_specific_tag(tag3)
+        # We use vumi's MessageHelper here rather than our own GoMessageHelper
+        # because we want to handle all the Go metadata stuff ourselves.
+        self.msg_helper = self.add_helper(MessageHelper())
+
+    def get_routing_table(self):
+        return RoutingTable({
             # Transport side
             "TRANSPORT_TAG:pool1:1234": {
                 "default": ["CONVERSATION:app1:conv1", "default"]},
@@ -247,51 +264,12 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
                 "other": ["CONVERSATION:app2:conv2", "yet-another"],
             },
         })
-        yield user_account.save()
-
-        self.user_account_key = user_account.key
-        self.user_api = self.vumi_api.get_user_api(self.user_account_key)
-        tag1, tag2, tag3 = yield self.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"])
-        yield self.user_api.acquire_specific_tag(tag1)
-        yield self.user_api.acquire_specific_tag(tag2)
-        yield self.user_api.acquire_specific_tag(tag3)
-        # We use vumi's MessageHelper here rather than our own GoMessageHelper
-        # because we want to handle all the Go metadata stuff ourselves.
-        self.msg_helper = MessageHelper()
-
-    @inlineCallbacks
-    def get_dispatcher(self, **config_extras):
-        config = {
-            "receive_inbound_connectors": [
-                "sphex", "router_ro"
-            ],
-            "receive_outbound_connectors": [
-                "app1", "app2", "router_ri", "optout"
-            ],
-            "metrics_prefix": "foo",
-            "application_connector_mapping": {
-                "app1": "app1",
-                "app2": "app2",
-            },
-            "router_inbound_connector_mapping": {
-                "router": "router_ro",
-            },
-            "router_outbound_connector_mapping": {
-                "router": "router_ri",
-            },
-            "opt_out_connector": "optout",
-        }
-        config.update(config_extras)
-        dispatcher = yield self.get_worker(
-            self.mk_config(config), AccountRoutingTableDispatcher)
-        returnValue(dispatcher)
 
     def with_md(self, msg, user_account=None, conv=None, router=None,
                 endpoint=None, tag=None, hops=None, outbound_hops_from=None,
                 is_paid=False):
         msg.payload.setdefault('helper_metadata', {})
-        md = MessageMetadataHelper(self.vumi_api, msg)
+        md = MessageMetadataHelper(self.vumi_helper.get_vumi_api(), msg)
         if user_account is not None:
             md.set_user_account(user_account)
         if conv is not None:
@@ -320,13 +298,14 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
         return msg
 
     def assert_rkeys_used(self, *rkeys):
-        self.assertEqual(set(rkeys), set(self._amqp.dispatched['vumi'].keys()))
+        broker = self.vumi_helper.get_worker_helper().broker
+        self.assertEqual(set(rkeys), set(broker.dispatched['vumi'].keys()))
 
     @inlineCallbacks
     def mk_msg_reply(self, **kw):
         "Create and store an outbound message, then create a reply for it."
         msg = self.with_md(self.msg_helper.make_inbound("foo"), **kw)
-        yield self.vumi_api.mdb.add_inbound_message(msg)
+        yield self.vumi_helper.get_vumi_api().mdb.add_inbound_message(msg)
         reply = msg.reply(content="Reply")
         returnValue((msg, reply))
 
@@ -334,17 +313,60 @@ class RoutingTableDispatcherTestCase(AppWorkerTestCase):
     def mk_msg_ack(self, **kw):
         "Create and store an outbound message, then create an ack for it."
         msg = self.with_md(self.msg_helper.make_outbound("foo"), **kw)
-        yield self.vumi_api.mdb.add_outbound_message(msg)
+        yield self.vumi_helper.get_vumi_api().mdb.add_outbound_message(msg)
         ack = self.msg_helper.make_ack(msg)
         returnValue((msg, ack))
+
+    def dispatch_inbound(self, msg, connector_name):
+        worker_helper = self.vumi_helper.get_worker_helper(connector_name)
+        return worker_helper.dispatch_inbound(msg)
+
+    def dispatch_outbound(self, msg, connector_name):
+        worker_helper = self.vumi_helper.get_worker_helper(connector_name)
+        return worker_helper.dispatch_outbound(msg)
+
+    def dispatch_event(self, msg, connector_name):
+        worker_helper = self.vumi_helper.get_worker_helper(connector_name)
+        return worker_helper.dispatch_event(msg)
+
+    def get_dispatched_inbound(self, connector_name):
+        worker_helper = self.vumi_helper.get_worker_helper(connector_name)
+        return worker_helper.get_dispatched_inbound()
+
+    def get_dispatched_outbound(self, connector_name):
+        worker_helper = self.vumi_helper.get_worker_helper(connector_name)
+        return worker_helper.get_dispatched_outbound()
+
+    def get_dispatched_events(self, connector_name):
+        worker_helper = self.vumi_helper.get_worker_helper(connector_name)
+        return worker_helper.get_dispatched_events()
 
 
 class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
 
-    @inlineCallbacks
-    def setUp(self):
-        yield super(TestRoutingTableDispatcher, self).setUp()
-        yield self.setup_routing_table_dispatcher_test()
+    def get_dispatcher(self):
+        config = self.vumi_helper.mk_config({
+            "receive_inbound_connectors": [
+                "sphex", "router_ro"
+            ],
+            "receive_outbound_connectors": [
+                "app1", "app2", "router_ri", "optout"
+            ],
+            "metrics_prefix": "foo",
+            "application_connector_mapping": {
+                "app1": "app1",
+                "app2": "app2",
+            },
+            "router_inbound_connector_mapping": {
+                "router": "router_ro",
+            },
+            "router_outbound_connector_mapping": {
+                "router": "router_ri",
+            },
+            "opt_out_connector": "optout",
+        })
+        return self.vumi_helper.get_worker_helper().get_worker(
+            AccountRoutingTableDispatcher, config)
 
     @inlineCallbacks
     def test_inbound_message_from_transport_to_app1(self):
@@ -577,7 +599,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_gets_transport_fields(self):
         yield self.get_dispatcher()
-        yield self.vumi_api.tpm.set_metadata("pool1", {
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata("pool1", {
             'transport_name': 'sphex',
             'transport_type': 'sms',
         })
@@ -598,14 +620,8 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
 
 class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
 
-    @inlineCallbacks
-    def setUp(self):
-        yield super(TestRoutingTableDispatcherWithBilling, self).setUp()
-        yield self.setup_routing_table_dispatcher_test()
-
-    @inlineCallbacks
-    def get_dispatcher(self, **config_extras):
-        config = {
+    def get_dispatcher(self):
+        config = self.vumi_helper.mk_config({
             "receive_inbound_connectors": [
                 "sphex", "router_ro", "billing_dispatcher_ro"
             ],
@@ -614,18 +630,28 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
                 "billing_dispatcher_ri"
             ],
             "billing_inbound_connector": "billing_dispatcher_ri",
-            "billing_outbound_connector": "billing_dispatcher_ro"
-        }
-        config.update(config_extras)
-        dispatcher = yield super(TestRoutingTableDispatcherWithBilling, self)\
-            .get_dispatcher(**config)
-
-        returnValue(dispatcher)
+            "billing_outbound_connector": "billing_dispatcher_ro",
+            "metrics_prefix": "foo",
+            "application_connector_mapping": {
+                "app1": "app1",
+                "app2": "app2",
+            },
+            "router_inbound_connector_mapping": {
+                "router": "router_ro",
+            },
+            "router_outbound_connector_mapping": {
+                "router": "router_ri",
+            },
+            "opt_out_connector": "optout",
+        })
+        return self.vumi_helper.get_worker_helper().get_worker(
+            AccountRoutingTableDispatcher, config)
 
     @inlineCallbacks
     def test_inbound_message_from_transport_to_billing(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used(
             'sphex.inbound', 'billing_dispatcher_ri.inbound')
@@ -642,7 +668,8 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_billing_to_app1(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.mkmsg_in(), user_account=self.user_account_key,
+            self.msg_helper.make_inbound("foo"),
+            user_account=self.user_account_key,
             tag=("pool1", "1234"), hops=[
                 ['TRANSPORT_TAG:pool1:1234', 'default'],
                 ['BILLING:INBOUND', 'default']
@@ -662,7 +689,8 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_inbound_optout_message_from_transport_to_billing(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
         msg['helper_metadata']['optout'] = {'optout': True}
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used(
@@ -678,7 +706,8 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_inbound_message_from_billing_to_optout(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
         msg['helper_metadata']['optout'] = {'optout': True}
         yield self.dispatch_inbound(msg, 'billing_dispatcher_ro')
         self.assert_rkeys_used(
@@ -694,8 +723,9 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_inbound_message_from_router(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
-                           is_paid=True)
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), router=('router', 'router1'),
+            is_paid=True)
 
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
@@ -728,7 +758,8 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_from_conversation_in_app1_to_billing(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used(
             'app1.outbound', 'billing_dispatcher_ro.outbound')
@@ -744,8 +775,9 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_from_billing_to_transport(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), tag=("pool1", "1234"),
-                           conv=('app1', 'conv1'), is_paid=True)
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), tag=("pool1", "1234"),
+            conv=('app1', 'conv1'), is_paid=True)
 
         yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
         self.assert_rkeys_used(
@@ -761,7 +793,8 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_outbound_message_from_router_to_billing(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'))
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), router=('router', 'router1'))
         yield self.dispatch_outbound(msg, 'router_ri')
         self.assert_rkeys_used(
             'router_ri.outbound', 'billing_dispatcher_ro.outbound')
@@ -777,8 +810,9 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     @inlineCallbacks
     def test_router_outbound_message_from_billing_to_transport(self):
         yield self.get_dispatcher()
-        msg = self.with_md(self.mkmsg_out(), tag=("pool1", "1234"),
-                           router=('router', 'router1'), is_paid=True)
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), tag=("pool1", "1234"),
+            router=('router', 'router1'), is_paid=True)
 
         yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
         self.assert_rkeys_used(
@@ -814,28 +848,32 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
 
 class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
 
-    @inlineCallbacks
-    def setUp(self):
-        yield super(TestUnroutableSessionResponse, self).setUp()
-        yield self.setup_routing_table_dispatcher_test()
+    def get_routing_table(self):
+        return RoutingTable({})
 
-    @inlineCallbacks
-    def get_dispatcher(self, **config_extras):
-        config = {
+    def get_dispatcher(self):
+        config = self.vumi_helper.mk_config({
             "receive_inbound_connectors": [
                 "sphex", "router_ro",
             ],
             "receive_outbound_connectors": [
                 "app1", "router_ri",
             ],
-            "send_unroutable_inbound_session_replies": True,
+            "metrics_prefix": "foo",
+            "application_connector_mapping": {
+                "app1": "app1",
+            },
+            "router_inbound_connector_mapping": {
+                "router": "router_ro",
+            },
+            "router_outbound_connector_mapping": {
+                "router": "router_ri",
+            },
+            "opt_out_connector": "optout",
             "default_unroutable_inbound_reply": "Eep!",
-        }
-        config.update(config_extras)
-        dispatcher = yield super(
-            TestUnroutableSessionResponse, self).get_dispatcher(**config)
-
-        returnValue(dispatcher)
+        })
+        return self.vumi_helper.get_worker_helper().get_worker(
+            AccountRoutingTableDispatcher, config)
 
     def assert_reply_matches(self, reply, msg, content,
                              session_event='close', **md):
@@ -860,7 +898,7 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("badpool", "tag1"))
+            tag=("badpool", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound')
         [failure] = self.flushLoggedErrors()
@@ -872,66 +910,71 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("pool1", "tag1"))
+            tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound')
         [failure] = self.flushLoggedErrors()
         self.assertEqual(
-            'Message received for unowned tag.', failure.value.args[0])
+            "No target found for inbound message from 'sphex'",
+            failure.value.args[0])
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_no_reply(self):
-        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
             "reply_to_unroutable_inbound": False,
         })
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("pool1", "tag1"))
+            tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound')
         [failure] = self.flushLoggedErrors()
         self.assertEqual(
-            'Message received for unowned tag.', failure.value.args[0])
+            "No target found for inbound message from 'sphex'",
+            failure.value.args[0])
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_default_reply(self):
-        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
             "reply_to_unroutable_inbound": True,
         })
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("pool1", "tag1"))
-        yield self.dispatch_inbound(msg, 'router_ro')
+            tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
-            'router_ro', msg, "Eep!", tag=("pool1", "tag1"))
+            'sphex', msg, "Eep!", tag=("pool1", "1234"),
+            user_account=self.user_helper.account_key)
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_default_reply_no_session(self):
-        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
             "reply_to_unroutable_inbound": True,
         })
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_inbound("foo"), tag=("pool1", "tag1"))
-        yield self.dispatch_inbound(msg, 'router_ro')
+            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
-            'router_ro', msg, "Eep!", tag=("pool1", "tag1"))
+            'sphex', msg, "Eep!", tag=("pool1", "1234"),
+            user_account=self.user_helper.account_key)
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_custom_reply(self):
-        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
             "reply_to_unroutable_inbound": True,
             "unroutable_inbound_reply": "Custom Eep!",
         })
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("pool1", "tag1"))
-        yield self.dispatch_inbound(msg, 'router_ro')
+            tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
-            'router_ro', msg, "Custom Eep!", tag=("pool1", "tag1"))
+            'sphex', msg, "Custom Eep!", tag=("pool1", "1234"),
+            user_account=self.user_helper.account_key)
 
     @inlineCallbacks
     def test_unroutable_inbound_from_router_no_config(self):
@@ -947,13 +990,13 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
 
     @inlineCallbacks
     def test_unroutable_inbound_from_router_default_reply(self):
-        yield self.vumi_api.tpm.set_metadata(u"pool1", {
+        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
             "reply_to_unroutable_inbound": True,
         })
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("pool1", "tag1"), router=('router', 'badrouter'))
+            tag=("pool1", "1234"), router=('router', 'badrouter'))
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_unroutable_reply(
             'router_ro', msg, "Eep!", router=("router", "badrouter"))

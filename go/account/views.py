@@ -1,11 +1,14 @@
+import csv
+
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordChangeForm
 from django.conf import settings
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 
@@ -16,6 +19,8 @@ from go.account.forms import (EmailForm, AccountForm, UserAccountForm,
 from go.account.tasks import update_account_details
 from go.base.models import UserProfile
 from go.token.django_token_manager import DjangoTokenManager
+from go.billing import settings as billing_settings
+from go.billing.models import Statement
 
 
 class GoRegistrationView(RegistrationView):
@@ -172,17 +177,68 @@ def user_detail(request, user_id=None):
     })
 
 
-def billing(request):
-    # TODO: Complete once billing data exists.
+@login_required
+def billing(request, template_name='account/billing.html'):
+    """Display a list of available statements for the logged in user"""
+    order_by = request.GET.get(
+        'o', billing_settings.STATEMENTS_DEFAULT_ORDER_BY)
 
-    # FAKE DATA
-    statement_list = (
-        {'date': '2013-03-31'},
-        {'date': '2013-02-28'},
-        {'date': '2013-01-31'},
-        {'date': '2013-12-31'},
-    )
+    # Validate the order_by parameter by making sure the field exists
+    if order_by.startswith('-'):
+        field = order_by[1:]
+    else:
+        field = order_by
+    if not field in Statement._meta.get_all_field_names():
+        order_by = billing_settings.STATEMENTS_DEFAULT_ORDER_BY
 
-    return render(request, 'account/billing.html', {
-        'statement_list': statement_list
-    })
+    # If the user has multiple accounts, take the first one
+    account_list = request.user.account_set.all()
+    if account_list:
+        statement_list = Statement.objects\
+            .filter(account=account_list[0])\
+            .order_by(order_by)
+
+    else:
+        statement_list = []
+
+    # Paginate statements
+    paginator = Paginator(statement_list,
+                          billing_settings.STATEMENTS_PER_PAGE)
+
+    try:
+        page = paginator.page(request.GET.get('p', 1))
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        page = paginator.page(paginator.num_pages)
+
+    context = {
+        'paginator': paginator,
+        'page': page,
+    }
+    return render(request, template_name, context)
+
+
+@login_required
+def statement_view(request, statement_id=None):
+    """Send a CSV version of the statement with the given
+       ``statement_id`` to the user's browser.
+    """
+    statement = get_object_or_404(
+        Statement, pk=statement_id, account__user=request.user)
+
+    response = HttpResponse(mimetype='text/csv')
+    filename = "%s (%s).csv" % (statement.title,
+                                statement.from_date.strftime('%B %Y'))
+
+    response['Content-Disposition'] = 'attachment; filename=%s' % (filename,)
+    writer = csv.writer(response)
+    headings = ["Tag pool name", "Tag name", "Message direction", "Total cost"]
+    writer.writerow(headings)
+    line_item_list = statement.lineitem_set.all()
+    for line_item in line_item_list:
+        writer.writerow([
+            line_item.tag_pool_name, line_item.tag_name,
+            line_item.message_direction, line_item.total_cost])
+
+    return response

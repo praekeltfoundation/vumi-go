@@ -6,14 +6,14 @@ from go.conversation.view_definition import (
 
 class TokenForm(forms.Form):
     api_tokens = forms.CharField(
-            help_text='The access token for this HTTP Conversation.',
-            required=True)
+        help_text='The access token for this HTTP Conversation.',
+        required=True)
     push_message_url = forms.CharField(
         help_text='The URL to forward messages to via HTTP POST.',
-        required=False)
+        required=True)
     push_event_url = forms.CharField(
         help_text='The URL to forward events to via HTTP POST.',
-        required=False)
+        required=True)
 
     @staticmethod
     def initial_from_config(data):
@@ -34,11 +34,11 @@ class TokenForm(forms.Form):
         }
 
 
-class EditHttpApiView(EditConversationView):
+class EditHttpApiNoStreamView(EditConversationView):
     edit_forms = (
-        ('http_api', TokenForm),
+        ('http_api_nostream', TokenForm),
     )
 
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):
-    edit_view = EditHttpApiView
+    edit_view = EditHttpApiNoStreamView
