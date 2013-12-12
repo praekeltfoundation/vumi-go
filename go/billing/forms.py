@@ -27,7 +27,7 @@ class MessageCostForm(ModelForm):
                 settings.CREDIT_CONVERSION_FACTOR)
 
             context = Context()
-            credit_cost = credit_cost.quantize(Decimal('.000001'),
+            credit_cost = credit_cost.quantize(settings.QUANTIZATION_EXPONENT,
                                                context=context)
 
             if context.flags[Inexact] and credit_cost == Decimal('0.0'):

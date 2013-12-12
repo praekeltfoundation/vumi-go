@@ -13,6 +13,8 @@ from twisted.web.test import test_web
 
 from txpostgres import txpostgres
 
+from go.billing import settings
+
 
 class JSONEncoder(json.JSONEncoder):
     """JSONEncoder to handle ``Decimal`` and ``datetime`` values"""
@@ -23,7 +25,7 @@ class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
             context = decimal.Context()
-            value = obj.quantize(decimal.Decimal('.000001'),
+            value = obj.quantize(settings.QUANTIZATION_EXPONENT,
                                  context=context)
 
             if (context.flags[decimal.Inexact]
@@ -51,7 +53,7 @@ class JSONDecoder(json.JSONDecoder):
     def parse_float_str(self, num_str):
         context = decimal.Context()
         value = decimal.Decimal(num_str).quantize(
-            decimal.Decimal('.000001'), context=context)
+            settings.QUANTIZATION_EXPONENT, context=context)
 
         if (context.flags[decimal.Inexact]
                 and value == decimal.Decimal('0.0')):
