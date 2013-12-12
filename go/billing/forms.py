@@ -14,7 +14,7 @@ class MessageCostForm(ModelForm):
         model = MessageCost
 
     def clean(self):
-        """Make sure the resulting credit cost does not result in 0"""
+        """Make sure the resulting credit cost does not underflow to zero"""
         cleaned_data = super(MessageCostForm, self).clean()
         message_cost = cleaned_data.get('message_cost')
         markup_percent = cleaned_data.get('markup_percent')
