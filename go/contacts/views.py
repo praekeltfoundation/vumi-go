@@ -17,7 +17,7 @@ from go.contacts.forms import (
     SelectContactGroupForm)
 from go.contacts import tasks, utils
 from go.contacts.parsers import ContactFileParser, ContactParserException
-from go.contacts.parsers.base import FieldInfo, FieldNormalizer
+from go.contacts.parsers.base import ColumnSpec, FieldNormalizer
 from go.vumitools.contact import ContactError
 
 
@@ -36,13 +36,19 @@ def index(request):
     return redirect(reverse('contacts:groups'))
 
 
-def filter_field(field, parser):
+def column_spec(parser, field, contact_field, normalizer):
     """
-    Sanitises the field mapping choice from the user.
+    Sanitises the column specifications selected by
+    the user and returns a ColumnSpec
     """
-    if field in parser.SETTABLE_ATTRIBUTES:
-        return field
-    return None
+    field = field.strip() or None
+    contact_field = contact_field.strip() or None
+    normalizer = normalizer.strip() or None
+    if contact_field not in parser.SETTABLE_ATTRIBUTES:
+        # this case will actually never be reached
+        # but being paranoid
+        contact_field = None
+    return ColumnSpec(field, contact_field, normalizer)
 
 
 @login_required
@@ -200,22 +206,19 @@ def _static_group(request, contact_store, group):
                 normalizers = [request.POST.get('normalize-%s' % i, '')
                                for i in range(len(sample_row))]
 
-                # filter field mapping choice
-                field_names = [filter_field(x, parser) for x in field_names]
-
-                # Based on the user input, construct FieldInfo objects
-                # for each column in the input file
+                # Based on the user input, construct ColumnSpec objects
+                # for each positional column in the input file
                 if has_header:
                     zipped = zip(sample_row.keys(), field_names, normalizers)
                 else:
                     zipped = zip([None] * len(sample_row),
                                  field_names, normalizers)
 
-                fields = [FieldInfo(f, cf or None, nr) for f, cf, nr in zipped]
+                specs = tuple([column_spec(f, cf, nr) for f, cf, nr in zipped])
 
                 tasks.import_contacts_file.delay(
                     request.user_api.user_account_key, group.key, file_name,
-                    file_path, tuple(fields), has_header)
+                    file_path, specs, has_header)
 
                 messages.info(
                     request, 'The contacts are being imported. '

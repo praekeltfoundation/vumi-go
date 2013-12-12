@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
-from go.contacts.parsers.base import FieldInfo
+from go.contacts.parsers.base import ColumnSpec
 from go.contacts.parsers.csv_parser import CSVFileParser
 from go.contacts.parsers.xls_parser import XLSFileParser
 
@@ -61,7 +61,7 @@ class CSVParserTestCase(ParserTestCase):
     def test_contacts_parsing(self):
         csv_file = self.fixture('sample-contacts-with-headers.csv')
         fp = default_storage.open(csv_file, 'rU')
-        fields = [FieldInfo(f, cf, nr) for f, cf, nr in
+        fields = [ColumnSpec(f, cf, nr) for f, cf, nr in
                   zip(['name', 'surname', 'msisdn'],
                       ['name', 'surname', 'msisdn'],
                       ['string', 'string', 'msisdn_za'])]
@@ -86,7 +86,7 @@ class CSVParserTestCase(ParserTestCase):
             'sample-contacts-with-unrecognized-headers.csv'
         )
         fp = default_storage.open(csv_file, 'rU')
-        fields = [FieldInfo(f, cf, nr) for f, cf, nr in
+        fields = [ColumnSpec(f, cf, nr) for f, cf, nr in
                   zip(['manager_name', 'manager_surname', 'manager_msisdn'],
                       ['name', 'surname', 'extra'],
                       ['string', 'string', 'msisdn_za'])]
@@ -119,7 +119,7 @@ class CSVParserTestCase(ParserTestCase):
     def test_contacts_with_none_entries(self):
         csv_file = self.fixture('sample-contacts-with-headers-and-none.csv')
         fp = default_storage.open(csv_file, 'rU')
-        fields = [FieldInfo(f, cf, nr) for f, cf, nr in
+        fields = [ColumnSpec(f, cf, nr) for f, cf, nr in
                   zip(['name', 'surname', 'msisdn'],
                       ['name', 'surname', 'msisdn'],
                       ['string', 'string', 'msisdn_za'])]
