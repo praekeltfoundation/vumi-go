@@ -497,6 +497,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             groups=[u'group-a', u'group-b'])
         reply = yield self.dispatch_command('search', query=u'surname:Jack*')
         self.assertTrue(reply['success'])
+        self.assertTrue('nextToken' not in reply)
+
         [contact_data] = reply['contacts']
         self.assertEqual(contact_data['key'], contact.key)
 
@@ -512,6 +514,49 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         reply = yield self.dispatch_command('search', query=u'name:foo*')
         self.assertTrue(reply['success'])
         self.assertEqual(reply['contacts'], [])
+
+    @inlineCallbacks
+    def test_search_with_paging(self):
+        """
+        Resultset has 6 contacts and we fetch them in batches of 2
+        """
+
+        query = u'surname:Jack*'
+        contact_keys = set()
+        expected_contact_keys = set()
+        for i in range(0, 6):
+            contact = yield self.new_contact(
+                surname=(u'Jackal%s' % i),
+                msisdn=u'+27831234567',
+                groups=[u'group-a', u'group-b'])
+            expected_contact_keys.add(contact.key)
+
+        reply = yield self.dispatch_command(
+            'search', query=query
+        )
+        self.assertTrue(reply['success'])
+        self.assertTrue('nextToken' in reply)
+        contact_keys.update([c['key'] for c in reply['contacts']])
+
+        reply = yield self.dispatch_command(
+            'search',
+            query=query,
+            nextToken=reply['nextToken']
+        )
+        self.assertTrue(reply['success'])
+        self.assertTrue('nextToken' in reply)
+        contact_keys.update([c['key'] for c in reply['contacts']])
+
+        reply = yield self.dispatch_command(
+            'search',
+            query=query,
+            nextToken=reply['nextToken']
+        )
+        self.assertTrue(reply['success'])
+        self.assertTrue('nextToken' not in reply)
+        contact_keys.update([c['key'] for c in reply['contacts']])
+
+        self.assertEqual(contact_keys, expected_contact_keys)
 
 
 class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
