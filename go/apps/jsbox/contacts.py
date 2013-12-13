@@ -436,7 +436,7 @@ class ContactsResource(SandboxResource):
             success=True,
             contact=contact.get_data()))
 
-    def _token(self, search_id, page):
+    def _token(self, request_id, page):
         """
         Constructs an opaque token which the user can use for paging
         through results. Since the token is opaque, we can modify our
@@ -448,33 +448,33 @@ class ContactsResource(SandboxResource):
 
            token := "{query}:{start}:{count}"
 
-        Anyhow, In the current implementation, ``search_id`` is a
+        Anyhow, In the current implementation, ``request_id`` is a
         unique ID identifying a 'contact.search' request
         performed by the user. Success calls to ``contact.search``
         with the same query string and nextToken will share the
-        same search_id.
+        same request_id.
 
         ``page`` is a key used to retrieve the next batch of
         of results.
 
         """
-        return "%s:%s" % (search_id, page)
+        return "%s:%s" % (request_id, page)
 
     def _token_parse(self, token):
-        """Parse search_id from token"""
+        """Parse request_id from token"""
         try:
-            search_id, page = token.split(':')
-            return (search_id, int(page),)
+            request_id, page = token.split(':')
+            return (request_id, int(page),)
         except (Exception, ValueError,) as e:
             e.args = ("Parameter value for 'nextToken' is invalid: %s"
                       % e.args[0])
             raise e
 
-    def _search_result_key(self, api, search_id, query):
+    def _search_result_key(self, api, request_id, query):
         """
         Construct a unique key for caching search results
 
-        We include both the search_id and the query in the key.
+        We include both the request_id and the query in the key.
 
         This acts as a way of forcing the user to a pass a ``nextToken``
         and ``query`` that are related to one another.
@@ -482,7 +482,7 @@ class ContactsResource(SandboxResource):
         prefix = "search:contacts"
         return ("%s:%s:%s:%s" % (prefix,
                                  api.sandbox_id,
-                                 search_id,
+                                 request_id,
                                  hashlib.sha1(query).hexdigest()))
 
     def make_batches(self, keys, size):
@@ -494,7 +494,7 @@ class ContactsResource(SandboxResource):
         return cache
 
     @inlineCallbacks
-    def _cache_search_result(self, api, search_id, query, keys):
+    def _cache_search_result(self, api, request_id, query, keys):
         """
         Caches search result keys and returns the tuple (KEYS, MORE, PAGE).
 
@@ -502,10 +502,10 @@ class ContactsResource(SandboxResource):
         MORE is a boolean indicating that there are more results available.
         PAGE is the key used to lookup the next batch of results.
 
-        ``search_id`` and PAGE are used to form the token which will be
+        ``request_id`` and PAGE are used to form the token which will be
         included in the response, iff MORE is true.
         """
-        redis_key = self._search_result_key(api, search_id, query)
+        redis_key = self._search_result_key(api, request_id, query)
         size = self.MAX_BATCH_SIZE
         keys, remaining = (keys[:size], keys[size:],)
 
@@ -518,7 +518,7 @@ class ContactsResource(SandboxResource):
         returnValue((keys, len(remaining) > 0, 0))
 
     @inlineCallbacks
-    def _next_batch_of_keys(self, api, search_id, page, query):
+    def _next_batch_of_keys(self, api, request_id, page, query):
         """
         Similarly to ``_cache_search_result`` this function returns
         a 3-tuple with the updated paging state.
@@ -526,7 +526,7 @@ class ContactsResource(SandboxResource):
         Uses ``page`` to fetch the next batch of contact keys.
 
         """
-        redis_key = self._search_result_key(api, search_id, query)
+        redis_key = self._search_result_key(api, request_id, query)
 
         keys = yield self.redis.hget(redis_key, str(page))
         if keys:
@@ -624,20 +624,20 @@ class ContactsResource(SandboxResource):
             contact_store = self._contact_store_for_api(api)
             if 'nextToken' in command and command['nextToken'] is not None:
                 # user is requesting more results
-                search_id, page = self._token_parse(command['nextToken'])
+                request_id, page = self._token_parse(command['nextToken'])
                 keys, more, page = yield self._next_batch_of_keys(
                     api,
-                    search_id,
+                    request_id,
                     page,
                     command['query']
                 )
             else:
-                search_id = str(uuid.uuid4())
+                request_id = str(uuid.uuid4())
                 keys = yield contact_store.contacts.raw_search(
                     command['query']).get_keys()
                 keys, more, page = yield self._cache_search_result(
                     api,
-                    search_id,
+                    request_id,
                     command['query'],
                     keys
                 )
@@ -659,7 +659,7 @@ class ContactsResource(SandboxResource):
 
         extra_fields = {}
         if more:
-            extra_fields['nextToken'] = self._token(search_id, page)
+            extra_fields['nextToken'] = self._token(request_id, page)
 
         returnValue(self.reply(
             command,
