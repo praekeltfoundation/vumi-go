@@ -54,7 +54,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
     def setUp(self):
         super(TestGoOutboundResource, self).setUp()
         yield self.create_resource({})
-        self.msg_helper = GoMessageHelper()
+        self.msg_helper = self.add_helper(GoMessageHelper())
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)

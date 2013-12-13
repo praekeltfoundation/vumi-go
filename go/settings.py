@@ -285,6 +285,7 @@ GOOGLE_ANALYTICS_UA = None
 
 MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
 GO_API_URL = 'http://localhost:8001/api/v1/go/api'
+GO_BILLING_API_URL = 'http://localhost:9090/'
 
 DIAMONDASH_API_URL = 'http://localhost:7115/api/'
 
@@ -299,6 +300,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'go.account.tasks.send_scheduled_account_summary',
         'schedule': crontab(hour=0, minute=0),
         'args': ('daily',)
+    },
+    'generate-monthly-account-statements': {
+        'task': 'go.billing.tasks.generate_monthly_account_statements',
+        'schedule': crontab(day_of_month=1),
     },
 }
 

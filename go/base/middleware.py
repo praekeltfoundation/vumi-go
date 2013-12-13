@@ -43,19 +43,22 @@ class ResponseTimeMiddleware(object):
 
     def process_response(self, request, response):
         try:
-            response_time = request.start_time - time.time()
-            response['X-Response-Time'] = response_time
+            start_time = request.start_time
+        except AttributeError:
+            # Ignoring AttributeError as that just means this request wasn't
+            # seen by process_request (this is normal when other middleware
+            # returns a response).
+            return response
 
+        try:
             metric = self.metric_from_request(request)
-            metric.oneshot(value=response_time)
-        except AttributeError, e:
-            # For cases where our request object was not processed and given a
-            # `start_time` attribute
-            logger.exception(e)
         except Resolver404:
             # Ignoring the Resolver404 as that just means we've not found a
             # page and any response metric on that will not be of interest
             # to us.
-            pass
-        if response:
             return response
+
+        response_time = start_time - time.time()
+        response['X-Response-Time'] = response_time
+        metric.oneshot(value=response_time)
+        return response

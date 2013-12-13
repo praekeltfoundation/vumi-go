@@ -2,25 +2,18 @@ from twisted.trial.unittest import SkipTest
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
+from vumi.tests.helpers import VumiTestCase
 
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.tests.utils import GoTestCase
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class MessageMetadataHelperTestCase(GoTestCase):
-    use_riak = True
+class TestMessageMetadataHelper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(MessageMetadataHelperTestCase, self).setUp()
-        self.vumi_api = yield self.get_vumi_api()
-        self.account = yield self.mk_user(self.vumi_api, u'user')
-        self.user_api = self.vumi_api.get_user_api(self.account.key)
-
-    def create_conversation(self, conversation_type=u'bulk_message',
-                            name=u'name', description=u'desc', config={}):
-        return self.user_api.new_conversation(
-            conversation_type, name, description, config)
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
 
     def mk_msg(self, go_metadata=None, optout_metadata=None):
         helper_metadata = {}
@@ -37,7 +30,7 @@ class MessageMetadataHelperTestCase(GoTestCase):
     def mk_md(self, message=None, go_metadata=None, optout_metadata=None):
         if message is None:
             message = self.mk_msg(go_metadata, optout_metadata)
-        return MessageMetadataHelper(self.vumi_api, message)
+        return MessageMetadataHelper(self.vumi_helper.get_vumi_api(), message)
 
     def test_is_sensitive(self):
         md = self.mk_md()
@@ -60,11 +53,11 @@ class MessageMetadataHelperTestCase(GoTestCase):
     def test_get_user_api(self):
         md = self.mk_md()
         self.assertRaises(KeyError, md.get_user_api)
-        md = self.mk_md(go_metadata={
-            'user_account': self.user_api.user_account_key})
+        md = self.mk_md(
+            go_metadata={'user_account': self.user_helper.account_key})
         user_api = md.get_user_api()
-        self.assertEqual(user_api.user_account_key,
-                         self.user_api.user_account_key)
+        self.assertEqual(
+            user_api.user_account_key, self.user_helper.account_key)
 
     def test_get_conversation_key(self):
         md = self.mk_md()
@@ -78,9 +71,10 @@ class MessageMetadataHelperTestCase(GoTestCase):
         self.assertRaises(KeyError, md.get_conversation)
         md = self.mk_md(go_metadata={'user_account': 'user-1'})
         self.assertRaises(KeyError, md.get_conversation)
-        conversation = yield self.create_conversation()
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
         md = self.mk_md(go_metadata={
-            'user_account': self.user_api.user_account_key,
+            'user_account': self.user_helper.account_key,
             'conversation_key': conversation.key,
         })
         md_conv = yield md.get_conversation()
@@ -88,14 +82,20 @@ class MessageMetadataHelperTestCase(GoTestCase):
 
     @inlineCallbacks
     def test_clear_object_cache(self):
-        conversation = yield self.create_conversation()
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
         md = self.mk_md(go_metadata={
-            'user_account': self.user_api.user_account_key,
+            'user_account': conversation.user_account.key,
             'conversation_key': conversation.key,
         })
+        md.set_tag(["pool", "tag"])
         self.assertEqual(md._store_objects, {})
         md_conv = yield md.get_conversation()
-        self.assertEqual(md._store_objects, {'conversation': md_conv})
+        tag_info = yield md.get_tag_info()
+        self.assertEqual(md._store_objects, {
+            'conversation': md_conv,
+            'tag_info': tag_info,
+        })
         md.clear_object_cache()
         self.assertEqual(md._store_objects, {})
 
@@ -105,9 +105,10 @@ class MessageMetadataHelperTestCase(GoTestCase):
         self.assertRaises(KeyError, md.get_conversation)
         md = self.mk_md(go_metadata={'user_account': 'user-1'})
         self.assertRaises(KeyError, md.get_conversation)
-        conversation = yield self.create_conversation()
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
         md = self.mk_md(go_metadata={
-            'user_account': self.user_api.user_account_key,
+            'user_account': conversation.user_account.key,
             'conversation_key': conversation.key,
         })
         md_conv = yield md.get_conversation()
@@ -242,3 +243,68 @@ class MessageMetadataHelperTestCase(GoTestCase):
         self.assertNotIdentical(md, other_md)
         self.assertEqual({}, other_md._store_objects)
         self.assertEqual(md._go_metadata, other_md._go_metadata)
+
+    def test_get_tag_info_no_tag(self):
+        md = self.mk_md()
+        self.assertEqual(None, md.tag)
+        self.assertRaises(ValueError, md.get_tag_info)
+
+    def test_get_tagpool_metadata_no_tag(self):
+        md = self.mk_md()
+        self.assertEqual(None, md.tag)
+        self.assertRaises(ValueError, md.get_tagpool_metadata)
+
+    @inlineCallbacks
+    def test_get_tag_info(self):
+        md = self.mk_md()
+        md.set_tag(["pool", "tagname"])
+
+        tag_info = yield md.get_tag_info()
+        self.assertEqual(("pool", "tagname"), tag_info.tag)
+
+    @inlineCallbacks
+    def test_tag_info_caching(self):
+        md = self.mk_md()
+        md.set_tag(["pool", "tagname"])
+
+        self.assertEqual({}, md._store_objects)
+        tag_info = yield md.get_tag_info()
+        self.assertEqual(("pool", "tagname"), tag_info.tag)
+        self.assertEqual({'tag_info': tag_info}, md._store_objects)
+
+        # Stash a fake thing in the cache to make sure that what we get is
+        # actually the thing in the cache.
+        md._store_objects['tag_info'] = "I am the cached tag_info"
+        cached_tag_info = yield md.get_tag_info()
+        self.assertEqual(cached_tag_info, "I am the cached tag_info")
+
+    @inlineCallbacks
+    def test_get_tagpool_metadata(self):
+        yield self.vumi_helper.setup_tagpool("pool", ["tagname"], metadata={
+            "foo": "bar",
+        })
+        md = self.mk_md()
+        md.set_tag(["pool", "tagname"])
+
+        tagpool_metadata = yield md.get_tagpool_metadata()
+        self.assertEqual({"foo": "bar"}, tagpool_metadata)
+
+    @inlineCallbacks
+    def test_tagpool_metadata_caching(self):
+        yield self.vumi_helper.setup_tagpool("pool", ["tagname"], metadata={
+            "foo": "bar",
+        })
+        md = self.mk_md()
+        md.set_tag(["pool", "tagname"])
+
+        self.assertEqual({}, md._store_objects)
+        tagpool_metadata = yield md.get_tagpool_metadata()
+        self.assertEqual({"foo": "bar"}, tagpool_metadata)
+        self.assertEqual(
+            {'tagpool_metadata': tagpool_metadata}, md._store_objects)
+
+        # Stash a fake thing in the cache to make sure that what we get is
+        # actually the thing in the cache.
+        md._store_objects['tagpool_metadata'] = "I am the cached metadata"
+        cached_tagpool_metadata = yield md.get_tagpool_metadata()
+        self.assertEqual(cached_tagpool_metadata, "I am the cached metadata")

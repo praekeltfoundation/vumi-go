@@ -3,6 +3,7 @@ from vumi_wikipedia.tests import test_wikipedia as tw
 from vumi_wikipedia.tests.test_wikipedia_api import (
     FakeHTTPTestCaseMixin, WIKIPEDIA_RESPONSES)
 
+from go.vumitools.metrics import ConversationMetric
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.wikipedia.vumi_app import WikipediaApplication
 from go.vumitools.tests.helpers import GoMessageHelper
@@ -27,7 +28,8 @@ class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
         yield self.setup_tagpools()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     @inlineCallbacks
     def tearDown(self):
@@ -68,3 +70,10 @@ class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
         [sms_msg] = self.get_outbound_msgs('sms_content')
         self.assertEqual(tw.CTHULHU_SMS, sms_msg['content'])
         self.assertEqual('+41791234567', sms_msg['to_addr'])
+
+        metric_names = [name for name, _ in
+                        self.get_published_metrics(self.app)]
+        self.assertEqual(metric_names, [
+            ConversationMetric.make_name(self.conv, name) for name in [
+                'wikipedia_search_call', 'wikipedia_extract_call',
+                'wikipedia_extract_call']])
