@@ -444,15 +444,19 @@ class ContactsResource(SandboxResource):
         break the JS Sandbox API.
 
         For example, if move to over to using a full Riak search
-        backend, we could construct a query as follows:
+        backend, we could construct a token as follows:
 
            token := "{query}:{start}:{count}"
 
         Anyhow, In the current implementation, ``search_id`` is a
-        unique ID identifying an initial 'contact.search' call
+        unique ID identifying a 'contact.search' request
         performed by the user. Success calls to ``contact.search``
         with the same query string and nextToken will share the
         same search_id.
+
+        ``page`` is a key used to retrieve the next batch of
+        of results.
+
         """
         return "%s:%s" % (search_id, page)
 
@@ -492,9 +496,14 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def _cache_search_result(self, api, search_id, query, keys):
         """
-        Caches search results and returns the keys we can actually
-        return to the user right now, as well the number of results
-        we can return in the users next call to 'contact.search'.
+        Caches search result keys and returns the tuple (KEYS, MORE, PAGE).
+
+        KEYS is a list of keys for contacts we can send to the user right now.
+        MORE is a boolean indicating that there are more results available.
+        PAGE is the key used to lookup the next batch of results.
+
+        ``search_id`` and PAGE are used to form the token which will be
+        included in the response, iff MORE is true.
         """
         redis_key = self._search_result_key(api, search_id, query)
         size = self.MAX_BATCH_SIZE
@@ -511,7 +520,11 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def _next_batch_of_keys(self, api, search_id, page, query):
         """
-        Remove next batch of keys from the search results
+        Similarly to ``_cache_search_result`` this function returns
+        a 3-tuple with the updated paging state.
+
+        Uses ``page`` to fetch the next batch of contact keys.
+
         """
         redis_key = self._search_result_key(api, search_id, query)
 
@@ -533,13 +546,16 @@ class ContactsResource(SandboxResource):
         """
         Search for contacts
 
+        Paging is implemented using the iterator pattern. The iterator is
+        represented as an opaque token that hides the current iteration
+        state and paging mechanism.
+
         Command fields:
             - ``query``: The Lucene search query to perform.
-            - ``nextToken``: Used to determine the next batch of contacts
-                             to return. this field is optional and must
-                             correspond the ``nextToken`` value returned
-                             produced by a prior call to the
-                             'contact.search' API.
+            - ``nextToken``: Informs Go to return the next batch of contacts.
+                             This field must correspond to the ``nextToken``
+                             value returned by the previous 'contact.search'
+                             call.
 
         Success reply fields:
             - ``success``: set to ``true``
@@ -571,39 +587,43 @@ class ContactsResource(SandboxResource):
 
         .. code-block:: javascript
 
-           // basic paging-aware search helper
+           // basic paging search helper
            function _search(query, nextToken, handler_func) {
-              cmd = {
-                  query: query,
-              };
-              if (nextToken) {
-                cmd['nextToken'] = nextToken;
-              }
-              api.request(
-                  'contacts.search', cmd,
-                   function(reply) {
-                       if (handler_func(reply) && reply.nextToken) {
-                          _search(query, reply.nextToken, handler_func);
-                       }
+               cmd = {
+                   query: query,
+               };
+               if (nextToken) {
+                   cmd['nextToken'] = nextToken;
+               }
+               api.request(
+                   'contacts.search', cmd,
+                    function(reply) {
+                        if (handler_func(reply) && reply.nextToken) {
+                             _search(query, reply.nextToken, handler_func);
+                        }
                    });
            }
 
-           // adaptor with friendlier interface
+           // adaptor with a friendlier interface
            function search(query, handler_func) {
-               contact_search_extended(query, false, handler_func)
+               _search(query, false, handler_func)
            }
 
-           // Search for matching contacts, retrieve all result
-           // batches and process them.
-           search_for_contacts('msisdn:"+27*"',
-                               function (reply) {
-                                   api.log_info(reply.contacts);
-                                   return true;
-                               });
+           // Search for contacts, and process results
+           // as they are delivered
+           search('msisdn:"+27*"',
+                  function (reply) {
+                      api.log_info(reply.contacts);
+                      // we want to retrieve all pages
+                      return true;
+                  });
+
+           // NOTE: These helpers should really go into the JS Sandbox.
         """
         try:
             contact_store = self._contact_store_for_api(api)
             if 'nextToken' in command and command['nextToken'] is not None:
+                # user is requesting more results
                 search_id, page = self._token_parse(command['nextToken'])
                 keys, more, page = yield self._next_batch_of_keys(
                     api,
@@ -637,15 +657,15 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        extra_reply_fields = {}
+        extra_fields = {}
         if more:
-            extra_reply_fields['nextToken'] = self._token(search_id, page)
+            extra_fields['nextToken'] = self._token(search_id, page)
 
         returnValue(self.reply(
             command,
             success=True,
             contacts=[contact.get_data() for contact in contacts],
-            **extra_reply_fields))
+            **extra_fields))
 
 
 class GroupsResource(SandboxResource):
