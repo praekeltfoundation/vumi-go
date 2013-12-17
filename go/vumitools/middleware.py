@@ -224,20 +224,8 @@ class GoStoringMiddleware(StoringMiddleware):
         yield self.vumi_api.redis.close_manager()
         yield super(GoStoringMiddleware, self).teardown_middleware()
 
-    @inlineCallbacks
     def get_batch_ids(self, msg):
-        batch_ids = []
-        mdh = MessageMetadataHelper(self.vumi_api, msg)
-
-        if mdh.get_conversation_info():
-            conversation = yield mdh.get_conversation()
-            batch_ids.append(conversation.batch.key)
-
-        if mdh.get_router_info():
-            router = yield mdh.get_router()
-            batch_ids.append(router.batch.key)
-
-        returnValue(batch_ids)
+        return MessageMetadataHelper(self.vumi_api, msg).get_batch_keys()
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
