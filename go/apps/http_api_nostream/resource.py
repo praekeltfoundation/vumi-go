@@ -5,8 +5,6 @@ import copy
 
 from twisted.web import resource, http, util
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
-from twisted.cred import portal
 from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 
 from vumi import errors
@@ -16,9 +14,10 @@ from vumi.errors import InvalidMessage
 from vumi.config import ConfigContext
 from vumi import log
 
-from go.apps.http_api_nostream.auth import (
-    ConversationRealm, ConversationAccessChecker)
 from go.vumitools.utils import MessageMetadataHelper
+
+
+# NOTE: Things in this module are subclassed and used by go.apps.http_api.
 
 
 class BaseResource(resource.Resource):
@@ -129,7 +128,6 @@ class ReplyToOptions(MsgOptions):
 
 class MessageResource(BaseResource):
 
-    message_class = TransportUserMessage
     routing_key = '%(transport_name)s.stream.message.%(conversation_key)s'
 
     def render_PUT(self, request):
@@ -261,8 +259,8 @@ class MetricResource(BaseResource):
             return
 
         conversation = yield self.get_conversation(user_account)
-        store = conversation.config.get('http_api_nostream', {}).get(
-            'metrics_store', self.DEFAULT_STORE_NAME)
+        store = self.worker.get_api_config(
+            conversation, 'metrics_store', self.DEFAULT_STORE_NAME)
         for name, value, agg_class in metrics:
             self.worker.publish_account_metric(user_account, store, name,
                                                value, agg_class)
@@ -306,12 +304,7 @@ class ConversationResource(resource.Resource):
 
     @inlineCallbacks
     def getDeferredChild(self, path, request):
-
-        class_map = {
-            'messages.json': MessageResource,
-            'metrics.json': MetricResource,
-        }
-        resource_class = class_map.get(path)
+        resource_class = self.get_child_resource(path)
 
         if resource_class is None:
             returnValue(resource.NoResource())
@@ -329,29 +322,8 @@ class ConversationResource(resource.Resource):
         returnValue(resource.ErrorPage(http.FORBIDDEN, 'Forbidden',
                                        'Too many concurrent connections'))
 
-
-class AuthorizedResource(resource.Resource):
-
-    resource_class = ConversationResource
-
-    def __init__(self, worker):
-        resource.Resource.__init__(self)
-        self.worker = worker
-
-    def render(self, request):
-        return resource.NoResource().render(request)
-
-    def getChild(self, conversation_key, request):
-        if conversation_key:
-            res = self.resource_class(self.worker, conversation_key)
-            checker = ConversationAccessChecker(self.worker.vumi_api,
-                                                conversation_key)
-            realm = ConversationRealm(res)
-            p = portal.Portal(realm, [checker])
-
-            factory = BasicCredentialFactory("Conversation Realm")
-            protected_resource = HTTPAuthSessionWrapper(p, [factory])
-
-            return protected_resource
-        else:
-            return resource.NoResource()
+    def get_child_resource(self, path):
+        return {
+            'messages.json': MessageResource,
+            'metrics.json': MetricResource,
+        }.get(path)

@@ -3,18 +3,14 @@ from collections import defaultdict
 import random
 
 from twisted.internet.defer import inlineCallbacks, maybeDeferred
-from twisted.internet.error import DNSLookupError
-from twisted.web import http
-from twisted.web.error import SchemeNotSupported
 
-from vumi.config import ConfigInt, ConfigText
-from vumi.utils import http_request_full, HttpTimeoutError
-from vumi.transports.httprpc import httprpc
-from vumi import log
+from go.apps.http_api_nostream.auth import AuthorizedResource
+from go.apps.http_api_nostream.vumi_app import NoStreamingHTTPWorker
+from go.apps.http_api.resource import (
+    MessageStream, EventStream, StreamingConversationResource)
 
-from go.vumitools.app_worker import GoApplicationWorker
-from go.apps.http_api.resource import (AuthorizedResource, MessageStream,
-                                       EventStream)
+
+# NOTE: This module subclasses and uses things from go.apps.http_api_nostream.
 
 
 class StreamingClientManager(object):
@@ -62,52 +58,22 @@ class StreamingClientManager(object):
         yield self.redis.ltrim(backlog_key, 0, self.MAX_BACKLOG_SIZE - 1)
 
 
-class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
-    """Configuration options for StreamingHTTPWorker."""
-
-    web_path = ConfigText(
-        "The path the HTTP worker should expose the API on.",
-        required=True, static=True)
-    web_port = ConfigInt(
-        "The port the HTTP worker should open for the API.",
-        required=True, static=True)
-    health_path = ConfigText(
-        "The path the resource should receive health checks on.",
-        default='/health/', static=True)
-    concurrency_limit = ConfigInt(
-        "Maximum number of clients per account. A value less than "
-        "zero disables the limit",
-        default=10)
-    timeout = ConfigInt(
-        "How long to wait for a response from a server when posting "
-        "messages or events", default=5, static=True)
-
-
-class StreamingHTTPWorker(GoApplicationWorker):
+class StreamingHTTPWorker(NoStreamingHTTPWorker):
 
     worker_name = 'http_api_worker'
-    CONFIG_CLASS = StreamingHTTPWorkerConfig
 
     @inlineCallbacks
     def setup_application(self):
         yield super(StreamingHTTPWorker, self).setup_application()
-        config = self.get_static_config()
-        self.web_path = config.web_path
-        self.web_port = config.web_port
-        self.health_path = config.health_path
-        self.metrics_prefix = config.metrics_prefix
 
-        # Set these to empty dictionaries because we're not interested
-        # in using any of the helper functions at this point.
-        self._event_handlers = {}
-        self._session_handlers = {}
         self.client_manager = StreamingClientManager(
             self.redis.sub_manager('http_api:message_cache'))
 
-        self.webserver = self.start_web_resources([
-            (AuthorizedResource(self), self.web_path),
-            (httprpc.HttpRpcHealthResource(self), self.health_path),
-        ], self.web_port)
+    def get_conversation_resource(self):
+        return AuthorizedResource(self, StreamingConversationResource)
+
+    def get_api_config(self, conversation, key, default=None):
+        return conversation.config.get('http_api', {}).get(key, default)
 
     def stream(self, stream_class, conversation_key, message):
         # Publish the message by manually specifying the routing key
@@ -124,68 +90,18 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def unregister_client(self, conversation_key, callback):
         self.client_manager.stop(conversation_key, callback)
 
-    def get_api_config(self, conversation, key):
-        return conversation.config.get('http_api', {}).get(key)
-
-    @inlineCallbacks
-    def consume_user_message(self, message):
-        msg_mdh = self.get_metadata_helper(message)
-        conversation = yield msg_mdh.get_conversation()
-        if conversation is None:
-            log.warning("Cannot find conversation for message: %r" % (
-                message,))
-            return
-
-        push_message_url = self.get_api_config(conversation,
-                                               'push_message_url')
-        if push_message_url:
-            yield self.push(push_message_url, message)
+    def send_message_to_client(self, message, conversation, push_url):
+        if push_url:
+            return self.push(push_url, message)
         else:
-            yield self.stream(MessageStream, conversation.key, message)
+            return self.stream(MessageStream, conversation.key, message)
 
-    @inlineCallbacks
-    def consume_unknown_event(self, event):
-        """
-        FIXME:  We're forced to do too much hoopla when trying to link events
-                back to the conversation the original message was part of.
-        """
-        outbound_message = yield self.find_outboundmessage_for_event(event)
-        if outbound_message is None:
-            log.warning('Unable to find message %s for event %s.' % (
-                event['user_message_id'], event['event_id']))
-
-        config = yield self.get_message_config(event)
-        conversation = config.get_conversation()
-        push_event_url = self.get_api_config(conversation, 'push_event_url')
-        if push_event_url:
-            yield self.push(push_event_url, event)
+    def send_event_to_client(self, event, conversation, push_url):
+        if push_url:
+            return self.push(push_url, event)
         else:
-            yield self.stream(EventStream, conversation.key, event)
-
-    @inlineCallbacks
-    def push(self, url, vumi_message):
-        config = self.get_static_config()
-        data = vumi_message.to_json().encode('utf-8')
-        try:
-            resp = yield http_request_full(
-                url.encode('utf-8'), data=data, headers={
-                    'Content-Type': 'application/json; charset=utf-8',
-                }, timeout=config.timeout)
-            if resp.code != http.OK:
-                log.warning('Got unexpected response code %s from %s' % (
-                    resp.code, url))
-        except SchemeNotSupported:
-            log.warning('Unsupported scheme for URL: %s' % (url,))
-        except HttpTimeoutError:
-            log.warning("Timeout pushing message to %s" % (url,))
-        except DNSLookupError:
-            log.warning("DNS lookup error pushing message to %s" % (url,))
+            return self.stream(EventStream, conversation.key, event)
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
                    self.client_manager.clients.values()]))
-
-    @inlineCallbacks
-    def teardown_application(self):
-        yield super(StreamingHTTPWorker, self).teardown_application()
-        yield self.webserver.loseConnection()
