@@ -10,11 +10,15 @@ from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.transports.httprpc import httprpc
 from vumi import log
 
+from go.apps.http_api_nostream.auth import AuthorizedResource
+from go.apps.http_api_nostream.resource import ConversationResource
 from go.vumitools.app_worker import GoApplicationWorker
-from go.apps.http_api_nostream.resource import AuthorizedResource
 
 
-class NoStreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
+# NOTE: Things in this module are subclassed and used by go.apps.http_api.
+
+
+class HTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
     """Configuration options for StreamingHTTPWorker."""
 
     web_path = ConfigText(
@@ -38,7 +42,7 @@ class NoStreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
 class NoStreamingHTTPWorker(GoApplicationWorker):
 
     worker_name = 'http_api_nostream_worker'
-    CONFIG_CLASS = NoStreamingHTTPWorkerConfig
+    CONFIG_CLASS = HTTPWorkerConfig
 
     @inlineCallbacks
     def setup_application(self):
@@ -55,12 +59,21 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         self._session_handlers = {}
 
         self.webserver = self.start_web_resources([
-            (AuthorizedResource(self), self.web_path),
+            (self.get_conversation_resource(), self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),
         ], self.web_port)
 
-    def get_api_config(self, conversation, key):
-        return conversation.config.get('http_api_nostream', {}).get(key)
+    def get_conversation_resource(self):
+        return AuthorizedResource(self, ConversationResource)
+
+    @inlineCallbacks
+    def teardown_application(self):
+        yield super(NoStreamingHTTPWorker, self).teardown_application()
+        yield self.webserver.loseConnection()
+
+    def get_api_config(self, conversation, key, default=None):
+        return conversation.config.get(
+            'http_api_nostream', {}).get(key, default)
 
     @inlineCallbacks
     def consume_user_message(self, message):
@@ -70,15 +83,16 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning("Cannot find conversation for message: %r" % (
                 message,))
             return
+        push_url = self.get_api_config(conversation, 'push_message_url')
+        yield self.send_message_to_client(message, conversation, push_url)
 
-        push_message_url = self.get_api_config(conversation,
-                                               'push_message_url')
-        if push_message_url is None:
+    def send_message_to_client(self, message, conversation, push_url):
+        if push_url is None:
             log.warning(
                 "push_message_url not configured for conversation: %s" % (
                     conversation.key))
             return
-        yield self.push(push_message_url, message)
+        return self.push(push_url, message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
@@ -93,13 +107,16 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
 
         config = yield self.get_message_config(event)
         conversation = config.get_conversation()
-        push_event_url = self.get_api_config(conversation, 'push_event_url')
-        if push_event_url is None:
+        push_url = self.get_api_config(conversation, 'push_event_url')
+        yield self.send_event_to_client(event, conversation, push_url)
+
+    def send_event_to_client(self, event, conversation, push_url):
+        if push_url is None:
             log.warning(
                 "push_event_url not configured for conversation: %s" % (
                     conversation.key))
             return
-        yield self.push(push_event_url, event)
+        return self.push(push_url, event)
 
     @inlineCallbacks
     def push(self, url, vumi_message):
@@ -122,8 +139,3 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
 
     def get_health_response(self):
         return "OK"
-
-    @inlineCallbacks
-    def teardown_application(self):
-        yield super(NoStreamingHTTPWorker, self).teardown_application()
-        yield self.webserver.loseConnection()
