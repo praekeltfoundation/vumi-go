@@ -24,10 +24,6 @@ class ContactsResource(SandboxResource):
     and its fields.
     """
 
-    # FIXME: Put these in the puppet config, wherever it is.
-    MAX_BATCH_SIZE = 2
-    SEARCH_CACHE_EXPIRE = 300
-
     @inlineCallbacks
     def setup(self):
         redis_config = self.config.get('redis_manager', {})
@@ -506,14 +502,17 @@ class ContactsResource(SandboxResource):
         included in the response, iff MORE is true.
         """
         redis_key = self._search_result_key(api, request_id, query)
-        size = self.MAX_BATCH_SIZE
+        size = self.config['max_batch_size']
         keys, remaining = (keys[:size], keys[size:],)
 
         if remaining:
-            batches = self.make_batches(remaining, self.MAX_BATCH_SIZE)
+            batches = self.make_batches(remaining, size)
             for batch_key, batch_value in batches.items():
                 yield self.redis.hset(redis_key, batch_key, batch_value)
-            yield self.redis.expire(redis_key, self.SEARCH_CACHE_EXPIRE)
+            yield self.redis.expire(
+                redis_key,
+                self.config['search_cache_expire']
+            )
 
         returnValue((keys, len(remaining) > 0, 0))
 
@@ -534,7 +533,10 @@ class ContactsResource(SandboxResource):
             more = yield self.redis.hexists(redis_key, str(page + 1))
             more = more == 1
             if more:
-                yield self.redis.expire(redis_key, self.SEARCH_CACHE_EXPIRE)
+                yield self.redis.expire(
+                    redis_key,
+                    self.config['search_cache_expire']
+                )
         else:
             more = False
             keys = []

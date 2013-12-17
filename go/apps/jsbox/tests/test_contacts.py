@@ -42,7 +42,9 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         yield self.contact_store.contacts.enable_search()
 
         self.app_worker.user_api.contact_store = self.contact_store
-        yield self.create_resource({'delivery_class': u'sms'})
+        yield self.create_resource({'delivery_class': u'sms',
+                                    'max_batch_size': 2,
+                                    'search_cache_expire': 300})
 
     def tearDown(self):
         super(TestContactsResource, self).tearDown()
