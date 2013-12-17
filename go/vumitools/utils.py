@@ -170,3 +170,40 @@ class MessageMetadataHelper(object):
 
         return self._get_if_not_stashed(
             'tagpool_metadata', self.vumi_api.tpm.get_metadata, self.tag[0])
+
+    def _add_conversation_batch_key(self, batch_keys):
+        d = self.get_conversation()
+        d.addCallback(lambda conv: batch_keys['conversation'].setdefault(
+            conv.key, conv.batch.key))
+        return d.addCallback(lambda r: batch_keys)
+
+    def _add_router_batch_key(self, batch_keys):
+        d = self.get_router()
+        d.addCallback(lambda router: batch_keys['router'].setdefault(
+            router.key, router.batch.key))
+        return d.addCallback(lambda r: batch_keys)
+
+    def get_batch_keys(self):
+        batch_keys = self._go_metadata.setdefault('batch_keys', {})
+        d = succeed(batch_keys)
+
+        conv_info = self.get_conversation_info()
+        if conv_info is not None:
+            conv_batch_keys = batch_keys.setdefault('conversation', {})
+            if conv_info['conversation_key'] not in conv_batch_keys:
+                d.addCallback(self._add_conversation_batch_key)
+
+        router_info = self.get_router_info()
+        if router_info is not None:
+            router_batch_keys = batch_keys.setdefault('router', {})
+            if router_info['router_key'] not in router_batch_keys:
+                d.addCallback(self._add_router_batch_key)
+
+        d.addCallback(lambda batch_keys: list(_flatten_batch_keys(batch_keys)))
+        return d
+
+
+def _flatten_batch_keys(batch_keys):
+    for conv_or_router_keys in batch_keys.itervalues():
+        for batch_key in conv_or_router_keys.itervalues():
+            yield batch_key
