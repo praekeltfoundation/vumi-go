@@ -221,7 +221,8 @@ class TestMessagesSentMetric(TxMetricTestBase):
     def setUp(self):
         yield super(TestMessagesSentMetric, self).setUp()
 
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
         self.conv = yield self.create_conversation(
             conversation_type=u'some_conversation')
@@ -245,7 +246,8 @@ class TestMessagesReceivedMetric(TxMetricTestBase):
     def setUp(self):
         yield super(TestMessagesReceivedMetric, self).setUp()
 
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
         self.conv = yield self.create_conversation(
             conversation_type=u'some_conversation')

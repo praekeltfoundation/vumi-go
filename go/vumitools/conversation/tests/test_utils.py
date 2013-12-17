@@ -2,109 +2,52 @@ from datetime import datetime, timedelta
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.tests.test_base import DummyApplicationWorker
+from vumi.tests.helpers import VumiTestCase
 
-from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.opt_out import OptOutStore
+from go.vumitools.tests.helpers import VumiApiHelper
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
-class ConversationWrapperTestCase(AppWorkerTestCase):
-
-    application_class = DummyApplicationWorker
+class TestConversationWrapper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(ConversationWrapperTestCase, self).setUp()
-        self.manager = yield self.get_riak_manager()
-        self.redis = yield self.get_redis_manager()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u'username')
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
 
-        # Get a dummy worker so we have an amqp_client which we need
-        # to set-up the MessageSender in the `VumiApi`
-        self.worker = yield self.get_application({})
-        self.vumi_api = yield self.get_vumi_api(
-            amqp_client=self.worker._amqp_client)
-        self.mdb = self.vumi_api.mdb
-        self.user = yield self.mk_user(self.vumi_api, u'username')
-        self.user_api = self.vumi_api.get_user_api(self.user.key)
-        yield self.setup_tags()
-
-        self.conv = yield self.create_conversation(
-            conversation_type=u'dummy')
-        self.msg_helper = GoMessageHelper(self.mdb)
+        self.conv = yield self.user_helper.create_conversation(u'dummy')
+        yield self.vumi_helper.setup_tagpool(
+            u"pool", [u"tag%s" % (i,) for i in range(1, 5)], metadata={
+                "display_name": "pool",
+                "delivery_class": "sms",
+                "transport_type": "sms",
+                "server_initiated": True,
+                "transport_name": self.msg_helper.transport_name,
+            })
+        yield self.user_helper.add_tagpool_permission(u"pool")
 
     @inlineCallbacks
-    def setup_tags(self, name=u'longcode', count=4, metadata=None):
-        """Declare a set of long codes to the tag pool."""
-        yield self.vumi_api.tpm.declare_tags(
-            [(name, "%s%s" % (name, i)) for i in range(10001, 10001 + count)])
-        defaults = {
-            "display_name": name,
-            "delivery_class": "sms",
-            "transport_type": "sms",
-            "server_initiated": True,
-            "transport_name": self.transport_name,
-        }
-        defaults.update(metadata or {})
-        yield self.vumi_api.tpm.set_metadata(name, defaults)
-        yield self.add_tagpool_permission(name)
-
-    @inlineCallbacks
-    def get_batch_id(self, conv, tag):
-        batch_id = yield conv.start_batch(tag)
-        self.conv.batches.add_key(batch_id)
-        yield conv.save()
-        returnValue(batch_id)
-
-    @inlineCallbacks
-    def store_inbound(self, batch_key, count=10, addr_template='from-{0}',
-                      content_template='hello world {0}',
-                      start_timestamp=None, time_multiplier=10, **kw):
-        inbound = []
-        now = start_timestamp or datetime.now().replace(
-            hour=23, minute=59, second=59, microsecond=999)
-        for i in range(count):
-            msg_in = self.msg_helper.make_inbound(
-                content_template.format(i), from_addr=addr_template.format(i),
-                timestamp=(now - timedelta(hours=i * time_multiplier)), **kw)
-            yield self.mdb.add_inbound_message(msg_in, batch_id=batch_key)
-            inbound.append(msg_in)
-        returnValue(inbound)
-
-    @inlineCallbacks
-    def store_outbound(self, batch_key, count=10, addr_template='to-{0}',
-                       content_template='hello world {0}',
-                       start_timestamp=None, time_multiplier=10, **kw):
-        outbound = []
-        now = start_timestamp or datetime.now().replace(
-            hour=23, minute=59, second=59, microsecond=999)
-        for i in range(count):
-            msg_out = self.msg_helper.make_outbound(
-                content_template.format(i), to_addr=addr_template.format(i),
-                timestamp=(now - timedelta(hours=i * time_multiplier)), **kw)
-            yield self.mdb.add_outbound_message(msg_out, batch_id=batch_key)
-            outbound.append(msg_out)
-        returnValue(outbound)
-
-    @inlineCallbacks
-    def store_event(self, outbound, event_type, count=None, **kwargs):
+    def store_events(self, outbound, event_type, count=None, **kwargs):
         count = count or len(outbound)
         messages = outbound[0:count]
         events = []
         for message in messages:
             event_maker = getattr(self.msg_helper, 'make_%s' % (event_type,))
             event = event_maker(message, **kwargs)
-            yield self.mdb.add_event(event)
+            yield self.msg_helper.store_event(event)
             events.append(event)
         returnValue(events)
 
     @inlineCallbacks
     def add_channels_to_conversation(self, conv, *channel_tags):
         for tag in channel_tags:
-            yield self.user_api.acquire_specific_tag(tag)
-        user_account = yield self.user_api.get_user_account()
+            yield self.user_helper.user_api.acquire_specific_tag(tag)
+        user_account = yield self.user_helper.get_user_account()
         for tag in channel_tags:
-            channel = yield self.user_api.get_channel(tag)
+            channel = yield self.user_helper.user_api.get_channel(tag)
             user_account.routing_table.add_entry(
                 conv.get_connector(), 'default',
                 channel.get_connector(), 'default')
@@ -115,61 +58,64 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_count_replies(self):
+        # XXX: Does this test make sense at all?
         yield self.conv.start()
-        yield self.store_inbound(self.conv.batch.key)
-        self.assertEqual((yield self.conv.count_replies()), 10)
+        yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        self.assertEqual((yield self.conv.count_replies()), 5)
 
     @inlineCallbacks
     def test_count_sent_messages(self):
         yield self.conv.start()
-        yield self.store_outbound(self.conv.batch.key)
-        self.assertEqual((yield self.conv.count_sent_messages()), 10)
+        yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
+        self.assertEqual((yield self.conv.count_sent_messages()), 5)
 
     @inlineCallbacks
     def test_count_inbound_uniques(self):
         yield self.conv.start()
-        yield self.store_inbound(self.conv.batch.key, count=5)
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 5)
-        yield self.store_inbound(
-            self.conv.batch.key, count=5, addr_template='from')
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 6)
+        yield self.msg_helper.add_inbound_to_conv(self.conv, 3)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 3)
+        yield self.msg_helper.add_inbound_to_conv(self.conv, 4)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 4)
+        yield self.msg_helper.add_inbound_to_conv(self.conv, 2)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 4)
 
     @inlineCallbacks
     def test_count_outbound_uniques(self):
         yield self.conv.start()
-        yield self.store_outbound(self.conv.batch.key, count=5)
-        self.assertEqual((yield self.conv.count_outbound_uniques()), 5)
-        yield self.store_outbound(
-            self.conv.batch.key, count=5, addr_template='from')
-        self.assertEqual((yield self.conv.count_outbound_uniques()), 6)
+        yield self.msg_helper.add_outbound_to_conv(self.conv, 3)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 3)
+        yield self.msg_helper.add_outbound_to_conv(self.conv, 4)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 4)
+        yield self.msg_helper.add_outbound_to_conv(self.conv, 2)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 4)
 
     @inlineCallbacks
     def test_received_messages(self):
         yield self.conv.start()
-        yield self.store_inbound(self.conv.batch.key, count=20)
+        yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
         received_messages = yield self.conv.received_messages()
-        self.assertEqual(len(received_messages), 20)
-        self.assertEqual(len((yield self.conv.received_messages(0, 5))), 5)
-        self.assertEqual(len((yield self.conv.received_messages(5, 10))), 5)
-        self.assertEqual(len((yield self.conv.received_messages(20, 25))), 0)
+        self.assertEqual(len(received_messages), 5)
+        self.assertEqual(len((yield self.conv.received_messages(0, 2))), 2)
+        self.assertEqual(len((yield self.conv.received_messages(2, 4))), 2)
+        self.assertEqual(len((yield self.conv.received_messages(5, 10))), 0)
 
     @inlineCallbacks
     def test_received_messages_include_sensitive(self):
         yield self.conv.start()
-        yield self.store_inbound(
-            self.conv.batch.key, count=20, helper_metadata={
+        yield self.msg_helper.make_stored_inbound(
+            self.conv, "hi", helper_metadata={
                 'go': {'sensitive': True},
             })
         self.assertEqual([], (yield self.conv.received_messages()))
         self.assertEqual(
-            20,
+            1,
             len((yield self.conv.received_messages(include_sensitive=True))))
 
     @inlineCallbacks
     def test_received_messages_include_sensitive_and_scrub(self):
         yield self.conv.start()
-        yield self.store_inbound(
-            self.conv.batch.key, count=20, helper_metadata={
+        yield self.msg_helper.make_stored_inbound(
+            self.conv, "hi", helper_metadata={
                 'go': {'sensitive': True},
             })
 
@@ -177,46 +123,43 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             msg['content'] = 'scrubbed'
             return msg
 
-        scrubbed_messages = yield self.conv.received_messages(
+        [scrubbed_messages] = yield self.conv.received_messages(
             include_sensitive=True, scrubber=scrubber)
-        self.assertEqual(len(scrubbed_messages), 20)
-        for message in scrubbed_messages:
-            self.assertEqual(message['content'], 'scrubbed')
+        self.assertEqual(scrubbed_messages['content'], 'scrubbed')
 
     @inlineCallbacks
     def test_received_messages_dictionary(self):
         yield self.conv.start()
-        [msg] = yield self.store_inbound(self.conv.batch.key, count=1)
+        msg = yield self.msg_helper.make_stored_inbound(self.conv, "hi")
         [reply] = yield self.conv.received_messages()
         self.assertEqual(msg['message_id'], reply['message_id'])
 
     @inlineCallbacks
     def test_sent_messages(self):
         yield self.conv.start()
-        yield self.store_outbound(self.conv.batch.key, count=20)
+        yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
         sent_messages = yield self.conv.sent_messages()
-        self.assertEqual(len(sent_messages), 20)
-        self.assertEqual(len((yield self.conv.sent_messages(0, 5))), 5)
-        self.assertEqual(len((yield self.conv.sent_messages(5, 10))), 5)
-        self.assertEqual(len((yield self.conv.sent_messages(20, 25))), 0)
+        self.assertEqual(len(sent_messages), 5)
+        self.assertEqual(len((yield self.conv.sent_messages(0, 2))), 2)
+        self.assertEqual(len((yield self.conv.sent_messages(2, 4))), 2)
+        self.assertEqual(len((yield self.conv.sent_messages(5, 10))), 0)
 
     @inlineCallbacks
     def test_sent_messages_include_sensitive(self):
         yield self.conv.start()
-        yield self.store_outbound(
-            self.conv.batch.key, count=20, helper_metadata={
+        yield self.msg_helper.make_stored_outbound(
+            self.conv, "hi", helper_metadata={
                 'go': {'sensitive': True},
             })
         self.assertEqual([], (yield self.conv.sent_messages()))
         self.assertEqual(
-            20,
-            len((yield self.conv.sent_messages(include_sensitive=True))))
+            1, len((yield self.conv.sent_messages(include_sensitive=True))))
 
     @inlineCallbacks
     def test_sent_messages_include_sensitive_and_scrub(self):
         yield self.conv.start()
-        yield self.store_outbound(
-            self.conv.batch.key, count=20, helper_metadata={
+        yield self.msg_helper.make_stored_outbound(
+            self.conv, "hi", helper_metadata={
                 'go': {'sensitive': True},
             })
 
@@ -224,16 +167,14 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             msg['content'] = 'scrubbed'
             return msg
 
-        scrubbed_messages = yield self.conv.sent_messages(
+        [scrubbed_message] = yield self.conv.sent_messages(
             include_sensitive=True, scrubber=scrubber)
-        self.assertEqual(len(scrubbed_messages), 20)
-        for message in scrubbed_messages:
-            self.assertEqual(message['content'], 'scrubbed')
+        self.assertEqual(scrubbed_message['content'], 'scrubbed')
 
     @inlineCallbacks
     def test_sent_messages_dictionary(self):
         yield self.conv.start()
-        [msg] = yield self.store_outbound(self.conv.batch.key, count=1)
+        msg = yield self.msg_helper.make_stored_outbound(self.conv, "hi")
         [sent_message] = yield self.conv.sent_messages()
         self.assertEqual(msg['message_id'], sent_message['message_id'])
 
@@ -254,39 +195,38 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_has_channel_supporting(self):
         yield self.conv.start()
-        yield self.setup_tagpool(u"pool1", [u"tag1"], metadata={
+        yield self.vumi_helper.setup_tagpool(u"pool1", [u"tag1"], metadata={
             "supports": {"foo": True, "bar": True}})
-        yield self.setup_tagpool(u"pool2", [u"tag1"], metadata={
+        yield self.vumi_helper.setup_tagpool(u"pool2", [u"tag1"], metadata={
             "supports": {"foo": True, "bar": False}})
         yield self.add_channels_to_conversation(
             self.conv, ("pool1", "tag1"), ("pool2", "tag1"))
-        self.assertTrue(
-            (yield self.conv.has_channel_supporting(foo=True, bar=True)))
-        self.assertTrue(
-            (yield self.conv.has_channel_supporting(foo=True)))
-        self.assertFalse(
-            (yield self.conv.has_channel_supporting(foo=False)))
-        self.assertTrue(
-            (yield self.conv.has_channel_supporting(bar=True)))
-        self.assertTrue(
-            (yield self.conv.has_channel_supporting(bar=False)))
-        self.assertFalse(
-            (yield self.conv.has_channel_supporting(zoo=True)))
-        self.assertTrue(
-            (yield self.conv.has_channel_supporting(zoo=False)))
+
+        @inlineCallbacks
+        def assert_has_channel_supporting(expected_value, **kw):
+            self.assertEqual(
+                expected_value, (yield self.conv.has_channel_supporting(**kw)))
+
+        yield assert_has_channel_supporting(True, foo=True, bar=True)
+        yield assert_has_channel_supporting(True, foo=True)
+        yield assert_has_channel_supporting(False, foo=False)
+        yield assert_has_channel_supporting(True, bar=True)
+        yield assert_has_channel_supporting(True, bar=False)
+        yield assert_has_channel_supporting(False, zoo=True)
+        yield assert_has_channel_supporting(True, zoo=False)
 
     @inlineCallbacks
     def test_get_progress_status(self):
         yield self.conv.start()
-        outbound = yield self.store_outbound(self.conv.batch.key, count=10)
-        yield self.store_event(outbound, 'ack', count=8)
-        yield self.store_event(outbound, 'nack', count=2)
-        yield self.store_event(outbound, 'delivery_report', count=4,
-                               delivery_status='delivered')
-        yield self.store_event(outbound, 'delivery_report', count=1,
-                               delivery_status='failed')
-        yield self.store_event(outbound, 'delivery_report', count=1,
-                               delivery_status='pending')
+        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 10)
+        yield self.store_events(outbound, 'ack', count=8)
+        yield self.store_events(outbound, 'nack', count=2)
+        yield self.store_events(outbound, 'delivery_report', count=4,
+                                delivery_status='delivered')
+        yield self.store_events(outbound, 'delivery_report', count=1,
+                                delivery_status='failed')
+        yield self.store_events(outbound, 'delivery_report', count=1,
+                                delivery_status='pending')
         self.assertEqual((yield self.conv.get_progress_status()), {
             'sent': 10,
             'ack': 8,
@@ -301,22 +241,23 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_progress_percentage_acks(self):
         yield self.conv.start()
         self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        outbound = yield self.store_outbound(self.conv.batch.key, count=10)
-        yield self.store_event(outbound, 'ack', count=8)
+        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
+        yield self.store_events(outbound, 'ack', count=4)
         self.assertEqual((yield self.conv.get_progress_percentage()), 80)
 
     @inlineCallbacks
     def test_get_progress_percentage_nacks(self):
         yield self.conv.start()
         self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        outbound = yield self.store_outbound(self.conv.batch.key, count=10)
-        yield self.store_event(outbound, 'nack', count=8)
+        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
+        yield self.store_events(outbound, 'nack', count=4)
         self.assertEqual((yield self.conv.get_progress_percentage()), 80)
 
     @inlineCallbacks
     def test_get_opted_in_contact_bunches(self):
-        contact_store = self.user_api.contact_store
-        opt_out_store = OptOutStore.from_user_account(self.user)
+        contact_store = self.user_helper.user_api.contact_store
+        user_account = yield self.user_helper.get_user_account()
+        opt_out_store = OptOutStore.from_user_account(user_account)
 
         @inlineCallbacks
         def get_contacts():
@@ -331,7 +272,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             [],
             (yield get_contacts()))
 
-        group = yield self.user_api.contact_store.new_group(u'a group')
+        group = yield contact_store.new_group(u'a group')
         self.conv.add_group(group)
         yield self.conv.save()
 
@@ -360,8 +301,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_inbound_throughput(self):
         yield self.conv.start()
-        yield self.store_inbound(
-            self.conv.batch.key, count=20, time_multiplier=0)
+        yield self.msg_helper.add_inbound_to_conv(
+            self.conv, 20, time_multiplier=0)
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_inbound_throughput()), 4)
@@ -372,8 +313,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_outbound_throughput(self):
         yield self.conv.start()
-        yield self.store_outbound(
-            self.conv.batch.key, count=20, time_multiplier=0)
+        yield self.msg_helper.add_outbound_to_conv(
+            self.conv, 20, time_multiplier=0)
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_outbound_throughput()), 4)
@@ -401,75 +342,78 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_find_inbound_messages_matching(self):
         yield self.conv.start()
-        yield self.store_inbound(self.conv.batch.key, count=20)
-        matching = yield self.do_search(self.conv, 'inbound', 'hello')
-        self.assertEqual(len(matching), 20)
-        matching = yield self.do_search(self.conv, 'inbound', 'hello world 1')
+        yield self.msg_helper.add_inbound_to_conv(self.conv, count=11)
+        matching = yield self.do_search(self.conv, 'inbound', 'inbound')
         self.assertEqual(len(matching), 11)
-        matching = yield self.do_search(self.conv, 'inbound', 'hello world 1$')
+        matching = yield self.do_search(self.conv, 'inbound', 'inbound 0')
+        self.assertEqual(len(matching), 1)
+        matching = yield self.do_search(self.conv, 'inbound', 'inbound 1')
+        self.assertEqual(len(matching), 2)
+        matching = yield self.do_search(self.conv, 'inbound', 'inbound 1$')
         self.assertEqual(len(matching), 1)
 
     @inlineCallbacks
     def test_find_inbound_messages_matching_flags(self):
         yield self.conv.start()
-        yield self.store_inbound(self.conv.batch.key, count=20)
-        matching = yield self.do_search(self.conv, 'inbound', 'HELLO',
-                                        flags="i")
-        self.assertEqual(len(matching), 20)
-        matching = yield self.do_search(self.conv, 'inbound', 'HELLO',
-                                        flags="")
+        yield self.msg_helper.add_inbound_to_conv(self.conv, count=2)
+        matching = yield self.do_search(
+            self.conv, 'inbound', 'INBOUND', flags="i")
+        self.assertEqual(len(matching), 2)
+        matching = yield self.do_search(
+            self.conv, 'inbound', 'INBOUND', flags="")
         self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
     def test_find_inbound_messages_matching_flags_custom_key(self):
         yield self.conv.start()
-        yield self.store_inbound(self.conv.batch.key, count=20)
-        matching = yield self.do_search(self.conv, 'inbound', 'FROM',
-                                        flags='i', key='msg.from_addr')
-        self.assertEqual(len(matching), 20)
-        matching = yield self.do_search(self.conv, 'inbound', 'FROM', flags='',
-                                        key='msg.from_addr')
+        yield self.msg_helper.add_inbound_to_conv(self.conv, count=2)
+        matching = yield self.do_search(
+            self.conv, 'inbound', 'FROM', flags='i', key='msg.from_addr')
+        self.assertEqual(len(matching), 2)
+        matching = yield self.do_search(
+            self.conv, 'inbound', 'FROM', flags='', key='msg.from_addr')
         self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
     def test_find_outbound_messages_matching(self):
         yield self.conv.start()
-        yield self.store_outbound(self.conv.batch.key, count=20)
-        matching = yield self.do_search(self.conv, 'outbound', 'hello')
-        self.assertEqual(len(matching), 20)
-        matching = yield self.do_search(self.conv, 'outbound', 'hello world 1')
+        yield self.msg_helper.add_outbound_to_conv(self.conv, count=11)
+        matching = yield self.do_search(self.conv, 'outbound', 'outbound')
         self.assertEqual(len(matching), 11)
-        matching = yield self.do_search(self.conv, 'outbound',
-                                        'hello world 1$')
+        matching = yield self.do_search(self.conv, 'outbound', 'outbound 0')
+        self.assertEqual(len(matching), 1)
+        matching = yield self.do_search(self.conv, 'outbound', 'outbound 1')
+        self.assertEqual(len(matching), 2)
+        matching = yield self.do_search(self.conv, 'outbound', 'outbound 1$')
         self.assertEqual(len(matching), 1)
 
     @inlineCallbacks
     def test_find_outbound_messages_matching_flags(self):
         yield self.conv.start()
-        yield self.store_outbound(self.conv.batch.key, count=20)
-        matching = yield self.do_search(self.conv, 'outbound', 'HELLO',
-                                        flags='i')
-        self.assertEqual(len(matching), 20)
-        matching = yield self.do_search(self.conv, 'outbound', 'HELLO',
-                                        flags='')
+        yield self.msg_helper.add_outbound_to_conv(self.conv, count=2)
+        matching = yield self.do_search(
+            self.conv, 'outbound', 'OUTBOUND', flags='i')
+        self.assertEqual(len(matching), 2)
+        matching = yield self.do_search(
+            self.conv, 'outbound', 'OUTBOUND', flags='')
         self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
     def test_find_outbound_messages_matching_flags_custom_key(self):
         yield self.conv.start()
-        yield self.store_outbound(self.conv.batch.key, count=20)
-        matching = yield self.do_search(self.conv, 'outbound', 'TO', flags='i',
-                                        key='msg.to_addr')
-        self.assertEqual(len(matching), 20)
-        matching = yield self.do_search(self.conv, 'outbound', 'TO', flags='',
-                                        key='msg.to_addr')
+        yield self.msg_helper.add_outbound_to_conv(self.conv, count=2)
+        matching = yield self.do_search(
+            self.conv, 'outbound', 'TO', flags='i', key='msg.to_addr')
+        self.assertEqual(len(matching), 2)
+        matching = yield self.do_search(
+            self.conv, 'outbound', 'TO', flags='', key='msg.to_addr')
         self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
     def test_get_aggregate_keys(self):
         yield self.conv.start()
-        yield self.store_outbound(
-            self.conv.batch.key, count=20, time_multiplier=12)
+        yield self.msg_helper.add_outbound_to_conv(
+            self.conv, 20, time_multiplier=12)
         inbound_aggregate = yield self.conv.get_aggregate_keys('inbound')
         self.assertEqual(inbound_aggregate, [])
         outbound_aggregate = yield self.conv.get_aggregate_keys('outbound')
@@ -485,8 +429,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_aggregate_count(self):
         yield self.conv.start()
-        yield self.store_outbound(
-            self.conv.batch.key, count=20, time_multiplier=12)
+        yield self.msg_helper.add_outbound_to_conv(
+            self.conv, 20, time_multiplier=12)
         inbound_aggregate = yield self.conv.get_aggregate_count('inbound')
         self.assertEqual(inbound_aggregate, [])
         outbound_aggregate = yield self.conv.get_aggregate_count('outbound')
@@ -501,9 +445,10 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_get_groups(self):
-        groups = yield self.user_api.list_groups()
+        groups = yield self.user_helper.user_api.list_groups()
         self.assertEqual([], groups)
-        group = yield self.user_api.contact_store.new_group(u'test group')
+        group = yield self.user_helper.user_api.contact_store.new_group(
+            u'test group')
         self.conv.groups.add_key(group.key)
         [found_group] = yield self.conv.get_groups()
         self.assertEqual(found_group.key, group.key)

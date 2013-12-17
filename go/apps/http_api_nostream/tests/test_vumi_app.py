@@ -71,7 +71,8 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
                 self.account.key, 'token-1'))],
         }
 
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     @inlineCallbacks
     def tearDown(self):

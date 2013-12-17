@@ -34,7 +34,7 @@ class OptOutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
         super(OptOutResourceTestCase, self).setUp()
         yield self._persist_setUp()
 
-        self.msg_helper = GoMessageHelper()
+        self.msg_helper = self.add_helper(GoMessageHelper())
 
         # We pass `self` in as the VumiApi object here, because mk_user() just
         # grabs .account_store off it.
