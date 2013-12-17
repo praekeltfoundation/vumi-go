@@ -7,7 +7,8 @@ from twisted.trial import unittest
 
 from go.billing import settings as app_settings
 from go.billing import api
-from go.billing.utils import DummySite, DictRowConnectionPool
+from go.billing.models import MessageCost
+from go.billing.utils import DummySite, DictRowConnectionPool, JSONDecoder
 
 
 DB_SUPPORTED = False
@@ -56,20 +57,20 @@ class UserTestCase(unittest.TestCase):
             'users', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        new_user = json.loads(response.value(), parse_float=decimal.Decimal)
+        new_user = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue('id' in new_user)
 
         # Fetch the new user
         url = 'users/%s' % (new_user.get('id'))
         response = yield self.web.get(url)
         self.assertEqual(response.responseCode, 200)
-        user = json.loads(response.value(), parse_float=decimal.Decimal)
+        user = json.loads(response.value(), cls=JSONDecoder)
         self.assertEqual(user.get('email'), new_user.get('email'))
 
         # Fetch a list of all users and make sure the new user is there
         response = yield self.web.get('users')
         self.assertEqual(response.responseCode, 200)
-        user_list = json.loads(response.value(), parse_float=decimal.Decimal)
+        user_list = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue(len(user_list) > 0)
         email_list = [u.get('email', None) for u in user_list]
         self.assertTrue("test@example.com" in email_list)
@@ -109,7 +110,7 @@ class AccountTestCase(unittest.TestCase):
             'users', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        user = json.loads(response.value(), parse_float=decimal.Decimal)
+        user = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue('id' in user)
 
         # Create a new account
@@ -124,9 +125,7 @@ class AccountTestCase(unittest.TestCase):
             'accounts', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        new_account = json.loads(response.value(),
-                                 parse_float=decimal.Decimal)
-
+        new_account = json.loads(response.value(), cls=JSONDecoder)
         self.assertEqual(new_account.get('account_number', None), "12345")
 
         # Load credits into the new account
@@ -145,7 +144,7 @@ class AccountTestCase(unittest.TestCase):
         url = 'accounts/%s' % (new_account.get('account_number'))
         response = yield self.web.get(url)
         self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), parse_float=decimal.Decimal)
+        account = json.loads(response.value(), cls=JSONDecoder)
         self.assertEqual(account.get('account_number'),
                          new_account.get('account_number'))
         self.assertTrue(account.get('credit_balance', 0) == 100)
@@ -154,9 +153,7 @@ class AccountTestCase(unittest.TestCase):
         args = {'account_number': account.get('account_number')}
         response = yield self.web.get('transactions', args=args)
         self.assertEqual(response.responseCode, 200)
-        transaction_list = json.loads(response.value(),
-                                      parse_float=decimal.Decimal)
-
+        transaction_list = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue(len(transaction_list) > 0)
         found = False
         for transaction in transaction_list:
@@ -202,7 +199,7 @@ class CostTestCase(unittest.TestCase):
             'users', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        user = json.loads(response.value(), parse_float=decimal.Decimal)
+        user = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue('id' in user)
 
         # Create a test account
@@ -217,13 +214,13 @@ class CostTestCase(unittest.TestCase):
             'accounts', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), parse_float=decimal.Decimal)
+        account = json.loads(response.value(), cls=JSONDecoder)
 
         # Create the message base cost
         content = {
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound",
-            'message_cost': 90,
+            'message_cost': 0.9,
             'markup_percent': 20.0,
         }
 
@@ -232,11 +229,14 @@ class CostTestCase(unittest.TestCase):
             'costs', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        base_cost = json.loads(response.value(), parse_float=decimal.Decimal)
+        base_cost = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue('credit_amount' in base_cost)
-        credit_factor = float(app_settings.CREDIT_CONVERSION_FACTOR)
-        credit_amount = round((90 + (90 * 20.0 / 100.0)) * credit_factor)
-        self.assertEqual(base_cost.get('credit_amount'), int(credit_amount))
+        message_cost = decimal.Decimal('0.9')
+        markup_percent = decimal.Decimal('20.0')
+        credit_amount = MessageCost.calculate_credit_cost(message_cost,
+                                                          markup_percent)
+
+        self.assertEqual(base_cost.get('credit_amount'), credit_amount)
 
         # Get the message cost
         args = {
@@ -246,9 +246,7 @@ class CostTestCase(unittest.TestCase):
 
         response = yield self.web.get('costs', args=args)
         self.assertEqual(response.responseCode, 200)
-        message_cost = json.loads(response.value(),
-                                  parse_float=decimal.Decimal)
-
+        message_cost = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue(len(message_cost) > 0)
         self.assertEqual(message_cost[0].get('credit_amount'), credit_amount)
 
@@ -257,7 +255,7 @@ class CostTestCase(unittest.TestCase):
             'account_number': account.get('account_number'),
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound",
-            'message_cost': 50,
+            'message_cost': 0.5,
             'markup_percent': 10.0,
         }
 
@@ -266,11 +264,13 @@ class CostTestCase(unittest.TestCase):
             'costs', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        cost_override = json.loads(response.value(),
-                                   parse_float=decimal.Decimal)
-
+        cost_override = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue('credit_amount' in base_cost)
-        credit_amount = (50 + (50 * 10.0 / 100.0)) * credit_factor
+        message_cost = decimal.Decimal('0.5')
+        markup_percent = decimal.Decimal('10.0')
+        credit_amount = MessageCost.calculate_credit_cost(message_cost,
+                                                          markup_percent)
+
         self.assertEqual(cost_override.get('credit_amount'), credit_amount)
 
         # Get the message cost again
@@ -282,9 +282,7 @@ class CostTestCase(unittest.TestCase):
 
         response = yield self.web.get('costs', args=args)
         self.assertEqual(response.responseCode, 200)
-        message_cost = json.loads(response.value(),
-                                  parse_float=decimal.Decimal)
-
+        message_cost = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue(len(message_cost) > 0)
         self.assertEqual(message_cost[0].get('credit_amount'), credit_amount)
 
@@ -323,7 +321,7 @@ class TransactionTestCase(unittest.TestCase):
             'users', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        user = json.loads(response.value(), parse_float=decimal.Decimal)
+        user = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue('id' in user)
 
         # Create a test account
@@ -338,13 +336,13 @@ class TransactionTestCase(unittest.TestCase):
             'accounts', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), parse_float=decimal.Decimal)
+        account = json.loads(response.value(), cls=JSONDecoder)
 
         # Set the message cost
         content = {
             'tag_pool_name': "test_pool2",
             'message_direction': "Inbound",
-            'message_cost': 60,
+            'message_cost': 0.6,
             'markup_percent': 10.0,
         }
 
@@ -353,10 +351,13 @@ class TransactionTestCase(unittest.TestCase):
             'costs', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        cost = json.loads(response.value(), parse_float=decimal.Decimal)
-        credit_factor = float(app_settings.CREDIT_CONVERSION_FACTOR)
-        credit_amount = round((60 + (60 * 10.0 / 100.0)) * credit_factor)
-        self.assertEqual(cost.get('credit_amount'), int(credit_amount))
+        cost = json.loads(response.value(), cls=JSONDecoder)
+        message_cost = decimal.Decimal('0.6')
+        markup_percent = decimal.Decimal('10.0')
+        credit_amount = MessageCost.calculate_credit_cost(message_cost,
+                                                          markup_percent)
+
+        self.assertEqual(cost.get('credit_amount'), credit_amount)
 
         # Create a transaction
         content = {
@@ -376,9 +377,7 @@ class TransactionTestCase(unittest.TestCase):
         args = {'account_number': account.get('account_number')}
         response = yield self.web.get('transactions', args=args)
         self.assertEqual(response.responseCode, 200)
-        transaction_list = json.loads(response.value(),
-                                      parse_float=decimal.Decimal)
-
+        transaction_list = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue(len(transaction_list) > 0)
         found = False
         for transaction in transaction_list:
@@ -394,5 +393,5 @@ class TransactionTestCase(unittest.TestCase):
         url = 'accounts/%s' % ("11111",)
         response = yield self.web.get(url)
         self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), parse_float=decimal.Decimal)
+        account = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue(account.get('credit_balance', 0) == -credit_amount)
