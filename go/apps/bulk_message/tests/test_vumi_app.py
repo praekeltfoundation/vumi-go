@@ -182,6 +182,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             'user_account': self.user_account.key,
             'conversation_type': 'bulk_message',
             'conversation_key': conversation.key,
+            'batch_keys': {
+                'conversation': {conversation.key: conversation.batch.key},
+            },
         })
         self.assertEqual(msg.payload['helper_metadata']['foo'],
                          {'bar': 'baz'})

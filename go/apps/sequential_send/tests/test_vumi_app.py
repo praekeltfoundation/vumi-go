@@ -253,6 +253,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
             'user_account': self.user_account.key,
             'conversation_type': 'sequential_send',
             'conversation_key': conv.key,
+            'batch_keys': {'conversation': {conv.key: conv.batch.key}},
         })
         self.assertEqual(msg2['content'], 'foo')
         self.assertEqual(msg2['to_addr'], contact2.msisdn)
@@ -260,6 +261,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
             'user_account': self.user_account.key,
             'conversation_type': 'sequential_send',
             'conversation_key': conv.key,
+            'batch_keys': {'conversation': {conv.key: conv.batch.key}},
         })
 
         # Send to previous two contacts and a new third contact.

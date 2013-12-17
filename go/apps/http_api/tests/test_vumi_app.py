@@ -267,13 +267,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         [sent_msg] = self.get_dispatched_messages()
         self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
-        self.assertEqual(sent_msg['helper_metadata'], {
-            'go': {
-                'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
-                'user_account': self.account.key,
-            },
-        })
+        self.assertEqual(sent_msg['helper_metadata'], {'go': {
+            'conversation_key': self.conversation.key,
+            'conversation_type': 'http_api',
+            'user_account': self.account.key,
+            'batch_keys': {'conversation': {
+                self.conversation.key: self.conversation.batch.key,
+            }},
+        }})
         # We do not respect the message_id that's been given.
         self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
         self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
@@ -325,13 +326,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         [sent_msg] = self.get_dispatched_messages()
         self.assertEqual(sent_msg['to_addr'], put_msg['to_addr'])
-        self.assertEqual(sent_msg['helper_metadata'], {
-            'go': {
-                'conversation_key': self.conversation.key,
-                'conversation_type': 'http_api',
-                'user_account': self.account.key,
-            },
-        })
+        self.assertEqual(sent_msg['helper_metadata'], {'go': {
+            'conversation_key': self.conversation.key,
+            'conversation_type': 'http_api',
+            'user_account': self.account.key,
+            'batch_keys': {'conversation': {
+                self.conversation.key: self.conversation.batch.key,
+            }},
+        }})
         self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
         self.assertEqual(sent_msg['session_event'], None)
         self.assertEqual(sent_msg['to_addr'], inbound_msg['from_addr'])
