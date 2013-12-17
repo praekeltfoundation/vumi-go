@@ -560,6 +560,23 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         self.assertEqual(contact_keys, expected_contact_keys)
 
+    def test_make_batches(self):
+        keys = [1, 2, 3, 4, 5]
+        batches = self.resource.make_batches(keys, 2)
+        self.assertEqual(sorted(batches.items()),
+                         [("0", json.dumps([1, 2])),
+                          ("1", json.dumps([3, 4])),
+                          ("2", json.dumps([5]))])
+
+        keys = [1]
+        batches = self.resource.make_batches(keys, 2)
+        self.assertEqual(sorted(batches.items()),
+                         [("0", json.dumps([1]))])
+
+        keys = []
+        batches = self.resource.make_batches(keys, 2)
+        self.assertEqual(sorted(batches.items()), [])
+
 
 class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
     use_riak = True
