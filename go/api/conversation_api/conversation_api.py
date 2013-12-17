@@ -2,7 +2,7 @@
 
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import NoResource
-from twisted.web import http
+from twisted.web import resource, http
 from twisted.internet.defer import inlineCallbacks, Deferred, succeed
 
 from vumi.config import ConfigText, ConfigDict, ConfigInt
@@ -10,8 +10,32 @@ from vumi.transports.httprpc import httprpc
 from vumi.utils import http_request_full
 from vumi.worker import BaseWorker
 
-from go.apps.http_api.resource import AuthorizedResource, BaseResource
 from go.vumitools.api import VumiApi
+# TODO: Avoid importing stuff from go.apps(!!!) here.
+from go.apps.http_api_nostream.auth import AuthorizedResource
+
+
+class BaseResource(resource.Resource):
+
+    def __init__(self, worker, conversation_key):
+        resource.Resource.__init__(self)
+        self.worker = worker
+        self.conversation_key = conversation_key
+        self.vumi_api = self.worker.vumi_api
+        self.user_apis = {}
+
+    def get_user_api(self, user_account):
+        if user_account in self.user_apis:
+            return self.user_apis[user_account]
+
+        user_api = self.vumi_api.get_user_api(user_account)
+        self.user_apis[user_account] = user_api
+        return user_api
+
+    def get_conversation(self, user_account, conversation_key=None):
+        conversation_key = conversation_key or self.conversation_key
+        user_api = self.get_user_api(user_account)
+        return user_api.get_wrapped_conversation(conversation_key)
 
 
 class ConversationConfigResource(BaseResource):
@@ -115,10 +139,6 @@ class ConversationApiWorkerConfig(BaseWorker.CONFIG_CLASS):
         "Riak client configuration.", default={}, static=True)
 
 
-class AccountResource(AuthorizedResource):
-    resource_class = ConversationApiResource
-
-
 class ConversationApiWorker(BaseWorker):
 
     worker_name = 'conversation_api_worker'
@@ -129,7 +149,8 @@ class ConversationApiWorker(BaseWorker):
         self.vumi_api = yield VumiApi.from_config_async(self.config)
         config = self.get_static_config()
         self.webserver = self.start_web_resources([
-            (AccountResource(self), config.web_path),
+            (AuthorizedResource(self, ConversationApiResource),
+             config.web_path),
             (httprpc.HttpRpcHealthResource(self), config.health_path)
         ], config.web_port)
 
@@ -139,3 +160,6 @@ class ConversationApiWorker(BaseWorker):
 
     def setup_connectors(self):
         pass
+
+    def get_api_config(self, conversation, key, default=None):
+        return conversation.config.get('http_api', {}).get(key, default)
