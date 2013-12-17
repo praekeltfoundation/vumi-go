@@ -1,11 +1,128 @@
-from twisted.trial.unittest import SkipTest
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
 
-from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.utils import MessageMetadataDictHelper, MessageMetadataHelper
 from go.vumitools.tests.helpers import VumiApiHelper
+
+
+class TestMessageMetadataDictHelper(VumiTestCase):
+
+    def mk_msg(self, go_metadata=None, optout_metadata=None):
+        helper_metadata = {}
+        if go_metadata is not None:
+            helper_metadata['go'] = go_metadata
+        if optout_metadata is not None:
+            helper_metadata['optout'] = optout_metadata
+        return TransportUserMessage(
+            to_addr="to@domain.org", from_addr="from@domain.org",
+            transport_name="dummy_endpoint",
+            transport_type="dummy_transport_type",
+            helper_metadata=helper_metadata)
+
+    def mk_md(self, message=None, go_metadata=None, optout_metadata=None):
+        if message is None:
+            message = self.mk_msg(go_metadata, optout_metadata)
+        return MessageMetadataDictHelper(message['helper_metadata'])
+
+    def test_is_sensitive(self):
+        md = self.mk_md()
+        self.assertFalse(md.is_sensitive())
+        md = self.mk_md(go_metadata={'sensitive': True})
+        self.assertTrue(md.is_sensitive())
+
+    def test_has_user_account(self):
+        md = self.mk_md()
+        self.assertFalse(md.has_user_account())
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertTrue(md.has_user_account())
+
+    def test_get_account_key(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_account_key)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertEqual(md.get_account_key(), 'user-1')
+
+    def test_get_conversation_key(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_conversation_key)
+        md = self.mk_md(go_metadata={'conversation_key': 'conv-1'})
+        self.assertEqual(md.get_conversation_key(), 'conv-1')
+
+    def test_get_conversation_info(self):
+        md = self.mk_md()
+        self.assertEqual(md.get_conversation_info(), None)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertEqual(md.get_conversation_info(), None)
+        md = self.mk_md(go_metadata={
+            'user_account': 'user-1',
+            'conversation_type': 'dummy',
+        })
+        self.assertEqual(md.get_conversation_info(), None)
+        md = self.mk_md(go_metadata={
+            'user_account': 'user-1',
+            'conversation_type': 'dummy',
+            'conversation_key': 'conv-1',
+        })
+        self.assertEqual(md.get_conversation_info(), {
+            'user_account': 'user-1',
+            'conversation_type': 'dummy',
+            'conversation_key': 'conv-1',
+        })
+
+    def test_set_conversation_info(self):
+        msg = self.mk_msg()
+        md = self.mk_md(msg)
+        md.set_conversation_info('dummy', 'conv-1')
+        self.assertEqual(msg['helper_metadata']['go'], {
+            'conversation_type': 'dummy',
+            'conversation_key': 'conv-1',
+        })
+
+    def test_set_user_account(self):
+        msg = self.mk_msg()
+        md = self.mk_md(msg)
+        md.set_user_account('user-1')
+        self.assertEqual(msg['helper_metadata']['go'], {
+            'user_account': 'user-1',
+        })
+
+    def test_get_router_key(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_router_key)
+        md = self.mk_md(go_metadata={'router_key': 'router-1'})
+        self.assertEqual(md.get_router_key(), 'router-1')
+
+    def test_get_router_info(self):
+        md = self.mk_md()
+        self.assertEqual(md.get_router_info(), None)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertEqual(md.get_router_info(), None)
+        md = self.mk_md(go_metadata={
+            'user_account': 'user-1',
+            'router_type': 'dummy',
+        })
+        self.assertEqual(md.get_router_info(), None)
+        md = self.mk_md(go_metadata={
+            'user_account': 'user-1',
+            'router_type': 'dummy',
+            'router_key': 'router-1',
+        })
+        self.assertEqual(md.get_router_info(), {
+            'user_account': 'user-1',
+            'router_type': 'dummy',
+            'router_key': 'router-1',
+        })
+
+    def test_set_router_info(self):
+        msg = self.mk_msg()
+        md = self.mk_md(msg)
+        md.set_router_info('dummy', 'router-1')
+        self.assertEqual(msg['helper_metadata']['go'], {
+            'router_type': 'dummy',
+            'router_key': 'router-1',
+        })
 
 
 class TestMessageMetadataHelper(VumiTestCase):
