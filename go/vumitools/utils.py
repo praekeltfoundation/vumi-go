@@ -133,8 +133,8 @@ class MessageMetadataHelper(object):
         return self._go_metadata['router_key']
 
     def get_router(self):
-        return self.get_user_api().get_router(
-            self.get_router_key())
+        return self._get_if_not_stashed(
+            'router', self.get_user_api().get_router, self.get_router_key())
 
     def get_router_info(self):
         router_info = {}

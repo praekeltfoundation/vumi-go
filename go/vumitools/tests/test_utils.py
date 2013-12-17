@@ -181,8 +181,50 @@ class TestMessageMetadataHelper(VumiTestCase):
         md = self.mk_md(go_metadata={'router_key': 'router-1'})
         self.assertEqual(md.get_router_key(), 'router-1')
 
+    @inlineCallbacks
     def test_get_router(self):
-        raise SkipTest("Add test once VumiUserApi has a get_router method")
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_router)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertRaises(KeyError, md.get_router)
+        router = yield self.user_helper.create_router(u'keyword')
+        md = self.mk_md(go_metadata={
+            'user_account': self.user_helper.account_key,
+            'router_key': router.key,
+        })
+        md_router = yield md.get_router()
+        self.assertEqual(md_router.key, router.key)
+
+    @inlineCallbacks
+    def test_router_caching(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_router)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertRaises(KeyError, md.get_router)
+        router = yield self.user_helper.create_router(u'keyword')
+        md = self.mk_md(go_metadata={
+            'user_account': router.user_account.key,
+            'router_key': router.key,
+        })
+        md_router = yield md.get_router()
+        self.assertEqual(md_router.key, router.key)
+        self.assertEqual(md_router.status, router.status)
+
+        # Modify the router and get it from md again, making sure we
+        # still have cached data.
+        router.set_status_starting()
+        yield router.save()
+        md_router2 = yield md.get_router()
+        self.assertIdentical(md_router, md_router2)
+        self.assertNotEqual(md_router2.status, router.status)
+
+        # Clear the stored object cache and get the router from md again,
+        # making sure we have new data now.
+        md.clear_object_cache()
+        md_router3 = yield md.get_router()
+        self.assertEqual(md_router3.key, router.key)
+        self.assertEqual(md_router3.status, router.status)
+        self.assertNotIdentical(md_router, md_router3)
 
     def test_get_router_info(self):
         md = self.mk_md()
