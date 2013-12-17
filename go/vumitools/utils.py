@@ -91,6 +91,28 @@ class MessageMetadataDictHelper(object):
             'router_key': router_key,
         })
 
+    def set_conversation_batch_key(self, conversation_key, batch_key):
+        batch_keys = self._go_metadata.setdefault('batch_keys', {})
+        conv_batch_keys = batch_keys.setdefault('conversation', {})
+        conv_batch_keys[conversation_key] = batch_key
+
+    def set_router_batch_key(self, router_key, batch_key):
+        batch_keys = self._go_metadata.setdefault('batch_keys', {})
+        router_batch_keys = batch_keys.setdefault('router', {})
+        router_batch_keys[router_key] = batch_key
+
+    def add_conversation_metadata(self, conversation):
+        self.set_user_account(conversation.user_account.key)
+        self.set_conversation_info(
+            conversation.conversation_type, conversation.key)
+        self.set_conversation_batch_key(
+            conversation.key, conversation.batch.key)
+
+    def add_router_metadata(self, router):
+        self.set_user_account(router.user_account.key)
+        self.set_router_info(router.router_type, router.key)
+        self.set_router_batch_key(router.key, router.batch.key)
+
 
 class MessageMetadataHelper(MessageMetadataDictHelper):
     """Manage various bits of metadata for a Vumi Go message.
@@ -183,13 +205,13 @@ class MessageMetadataHelper(MessageMetadataDictHelper):
 
     def _add_conversation_batch_key(self, batch_keys):
         d = self.get_conversation()
-        d.addCallback(lambda conv: batch_keys['conversation'].setdefault(
+        d.addCallback(lambda conv: self.set_conversation_batch_key(
             conv.key, conv.batch.key))
         return d.addCallback(lambda r: batch_keys)
 
     def _add_router_batch_key(self, batch_keys):
         d = self.get_router()
-        d.addCallback(lambda router: batch_keys['router'].setdefault(
+        d.addCallback(lambda router: self.set_router_batch_key(
             router.key, router.batch.key))
         return d.addCallback(lambda r: batch_keys)
 

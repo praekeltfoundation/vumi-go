@@ -124,6 +124,42 @@ class TestMessageMetadataDictHelper(VumiTestCase):
             'router_key': 'router-1',
         })
 
+    @inlineCallbacks
+    def test_add_conversation_metadata(self):
+        md = self.mk_md()
+        self.assertEqual(md._go_metadata, {})
+
+        vumi_helper = yield self.add_helper(VumiApiHelper())
+        user_helper = yield vumi_helper.make_user(u'user')
+
+        conv = yield user_helper.create_conversation(u'bulk_message')
+        md.add_conversation_metadata(conv)
+
+        self.assertEqual(md._go_metadata, {
+            'user_account': user_helper.account_key,
+            'conversation_type': conv.conversation_type,
+            'conversation_key': conv.key,
+            'batch_keys': {'conversation': {conv.key: conv.batch.key}},
+        })
+
+    @inlineCallbacks
+    def test_add_router_metadata(self):
+        md = self.mk_md()
+        self.assertEqual(md._go_metadata, {})
+
+        vumi_helper = yield self.add_helper(VumiApiHelper())
+        user_helper = yield vumi_helper.make_user(u'user')
+
+        router = yield user_helper.create_router(u'keyword')
+        md.add_router_metadata(router)
+
+        self.assertEqual(md._go_metadata, {
+            'user_account': user_helper.account_key,
+            'router_type': router.router_type,
+            'router_key': router.key,
+            'batch_keys': {'router': {router.key: router.batch.key}},
+        })
+
 
 class TestMessageMetadataHelper(VumiTestCase):
 
