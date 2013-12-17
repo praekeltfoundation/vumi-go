@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, Context, Inexact
 
 from django.conf import settings
 from django import forms
@@ -7,7 +7,36 @@ from django.forms.models import BaseModelFormSet
 
 from go.vumitools.api import VumiApi
 
-from go.billing.models import Account, Transaction, TagPool
+from go.billing import settings
+from go.billing.models import Account, TagPool, MessageCost, Transaction
+
+
+class MessageCostForm(ModelForm):
+
+    class Meta:
+        model = MessageCost
+
+    def clean(self):
+        """Make sure the resulting credit cost does not underflow to zero"""
+        cleaned_data = super(MessageCostForm, self).clean()
+        message_cost = cleaned_data.get('message_cost')
+        markup_percent = cleaned_data.get('markup_percent')
+        if message_cost and markup_percent:
+            markup_amount = (message_cost
+                             * markup_percent / Decimal('100.0'))
+
+            resulting_price = message_cost + markup_amount
+            credit_cost = resulting_price * Decimal(
+                settings.CREDIT_CONVERSION_FACTOR)
+
+            context = Context()
+            credit_cost = credit_cost.quantize(settings.QUANTIZATION_EXPONENT,
+                                               context=context)
+
+            if context.flags[Inexact] and credit_cost == Decimal('0.0'):
+                raise forms.ValidationError("The resulting credit cost is 0.")
+
+        return cleaned_data
 
 
 class BaseCreditLoadFormSet(BaseModelFormSet):

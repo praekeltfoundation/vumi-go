@@ -10,6 +10,7 @@ from django.contrib import messages
 from go.billing.models import TagPool, Account, MessageCost, Transaction
 from go.billing.forms import (CreditLoadForm,
                               BaseCreditLoadFormSet,
+                              MessageCostForm,
                               TagPoolForm)
 
 
@@ -90,6 +91,7 @@ class MessageCostAdmin(admin.ModelAdmin):
 
     search_fields = ('tag_pool__name', 'account__account_number')
     list_filter = ('tag_pool', 'message_direction')
+    form = MessageCostForm
 
     def credit_amount(self, obj):
         return obj.credit_cost
