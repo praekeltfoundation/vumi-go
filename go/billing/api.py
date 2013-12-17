@@ -8,6 +8,7 @@ from twisted.web.server import NOT_DONE_YET
 from django.contrib.auth.hashers import make_password
 
 from go.billing import settings as app_settings
+from go.billing.models import MessageCost
 from go.billing.utils import JSONEncoder, JSONDecoder
 
 
@@ -44,9 +45,10 @@ class BaseResource(Resource):
 
         """
         if result is not None:
+            data = json.dumps(result, cls=JSONEncoder)
             request.setResponseCode(200)  # OK
             request.setHeader('Content-Type', 'application/json')
-            request.write(json.dumps(result, cls=JSONEncoder))
+            request.write(data)
         else:
             request.setResponseCode(404)  # Not Found
         request.finish()
@@ -60,8 +62,8 @@ class BaseResource(Resource):
         """
         content_type = request.getHeader('Content-Type')
         if request.method == 'POST' and content_type == 'application/json':
-            return json.loads(request.content.read(), cls=JSONDecoder)
-
+            content = request.content.read()
+            return json.loads(content, cls=JSONDecoder)
         return None
 
 
@@ -413,10 +415,7 @@ class CostResource(BaseResource):
         """
         query = """
             SELECT a.account_number, t.name AS tag_pool_name,
-                   c.message_direction, c.message_cost, c.markup_percent,
-                   CAST((c.message_cost +
-                         (c.message_cost * c.markup_percent / 100.0))
-                         * %(credit_factor)s AS INT) AS credit_amount
+                   c.message_direction, c.message_cost, c.markup_percent
             FROM billing_messagecost c
                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
                  LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
@@ -425,7 +424,7 @@ class CostResource(BaseResource):
         # Construct the query conditions dynamically based on the sent
         # parameters
         conditions = ""
-        params = {'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR}
+        params = {}
         if account_number:
             if conditions:
                 conditions += " AND "
@@ -450,6 +449,12 @@ class CostResource(BaseResource):
         query += conditions
         query += " ORDER BY a.account_number"
         result = yield self._connection_pool.runQuery(query, params)
+        for index, message_cost in enumerate(result):
+            result[index]['credit_amount'] = \
+                MessageCost.calculate_credit_cost(
+                    message_cost.get('message_cost'),
+                    message_cost.get('markup_percent'))
+
         defer.returnValue(result)
 
     @defer.inlineCallbacks
@@ -494,10 +499,7 @@ class CostResource(BaseResource):
                 RETURNING
                     %(account_number)s AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
-                    message_direction, message_cost, markup_percent,
-                    CAST((message_cost +
-                          (message_cost * markup_percent / 100.0))
-                          * %(credit_factor)s AS INT) AS credit_amount
+                    message_direction, message_cost, markup_percent
             """
 
             params = {
@@ -506,8 +508,7 @@ class CostResource(BaseResource):
                 'tag_pool_name': tag_pool_name,
                 'message_direction': message_direction,
                 'message_cost': message_cost,
-                'markup_percent': markup_percent,
-                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR
+                'markup_percent': markup_percent
             }
         else:
             query = """
@@ -520,10 +521,7 @@ class CostResource(BaseResource):
                 RETURNING
                     NULL AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
-                    message_direction, message_cost, markup_percent,
-                    CAST((message_cost +
-                          (message_cost * markup_percent / 100.0))
-                          * %(credit_factor)s AS INT) AS credit_amount
+                    message_direction, message_cost, markup_percent
             """
 
             params = {
@@ -531,12 +529,14 @@ class CostResource(BaseResource):
                 'tag_pool_name': tag_pool_name,
                 'message_direction': message_direction,
                 'message_cost': message_cost,
-                'markup_percent': markup_percent,
-                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR
+                'markup_percent': markup_percent
             }
 
         cursor = yield cursor.execute(query, params)
         result = yield cursor.fetchone()
+        result['credit_amount'] = MessageCost.calculate_credit_cost(
+            result.get('message_cost'), result.get('markup_percent'))
+
         defer.returnValue(result)
 
     @defer.inlineCallbacks
@@ -603,10 +603,7 @@ class TransactionResource(BaseResource):
         """Return the message cost"""
         query = """
             SELECT t.account_number, t.tag_pool_name, t.message_direction,
-                   t.message_cost, t.markup_percent,
-                   CAST((t.message_cost +
-                         (t.message_cost * t.markup_percent / 100.0))
-                         * %(credit_factor)s AS INT) AS credit_amount
+                   t.message_cost, t.markup_percent
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
                          c.message_direction, c.message_cost, c.markup_percent
                   FROM billing_messagecost c
@@ -628,7 +625,6 @@ class TransactionResource(BaseResource):
             """
 
         params = {
-            'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
             'account_number': account_number,
             'tag_pool_name': tag_pool_name,
             'message_direction': message_direction
@@ -636,7 +632,12 @@ class TransactionResource(BaseResource):
 
         result = yield self._connection_pool.runQuery(query, params)
         if len(result) > 0:
-            defer.returnValue(result[0])
+            message_cost = result[0]
+            message_cost['credit_amount'] = MessageCost.calculate_credit_cost(
+                message_cost.get('message_cost'),
+                message_cost.get('markup_percent'))
+
+            defer.returnValue(message_cost)
         else:
             defer.returnValue(None)
 

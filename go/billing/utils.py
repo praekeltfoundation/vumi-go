@@ -13,13 +13,27 @@ from twisted.web.test import test_web
 
 from txpostgres import txpostgres
 
+from go.billing import settings
+
 
 class JSONEncoder(json.JSONEncoder):
     """JSONEncoder to handle ``Decimal`` and ``datetime`` values"""
 
+    class EncodeError(Exception):
+        """Raised when an error occurs during encoding"""
+
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
-            return float(obj.quantize(decimal.Decimal('.01')))
+            context = decimal.Context()
+            value = obj.quantize(settings.QUANTIZATION_EXPONENT,
+                                 context=context)
+
+            if (context.flags[decimal.Inexact]
+                    and value == decimal.Decimal('0.0')):
+                raise self.EncodeError("Decimal quantization resulted in 0")
+
+            return float(value)
+
         elif isinstance(obj, datetime.datetime):
             return obj.isoformat()
         else:
@@ -29,12 +43,23 @@ class JSONEncoder(json.JSONEncoder):
 class JSONDecoder(json.JSONDecoder):
     """JSONDecoder to handle ``float`` values"""
 
+    class DecodeError(Exception):
+        """Raised when an error occurs during decoding"""
+
     def __init__(self, *args, **kwargs):
         kwargs['parse_float'] = self.parse_float_str
         super(JSONDecoder, self).__init__(*args, **kwargs)
 
     def parse_float_str(self, num_str):
-        return decimal.Decimal(num_str).quantize(decimal.Decimal('.01'))
+        context = decimal.Context()
+        value = decimal.Decimal(num_str).quantize(
+            settings.QUANTIZATION_EXPONENT, context=context)
+
+        if (context.flags[decimal.Inexact]
+                and value == decimal.Decimal('0.0')):
+            raise self.DecodeError("Decimal quantization resulted in 0")
+
+        return value
 
 
 def real_dict_connect(*args, **kwargs):
