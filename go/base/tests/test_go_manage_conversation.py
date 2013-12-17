@@ -1,4 +1,11 @@
+import json
+from StringIO import StringIO
 from pprint import pformat
+from datetime import datetime
+
+from django.core.management.base import CommandError
+
+from vumi.message import VUMI_DATE_FORMAT
 
 from go.base.management.commands import go_manage_conversation
 from go.base.tests.helpers import GoAccountCommandTestCase
@@ -75,3 +82,64 @@ class TestGoManageConversation(GoAccountCommandTestCase):
 
         conv = self.user_helper.get_conversation(conv.key)
         self.assertEqual(conv.archive_status, 'archived')
+
+    def test_export(self):
+        conv = self.user_helper.create_conversation(u"http_api")
+        self.assert_command_output(json.dumps(
+            conv.get_data()), 'export', conversation_key=conv.key)
+
+    def test_import(self):
+        original = {
+            "status": "running",
+            "conversation_type": "bulk_message",
+            "extra_endpoints": [],
+            "description": "hello world",
+            "archive_status": "active",
+            "created_at": "2013-12-09 13:02:03.332158",
+            "batch": "30aae629e8774c56b482a1dfef39875c",
+            "name": "conversation name",
+            "key": "f7115b8c6cc3442b90655234d1a893ce",
+            "groups": [],
+            "$VERSION": 3,
+            "archived_at": None,
+            "delivery_class": None,
+            "config": {},
+            "user_account": "test-0-user"
+        }
+
+        self.command.load_file = lambda *a: StringIO(json.dumps(original))
+
+        self.call_command('import', file='foo.json')
+
+        # get latest conversation
+        conversations = self.user_helper.user_api.active_conversations()
+        conv = max(conversations, key=lambda c: c.created_at)
+        data = conv.get_data()
+        created_at = datetime.strptime(data.pop('created_at'),
+                                       VUMI_DATE_FORMAT)
+        status = data.pop('status')
+        batch = data.pop('batch')
+        key = data.pop('key')
+        groups = data.pop('groups')
+        user_account = data.pop('user_account')
+        self.assertEqual(created_at.date(), datetime.now().date())
+        self.assertEqual(status, 'stopped')
+        self.assertEqual(groups, [])
+        self.assertNotEqual(batch, original['batch'])
+        self.assertNotEqual(key, original['key'])
+        self.assertEqual(user_account, self.user_helper.account_key)
+
+    def test_import_invalid_conv_type(self):
+        original = {
+            "status": "running",
+            "conversation_type": "foo",
+            "description": "hello world",
+            "name": "conversation name",
+            "config": {},
+        }
+
+        self.command.load_file = lambda *a: StringIO(json.dumps(original))
+
+        self.assertRaisesRegexp(
+            CommandError, 'Invalid conversation_type: foo',
+            self.call_command, 'import', file='foo.json')

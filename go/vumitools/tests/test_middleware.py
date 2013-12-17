@@ -119,6 +119,9 @@ class TestOptOutMiddleware(VumiTestCase):
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         expected_response = dict(expected_response,
                                  tag={'tag': ['pool', 'tag1']})
+        # MessageMetadataHelper can add 'go' metadata and we want to ignore it.
+        if 'go' in msg['helper_metadata']:
+            expected_response['go'] = msg['helper_metadata']['go']
         self.assertEqual(msg['helper_metadata'], expected_response)
 
     @inlineCallbacks
@@ -340,26 +343,73 @@ class TestConversationStoringMiddleware(VumiTestCase):
     def setUp(self):
         self.mw_helper = self.add_helper(
             MiddlewareHelper(ConversationStoringMiddleware))
-        self.mw = yield self.mw_helper.create_middleware()
         yield self.mw_helper.setup_vumi_api()
         self.user_helper = yield self.mw_helper.make_user(u'user')
         self.conv = yield self.user_helper.create_conversation(u'dummy_conv')
 
     @inlineCallbacks
+    def assert_stored_inbound(self, msgs):
+        ids = yield self.mw_helper.get_vumi_api().mdb.batch_inbound_keys(
+            self.conv.batch.key)
+        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+
+    @inlineCallbacks
+    def assert_stored_outbound(self, msgs):
+        ids = yield self.mw_helper.get_vumi_api().mdb.batch_outbound_keys(
+            self.conv.batch.key)
+        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+
+    @inlineCallbacks
     def test_inbound_message(self):
-        msg = self.mw_helper.make_inbound("inbound", conv=self.conv)
-        yield self.mw.handle_inbound(msg, 'default')
-        batch_id = self.conv.batch.key
-        msg_ids = yield self.mw.vumi_api.mdb.batch_inbound_keys(batch_id)
-        self.assertEqual(msg_ids, [msg['message_id']])
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_inbound("inbound", conv=self.conv)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([msg1])
+
+        msg2 = self.mw_helper.make_inbound("inbound", conv=self.conv)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound([msg1, msg2])
+
+    @inlineCallbacks
+    def test_inbound_message_no_consume_store(self):
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        msg1 = self.mw_helper.make_inbound("inbound", conv=self.conv)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([])
+
+        msg2 = self.mw_helper.make_inbound("inbound", conv=self.conv)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound([msg2])
 
     @inlineCallbacks
     def test_outbound_message(self):
-        msg = self.mw_helper.make_outbound("outbound", conv=self.conv)
-        yield self.mw.handle_outbound(msg, 'default')
-        batch_id = self.conv.batch.key
-        msg_ids = yield self.mw.vumi_api.mdb.batch_outbound_keys(batch_id)
-        self.assertEqual(msg_ids, [msg['message_id']])
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_outbound("outbound", conv=self.conv)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([msg1])
+
+        msg2 = self.mw_helper.make_outbound("outbound", conv=self.conv)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound([msg1, msg2])
+
+    @inlineCallbacks
+    def test_outbound_message_no_consume_store(self):
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        msg1 = self.mw_helper.make_outbound("outbound", conv=self.conv)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([])
+
+        msg2 = self.mw_helper.make_outbound("outbound", conv=self.conv)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound([msg2])
 
 
 class TestRouterStoringMiddleware(VumiTestCase):
@@ -368,23 +418,70 @@ class TestRouterStoringMiddleware(VumiTestCase):
     def setUp(self):
         self.mw_helper = self.add_helper(
             MiddlewareHelper(RouterStoringMiddleware))
-        self.mw = yield self.mw_helper.create_middleware()
         yield self.mw_helper.setup_vumi_api()
         self.user_helper = yield self.mw_helper.make_user(u'user')
         self.router = yield self.user_helper.create_router(u'dummy_conv')
 
     @inlineCallbacks
-    def test_inbound_message(self):
-        msg = self.mw_helper.make_inbound("inbound", router=self.router)
-        yield self.mw.handle_inbound(msg, 'dummy_endpoint')
-        msg_ids = yield self.mw.vumi_api.mdb.batch_inbound_keys(
+    def assert_stored_inbound(self, msgs):
+        ids = yield self.mw_helper.get_vumi_api().mdb.batch_inbound_keys(
             self.router.batch.key)
-        self.assertEqual(msg_ids, [msg['message_id']])
+        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+
+    @inlineCallbacks
+    def assert_stored_outbound(self, msgs):
+        ids = yield self.mw_helper.get_vumi_api().mdb.batch_outbound_keys(
+            self.router.batch.key)
+        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+
+    @inlineCallbacks
+    def test_inbound_message(self):
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_inbound("inbound", router=self.router)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([msg1])
+
+        msg2 = self.mw_helper.make_inbound("inbound", router=self.router)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound([msg1, msg2])
+
+    @inlineCallbacks
+    def test_inbound_message_no_consume_store(self):
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        msg1 = self.mw_helper.make_inbound("inbound", router=self.router)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([])
+
+        msg2 = self.mw_helper.make_inbound("inbound", router=self.router)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound([msg2])
 
     @inlineCallbacks
     def test_outbound_message(self):
-        msg = self.mw_helper.make_outbound("outbound", router=self.router)
-        yield self.mw.handle_outbound(msg, 'dummy_endpoint')
-        msg_ids = yield self.mw.vumi_api.mdb.batch_outbound_keys(
-            self.router.batch.key)
-        self.assertEqual(msg_ids, [msg['message_id']])
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_outbound("outbound", router=self.router)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([msg1])
+
+        msg2 = self.mw_helper.make_outbound("outbound", router=self.router)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound([msg1, msg2])
+
+    @inlineCallbacks
+    def test_outbound_message_no_consume_store(self):
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        msg1 = self.mw_helper.make_outbound("outbound", router=self.router)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([])
+
+        msg2 = self.mw_helper.make_outbound("outbound", router=self.router)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound([msg2])

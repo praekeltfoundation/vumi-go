@@ -1,19 +1,17 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
-import sys
 import time
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.middleware.message_storing import StoringMiddleware
 from vumi.utils import normalize_msisdn
-from vumi.components.tagpool import TagpoolManager
 from vumi.blinkenlights.metrics import MetricManager, Count, Metric
 from vumi.persist.txredis_manager import TxRedisManager
 from vumi.errors import ConfigError
 
-from go.vumitools.credit import CreditManager
+from go.vumitools.api import VumiApi
+from go.vumitools.utils import MessageMetadataHelper
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -34,33 +32,10 @@ class NormalizeMsisdnMiddleware(TransportMiddleware):
         return message
 
 
-class DebitAccountError(Exception):
-    """Exception raised if a message can't be paid for."""
-
-
-class NoUserError(DebitAccountError):
-    """Account could not be debited because no user was found."""
-
-
-class NoTagError(DebitAccountError):
-    """Account could not be debited because no tag was found."""
-
-
-class BadTagPool(DebitAccountError):
-    """Account could not be debited because the tag pool doesn't
-       specify a cost."""
-
-
-class InsufficientCredit(DebitAccountError):
-    """Account could not be debited because the user account has
-       insufficient credit."""
-
-
 class OptOutMiddleware(BaseMiddleware):
 
     @inlineCallbacks
     def setup_middleware(self):
-        from go.vumitools.api import VumiApi
         self.vumi_api = yield VumiApi.from_config_async(self.config)
 
         self.case_sensitive = self.config.get('case_sensitive', False)
@@ -75,9 +50,9 @@ class OptOutMiddleware(BaseMiddleware):
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):
         optout_disabled = False
-        tag = TaggingMiddleware.map_msg_to_tag(message)
-        if tag is not None:
-            tagpool_metadata = yield self.vumi_api.tpm.get_metadata(tag[0])
+        msg_mdh = MessageMetadataHelper(self.vumi_api, message)
+        if msg_mdh.tag is not None:
+            tagpool_metadata = yield msg_mdh.get_tagpool_metadata()
             optout_disabled = tagpool_metadata.get(
                 'disable_global_opt_out', False)
         keyword = (message['content'] or '').strip()
@@ -94,83 +69,6 @@ class OptOutMiddleware(BaseMiddleware):
     @staticmethod
     def is_optout_message(message):
         return message['helper_metadata'].get('optout', {}).get('optout')
-
-
-class DebitAccountMiddleware(TransportMiddleware):
-
-    def setup_middleware(self):
-        # TODO: There really needs to be a helper function to
-        #       turn this config into managers.
-        from go.vumitools.api import get_redis
-        self._r_server = get_redis(self.config)
-        tpm_config = self.config.get('tagpool_manager', {})
-        tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
-        self.tpm = TagpoolManager(self._r_server, tpm_prefix)
-        cm_config = self.config.get('credit_manager', {})
-        cm_prefix = cm_config.get('credit_prefix', 'credit_store')
-        self.cm = CreditManager(self._r_server, cm_prefix)
-
-    def teardown_middleware(self):
-        return self._r_server.close_manager()
-
-    def _credits_per_message(self, pool):
-        tagpool_metadata = self.tpm.get_metadata(pool)
-        credits_per_message = tagpool_metadata.get('credits_per_message')
-        try:
-            credits_per_message = int(credits_per_message)
-            assert credits_per_message >= 0
-        except Exception:
-            exc_tb = sys.exc_info()[2]
-            raise (BadTagPool,
-                   BadTagPool("Invalid credits_per_message for pool %r"
-                              % (pool,)),
-                   exc_tb)
-        return credits_per_message
-
-    @staticmethod
-    def map_msg_to_user(msg):
-        """Convenience method for retrieving a user that was added
-        to a message.
-        """
-        user_account = msg['helper_metadata'].get('go', {}).get('user_account')
-        return user_account
-
-    @staticmethod
-    def map_payload_to_user(payload):
-        """Convenience method for retrieving a user from a payload."""
-        go_metadata = payload.get('helper_metadata', {}).get('go', {})
-        return go_metadata.get('user_account')
-
-    @staticmethod
-    def add_user_to_message(msg, user_account_key):
-        """Convenience method for adding a user to a message."""
-        go_metadata = msg['helper_metadata'].setdefault('go', {})
-        go_metadata['user_account'] = user_account_key
-
-    @staticmethod
-    def add_user_to_payload(payload, user_account_key):
-        """Convenience method for adding a user to a message payload."""
-        helper_metadata = payload.setdefault('helper_metadata', {})
-        go_metadata = helper_metadata.setdefault('go', {})
-        go_metadata['user_account'] = user_account_key
-
-    def handle_outbound(self, msg, endpoint):
-        # TODO: what actually happens when we raise an exception from
-        #       inside middleware?
-        user_account_key = self.map_msg_to_user(msg)
-        if user_account_key is None:
-            raise NoUserError(msg)
-        tag = TaggingMiddleware.map_msg_to_tag(msg)
-        if tag is None:
-            raise NoTagError(msg)
-        credits_per_message = self._credits_per_message(tag[0])
-        self._debit_account(user_account_key, credits_per_message)
-        success = self.cm.debit(user_account_key, credits_per_message)
-        if not success:
-            raise InsufficientCredit("User %r has insufficient credit"
-                                     " to debit %r." %
-                                     (user_account_key, credits_per_message))
-        return msg
 
 
 class MetricsMiddleware(BaseMiddleware):
@@ -319,7 +217,6 @@ class GoStoringMiddleware(StoringMiddleware):
     @inlineCallbacks
     def setup_middleware(self):
         yield super(GoStoringMiddleware, self).setup_middleware()
-        from go.vumitools.api import VumiApi
         self.vumi_api = yield VumiApi.from_config_async(self.config)
 
     @inlineCallbacks
@@ -346,8 +243,6 @@ class GoStoringMiddleware(StoringMiddleware):
 class ConversationStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
-        # MessageMetadataHelper is imported here to avoid a circular import
-        from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         conversation = yield mdh.get_conversation()
         returnValue(conversation.batch.key)
@@ -356,8 +251,6 @@ class ConversationStoringMiddleware(GoStoringMiddleware):
 class RouterStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
-        # MessageMetadataHelper is imported here to avoid a circular import
-        from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         router = yield mdh.get_router()
         returnValue(router.batch.key)
