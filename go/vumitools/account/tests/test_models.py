@@ -1,25 +1,26 @@
 from twisted.internet.defer import inlineCallbacks
+
+from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 from vumi.tests.utils import UTCNearNow
 
-from go.vumitools.tests.utils import GoTestCase
 from go.vumitools.account.models import AccountStore
 from go.vumitools.account.old_models import (
     AccountStoreVNone, AccountStoreV1, AccountStoreV2)
 from go.vumitools.routing_table import RoutingTable
 
 
-class UserAccountTestCase(GoTestCase):
-    use_riak = True
+class TestUserAccount(VumiTestCase):
 
     def setUp(self):
-        super(UserAccountTestCase, self).setUp()
-        self.manager = self.get_riak_manager()
-        self.store = AccountStore(self.manager)
+        self.persistence_helper = self.add_helper(
+            PersistenceHelper(use_riak=True))
+        riak_manager = self.persistence_helper.get_riak_manager()
+        self.store = AccountStore(riak_manager)
 
         # Some old stores for testing migrations.
-        self.store_v2 = AccountStoreV2(self.manager)
-        self.store_v1 = AccountStoreV1(self.manager)
-        self.store_vnone = AccountStoreVNone(self.manager)
+        self.store_v2 = AccountStoreV2(riak_manager)
+        self.store_v1 = AccountStoreV1(riak_manager)
+        self.store_vnone = AccountStoreVNone(riak_manager)
 
     def assert_user(self, user, **fields):
         def assert_field(value, name, default):

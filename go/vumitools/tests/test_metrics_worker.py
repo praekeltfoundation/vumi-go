@@ -6,17 +6,19 @@ import re
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.task import Clock, LoopingCall
 
-from go.vumitools.tests.utils import GoWorkerTestCase
+from vumi.tests.helpers import VumiTestCase
+
 from go.vumitools import metrics_worker
+from go.vumitools.tests.helpers import VumiApiHelper
 
 from vumi.tests.utils import LogCatcher
 
 
-class GoMetricsWorkerTestCase(GoWorkerTestCase):
-    worker_class = metrics_worker.GoMetricsWorker
+class TestGoMetricsWorker(VumiTestCase):
 
+    @inlineCallbacks
     def setUp(self):
-        super(GoMetricsWorkerTestCase, self).setUp()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.clock = Clock()
         self.patch(metrics_worker, 'LoopingCall', self.looping_call)
         self.conversation_names = {}
@@ -29,9 +31,9 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
             self.patch(metrics_worker.GoMetricsWorker,
                        'bucket_for_conversation',
                        self.dummy_bucket_for_conversation)
-        if config is None:
-            config = {}
-        return self.get_worker(self.mk_config(config), start)
+        config = self.vumi_helper.mk_config(config or {})
+        return self.vumi_helper.get_worker_helper().get_worker(
+            metrics_worker.GoMetricsWorker, config, start=start)
 
     def rkey(self, name):
         return name
@@ -49,45 +51,20 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
         digits = re.sub('[^0-9]', '', conv_name) or '0'
         return int(digits) % 60
 
-    def make_account(self, worker, username):
-        return self.mk_user(worker.vumi_api, username)
-
-    def make_conv(self, user_api, conv_name, conv_type=u'my_conv'):
-        return user_api.new_conversation(conv_type, conv_name, u'', {})
-
-    def start_conv(self, conv):
-        conv.set_status_started()
-        return conv.save()
-
-    def archive_conv(self, conv):
-        conv.set_status_stopped()
-        conv.set_status_finished()
-        return conv.save()
-
-    @inlineCallbacks
-    def make_accounts_and_conversations(self, worker, **account_definitions):
-        accounts, conversations = {}, {}
-        for username, convs in account_definitions.iteritems():
-            account = yield self.make_account(worker, unicode(username))
-            accounts[username] = account
-            user_api = worker.vumi_api.get_user_api(account.key)
-            for conv_name in convs:
-                conv = yield self.make_conv(user_api, unicode(conv_name))
-                self.conversation_names[conv.key] = conv.name
-                conversations[conv_name] = conv
-
-        returnValue((accounts, conversations))
+    def make_conv(self, user_helper, conv_name, conv_type=u'my_conv', **kw):
+        return user_helper.create_conversation(conv_type, name=conv_name, **kw)
 
     @inlineCallbacks
     def test_bucket_for_conversation(self):
         worker = yield self.get_metrics_worker(needs_hash=True)
-        accounts, conversations = yield self.make_accounts_and_conversations(
-            worker, acc1=["conv1"])
-        bucket = worker.bucket_for_conversation(conversations["conv1"].key)
-        self.assertEqual(bucket, hash(conversations["conv1"].key) % 60)
+        user_helper = yield self.vumi_helper.make_user(u'acc1')
+        conv1 = yield self.make_conv(user_helper, u'conv1')
+
+        bucket = worker.bucket_for_conversation(conv1.key)
+        self.assertEqual(bucket, hash(conv1.key) % 60)
 
     def assert_conversations_bucketed(self, worker, expected):
-        expected = copy.deepcopy(expected)
+        expected = expected.copy()
         buckets = copy.deepcopy(worker._buckets)
         for key in range(60):
             buckets[key] = sorted(buckets[key])
@@ -103,19 +80,22 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
     def test_populate_conversation_buckets(self):
         worker = yield self.get_metrics_worker()
 
-        accounts, conversations = yield self.make_accounts_and_conversations(
-            worker, acc1=["conv1", "conv2a", "conv2b", "conv4"])
-        for conv in conversations.values():
-            self.start_conv(conv)
+        user_helper = yield self.vumi_helper.make_user(u'acc1')
+        conv1 = yield self.make_conv(user_helper, u'conv1', started=True)
+        conv2a = yield self.make_conv(user_helper, u'conv2a', started=True)
+        conv2b = yield self.make_conv(user_helper, u'conv2b', started=True)
+        conv4 = yield self.make_conv(user_helper, u'conv4', started=True)
+        for conv in [conv1, conv2a, conv2b, conv4]:
+            self.conversation_names[conv.key] = conv.name
 
         self.assert_conversations_bucketed(worker, {})
         with LogCatcher(message='Scheduled') as lc:
             yield worker.populate_conversation_buckets()
             [log_msg] = lc.messages()
         self.assert_conversations_bucketed(worker, {
-            1: [conversations["conv1"]],
-            2: [conversations["conv2a"], conversations["conv2b"]],
-            4: [conversations["conv4"]],
+            1: [conv1],
+            2: [conv2a, conv2b],
+            4: [conv4],
         })
         # We may have tombstone keys from accounts created (and deleted) by
         # previous tests, so we replace the account count in the log message
@@ -128,17 +108,20 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
     def test_process_bucket(self):
         worker = yield self.get_metrics_worker()
 
-        accounts, conversations = yield self.make_accounts_and_conversations(
-            worker, acc1=["conv1", "conv2a", "conv2b", "conv4"])
-        for conv in conversations.values():
-            self.start_conv(conv)
+        user_helper = yield self.vumi_helper.make_user(u'acc1')
+        conv1 = yield self.make_conv(user_helper, u'conv1', started=True)
+        conv2a = yield self.make_conv(user_helper, u'conv2a', started=True)
+        conv2b = yield self.make_conv(user_helper, u'conv2b', started=True)
+        conv4 = yield self.make_conv(user_helper, u'conv4', started=True)
+        for conv in [conv1, conv2a, conv2b, conv4]:
+            self.conversation_names[conv.key] = conv.name
 
         self.assert_conversations_bucketed(worker, {})
         yield worker.populate_conversation_buckets()
         yield worker.process_bucket(2)
         self.assert_conversations_bucketed(worker, {
-            1: [conversations["conv1"]],
-            4: [conversations["conv4"]],
+            1: [conv1],
+            4: [conv4],
         })
 
     @inlineCallbacks
@@ -171,94 +154,97 @@ class GoMetricsWorkerTestCase(GoWorkerTestCase):
     @inlineCallbacks
     def test_find_accounts(self):
         worker = yield self.get_metrics_worker()
-        accounts, conversations = yield self.make_accounts_and_conversations(
-            worker, acc1=[], acc2=[], acc3=[])
-        yield worker.redis.sadd('disabled_metrics_accounts',
-                                accounts["acc3"].key)
+        user1_helper = yield self.vumi_helper.make_user(u'acc1')
+        user2_helper = yield self.vumi_helper.make_user(u'acc2')
+        user3_helper = yield self.vumi_helper.make_user(u'acc3')
+        yield worker.redis.sadd(
+            'disabled_metrics_accounts', user3_helper.account_key)
+        yield worker.redis.sadd('metrics_accounts', user2_helper.account_key)
 
         account_keys = yield worker.find_account_keys()
         self.assertEqual(
-            sorted([accounts["acc1"].key, accounts["acc2"].key]),
+            sorted([user1_helper.account_key, user2_helper.account_key]),
             sorted(account_keys))
 
     @inlineCallbacks
     def test_find_conversations_for_account(self):
         worker = yield self.get_metrics_worker()
-        accounts, conversations = yield self.make_accounts_and_conversations(
-            worker, acc1=["conv1", "conv2", "conv3"])
+        user_helper = yield self.vumi_helper.make_user(u'acc1')
+        akey = user_helper.account_key
 
-        yield self.archive_conv(conversations["conv1"])
-        yield self.start_conv(conversations["conv2"])
+        conv1 = yield self.make_conv(user_helper, u'conv1', started=True)
+        yield self.make_conv(user_helper, u'conv2', archived=True)
+        yield self.make_conv(user_helper, u'conv3')
 
-        active_conversations = yield worker.find_conversations_for_account(
-            accounts["acc1"].key)
-        self.assertEqual(active_conversations, [conversations["conv2"].key])
+        conversation_keys = yield worker.find_conversations_for_account(akey)
+        self.assertEqual(conversation_keys, [conv1.key])
 
     @inlineCallbacks
     def test_send_metrics_command(self):
         worker = yield self.get_metrics_worker()
-        accounts, conversations = yield self.make_accounts_and_conversations(
-            worker, acc1=["conv1"])
+        user_helper = yield self.vumi_helper.make_user(u'acc1')
 
-        yield self.start_conv(conversations["conv1"])
-        conv = conversations["conv1"]
+        conv1 = yield self.make_conv(user_helper, u'conv1', started=True)
+
         yield worker.send_metrics_command(
-            conv.user_account.key, conv.key, 'my_conv_application')
-        [cmd] = self._get_dispatched('vumi.api')
+            conv1.user_account.key, conv1.key, 'my_conv_application')
+        [cmd] = self.vumi_helper.get_dispatched_commands()
 
         self.assertEqual(cmd['worker_name'], 'my_conv_application')
-        self.assertEqual(cmd.payload['kwargs']['conversation_key'],
-                         conversations["conv1"].key)
-        self.assertEqual(cmd.payload['kwargs']['user_account_key'],
-                         accounts["acc1"].key)
+        self.assertEqual(cmd['kwargs']['conversation_key'], conv1.key)
+        self.assertEqual(
+            cmd['kwargs']['user_account_key'], user_helper.account_key)
 
     @inlineCallbacks
     def setup_metric_loop_conversations(self, worker):
-        accounts, conversations = yield self.make_accounts_and_conversations(
-            worker, acc1=["conv0", "conv1"], acc2=["conv2", "conv3"])
+        user1_helper = yield self.vumi_helper.make_user(u'acc1')
+        conv0 = yield self.make_conv(user1_helper, u'conv0', started=True)
+        conv1 = yield self.make_conv(user1_helper, u'conv1', started=True)
+        user2_helper = yield self.vumi_helper.make_user(u'acc2')
+        conv2 = yield self.make_conv(user2_helper, u'conv2', started=True)
+        conv3 = yield self.make_conv(user2_helper, u'conv3', started=True)
+        for conv in [conv0, conv1, conv2, conv3]:
+            self.conversation_names[conv.key] = conv.name
 
-        yield self.start_conv(conversations["conv0"])
-        yield self.start_conv(conversations["conv1"])
-        yield self.start_conv(conversations["conv2"])
-        yield self.start_conv(conversations["conv3"])
-
-        returnValue(conversations)
+        returnValue([conv0, conv1, conv2, conv3])
 
     @inlineCallbacks
     def test_metrics_loop_func_bucket_zero(self):
         worker = yield self.get_metrics_worker()
-        conversations = yield self.setup_metric_loop_conversations(worker)
+        convs = yield self.setup_metric_loop_conversations(worker)
+        [conv0, conv1, conv2, conv3] = convs
 
         self.assertEqual(worker._current_bucket, 0)
         yield worker.metrics_loop_func()
         self.assertEqual(worker._current_bucket, 1)
 
-        cmds = self._get_dispatched('vumi.api')
+        cmds = self.vumi_helper.get_dispatched_commands()
         conv_keys = [c.payload['kwargs']['conversation_key'] for c in cmds]
-        self.assertEqual(conv_keys, [conversations["conv0"].key])
+        self.assertEqual(conv_keys, [conv0.key])
 
         self.assert_conversations_bucketed(worker, {
-            1: [conversations["conv1"]],
-            2: [conversations["conv2"]],
-            3: [conversations["conv3"]],
+            1: [conv1],
+            2: [conv2],
+            3: [conv3],
         })
 
     @inlineCallbacks
     def test_metrics_loop_func_bucket_nonzero(self):
         worker = yield self.get_metrics_worker()
-        conversations = yield self.setup_metric_loop_conversations(worker)
+        convs = yield self.setup_metric_loop_conversations(worker)
+        [conv0, conv1, conv2, conv3] = convs
         yield worker.populate_conversation_buckets()
 
         worker._current_bucket = 1
         yield worker.metrics_loop_func()
         self.assertEqual(worker._current_bucket, 2)
 
-        cmds = self._get_dispatched('vumi.api')
-        conv_keys = [c.payload['kwargs']['conversation_key'] for c in cmds]
-        self.assertEqual(conv_keys, [conversations["conv1"].key])
+        cmds = self.vumi_helper.get_dispatched_commands()
+        conv_keys = [c['kwargs']['conversation_key'] for c in cmds]
+        self.assertEqual(conv_keys, [conv1.key])
 
         self.assert_conversations_bucketed(worker, {
-            0: [conversations["conv0"]],
-            2: [conversations["conv2"]],
-            3: [conversations["conv3"]],
+            0: [conv0],
+            2: [conv2],
+            3: [conv3],
         })

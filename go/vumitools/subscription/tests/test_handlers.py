@@ -1,30 +1,33 @@
-from go.vumitools.tests.test_handler import EventHandlerTestCase
-
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.tests.helpers import VumiTestCase
 
-class SubscriptionHandlerTestCase(EventHandlerTestCase):
+from go.vumitools.subscription.handlers import SubscriptionHandler
+from go.vumitools.tests.helpers import EventHandlerHelper
 
-    handlers = [
-        ('conv', 'go.vumitools.subscription.handlers.SubscriptionHandler', {})
-    ]
+
+class TestSubscriptionHandler(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(SubscriptionHandlerTestCase, self).setUp()
-        self.contact_store = self.user_api.contact_store
+        self.eh_helper = self.add_helper(EventHandlerHelper())
+
+        yield self.eh_helper.setup_event_dispatcher(
+            'conv', SubscriptionHandler, {})
+
+        user_helper = yield self.eh_helper.vumi_helper.get_or_create_user()
+        self.contact_store = user_helper.user_api.contact_store
         contact = yield self.contact_store.new_contact(
             name=u'J Random', surname=u'Person', msisdn=u'27831234567')
         self.contact_id = contact.key
-        self.track_event(self.account.key, self.conversation.key,
-                         'subscription', 'conv')
+        self.eh_helper.track_event('subscription', 'conv')
 
     def mkevent_sub(self, operation):
-        return self.mkevent('subscription', {
+        return self.eh_helper.make_event('subscription', {
             'contact_id': self.contact_id,
             'campaign_name': 'testcampaign',
             'operation': operation,
-            }, conv_key=self.conversation.key, account_key=self.account.key)
+        })
 
     @inlineCallbacks
     def assert_subscription(self, value):
@@ -34,23 +37,23 @@ class SubscriptionHandlerTestCase(EventHandlerTestCase):
     @inlineCallbacks
     def test_subscribe(self):
         yield self.assert_subscription(None)
-        yield self.publish_event(self.mkevent_sub('subscribe'))
+        yield self.eh_helper.dispatch_event(self.mkevent_sub('subscribe'))
         yield self.assert_subscription('subscribed')
 
     @inlineCallbacks
     def test_unsubscribe(self):
         yield self.assert_subscription(None)
-        yield self.publish_event(self.mkevent_sub('unsubscribe'))
+        yield self.eh_helper.dispatch_event(self.mkevent_sub('unsubscribe'))
         yield self.assert_subscription('unsubscribed')
 
     @inlineCallbacks
     def test_subscription_churn(self):
         yield self.assert_subscription(None)
-        yield self.publish_event(self.mkevent_sub('subscribe'))
+        yield self.eh_helper.dispatch_event(self.mkevent_sub('subscribe'))
         yield self.assert_subscription('subscribed')
-        yield self.publish_event(self.mkevent_sub('subscribe'))
+        yield self.eh_helper.dispatch_event(self.mkevent_sub('subscribe'))
         yield self.assert_subscription('subscribed')
-        yield self.publish_event(self.mkevent_sub('unsubscribe'))
+        yield self.eh_helper.dispatch_event(self.mkevent_sub('unsubscribe'))
         yield self.assert_subscription('unsubscribed')
-        yield self.publish_event(self.mkevent_sub('subscribe'))
+        yield self.eh_helper.dispatch_event(self.mkevent_sub('subscribe'))
         yield self.assert_subscription('subscribed')

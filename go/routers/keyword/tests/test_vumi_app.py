@@ -19,7 +19,8 @@ class TestKeywordRouter(RouterWorkerTestCase):
         user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_account_key = user_account.key
         self.user_api = self.vumi_api.get_user_api(self.user_account_key)
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     @inlineCallbacks
     def assert_routed_inbound(self, msg, router, expected_endpoint):

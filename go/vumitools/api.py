@@ -29,7 +29,6 @@ from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.router import RouterStore
 from go.vumitools.conversation.utils import ConversationWrapper
-from go.vumitools.credit import CreditManager
 from go.vumitools.token_manager import TokenManager
 
 from django.utils.datastructures import SortedDict
@@ -500,7 +499,6 @@ class VumiApi(object):
         self.redis = redis
 
         self.tpm = TagpoolManager(self.redis.sub_manager('tagpool_store'))
-        self.cm = CreditManager(self.redis.sub_manager('credit_store'))
         self.mdb = MessageStore(self.manager,
                                 self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)

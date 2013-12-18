@@ -3,7 +3,6 @@
 """Tests for go.apps.dialogue.vumi_app"""
 
 import pkg_resources
-import uuid
 import os
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -70,7 +69,8 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         yield self.setup_tagpools()
-        self.msg_helper = GoMessageHelper(self.user_api.api.mdb)
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(self.user_api.api.mdb))
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
