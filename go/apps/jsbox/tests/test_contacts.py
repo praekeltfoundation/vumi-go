@@ -42,8 +42,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         yield self.contact_store.contacts.enable_search()
 
         self.app_worker.user_api.contact_store = self.contact_store
-        yield self.create_resource({'delivery_class': u'sms',
-                                    'max_search_result_keys': 2})
+        yield self.create_resource({'delivery_class': u'sms'})
 
     def tearDown(self):
         super(TestContactsResource, self).tearDown()
@@ -527,6 +526,40 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         self.assertTrue('reason' in reply)
         self.assertFalse('keys' in reply)
         self.assertTrue("Expected 'query' field in request" in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_search_max_keys(self):
+        keys = set()
+        for i in range(0, 6):
+            contact = yield self.new_contact(
+                surname=unicode('Jackal%s' % i),
+                msisdn=u'+27831234567',
+                groups=[u'group-a', u'group-b'])
+            keys.add(contact.key)
+
+        # subset
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*',
+                                            max_keys=3)
+        self.assertTrue(reply['success'])
+        self.assertTrue(set(reply['keys']).issubset(keys))
+
+        # no limit
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*')
+        self.assertTrue(reply['success'])
+        self.assertEqual(set(reply['keys']), keys)
+
+        # bad value for max_keys
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*',
+                                            max_keys="Haha!")
+        self.assertFalse(reply['success'])
+        self.assertTrue(
+            "Value for parameter 'max_keys' is invalid" in reply['reason']
+        )
+
+
 
     @inlineCallbacks
     def test_handle_get_by_key(self):

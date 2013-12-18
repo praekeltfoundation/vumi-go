@@ -478,6 +478,10 @@ class ContactsResource(SandboxResource):
 
         Command fields:
             - ``query``: The Lucene search query to perform.
+            - ``max_keys``: If present, a non-negative number that specifies
+                            the maximum number of keys to return in the result.
+                            By default keys for all matching contacts are
+                            returned.
 
         Success reply fields:
             - ``success``: set to ``true``
@@ -508,11 +512,23 @@ class ContactsResource(SandboxResource):
                     command,
                     success=False,
                     reason=u"Expected 'query' field in request"))
+            max_keys = None
+            if 'max_keys' in command:
+                try:
+                    value = int(command['max_keys'])
+                    if value >= 0:
+                        max_keys = value
+                except ValueError:
+                    returnValue(self.reply(
+                        command,
+                        success=False,
+                        reason=u"Value for parameter 'max_keys' is invalid"))
 
             contact_store = self._contact_store_for_api(api)
             keys = yield contact_store.contacts.raw_search(
                 command['query']).get_keys()
-            keys = keys[:self.config['max_search_result_keys']]
+            if max_keys is not None:
+                keys = keys[:max_keys]
 
         except (SandboxError,) as e:
             log.warning(str(e))
