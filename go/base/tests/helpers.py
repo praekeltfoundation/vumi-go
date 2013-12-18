@@ -115,9 +115,9 @@ class DjangoVumiApiHelper(object):
             dispatch_uid='go.base.models.create_user_profile')
 
     @proxyable
-    def get_client(self):
+    def get_client(self, username='user@domain.com', password='password'):
         client = Client()
-        client.login(username='user@domain.com', password='password')
+        client.login(username=username, password=password)
         return client
 
     @proxyable
@@ -127,11 +127,12 @@ class DjangoVumiApiHelper(object):
         self._settings_patches.append(patch)
 
     @proxyable
-    def make_django_user(self):
+    def make_django_user(self, email='user@domain.com', password='password',
+                         first_name="Test", last_name="User"):
         user = get_user_model().objects.create_user(
-            email='user@domain.com', password='password')
-        user.first_name = "Test"
-        user.last_name = "User"
+            email=email, password=password)
+        user.first_name = first_name
+        user.last_name = last_name
         user.save()
         user_api = base_utils.vumi_api_for_user(user)
         return self.get_user_helper(user_api.user_account_key)
