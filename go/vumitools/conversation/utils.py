@@ -9,7 +9,7 @@ from twisted.internet.defer import returnValue
 from vumi.persist.model import Manager
 
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.utils import MessageMetadataDictHelper
 
 
 class ConversationWrapper(object):
@@ -149,10 +149,8 @@ class ConversationWrapper(object):
     def set_go_helper_metadata(self, helper_metadata=None):
         if helper_metadata is None:
             helper_metadata = {}
-        go_metadata = helper_metadata.setdefault('go', {})
-        go_metadata['user_account'] = self.user_account.key
-        go_metadata['conversation_type'] = self.conversation_type
-        go_metadata['conversation_key'] = self.key
+        mdh = MessageMetadataDictHelper(helper_metadata)
+        mdh.add_conversation_metadata(self)
         return helper_metadata
 
     @Manager.calls_manager
@@ -249,7 +247,7 @@ class ConversationWrapper(object):
         for message in messages:
             # vumi message is an attribute on the inbound message object
             msg = message.msg
-            msg_mdh = MessageMetadataHelper(self.api, msg)
+            msg_mdh = MessageMetadataDictHelper(msg.get('helper_metadata', {}))
             if not msg_mdh.is_sensitive():
                 collection.append(msg)
             elif include_sensitive:
