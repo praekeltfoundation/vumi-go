@@ -9,7 +9,7 @@ from twisted.internet.defer import returnValue
 from vumi.persist.model import Manager
 
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.utils import MessageMetadataDictHelper, MessageMetadataHelper
 
 
 class ConversationWrapper(object):
@@ -149,10 +149,8 @@ class ConversationWrapper(object):
     def set_go_helper_metadata(self, helper_metadata=None):
         if helper_metadata is None:
             helper_metadata = {}
-        go_metadata = helper_metadata.setdefault('go', {})
-        go_metadata['user_account'] = self.user_account.key
-        go_metadata['conversation_type'] = self.conversation_type
-        go_metadata['conversation_key'] = self.key
+        mdh = MessageMetadataDictHelper(helper_metadata)
+        mdh.add_conversation_metadata(self)
         return helper_metadata
 
     @Manager.calls_manager
@@ -181,8 +179,10 @@ class ConversationWrapper(object):
     def send_token_url(self, token_url, msisdn):
         """Send a confirmation/token link.
         """
+        msg_options = {'helper_metadata': {}}
         # specify this message as being sensitive
-        msg_options = {'helper_metadata': {'go': {'sensitive': True}}}
+        msg_mdh = MessageMetadataDictHelper(msg_options['helper_metadata'])
+        msg_mdh.set_sensitive(True)
 
         yield self.dispatch_command(
             'send_message',
