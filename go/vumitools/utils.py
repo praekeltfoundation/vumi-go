@@ -24,6 +24,9 @@ class MessageMetadataDictHelper(object):
         """
         return bool(self._go_metadata.get('sensitive'))
 
+    def set_sensitive(self, value):
+        self._go_metadata['sensitive'] = value
+
     def has_user_account(self):
         return 'user_account' in self._go_metadata
 
