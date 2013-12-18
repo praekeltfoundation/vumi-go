@@ -458,4 +458,7 @@ class TestConversationWrapper(VumiTestCase):
             'user_account': self.conv.user_account.key,
             'conversation_type': self.conv.conversation_type,
             'conversation_key': self.conv.key,
+            'batch_keys': {
+                'conversation': {self.conv.key: self.conv.batch.key},
+            },
         }})

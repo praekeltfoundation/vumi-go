@@ -13,7 +13,8 @@ from vumi.worker import BaseWorker
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.middleware import (
     NormalizeMsisdnMiddleware, OptOutMiddleware, MetricsMiddleware,
-    ConversationStoringMiddleware, RouterStoringMiddleware)
+    ConversationStoringMiddleware, RouterStoringMiddleware,
+    GoStoringMiddleware)
 from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
 
 
@@ -485,3 +486,152 @@ class TestRouterStoringMiddleware(VumiTestCase):
         msg2 = self.mw_helper.make_outbound("outbound", router=self.router)
         yield mw.handle_publish_outbound(msg2, 'default')
         yield self.assert_stored_outbound([msg2])
+
+
+class TestGoStoringMiddleware(VumiTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        self.mw_helper = self.add_helper(MiddlewareHelper(GoStoringMiddleware))
+        yield self.mw_helper.setup_vumi_api()
+        self.user_helper = yield self.mw_helper.make_user(u'user')
+
+    @inlineCallbacks
+    def _assert_stored(self, batch_key_func, msgs, batch_ids):
+        batch_msgs = {}
+        msg_ids = set(m['message_id'] for m in msgs)
+
+        for batch_id in batch_ids:
+            batch_msgs[batch_id] = set((yield batch_key_func(batch_id)))
+
+        self.assertEqual(set(batch_msgs.keys()), set(batch_ids))
+        for batch_id in batch_ids:
+            self.assertEqual(msg_ids, batch_msgs[batch_id])
+
+    def assert_stored_inbound(self, msgs, batch_ids):
+        batch_key_func = self.mw_helper.get_vumi_api().mdb.batch_inbound_keys
+        return self._assert_stored(batch_key_func, msgs, batch_ids)
+
+    def assert_stored_outbound(self, msgs, batch_ids):
+        batch_key_func = self.mw_helper.get_vumi_api().mdb.batch_outbound_keys
+        return self._assert_stored(batch_key_func, msgs, batch_ids)
+
+    @inlineCallbacks
+    def test_inbound_message_no_consume_store(self):
+        conv = yield self.user_helper.create_conversation(u'dummy_conv')
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        msg1 = self.mw_helper.make_inbound("inbound", conv=conv)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([], batch_ids=[conv.batch.key])
+
+        msg2 = self.mw_helper.make_inbound("inbound", conv=conv)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound([msg2], batch_ids=[conv.batch.key])
+
+    @inlineCallbacks
+    def test_inbound_message_with_conv(self):
+        conv = yield self.user_helper.create_conversation(u'dummy_conv')
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_inbound("inbound", conv=conv)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([msg1], batch_ids=[conv.batch.key])
+
+        msg2 = self.mw_helper.make_inbound("inbound", conv=conv)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound(
+            [msg1, msg2], batch_ids=[conv.batch.key])
+
+    @inlineCallbacks
+    def test_inbound_message_with_router(self):
+        router = yield self.user_helper.create_router(u'dummy_conv')
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_inbound("inbound", router=router)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([msg1], batch_ids=[router.batch.key])
+
+        msg2 = self.mw_helper.make_inbound("inbound", router=router)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound(
+            [msg1, msg2], batch_ids=[router.batch.key])
+
+    @inlineCallbacks
+    def test_inbound_message_with_conv_and_router(self):
+        conv = yield self.user_helper.create_conversation(u'dummy_conv')
+        router = yield self.user_helper.create_router(u'dummy_conv')
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_inbound("inbound", conv=conv, router=router)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound(
+            [msg1], batch_ids=[conv.batch.key, router.batch.key])
+
+        msg2 = self.mw_helper.make_inbound("inbound", conv=conv, router=router)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound(
+            [msg1, msg2], batch_ids=[conv.batch.key, router.batch.key])
+
+    @inlineCallbacks
+    def test_outbound_message_no_consume_store(self):
+        conv = yield self.user_helper.create_conversation(u'dummy_conv')
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        msg1 = self.mw_helper.make_outbound("outbound", conv=conv)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([], batch_ids=[conv.batch.key])
+
+        msg2 = self.mw_helper.make_outbound("outbound", conv=conv)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound([msg2], batch_ids=[conv.batch.key])
+
+    @inlineCallbacks
+    def test_outbound_message_with_conv(self):
+        conv = yield self.user_helper.create_conversation(u'dummy_conv')
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_outbound("outbound", conv=conv)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([msg1], batch_ids=[conv.batch.key])
+
+        msg2 = self.mw_helper.make_outbound("outbound", conv=conv)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound(
+            [msg1, msg2], batch_ids=[conv.batch.key])
+
+    @inlineCallbacks
+    def test_outbound_message_with_router(self):
+        router = yield self.user_helper.create_router(u'dummy_conv')
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_outbound("outbound", router=router)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([msg1], batch_ids=[router.batch.key])
+
+        msg2 = self.mw_helper.make_outbound("outbound", router=router)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound(
+            [msg1, msg2], batch_ids=[router.batch.key])
+
+    @inlineCallbacks
+    def test_outbound_message_with_conv_and_router(self):
+        conv = yield self.user_helper.create_conversation(u'dummy_conv')
+        router = yield self.user_helper.create_router(u'dummy_conv')
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_outbound(
+            "outbound", conv=conv, router=router)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound(
+            [msg1], batch_ids=[conv.batch.key, router.batch.key])
+
+        msg2 = self.mw_helper.make_outbound(
+            "outbound", conv=conv, router=router)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound(
+            [msg1, msg2], batch_ids=[conv.batch.key, router.batch.key])

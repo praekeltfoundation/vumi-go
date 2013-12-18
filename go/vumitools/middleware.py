@@ -224,33 +224,29 @@ class GoStoringMiddleware(StoringMiddleware):
         yield self.vumi_api.redis.close_manager()
         yield super(GoStoringMiddleware, self).teardown_middleware()
 
-    def get_batch_id(self, msg):
-        raise NotImplementedError("Sub-classes should implement .get_batch_id")
+    def get_batch_ids(self, msg):
+        return MessageMetadataHelper(self.vumi_api, msg).get_batch_keys()
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
-        batch_id = yield self.get_batch_id(message)
-        yield self.store.add_inbound_message(message, batch_id=batch_id)
+        batch_ids = yield self.get_batch_ids(message)
+        yield self.store.add_inbound_message(message, batch_ids=batch_ids)
         returnValue(message)
 
     @inlineCallbacks
     def handle_outbound(self, message, connector_name):
-        batch_id = yield self.get_batch_id(message)
-        yield self.store.add_outbound_message(message, batch_id=batch_id)
+        batch_ids = yield self.get_batch_ids(message)
+        yield self.store.add_outbound_message(message, batch_ids=batch_ids)
         returnValue(message)
 
 
 class ConversationStoringMiddleware(GoStoringMiddleware):
-    @inlineCallbacks
-    def get_batch_id(self, msg):
-        mdh = MessageMetadataHelper(self.vumi_api, msg)
-        conversation = yield mdh.get_conversation()
-        returnValue(conversation.batch.key)
+    """This is a deprecated. It's still here to ease the transition to
+    GoStoringMiddleware.
+    """
 
 
 class RouterStoringMiddleware(GoStoringMiddleware):
-    @inlineCallbacks
-    def get_batch_id(self, msg):
-        mdh = MessageMetadataHelper(self.vumi_api, msg)
-        router = yield mdh.get_router()
-        returnValue(router.batch.key)
+    """This is a deprecated. It's still here to ease the transition to
+    GoStoringMiddleware.
+    """

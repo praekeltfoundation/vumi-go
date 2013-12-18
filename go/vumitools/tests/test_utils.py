@@ -138,6 +138,7 @@ class TestMessageMetadataDictHelper(VumiTestCase):
             'user_account': user_helper.account_key,
             'conversation_type': conv.conversation_type,
             'conversation_key': conv.key,
+            'batch_keys': {'conversation': {conv.key: conv.batch.key}},
         })
 
     @inlineCallbacks
@@ -155,6 +156,7 @@ class TestMessageMetadataDictHelper(VumiTestCase):
             'user_account': user_helper.account_key,
             'router_type': router.router_type,
             'router_key': router.key,
+            'batch_keys': {'router': {router.key: router.batch.key}},
         })
 
 
@@ -498,3 +500,48 @@ class TestMessageMetadataHelper(VumiTestCase):
         md._store_objects['tagpool_metadata'] = "I am the cached metadata"
         cached_tagpool_metadata = yield md.get_tagpool_metadata()
         self.assertEqual(cached_tagpool_metadata, "I am the cached metadata")
+
+    @inlineCallbacks
+    def test_get_batch_keys_no_cache(self):
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
+        md = self.mk_md(go_metadata={
+            'user_account': conversation.user_account.key,
+            'conversation_type': conversation.conversation_type,
+            'conversation_key': conversation.key,
+        })
+        # Make sure we have no cached batch keys.
+        self.assertEqual(
+            set(['user_account', 'conversation_key', 'conversation_type']),
+            set(md._go_metadata.keys()))
+
+        batch_keys = yield md.get_batch_keys()
+        self.assertEqual(batch_keys, [conversation.batch.key])
+
+        # Make sure we've cached this properly.
+        self.assertEqual(md._go_metadata['batch_keys'], {
+            'conversation': {conversation.key: conversation.batch.key},
+        })
+
+    @inlineCallbacks
+    def test_get_batch_keys_with_cache(self):
+        # Neither the conversation nor the routers we have batch keys for in
+        # the metadata exist, but we have enough information to attempt to load
+        # the conversation if it did.
+        md = self.mk_md(go_metadata={
+            'user_account': self.user_helper.account_key,
+            'conversation_type': 'who_knows',
+            'conversation_key': 'fake_conversation_key',
+            'batch_keys': {
+                'conversation': {'fake_conversation_key': 'conv_batch'},
+                'router': {
+                    'router1': 'router1_batch',
+                    'router2': 'router2_batch',
+                },
+            },
+        })
+
+        batch_keys = yield md.get_batch_keys()
+        self.assertEqual(
+            set(batch_keys),
+            set(['conv_batch', 'router1_batch', 'router2_batch']))
