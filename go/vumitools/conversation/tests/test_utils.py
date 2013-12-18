@@ -452,3 +452,10 @@ class TestConversationWrapper(VumiTestCase):
         self.conv.groups.add_key(group.key)
         [found_group] = yield self.conv.get_groups()
         self.assertEqual(found_group.key, group.key)
+
+    def test_set_go_helper_metadata(self):
+        self.assertEqual(self.conv.set_go_helper_metadata(), {'go': {
+            'user_account': self.conv.user_account.key,
+            'conversation_type': self.conv.conversation_type,
+            'conversation_key': self.conv.key,
+        }})
