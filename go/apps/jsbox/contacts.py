@@ -451,16 +451,18 @@ class ContactsResource(SandboxResource):
         """
         try:
             if 'key' not in command:
-                raise KeyError("Expected 'key' field in request")
-            key = command['key']
+                returnValue(self.reply(
+                    command,
+                    success=False,
+                    reason=u"Expected 'key' field in request"))
 
+            key = command['key']
             contact_store = self._contact_store_for_api(api)
             contact = (yield contact_store.get_contact_by_key(key)).get_data()
 
-        except (KeyError, ContactNotFoundError, SandboxError,) as e:
-            log.warning(str(e))
+        except (ContactNotFoundError,) as e:
             returnValue(self.reply(command, success=False, reason=unicode(e)))
-        except (Exception,) as e:
+        except (ContactError, SandboxError,) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -501,6 +503,12 @@ class ContactsResource(SandboxResource):
 
         """
         try:
+            if 'query' not in command:
+                returnValue(self.reply(
+                    command,
+                    success=False,
+                    reason=u"Expected 'query' field in request"))
+
             contact_store = self._contact_store_for_api(api)
             keys = yield contact_store.contacts.raw_search(
                 command['query']).get_keys()
