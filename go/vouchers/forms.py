@@ -223,10 +223,7 @@ class AirtimeVoucherPoolForm(BaseVoucherPoolForm):
                 headings = reader.next()
             finally:
                 csvfile.close()
-        if (len(headings) != len(settings.AIRTIME_VOUCHER_FILE_FORMAT)
-                or headings[0] != settings.AIRTIME_VOUCHER_FILE_FORMAT[0]
-                or headings[1] != settings.AIRTIME_VOUCHER_FILE_FORMAT[1]
-                or headings[2] != settings.AIRTIME_VOUCHER_FILE_FORMAT[2]):
+        if list(headings) != list(settings.AIRTIME_VOUCHER_FILE_FORMAT):
             raise forms.ValidationError(
                 "Invalid file format.")
 
@@ -244,15 +241,14 @@ class AirtimeVoucherPoolForm(BaseVoucherPoolForm):
                     "The file is empty.")
 
             sheet = sheets[0]
-            if (sheet.ncols != len(settings.AIRTIME_VOUCHER_FILE_FORMAT)
-                    or (sheet.cell(0, 0).value
-                        != settings.AIRTIME_VOUCHER_FILE_FORMAT[0])
-                    or (sheet.cell(0, 1).value
-                        != settings.AIRTIME_VOUCHER_FILE_FORMAT[1])
-                    or (sheet.cell(0, 2).value
-                        != settings.AIRTIME_VOUCHER_FILE_FORMAT[2])):
-                raise forms.ValidationError(
-                    "Invalid file format.")
+            if sheet.ncols != len(settings.AIRTIME_VOUCHER_FILE_FORMAT):
+                raise forms.ValidationError("Invalid file format.")
+
+            headings = [sheet.cell(0, 0).value, sheet.cell(0, 1).value,
+                        sheet.cell(0, 2).value]
+
+            if headings != list(settings.AIRTIME_VOUCHER_FILE_FORMAT):
+                raise forms.ValidationError("Invalid file format.")
         finally:
             book.release_resources()
 
