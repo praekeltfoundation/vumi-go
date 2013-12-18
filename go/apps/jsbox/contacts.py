@@ -1,15 +1,10 @@
 # -*- test-case-name: go.apps.jsbox.tests.test_contacts -*-
 # -*- coding: utf-8 -*-
 
-import hashlib
-import uuid
-import json
-
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
 from vumi.application.sandbox import SandboxResource, SandboxError
-from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.contact import (
     Contact, ContactStore, ContactError, ContactNotFoundError)
@@ -23,14 +18,6 @@ class ContactsResource(SandboxResource):
     See :class:`go.vumitools.contact.Contact` for a look at the Contact model
     and its fields.
     """
-
-    @inlineCallbacks
-    def setup(self):
-        redis_config = self.config.get('redis_manager', {})
-        self.redis = yield TxRedisManager.from_config(redis_config)
-
-    def teardown(self):
-        return self.redis.close_manager()
 
     def _contact_store_for_api(self, api):
         return self.app_worker.user_api_for_api(api).contact_store
@@ -474,10 +461,6 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
         except (Exception,) as e:
-            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
-            #       a MapReduce error.
-            if 'MapReduce' not in str(e):
-                raise
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
