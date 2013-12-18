@@ -28,6 +28,12 @@ class BaseVoucherService(object):
         or 201 (Created), `False` otherwise."""
         return response.status_code in [200, 201]
 
+    def _is_json(self, response):
+        """Return `True` if the HTTP response contains JSON,
+           `False` otherwise."""
+        return 'application/json' in response.headers.get('content-type',
+                                                          None)
+
     def _get_result(self, response):
         """Return the response content.
 
@@ -37,16 +43,15 @@ class BaseVoucherService(object):
         - If the content type is `application/json`, return a Python `dict`
 
         """
-        failed = not self._is_success(response)
-        content_type = response.headers.get('content-type', None)
-        if 'application/json' in content_type:
+        is_success = self._is_success(response)
+        if self._is_json(response):
             result = response.json
-            if failed:
+            if not is_success:
                 error = result.get('error', response.text)
                 raise VoucherServiceError(error)
         else:
             result = response.text
-            if failed:
+            if not is_success:
                 raise VoucherServiceError(result)
         return result
 
