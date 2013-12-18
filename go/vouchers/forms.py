@@ -15,11 +15,11 @@ class BaseVoucherPoolForm(forms.ModelForm):
 
     EXCEL_CONTENT_TYPES = (
         'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
 
     CSV_CONTENT_TYPES = (
-        'text/csv'
+        'text/csv',
     )
 
     class Meta:
