@@ -43,8 +43,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         self.app_worker.user_api.contact_store = self.contact_store
         yield self.create_resource({'delivery_class': u'sms',
-                                    'max_batch_size': 2,
-                                    'search_cache_expire': 300})
+                                    'max_search_result_keys': 2})
 
     def tearDown(self):
         super(TestContactsResource, self).tearDown()
@@ -499,83 +498,63 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             groups=[u'group-a', u'group-b'])
         reply = yield self.dispatch_command('search', query=u'surname:Jack*')
         self.assertTrue(reply['success'])
-        self.assertTrue('nextToken' not in reply)
+        self.assertFalse('reason' in reply)
 
-        [contact_data] = reply['contacts']
-        self.assertEqual(contact_data['key'], contact.key)
+        self.assertTrue('contacts' in reply)
+        self.assertEqual(reply['contacts'][0], contact.key)
 
     @inlineCallbacks
     def test_bad_query_handle_search(self):
         reply = yield self.dispatch_command(
             'search', query=u'name:[BAD_QUERY!]')
         self.assertFalse(reply['success'])
+        self.assertFalse('contacts' in reply)
+        self.assertTrue('reason' in reply)
+
         self.assertTrue('Error running MapReduce' in reply['reason'])
 
     @inlineCallbacks
     def test_no_results_handle_search(self):
         reply = yield self.dispatch_command('search', query=u'name:foo*')
         self.assertTrue(reply['success'])
+        self.assertFalse('reason' in reply)
         self.assertEqual(reply['contacts'], [])
 
     @inlineCallbacks
-    def test_search_with_paging(self):
-        """
-        Resultset has 6 contacts and we fetch them in batches of 2
-        """
+    def test_handle_get_by_key(self):
+        contact = yield self.new_contact(
+            surname=u'Jackal',
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b'])
 
-        query = u'surname:Jack*'
-        contact_keys = set()
-        expected_contact_keys = set()
-        for i in range(0, 6):
-            contact = yield self.new_contact(
-                surname=(u'Jackal%s' % i),
-                msisdn=u'+27831234567',
-                groups=[u'group-a', u'group-b'])
-            expected_contact_keys.add(contact.key)
+        reply = yield self.dispatch_command('get_by_key', key=contact.key)
 
-        reply = yield self.dispatch_command(
-            'search', query=query
-        )
         self.assertTrue(reply['success'])
-        self.assertTrue('nextToken' in reply)
-        contact_keys.update([c['key'] for c in reply['contacts']])
+        self.assertFalse('reason' in reply)
+        self.assertTrue('contact' in reply)
 
-        reply = yield self.dispatch_command(
-            'search',
-            query=query,
-            nextToken=reply['nextToken']
+        self.assertEqual(reply['contact']['key'], contact.key)
+
+    @inlineCallbacks
+    def test_handle_get_by_key_bad(self):
+        reply = yield self.dispatch_command('get_by_key')
+
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('contact' in reply)
+
+        self.assertTrue("Expected 'key' field in request" in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_get_by_key_no_results(self):
+        reply = yield self.dispatch_command('get_by_key', key="Haha!")
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('contact' in reply)
+
+        self.assertTrue(
+            "Contact with key 'Haha!' not found." in reply['reason']
         )
-        self.assertTrue(reply['success'])
-        self.assertTrue('nextToken' in reply)
-        contact_keys.update([c['key'] for c in reply['contacts']])
-
-        reply = yield self.dispatch_command(
-            'search',
-            query=query,
-            nextToken=reply['nextToken']
-        )
-        self.assertTrue(reply['success'])
-        self.assertTrue('nextToken' not in reply)
-        contact_keys.update([c['key'] for c in reply['contacts']])
-
-        self.assertEqual(contact_keys, expected_contact_keys)
-
-    def test_make_batches(self):
-        keys = [1, 2, 3, 4, 5]
-        batches = self.resource.make_batches(keys, 2)
-        self.assertEqual(sorted(batches.items()),
-                         [("0", json.dumps([1, 2])),
-                          ("1", json.dumps([3, 4])),
-                          ("2", json.dumps([5]))])
-
-        keys = [1]
-        batches = self.resource.make_batches(keys, 2)
-        self.assertEqual(sorted(batches.items()),
-                         [("0", json.dumps([1]))])
-
-        keys = []
-        batches = self.resource.make_batches(keys, 2)
-        self.assertEqual(sorted(batches.items()), [])
 
 
 class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
