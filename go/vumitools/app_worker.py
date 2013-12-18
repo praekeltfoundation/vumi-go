@@ -190,17 +190,17 @@ class GoWorkerMixin(object):
 
     @inlineCallbacks
     def get_contact_for_message(self, message, create=True):
-        helper_metadata = message.get('helper_metadata', {})
+        msg_mdh = self.get_metadata_helper(message)
 
-        go_metadata = helper_metadata.get('go', {})
-        account_key = go_metadata.get('user_account', None)
+        if not msg_mdh.has_user_account():
+            # If we have no user account we can't look up contacts.
+            return
 
-        if account_key:
-            user_api = self.get_user_api(account_key)
-            delivery_class = user_api.delivery_class_for_msg(message)
-            contact = yield user_api.contact_store.contact_for_addr(
-                delivery_class, message.user(), create=create)
-            returnValue(contact)
+        user_api = msg_mdh.get_user_api()
+        delivery_class = user_api.delivery_class_for_msg(message)
+        contact = yield user_api.contact_store.contact_for_addr(
+            delivery_class, message.user(), create=create)
+        returnValue(contact)
 
     def get_conversation(self, user_account_key, conversation_key):
         user_api = self.get_user_api(user_account_key)

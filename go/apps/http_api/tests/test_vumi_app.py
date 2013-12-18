@@ -2,21 +2,20 @@ import base64
 import json
 
 from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
-from twisted.internet.error import DNSLookupError
-from twisted.web.error import SchemeNotSupported
 from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
-from vumi.utils import http_request_full, HttpTimeoutError
+from vumi.utils import http_request_full
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer, LogCatcher
 from vumi.transports.vumi_bridge.client import StreamingClient
 from vumi.config import ConfigContext
 
 from go.vumitools.tests.utils import AppWorkerTestCase
+from go.apps.http_api.resource import (
+    StreamResourceMixin, StreamingConversationResource)
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.resource import StreamResource, ConversationResource
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
@@ -88,8 +87,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             'queue': DeferredQueue(),
             'expected': 0,
         }
-        orig_track = ConversationResource.track_request
-        orig_release = ConversationResource.release_request
+        orig_track = StreamingConversationResource.track_request
+        orig_release = StreamingConversationResource.release_request
 
         def track_wrapper(*args, **kw):
             self._req_state['expected'] += 1
@@ -99,8 +98,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             return orig_release(*args, **kw).addCallback(
                 self._req_state['queue'].put)
 
-        self.patch(ConversationResource, 'track_request', track_wrapper)
-        self.patch(ConversationResource, 'release_request', release_wrapper)
+        self.patch(
+            StreamingConversationResource, 'track_request', track_wrapper)
+        self.patch(
+            StreamingConversationResource, 'release_request', release_wrapper)
 
     @inlineCallbacks
     def _wait_for_requests(self):
@@ -143,13 +144,16 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_proxy_buffering_headers_off(self):
+        # This is the default, but we patch it anyway to make sure we're
+        # testing the right thing should the default change.
+        self.patch(StreamResourceMixin, 'proxy_buffering', False)
         receiver, received_messages = yield self.pull_message()
         headers = receiver._response.headers
         self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['no'])
 
     @inlineCallbacks
     def test_proxy_buffering_headers_on(self):
-        StreamResource.proxy_buffering = True
+        self.patch(StreamResourceMixin, 'proxy_buffering', True)
         receiver, received_messages = yield self.pull_message()
         headers = receiver._response.headers
         self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['yes'])
@@ -480,7 +484,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_disabling_concurrency_limit(self):
-        conv_resource = ConversationResource(self.app, self.conversation.key)
+        conv_resource = StreamingConversationResource(
+            self.app, self.conversation.key)
         # negative concurrency limit disables it
         ctxt = ConfigContext(user_account=self.account.key,
                              concurrency_limit=-1)
@@ -557,58 +562,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         posted_msg = TransportUserMessage.from_json(posted_json_data)
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
 
-    def _patch_http_request_full(self, exception_class):
-        from go.apps.http_api import vumi_app
-
-        def raiser(*args, **kw):
-            raise exception_class()
-        self.patch(vumi_app, 'http_request_full', raiser)
-
-    @inlineCallbacks
-    def test_post_inbound_message_unsupported_scheme(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
-            'push_message_url': 'example.com',
-        })
-        yield self.conversation.save()
-
-        self._patch_http_request_full(SchemeNotSupported)
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
-        with LogCatcher(message='Unsupported') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
-            [unsupported_scheme_log] = lc.messages()
-        self.assertTrue('example.com' in unsupported_scheme_log)
-
-    @inlineCallbacks
-    def test_post_inbound_message_timeout(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
-            'push_message_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
-        self._patch_http_request_full(HttpTimeoutError)
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
-        with LogCatcher(message='Timeout') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
-            [timeout_log] = lc.messages()
-        self.assertTrue(self.mock_push_server.url in timeout_log)
-
-    @inlineCallbacks
-    def test_post_inbound_message_dns_lookup_error(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
-            'push_message_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
-        self._patch_http_request_full(DNSLookupError)
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
-        with LogCatcher(message='DNS lookup error') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
-            [dns_log] = lc.messages()
-        self.assertTrue(self.mock_push_server.url in dns_log)
-
     @inlineCallbacks
     def test_post_inbound_event(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
@@ -628,42 +581,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield event_d
 
         self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
-
-    @inlineCallbacks
-    def test_post_inbound_event_timeout(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
-            'push_event_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
-        msg1 = yield self.msg_helper.make_stored_outbound(
-            self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
-
-        self._patch_http_request_full(HttpTimeoutError)
-        with LogCatcher(message='Timeout') as lc:
-            yield self.dispatch_event_to_conv(ack1, self.conversation)
-            [timeout_log] = lc.messages()
-        self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
-
-    @inlineCallbacks
-    def test_post_inbound_event_dns_lookup_error(self):
-        # Set the URL so stuff is HTTP Posted instead of streamed.
-        self.conversation.config['http_api'].update({
-            'push_event_url': self.mock_push_server.url,
-        })
-        yield self.conversation.save()
-
-        msg1 = yield self.msg_helper.make_stored_outbound(
-            self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
-
-        self._patch_http_request_full(DNSLookupError)
-        with LogCatcher(message='DNS lookup error') as lc:
-            yield self.dispatch_event_to_conv(ack1, self.conversation)
-            [dns_log] = lc.messages()
-        self.assertTrue(self.mock_push_server.url in dns_log)
 
     @inlineCallbacks
     def test_bad_urls(self):
