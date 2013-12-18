@@ -500,25 +500,33 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         self.assertTrue(reply['success'])
         self.assertFalse('reason' in reply)
 
-        self.assertTrue('contacts' in reply)
-        self.assertEqual(reply['contacts'][0], contact.key)
+        self.assertTrue('keys' in reply)
+        self.assertEqual(reply['keys'][0], contact.key)
 
     @inlineCallbacks
-    def test_bad_query_handle_search(self):
+    def test_handle_search_bad_query(self):
         reply = yield self.dispatch_command(
             'search', query=u'name:[BAD_QUERY!]')
         self.assertFalse(reply['success'])
-        self.assertFalse('contacts' in reply)
+        self.assertFalse('keys' in reply)
         self.assertTrue('reason' in reply)
 
         self.assertTrue('Error running MapReduce' in reply['reason'])
 
     @inlineCallbacks
-    def test_no_results_handle_search(self):
+    def test_handle_search_results(self):
         reply = yield self.dispatch_command('search', query=u'name:foo*')
         self.assertTrue(reply['success'])
         self.assertFalse('reason' in reply)
-        self.assertEqual(reply['contacts'], [])
+        self.assertEqual(reply['keys'], [])
+
+    @inlineCallbacks
+    def test_handle_search_missing_param(self):
+        reply = yield self.dispatch_command('search')
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('keys' in reply)
+        self.assertTrue("Expected 'query' field in request" in reply['reason'])
 
     @inlineCallbacks
     def test_handle_get_by_key(self):
@@ -536,13 +544,11 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         self.assertEqual(reply['contact']['key'], contact.key)
 
     @inlineCallbacks
-    def test_handle_get_by_key_bad(self):
+    def test_handle_get_by_key_missing_param(self):
         reply = yield self.dispatch_command('get_by_key')
-
         self.assertFalse(reply['success'])
         self.assertTrue('reason' in reply)
         self.assertFalse('contact' in reply)
-
         self.assertTrue("Expected 'key' field in request" in reply['reason'])
 
     @inlineCallbacks

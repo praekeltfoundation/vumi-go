@@ -481,9 +481,9 @@ class ContactsResource(SandboxResource):
 
         Success reply fields:
             - ``success``: set to ``true``
-            - ``contacts``: A list of keys for matching contacts.
+            - ``keys``: A list of keys for matching contacts.
 
-        Note: If no matches are found ``contacts`` will be an empty list.
+        Note: If no matches are found ``keys`` will be an empty list.
 
         Failure reply fields:
             - ``success``: set to ``false``
@@ -499,7 +499,7 @@ class ContactsResource(SandboxResource):
                 'contacts.search', {
                      query: 'name:"My Name"',
                 },
-                function(reply) { api.log_info(reply.contacts); });
+                function(reply) { api.log_info(reply.keys); });
 
         """
         try:
@@ -528,7 +528,7 @@ class ContactsResource(SandboxResource):
         returnValue(self.reply(
             command,
             success=True,
-            contacts=keys))
+            keys=keys))
 
 
 class GroupsResource(SandboxResource):
