@@ -1,7 +1,6 @@
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.message import TransportUserMessage
-from vumi.tests.helpers import VumiTestCase
+from vumi.tests.helpers import VumiTestCase, MessageHelper
 
 from go.vumitools.utils import MessageMetadataDictHelper, MessageMetadataHelper
 from go.vumitools.tests.helpers import VumiApiHelper
@@ -9,17 +8,17 @@ from go.vumitools.tests.helpers import VumiApiHelper
 
 class TestMessageMetadataDictHelper(VumiTestCase):
 
+    def setUp(self):
+        self.msg_helper = self.add_helper(MessageHelper())
+
     def mk_msg(self, go_metadata=None, optout_metadata=None):
         helper_metadata = {}
         if go_metadata is not None:
             helper_metadata['go'] = go_metadata
         if optout_metadata is not None:
             helper_metadata['optout'] = optout_metadata
-        return TransportUserMessage(
-            to_addr="to@domain.org", from_addr="from@domain.org",
-            transport_name="dummy_endpoint",
-            transport_type="dummy_transport_type",
-            helper_metadata=helper_metadata)
+        return self.msg_helper.make_inbound(
+            "hi", helper_metadata=helper_metadata)
 
     def mk_md(self, message=None, go_metadata=None, optout_metadata=None):
         if message is None:
@@ -165,6 +164,7 @@ class TestMessageMetadataHelper(VumiTestCase):
     def setUp(self):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'user')
+        self.msg_helper = self.add_helper(MessageHelper())
 
     def mk_msg(self, go_metadata=None, optout_metadata=None):
         helper_metadata = {}
@@ -172,11 +172,8 @@ class TestMessageMetadataHelper(VumiTestCase):
             helper_metadata['go'] = go_metadata
         if optout_metadata is not None:
             helper_metadata['optout'] = optout_metadata
-        return TransportUserMessage(
-            to_addr="to@domain.org", from_addr="from@domain.org",
-            transport_name="dummy_endpoint",
-            transport_type="dummy_transport_type",
-            helper_metadata=helper_metadata)
+        return self.msg_helper.make_inbound(
+            "hi", helper_metadata=helper_metadata)
 
     def mk_md(self, message=None, go_metadata=None, optout_metadata=None):
         if message is None:
