@@ -5,6 +5,70 @@ from django.core.files.storage import default_storage
 from vumi.utils import load_class, normalize_msisdn
 
 
+class ColumnSpec(object):
+    """
+    Describes what actions to take when importing a column of tabular data.
+
+    Actions are determined based on the following logical cases:
+      * field AND contact_field
+        - Column contains a header.
+        - Map column to a specific field in the Contact dict
+      * NOT field AND contact_field
+        - Column does not contain a header.
+        - Map column to a specific field in the Contact dict
+      * NOT field AND (NOT contact_field OR contact_field = 'extra')
+        Do not import this column
+        Note that this case catches the situation in which a user
+        tries to put an unnamed field into 'extra'
+
+    If specified, 'normalizer' is the formatting function to apply to this
+    column. It defaults to 'text'.
+    """
+
+    def __init__(self, field, contact_field, normalizer=None):
+        self._field = field or None
+        self._contact_field = contact_field or None
+        self._normalizer = normalizer or None
+
+    @property
+    def field(self):
+        """
+        The field name in original tabular data. If None, the tabular data
+        is headerless.
+        """
+        return self._field
+
+    @property
+    def contact_field(self):
+        """
+        The contact field in which to store this data for the column
+        corresponding to this FieldSpec.
+        """
+        return self._contact_field
+
+    @property
+    def normalizer(self):
+        """
+        The normalizer function to apply to this column. Unless specified,
+        'text' is the default normalization function.
+        """
+        return self._normalizer or 'text'
+
+    def include(self):
+        """
+        Whether to import this column or not.
+        """
+        return ((self.field and self.contact_field) or
+                (not self.field and self.contact_field))
+
+    def include_in_extra(self):
+        """
+        Whether this column should go into the 'extra' dict
+        """
+        return ((self.field and self.field != '') and
+                self.contact_field == 'extra')
+
+
 class ContactParserException(Exception):
     pass
 
@@ -30,8 +94,7 @@ class FieldNormalizer(object):
 
     def __init__(self, encoding='utf-8', encoding_errors='strict'):
         self.normalizers = [
-            ('', 'Leave as is'),
-            ('string', 'Plain Text'),
+            ('text', 'Plain Text'),
             ('integer', 'Whole Numbers (0, 10, 245, ... )'),
             ('float', 'Numbers (0.1, 3.14, 4.165, ...)'),
             ('msisdn_za', 'South African contact number (+27)'),
@@ -51,10 +114,10 @@ class FieldNormalizer(object):
         return iter(self.normalizers)
 
     def normalize(self, name, value):
-        normalizer = getattr(self, 'normalize_%s' % (name,), lambda v: v)
+        normalizer = getattr(self, 'normalize_%s' % (name,))
         return normalizer(value)
 
-    def normalize_string(self, value):
+    def normalize_text(self, value):
         if value is not None:
             try:
                 return unicode(value, self.encoding, self.encoding_errors)
@@ -143,6 +206,7 @@ class ContactFileParser(object):
         'facebook_id': 'Facebook ID',
         'twitter_handle': 'Twitter handle',
         'email_address': 'Email address',
+        'extra': "Extra",
     }
 
     ENCODING = 'utf-8'
@@ -206,31 +270,72 @@ class ContactFileParser(object):
         """
         raise NotImplementedError('Subclasses should implement this.')
 
-    def parse_file(self, file_path, fields, has_header):
+    def header_names_for_parsing(self, specs, has_header):
+        """
+        Create a list of header objects for use by csv.DictReader
+
+        For consistency, the returned header names are all
+        valid field names in the Contact relation, except in the
+        case where a user wants to put a column into 'extra',
+        in which case a tuple ('extra', any_user_field_name) is
+        is used.
+
+        The above rule is for CSVs with and without headers.
+        """
+        if has_header:
+            headers = []
+            for spec in specs:
+                if spec.column_field == 'extra':
+                    headers.append(('extra', spec.field,))
+                else:
+                    headers.append(spec.contact_field)
+            return headers
+        else:
+            return dict([(spec.contact_field, spec) for spec in specs])
+
+    def parse_file(self, file_path, column_specs, has_header):
         """
         Parses the file and returns dictionaries ready to be fed
-        the ContactStore.new_contact method.
+        the ContactStore.new_contact method. The `fields' parameter
+        is a list of `FieldInfo' records.
 
         We need to know what we cannot set to avoid a file import overwriting
         things like account details. Attributes that can be set are in the
         SETTABLE_ATTRIBUTES list, which defaults to the DEFAULT_HEADERS keys.
         """
-        # We receive the fields as list of tuples, not a dict because the
-        # order is important and needs to stay intact while being encoded
-        # and decoded as JSON
-        field_names = [field[0] for field in fields]
-        field_map = dict(fields)
+
+        header_names = self.header_names_for_parsing(column_specs, has_header)
+        header_map = dict([(header, spec) for header, spec
+                           in zip(header_names, column_specs)])
+
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
         data_dictionaries = self.read_data_from_file(
-            file_path, field_names, has_header)
+            file_path,
+            header_names,
+            has_header
+        )
         for data_dictionary in data_dictionaries:
 
             # Populate this with whatever we'll be sending to the
             # contact to be saved
             contact_dictionary = {}
-            for key, value in data_dictionary.items():
-                value = self.normalizer.normalize(field_map[key], value)
+            for header, value in data_dictionary.items():
+
+                if header is None:
+                    # We will reach this case when a particular field
+                    # in the header row was empty. OR for a CSV file with no
+                    # header row, the user choose not to import the column
+                    #
+                    # See the docs for `header_names_for_parsing' and
+                    # `ColumnSpec'.
+                    continue
+
+                spec = header_map[header]
+                assert spec is not None
+
+                value = self.normalizer.normalize(spec.normalizer, value)
+
                 if not isinstance(value, basestring):
                     value = unicode(str(value), self.ENCODING,
                                     self.ENCODING_ERRORS)
@@ -241,10 +346,10 @@ class ContactFileParser(object):
                 if value is None or value == '':
                     continue
 
-                if key in self.SETTABLE_ATTRIBUTES:
-                    contact_dictionary[key] = value
-                else:
+                if spec.include_in_extra():
                     extra = contact_dictionary.setdefault('extra', {})
-                    extra[key] = value
+                    extra[spec.field] = value
+                elif spec.include():
+                    contact_dictionary[spec.contact_field] = value
 
             yield contact_dictionary

@@ -99,8 +99,8 @@
                 {% csrf_token %}
                 <div class="modal-body">
                     <p><span class="help-block">
-                      The file is potentially quite large and as a result the export 
-                      will be done in the background. When completed the results will 
+                      The file is potentially quite large and as a result the export
+                      will be done in the background. When completed the results will
                       be sent to you as a CSV file attached to an email.
                     </span><br/></p>
                 </div>
@@ -125,24 +125,37 @@
                     <fieldset>
                       <table class="table table-bordered table-striped">
                         <tbody>
+                            <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Contact Field</th>
+                                <th>Format</th>
+                            </tr>
+                            </thead>
+                            <!-- Insert mapping and normalization choices for each column in the CSV 
+                              -->
                             {% for column, value in contact_data_row.items %}
                               <tr>
-                                <td>
-                                    <select class="form-control" name="column-{{ forloop.counter0 }}">
-                                        <option value="">Please Select:</option>
-                                        {% for header, label in contact_data_headers.items %}
-                                        <option {% if header == column %}selected="true"{% endif %}value="{{ header }}">{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>{{ value }}</td>
-                                <td>
-                                    <select class="form-control" name="normalize-{{ forloop.counter0 }}">
-                                      <option value="">Please Select:</option>
-                                      {% for name, label in field_normalizer %}
-                                      <option value="{{name}}">{{label}}</option>
-                                      {% endfor %}
-                                    </select>
+                                  <td>{{ value }}</td>
+                                  <td>
+                                      <select class="form-control" name="column-{{ forloop.counter0 }}">
+                                          <option value="">Please select:</option>
+                                          <!--Insert option for each Contact header-->
+                                          {% for header, label in contact_data_headers.items %}
+                                          <option {% if header == column %}selected="true"{% endif %}
+                                                  value="{{ header }}">
+                                              {{ label }}
+                                          </option>
+                                          {% endfor %}
+                                      </select>
+                                  </td>
+                                  <td>
+                                      <select class="form-control" name="normalize-{{ forloop.counter0 }}">
+                                          <option value="">Please select:</option>
+                                          {% for name, label in field_normalizer %}
+                                          <option value="{{name}}">{{label}}</option>
+                                          {% endfor %}
+                                      </select>
                                 </td>
                               </tr>
                             {% endfor %}

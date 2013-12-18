@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
+from go.contacts.parsers.base import ColumnSpec
 from go.contacts.parsers.csv_parser import CSVFileParser
 from go.contacts.parsers.xls_parser import XLSFileParser
 
@@ -60,9 +61,11 @@ class CSVParserTestCase(ParserTestCase):
     def test_contacts_parsing(self):
         csv_file = self.fixture('sample-contacts-with-headers.csv')
         fp = default_storage.open(csv_file, 'rU')
-        contacts = list(self.parser.parse_file(fp, zip(
-            ['name', 'surname', 'msisdn'],
-            ['string', 'string', 'msisdn_za']), has_header=True))
+        fields = [ColumnSpec(f, cf, nr) for f, cf, nr in
+                  zip(['name', 'surname', 'msisdn'],
+                      ['name', 'surname', 'msisdn'],
+                      ['string', 'string', 'msisdn_za'])]
+        contacts = list(self.parser.parse_file(fp, fields, has_header=True))
         self.assertEqual(contacts, [
             {
                 'msisdn': '+27761234561',
@@ -78,12 +81,49 @@ class CSVParserTestCase(ParserTestCase):
                 'name': 'Name 3'},
             ])
 
+    def test_contacts_parsing_into_extra(self):
+        csv_file = self.fixture(
+            'sample-contacts-with-unrecognized-headers.csv'
+        )
+        fp = default_storage.open(csv_file, 'rU')
+        fields = [ColumnSpec(f, cf, nr) for f, cf, nr in
+                  zip(['manager_name', 'manager_surname', 'manager_msisdn'],
+                      ['name', 'surname', 'extra'],
+                      ['string', 'string', 'msisdn_za'])]
+        contacts = list(self.parser.parse_file(fp, fields, has_header=True))
+        self.assertEqual(contacts, [
+            {
+                'surname': 'Surname 1',
+                'name': 'Name 1',
+                'extra': {
+                    'manager_msisdn': '+27761234561'
+                }
+            },
+            {
+                'surname': 'Surname 2',
+                'name': 'Name 2',
+                'extra': {
+                    'manager_msisdn': '+27761234562'
+                }
+            },
+            {
+                'surname': 'Surname 3',
+                'name': 'Name 3',
+                'extra': {
+                    'manager_msisdn': '+27761234563'
+                }
+
+            },
+        ])
+
     def test_contacts_with_none_entries(self):
         csv_file = self.fixture('sample-contacts-with-headers-and-none.csv')
         fp = default_storage.open(csv_file, 'rU')
-        contacts = list(self.parser.parse_file(fp, zip(
-            ['name', 'surname', 'msisdn'],
-            ['string', 'string', 'msisdn_za']), has_header=True))
+        fields = [ColumnSpec(f, cf, nr) for f, cf, nr in
+                  zip(['name', 'surname', 'msisdn'],
+                      ['name', 'surname', 'msisdn'],
+                      ['string', 'string', 'msisdn_za'])]
+        contacts = list(self.parser.parse_file(fp, fields, has_header=True))
         self.assertEqual(contacts, [
             {
                 'msisdn': '+27761234561',
@@ -120,9 +160,12 @@ class XLSParserTestCase(ParserTestCase):
 
     def test_contacts_parsing(self):
         xls_file = self.fixture('sample-contacts-with-headers.xlsx')
-        contacts = list(self.parser.parse_file(xls_file, zip(
-            ['name', 'surname', 'msisdn'],
-            ['string', 'integer', 'number']), has_header=True))
+        fields = [FieldInfo(f, cf, nr) for f, cf, nr in
+                  zip(['name', 'surname', 'msisdn'],
+                      ['name', 'surname', 'msisdn'],
+                      ['string', 'integer', 'number'])]
+        contacts = list(self.parser.parse_file(xls_file, fields,
+                                               has_header=True))
         self.assertEqual(contacts[0], {
                 'msisdn': '1.0',
                 'surname': '2',
