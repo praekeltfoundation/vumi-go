@@ -179,9 +179,9 @@ class ConversationWrapper(object):
     def send_token_url(self, token_url, msisdn):
         """Send a confirmation/token link.
         """
-        msg_options = {}
+        msg_options = {'helper_metadata': {}}
         # specify this message as being sensitive
-        msg_mdh = MessageMetadataDictHelper(msg_options)
+        msg_mdh = MessageMetadataDictHelper(msg_options['helper_metadata'])
         msg_mdh.set_sensitive(True)
 
         yield self.dispatch_command(
