@@ -80,7 +80,6 @@ class TestDashboard(GoDjangoTestCase):
 
 class TestDashboardLayout(GoDjangoTestCase):
     def setUp(self):
-        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.layout = ToyDashboardLayout()
 
     @staticmethod
