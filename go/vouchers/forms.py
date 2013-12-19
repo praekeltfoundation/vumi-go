@@ -3,10 +3,11 @@ import csv
 import xlrd
 import StringIO
 
+from django.conf import settings
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-from go.vouchers import settings
+from go.vouchers import settings as app_settings
 from go.vouchers.models import VoucherPool
 from go.vouchers.services import AirtimeVoucherService
 
@@ -71,9 +72,10 @@ class BaseVoucherPoolForm(forms.ModelForm):
         """Return a unique name for the pool to be used in the external
         voucher service.
         """
-        pool_name = pool_name.strip().lower()
-        return "user_%d_%s" % (self.user.id,
-                               re.sub(r'\W+', '_', pool_name))
+        account = self.user.get_account()
+        pool_name = re.sub(r'\W+', '_', pool_name.strip().lower())
+        return "%s%s_%s" % (settings.GO_POOL_NAME_PREFIX,
+                            account.account_number, pool_name)
 
     def _import_csv_file(self, voucher_pool):
         """Import the voucher CSV into the Airtime Voucher service.
@@ -98,7 +100,7 @@ class BaseVoucherPoolForm(forms.ModelForm):
             for row in reader:
                 writer.writerow(row)
                 record_count += 1
-                if record_count >= settings.REQUEST_RECORD_LIMIT:
+                if record_count >= app_settings.REQUEST_RECORD_LIMIT:
                     self.voucher_service.import_vouchers(
                         voucher_pool, vouchers_file.name, content.getvalue())
 
@@ -145,7 +147,7 @@ class BaseVoucherPoolForm(forms.ModelForm):
                     record.append(sheet.cell(row, col).value)
                 writer.writerow(record)
                 record_count += 1
-                if record_count >= settings.REQUEST_RECORD_LIMIT:
+                if record_count >= app_settings.REQUEST_RECORD_LIMIT:
                     self.voucher_service.import_vouchers(
                         voucher_pool, vouchers_file.name, content.getvalue())
 
@@ -223,7 +225,7 @@ class AirtimeVoucherPoolForm(BaseVoucherPoolForm):
                 headings = reader.next()
             finally:
                 csvfile.close()
-        if list(headings) != list(settings.AIRTIME_VOUCHER_FILE_FORMAT):
+        if list(headings) != list(app_settings.AIRTIME_VOUCHER_FILE_FORMAT):
             raise forms.ValidationError(
                 "Invalid file format.")
 
@@ -241,13 +243,13 @@ class AirtimeVoucherPoolForm(BaseVoucherPoolForm):
                     "The file is empty.")
 
             sheet = sheets[0]
-            if sheet.ncols != len(settings.AIRTIME_VOUCHER_FILE_FORMAT):
+            if sheet.ncols != len(app_settings.AIRTIME_VOUCHER_FILE_FORMAT):
                 raise forms.ValidationError("Invalid file format.")
 
             headings = [sheet.cell(0, 0).value, sheet.cell(0, 1).value,
                         sheet.cell(0, 2).value]
 
-            if headings != list(settings.AIRTIME_VOUCHER_FILE_FORMAT):
+            if headings != list(app_settings.AIRTIME_VOUCHER_FILE_FORMAT):
                 raise forms.ValidationError("Invalid file format.")
         finally:
             book.release_resources()
