@@ -542,6 +542,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
                                             query=u'surname:Jack*',
                                             max_keys=3)
         self.assertTrue(reply['success'])
+        self.assertEqual(len(reply['keys']), 3)
         self.assertTrue(set(reply['keys']).issubset(keys))
 
         # no limit
@@ -558,8 +559,6 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         self.assertTrue(
             "Value for parameter 'max_keys' is invalid" in reply['reason']
         )
-
-
 
     @inlineCallbacks
     def test_handle_get_by_key(self):

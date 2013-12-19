@@ -514,11 +514,10 @@ class ContactsResource(SandboxResource):
                     reason=u"Expected 'query' field in request"))
             max_keys = None
             if 'max_keys' in command:
-                try:
-                    value = int(command['max_keys'])
-                    if value >= 0:
-                        max_keys = value
-                except ValueError:
+                value = command['max_keys']
+                if type(value) is int and value >= 0:
+                    max_keys = value
+                else:
                     returnValue(self.reply(
                         command,
                         success=False,
