@@ -134,7 +134,7 @@ class BaseConversationViewTestCase(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(
             DjangoVumiApiHelper(), setup_vumi_api=False)
-        self.vumi_helper.monkey_patch(
+        self.monkey_patch(
             go.base.utils, 'get_conversation_pkg', self._get_conversation_pkg)
         self.vumi_helper.patch_config(
             VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
@@ -683,7 +683,7 @@ class TestConversationViews(BaseConversationViewTestCase):
 
     def test_reply_on_inbound_messages_only(self):
         # Fake the routing setup.
-        self.vumi_helper.monkey_patch(
+        self.monkey_patch(
             ConversationWrapper, 'has_channel_supporting_generic_sends',
             lambda s: True)
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -789,9 +789,9 @@ class TestConversationReportsView(BaseConversationViewTestCase):
             self.assertEqual(e, exc_value)
             self.error_log.append(unicode(e))
 
-        self.vumi_helper.monkey_patch(logger, 'error', log_error)
+        self.monkey_patch(logger, 'error', log_error)
 
-        self.vumi_helper.monkey_patch(
+        self.monkey_patch(
             dashboard_client,
             'get_diamondash_api',
             lambda: self.diamondash_api)
@@ -834,8 +834,7 @@ class TestConversationReportsView(BaseConversationViewTestCase):
         def bad_add_entity(*a, **kw):
             raise DashboardParseError(':(')
 
-        self.vumi_helper.monkey_patch(
-            DashboardLayout, 'add_entity', bad_add_entity)
+        self.monkey_patch(DashboardLayout, 'add_entity', bad_add_entity)
         response = self.client.get(self.get_view_url(conv, 'reports'))
 
         self.assertEqual(self.error_log, [':('])

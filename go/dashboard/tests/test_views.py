@@ -12,10 +12,8 @@ class DashboardViewsTestCase(GoDjangoTestCase):
         self.client = self.vumi_helper.get_client()
 
         self.diamondash_api = FakeDiamondashApiClient()
-        self.vumi_helper.monkey_patch(
-            client,
-            'get_diamondash_api',
-            lambda: self.diamondash_api)
+        self.monkey_patch(
+            client, 'get_diamondash_api', lambda: self.diamondash_api)
 
     def test_api_proxy(self):
         self.diamondash_api.set_raw_response(json.dumps({'bar': 'baz'}), 201)

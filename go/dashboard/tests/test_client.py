@@ -44,7 +44,7 @@ class TestDashboardApiClient(GoDjangoTestCase):
             self.assertEqual(auth, ('username', 'password'))
             return resp
 
-        self.vumi_helper.monkey_patch(requests, 'request', stubbed_request)
+        self.monkey_patch(requests, 'request', stubbed_request)
 
         client = DiamondashApiClient()
         self.assertEqual(client.raw_request('put', 'foo', 'bar'), {
@@ -54,8 +54,7 @@ class TestDashboardApiClient(GoDjangoTestCase):
 
     def test_raw_request_for_error_responses(self):
         resp = FakeErrorResponse(':(')
-        self.vumi_helper.monkey_patch(
-            requests, 'request', lambda *a, **kw: resp)
+        self.monkey_patch(requests, 'request', lambda *a, **kw: resp)
 
         client = DiamondashApiClient()
         self.assertRaises(
@@ -68,7 +67,7 @@ class TestDashboardApiClient(GoDjangoTestCase):
             self.assertEqual(auth, None)
             return FakeResponse()
 
-        self.vumi_helper.monkey_patch(requests, 'request', stubbed_request)
+        self.monkey_patch(requests, 'request', stubbed_request)
 
         client = DiamondashApiClient()
         client.raw_request('put', 'foo'),
@@ -90,7 +89,7 @@ class TestDashboardApiClient(GoDjangoTestCase):
             self.assertEqual(auth, ('username', 'password'))
             return resp
 
-        self.vumi_helper.monkey_patch(requests, 'request', stubbed_request)
+        self.monkey_patch(requests, 'request', stubbed_request)
 
         client = DiamondashApiClient()
         self.assertEqual(
@@ -102,15 +101,14 @@ class TestDashboardApiClient(GoDjangoTestCase):
             self.assertEqual(auth, None)
             return FakeResponse(json.dumps({'data': {}}))
 
-        self.vumi_helper.monkey_patch(requests, 'request', stubbed_request)
+        self.monkey_patch(requests, 'request', stubbed_request)
 
         client = DiamondashApiClient()
         client.request('put', 'foo', {}),
 
     def test_request_for_error_responses(self):
         resp = FakeErrorResponse(':(')
-        self.vumi_helper.monkey_patch(
-            requests, 'request', lambda *a, **kw: resp)
+        self.monkey_patch(requests, 'request', lambda *a, **kw: resp)
 
         client = DiamondashApiClient()
         self.assertRaises(

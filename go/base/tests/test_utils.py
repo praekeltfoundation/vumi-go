@@ -5,12 +5,9 @@ import go.base.utils
 from go.base.utils import (
     get_conversation_view_definition, get_router_view_definition)
 from go.errors import UnknownConversationType, UnknownRouterType
-from go.vumitools.tests.helpers import PatchHelper
 
 
 class TestConversationDefinitionHelpers(GoDjangoTestCase):
-    def setUp(self):
-        self.patch_helper = self.add_helper(PatchHelper())
 
     def test_get_conversation_view_definition(self):
         view_def = get_conversation_view_definition('bulk_message')
@@ -29,7 +26,7 @@ class TestConversationDefinitionHelpers(GoDjangoTestCase):
             get_conversation_view_definition, 'not_droids')
 
     def test_get_conversation_view_definition_obsolete_conv_type(self):
-        self.patch_helper.monkey_patch(
+        self.monkey_patch(
             go.base.utils, 'obsolete_conversation_types',
             lambda: set(['old_conv']))
         view_def = get_conversation_view_definition('old_conv')
@@ -37,8 +34,6 @@ class TestConversationDefinitionHelpers(GoDjangoTestCase):
 
 
 class TestRouterDefinitionHelpers(GoDjangoTestCase):
-    def setUp(self):
-        self.patch_helper = self.add_helper(PatchHelper())
 
     def test_get_router_view_definition(self):
         view_def = get_router_view_definition('keyword')
@@ -57,7 +52,7 @@ class TestRouterDefinitionHelpers(GoDjangoTestCase):
             get_router_view_definition, 'not_the_router_we_are_looking_for')
 
     def test_get_router_view_definition_obsolete_router_type(self):
-        self.patch_helper.monkey_patch(
+        self.monkey_patch(
             go.base.utils, 'obsolete_router_types',
             lambda: set(['old_router']))
         view_def = get_router_view_definition('old_router')

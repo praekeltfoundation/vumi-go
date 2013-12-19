@@ -16,19 +16,25 @@ from vumi.tests.helpers import (
 
 from go.base import models as base_models
 from go.base import utils as base_utils
-from go.vumitools.tests.helpers import VumiApiHelper
+from go.vumitools.tests.helpers import VumiApiHelper, PatchHelper
 
 
 class GoDjangoTestCase(TestCase):
     implements(IHelperEnabledTestCase)
 
     _cleanup_funcs = None
+    _patch_helper = None
 
     def tearDown(self):
         # Run any cleanup code we've registered with .add_cleanup().
         if self._cleanup_funcs is not None:
             for cleanup, args, kw in reversed(self._cleanup_funcs):
                 cleanup(*args, **kw)
+
+    def monkey_patch(self, obj, attribute, value):
+        if self._patch_helper is None:
+            self._patch_helper = self.add_helper(PatchHelper())
+        self._patch_helper.monkey_patch(obj, attribute, value)
 
     def add_cleanup(self, func, *args, **kw):
         if self._cleanup_funcs is None:

@@ -40,10 +40,8 @@ class TestDashboard(GoDjangoTestCase):
             },
         }])
 
-        self.vumi_helper.monkey_patch(
-            client,
-            'get_diamondash_api',
-            lambda: self.diamondash_api)
+        self.monkey_patch(
+            client, 'get_diamondash_api', lambda: self.diamondash_api)
 
         self.dashboard = Dashboard('ackbar-the-dashboard', layout)
 

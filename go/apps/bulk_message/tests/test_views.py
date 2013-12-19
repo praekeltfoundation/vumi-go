@@ -155,7 +155,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
             started=True, channel=channel, groups=[group])
 
         # POST the action with a mock token manager
-        self.app_helper.monkey_patch(
+        self.monkey_patch(
             TokenManager, 'generate_token', lambda s: ('abcdef', '123456'))
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
