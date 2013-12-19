@@ -13,35 +13,35 @@ class TestKeywordRouter(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.app_helper = self.add_helper(RouterWorkerHelper(KeywordRouter))
-        self.router_worker = yield self.app_helper.get_router_worker({})
+        self.router_helper = self.add_helper(RouterWorkerHelper(KeywordRouter))
+        self.router_worker = yield self.router_helper.get_router_worker({})
 
     @inlineCallbacks
     def assert_routed_inbound(self, content, router, expected_endpoint):
-        msg = yield self.app_helper.make_dispatch_inbound(
+        msg = yield self.router_helper.make_dispatch_inbound(
             content, router=router)
         emsg = msg.copy()
         emsg.set_routing_endpoint(expected_endpoint)
-        rmsg = self.app_helper.get_dispatched_inbound()[-1]
+        rmsg = self.router_helper.get_dispatched_inbound()[-1]
         self.assertEqual(emsg, rmsg)
 
     @inlineCallbacks
     def assert_routed_outbound(self, content, router, src_endpoint):
-        msg = yield self.app_helper.make_dispatch_outbound(
+        msg = yield self.router_helper.make_dispatch_outbound(
             content, router=router, routing_endpoint=src_endpoint)
         emsg = msg.copy()
         emsg.set_routing_endpoint('default')
-        rmsg = self.app_helper.get_dispatched_outbound()[-1]
+        rmsg = self.router_helper.get_dispatched_outbound()[-1]
         self.assertEqual(emsg, rmsg)
 
     @inlineCallbacks
     def assert_routed_event(self, router, expected_endpoint, hops):
-        ack = self.app_helper.make_ack(router=router)
+        ack = self.router_helper.make_ack(router=router)
         self.set_event_hops(ack, hops)
-        yield self.app_helper.dispatch_event(ack)
+        yield self.router_helper.dispatch_event(ack)
         eevent = ack.copy()
         eevent.set_routing_endpoint(expected_endpoint)
-        [revent] = self.app_helper.get_dispatched_events()
+        [revent] = self.router_helper.get_dispatched_events()
         self.assertEqual(eevent, revent)
 
     def set_event_hops(self, event, outbound_hops, num_inbound_hops=1):
@@ -53,50 +53,50 @@ class TestKeywordRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_start(self):
-        router = yield self.app_helper.create_router()
+        router = yield self.router_helper.create_router()
         self.assertTrue(router.stopped())
         self.assertFalse(router.running())
 
-        yield self.app_helper.start_router(router)
-        router = yield self.app_helper.get_router(router.key)
+        yield self.router_helper.start_router(router)
+        router = yield self.router_helper.get_router(router.key)
         self.assertFalse(router.stopped())
         self.assertTrue(router.running())
 
     @inlineCallbacks
     def test_stop(self):
-        router = yield self.app_helper.create_router(started=True)
+        router = yield self.router_helper.create_router(started=True)
         self.assertFalse(router.stopped())
         self.assertTrue(router.running())
 
-        yield self.app_helper.stop_router(router)
-        router = yield self.app_helper.get_router(router.key)
+        yield self.router_helper.stop_router(router)
+        router = yield self.router_helper.get_router(router.key)
         self.assertTrue(router.stopped())
         self.assertFalse(router.running())
 
     @inlineCallbacks
     def test_no_messages_processed_while_stopped(self):
-        router = yield self.app_helper.create_router()
+        router = yield self.router_helper.create_router()
 
-        yield self.app_helper.make_dispatch_inbound("foo", router=router)
-        self.assertEqual([], self.app_helper.get_dispatched_inbound())
+        yield self.router_helper.make_dispatch_inbound("foo", router=router)
+        self.assertEqual([], self.router_helper.get_dispatched_inbound())
 
-        yield self.app_helper.make_dispatch_ack(router=router)
-        self.assertEqual([], self.app_helper.get_dispatched_events())
+        yield self.router_helper.make_dispatch_ack(router=router)
+        self.assertEqual([], self.router_helper.get_dispatched_events())
 
-        yield self.app_helper.make_dispatch_outbound("foo", router=router)
-        self.assertEqual([], self.app_helper.get_dispatched_outbound())
-        [nack] = self.app_helper.get_dispatched_events()
+        yield self.router_helper.make_dispatch_outbound("foo", router=router)
+        self.assertEqual([], self.router_helper.get_dispatched_outbound())
+        [nack] = self.router_helper.get_dispatched_events()
         self.assertEqual(nack['event_type'], 'nack')
 
     @inlineCallbacks
     def test_inbound_no_config(self):
-        router = yield self.app_helper.create_router(started=True)
+        router = yield self.router_helper.create_router(started=True)
         yield self.assert_routed_inbound("foo bar", router, 'default')
         yield self.assert_routed_inbound("baz quux", router, 'default')
 
     @inlineCallbacks
     def test_inbound_keyword(self):
-        router = yield self.app_helper.create_router(started=True, config={
+        router = yield self.router_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
                 'abc123': 'app2',
@@ -109,7 +109,7 @@ class TestKeywordRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_outbound_no_config(self):
-        router = yield self.app_helper.create_router(started=True)
+        router = yield self.router_helper.create_router(started=True)
         yield self.assert_routed_outbound("foo bar", router, 'default')
         yield self.assert_routed_outbound("baz quux", router, 'default')
         yield self.assert_routed_outbound("foo bar", router, 'app1')
@@ -117,7 +117,7 @@ class TestKeywordRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_outbound(self):
-        router = yield self.app_helper.create_router(started=True, config={
+        router = yield self.router_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
@@ -129,7 +129,7 @@ class TestKeywordRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_event_default_to_default(self):
-        router = yield self.app_helper.create_router(started=True, config={
+        router = yield self.router_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
@@ -141,7 +141,7 @@ class TestKeywordRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_event_foo_to_default(self):
-        router = yield self.app_helper.create_router(started=True, config={
+        router = yield self.router_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
@@ -153,7 +153,7 @@ class TestKeywordRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_event_default_to_foo(self):
-        router = yield self.app_helper.create_router(started=True, config={
+        router = yield self.router_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },
@@ -165,7 +165,7 @@ class TestKeywordRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_event_foo_to_bar(self):
-        router = yield self.app_helper.create_router(started=True, config={
+        router = yield self.router_helper.create_router(started=True, config={
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
             },

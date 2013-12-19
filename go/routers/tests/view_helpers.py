@@ -17,16 +17,16 @@ class RouterViewsHelper(object):
         self.router_type = router_type
 
         self.vumi_helper = DjangoVumiApiHelper()
-        self._app_helper = RouterHelper(
+        self._router_helper = RouterHelper(
             router_type, self.vumi_helper)
-        self._app_helper.router_wrapper = self.get_router_helper
+        self._router_helper.router_wrapper = self.get_router_helper
 
         # Create the things we need to create
         self.vumi_helper.setup_vumi_api()
         self.vumi_helper.make_django_user()
 
         # Proxy methods from our helpers.
-        generate_proxies(self, self._app_helper)
+        generate_proxies(self, self._router_helper)
         generate_proxies(self, self.vumi_helper)
 
     def setup(self):
@@ -52,7 +52,7 @@ class RouterViewHelper(object):
     def __init__(self, router_views_helper, router_key):
         self.router_key = router_key
         self.router_type = router_views_helper.router_type
-        self.app_helper = router_views_helper
+        self.router_helper = router_views_helper
 
     def get_view_url(self, view):
         view_def = base_utils.get_router_view_definition(
@@ -61,14 +61,14 @@ class RouterViewHelper(object):
             view, router_key=self.router_key)
 
     def get_router(self):
-        return self.app_helper.get_router(self.router_key)
+        return self.router_helper.get_router(self.router_key)
 
     def add_stored_inbound(self, count, **kw):
-        msg_helper = GoMessageHelper(mdb=self.app_helper.get_vumi_api().mdb)
+        msg_helper = GoMessageHelper(mdb=self.router_helper.get_vumi_api().mdb)
         conv = self.get_router()
         return msg_helper.add_inbound_to_conv(conv, count, **kw)
 
     def add_stored_replies(self, msgs):
-        msg_helper = GoMessageHelper(mdb=self.app_helper.get_vumi_api().mdb)
+        msg_helper = GoMessageHelper(mdb=self.router_helper.get_vumi_api().mdb)
         conv = self.get_router()
         return msg_helper.add_replies_to_conv(conv, msgs)
