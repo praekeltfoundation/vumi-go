@@ -489,6 +489,111 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_save_for_nonexistent_contacts(self):
         return self.assert_bad_command('save', contact={'key': u'213123'})
 
+    @inlineCallbacks
+    def test_handle_search(self):
+        contact = yield self.new_contact(
+            surname=u'Jackal',
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b'])
+        reply = yield self.dispatch_command('search', query=u'surname:Jack*')
+        self.assertTrue(reply['success'])
+        self.assertFalse('reason' in reply)
+
+        self.assertTrue('keys' in reply)
+        self.assertEqual(reply['keys'][0], contact.key)
+
+    @inlineCallbacks
+    def test_handle_search_bad_query(self):
+        reply = yield self.dispatch_command(
+            'search', query=u'name:[BAD_QUERY!]')
+        self.assertFalse(reply['success'])
+        self.assertFalse('keys' in reply)
+        self.assertTrue('reason' in reply)
+
+        self.assertTrue('Error running MapReduce' in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_search_results(self):
+        reply = yield self.dispatch_command('search', query=u'name:foo*')
+        self.assertTrue(reply['success'])
+        self.assertFalse('reason' in reply)
+        self.assertEqual(reply['keys'], [])
+
+    @inlineCallbacks
+    def test_handle_search_missing_param(self):
+        reply = yield self.dispatch_command('search')
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('keys' in reply)
+        self.assertTrue("Expected 'query' field in request" in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_search_max_keys(self):
+        keys = set()
+        for i in range(0, 6):
+            contact = yield self.new_contact(
+                surname=unicode('Jackal%s' % i),
+                msisdn=u'+27831234567',
+                groups=[u'group-a', u'group-b'])
+            keys.add(contact.key)
+
+        # subset
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*',
+                                            max_keys=3)
+        self.assertTrue(reply['success'])
+        self.assertEqual(len(reply['keys']), 3)
+        self.assertTrue(set(reply['keys']).issubset(keys))
+
+        # no limit
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*')
+        self.assertTrue(reply['success'])
+        self.assertEqual(set(reply['keys']), keys)
+
+        # bad value for max_keys
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*',
+                                            max_keys="Haha!")
+        self.assertFalse(reply['success'])
+        self.assertTrue(
+            "Value for parameter 'max_keys' is invalid" in reply['reason']
+        )
+
+    @inlineCallbacks
+    def test_handle_get_by_key(self):
+        contact = yield self.new_contact(
+            surname=u'Jackal',
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b'])
+
+        reply = yield self.dispatch_command('get_by_key', key=contact.key)
+
+        self.assertTrue(reply['success'])
+        self.assertFalse('reason' in reply)
+        self.assertTrue('contact' in reply)
+
+        self.assertEqual(reply['contact']['key'], contact.key)
+
+    @inlineCallbacks
+    def test_handle_get_by_key_missing_param(self):
+        reply = yield self.dispatch_command('get_by_key')
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('contact' in reply)
+        self.assertTrue("Expected 'key' field in request" in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_get_by_key_no_results(self):
+        reply = yield self.dispatch_command('get_by_key', key="Haha!")
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('contact' in reply)
+
+        self.assertTrue(
+            "Contact with key 'Haha!' not found." in reply['reason']
+        )
+
 
 class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
     use_riak = True

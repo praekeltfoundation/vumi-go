@@ -419,6 +419,132 @@ class ContactsResource(SandboxResource):
             success=True,
             contact=contact.get_data()))
 
+    @inlineCallbacks
+    def handle_get_by_key(self, api, command):
+        """
+        Retrieve a contact object by key
+
+        Command fields:
+            - ``key``: The key identifying an existing contact.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: A string describing the reason for the failure
+
+        Examples:
+
+        Retrieve a contact which is known to have key
+        '391cea45-ae51-441c-b972-5de765c7a0dc'.
+
+        .. code-block:: javascript
+
+            api.request(
+                'contacts.get_by_key', {
+                     key: '391cea45-ae51-441c-b972-5de765c7a0dc',
+                },
+                function(reply) { api.log_info(reply.contact); });
+
+        """
+        try:
+            if 'key' not in command:
+                returnValue(self.reply(
+                    command,
+                    success=False,
+                    reason=u"Expected 'key' field in request"))
+
+            key = command['key']
+            contact_store = self._contact_store_for_api(api)
+            contact = (yield contact_store.get_contact_by_key(key)).get_data()
+
+        except (ContactNotFoundError,) as e:
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (ContactError, SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact))
+
+    @inlineCallbacks
+    def handle_search(self, api, command):
+        """
+        Search for contacts
+
+        Command fields:
+            - ``query``: The Lucene search query to perform.
+            - ``max_keys``: If present, a non-negative number that specifies
+                            the maximum number of keys to return in the result.
+                            By default keys for all matching contacts are
+                            returned.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``keys``: A list of keys for matching contacts.
+
+        Note: If no matches are found ``keys`` will be an empty list.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Examples:
+
+        Searching on a single contact field:
+
+        .. code-block:: javascript
+
+            api.request(
+                'contacts.search', {
+                     query: 'name:"My Name"',
+                },
+                function(reply) { api.log_info(reply.keys); });
+
+        """
+        try:
+            if 'query' not in command:
+                returnValue(self.reply(
+                    command,
+                    success=False,
+                    reason=u"Expected 'query' field in request"))
+            max_keys = None
+            if 'max_keys' in command:
+                value = command['max_keys']
+                if type(value) is int and value >= 0:
+                    max_keys = value
+                else:
+                    returnValue(self.reply(
+                        command,
+                        success=False,
+                        reason=u"Value for parameter 'max_keys' is invalid"))
+
+            contact_store = self._contact_store_for_api(api)
+            keys = yield contact_store.contacts.raw_search(
+                command['query']).get_keys()
+            if max_keys is not None:
+                keys = keys[:max_keys]
+
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (Exception,) as e:
+            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
+            #       a MapReduce error.
+            if 'MapReduce' not in str(e):
+                raise
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            keys=keys))
+
 
 class GroupsResource(SandboxResource):
     """
