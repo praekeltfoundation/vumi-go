@@ -2,24 +2,23 @@ from StringIO import StringIO
 
 from django.core.management.base import CommandError
 
-from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_manage_http_api
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class GoManageHttpAPICommandTestCase(VumiGoDjangoTestCase):
-    use_riak = True
+class TestGoManageHttpAPICommand(GoDjangoTestCase):
 
     def setUp(self):
-        super(GoManageHttpAPICommandTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.user_email = self.user_helper.get_django_user().email
 
         self.command = go_manage_http_api.Command()
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
 
     def setup_conv(self, **kwargs):
-        self.conversation = self.create_conversation(
+        self.conversation = self.user_helper.create_conversation(
             conversation_type=u'http_api', **kwargs)
 
     def test_conv_sanity_checks(self):
@@ -29,24 +28,24 @@ class GoManageHttpAPICommandTestCase(VumiGoDjangoTestCase):
             email_address='foo@bar')
         self.assertRaisesRegexp(
             CommandError, 'Conversation does not exist',
-            self.command.handle, email_address=self.django_user.email,
+            self.command.handle, email_address=self.user_email,
             conversation_key='foo')
 
         self.setup_conv()
         self.assertEqual(None, self.command.handle(
-            email_address=self.django_user.email,
+            email_address=self.user_email,
             conversation_key=self.conversation.key))
 
         self.set_conv_type(u'jsbox')
         self.assertEqual(None, self.command.handle(
-            email_address=self.django_user.email,
+            email_address=self.user_email,
             conversation_key=self.conversation.key))
 
         self.set_conv_type(u'bulk_message')
         self.assertRaisesRegexp(
             CommandError,
             'Conversation is not allowed for an HTTP API', self.command.handle,
-            email_address=self.django_user.email,
+            email_address=self.user_email,
             conversation_key=self.conversation.key)
 
     def set_conv_type(self, conv_type):
@@ -55,7 +54,7 @@ class GoManageHttpAPICommandTestCase(VumiGoDjangoTestCase):
 
     def do_command(self, **kwargs):
         return self.command.handle(
-            email_address=self.django_user.email,
+            email_address=self.user_email,
             conversation_key=self.conversation.key, **kwargs)
 
     def test_create_token(self):
@@ -63,7 +62,7 @@ class GoManageHttpAPICommandTestCase(VumiGoDjangoTestCase):
         self.do_command(create_token=True)
         self.assertTrue(
             self.command.stdout.getvalue().startswith('Created token'))
-        c = self.user_api.get_wrapped_conversation(self.conversation.key)
+        c = self.user_helper.get_conversation(self.conversation.key)
         self.assertNotEqual(c.config['http_api']['api_tokens'], [])
 
     def test_remove_token(self):
@@ -75,7 +74,7 @@ class GoManageHttpAPICommandTestCase(VumiGoDjangoTestCase):
         self.do_command(remove_token='token')
         self.assertTrue(
             self.command.stdout.getvalue().startswith('Removed token'))
-        c = self.user_api.get_wrapped_conversation(self.conversation.key)
+        c = self.user_helper.get_conversation(self.conversation.key)
         self.assertEqual(c.config['http_api']['api_tokens'], [])
 
     def test_remove_invalid_token(self):

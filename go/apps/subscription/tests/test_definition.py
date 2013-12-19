@@ -1,17 +1,17 @@
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.vumitools.metrics import MessagesReceivedMetric, MessagesSentMetric
 from go.apps.subscription.definition import ConversationDefinition
 from go.apps.subscription.metrics import SubscribedMetric, UnsubscribedMetric
+from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.metrics import MessagesReceivedMetric, MessagesSentMetric
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class TestSubscriptionConversationDefinition(VumiGoDjangoTestCase):
+class TestSubscriptionConversationDefinition(GoDjangoTestCase):
     def setUp(self):
-        super(TestSubscriptionConversationDefinition, self).setUp()
+        self.vumi_helper = self.add_helper(VumiApiHelper(is_sync=True))
+        self.user_helper = self.vumi_helper.get_or_create_user()
 
-        self.setup_user_api()
-        wrapped_conv = self.create_conversation(
-            conversation_type=u'subscription',
-            config={
+        wrapped_conv = self.user_helper.create_conversation(
+            u'subscription', config={
                 'handlers': [
                     {'campaign_name': 'campaign-1'},
                     {'campaign_name': 'campaign-2'}]

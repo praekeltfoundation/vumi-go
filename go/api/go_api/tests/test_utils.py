@@ -2,12 +2,12 @@
 
 from mock import Mock
 
-from twisted.trial.unittest import TestCase
+from vumi.tests.helpers import VumiTestCase
 
 from go.api.go_api.utils import GoApiError, GoApiSubHandler
 
 
-class GoApiErrorTestCase(TestCase):
+class TestGoApiError(VumiTestCase):
     def test_go_api_error(self):
         err = GoApiError("Testing")
         self.assertEqual(err.faultString, "Testing")
@@ -19,7 +19,7 @@ class GoApiErrorTestCase(TestCase):
         self.assertEqual(err.faultCode, 314)
 
 
-class GoApiSubHandlerTestCase(TestCase):
+class TestGoApiSubHandler(VumiTestCase):
     def setUp(self):
         self.account = Mock(key=u"account-1")
         self.user_api = Mock()

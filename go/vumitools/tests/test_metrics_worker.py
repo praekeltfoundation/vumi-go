@@ -183,7 +183,6 @@ class TestGoMetricsWorker(VumiTestCase):
     def test_send_metrics_command(self):
         worker = yield self.get_metrics_worker()
         user_helper = yield self.vumi_helper.make_user(u'acc1')
-
         conv1 = yield self.make_conv(user_helper, u'conv1', started=True)
 
         yield worker.send_metrics_command(

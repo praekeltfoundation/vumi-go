@@ -4,10 +4,11 @@
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.tests.helpers import VumiTestCase
+
+from go.apps.tests.helpers import AppWorkerHelper
 from go.vumitools import app_worker
 from go.vumitools.app_worker import GoApplicationWorker
-from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.tests.helpers import GoMessageHelper
 from go.vumitools.metrics import ConversationMetric
 from go.vumitools.conversation.definition import ConversationDefinitionBase
 
@@ -51,118 +52,93 @@ class DummyApplication(GoApplicationWorker):
         self.events.append(event)
 
 
-class TestGoApplicationWorker(AppWorkerTestCase):
+class TestGoApplicationWorker(VumiTestCase):
     application_class = DummyApplication
 
     @inlineCallbacks
     def setUp(self):
-        super(TestGoApplicationWorker, self).setUp()
+        self.app_helper = self.add_helper(AppWorkerHelper(DummyApplication))
 
         self.patch(
             app_worker,
             'get_conversation_definition',
             lambda conv_type, conv: DummyConversationDefinition(conv))
 
-        self.config = self.mk_config({})
-        self.app = yield self.get_application(self.config)
-
-        # Steal app's vumi_api
-        self.vumi_api = self.app.vumi_api  # YOINK!
-
-        # Create a test user account
-        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
-
-        self.conv = yield self.create_conversation()
-        self.msg_helper = self.add_helper(GoMessageHelper(self.vumi_api.mdb))
+        self.app = yield self.app_helper.get_app_worker({})
+        self.conv = yield self.app_helper.create_conversation()
 
     @inlineCallbacks
     def test_message_not_processed_while_stopped(self):
-        self.assertEqual([], self.app.msgs)
-        msg = self.msg_helper.make_inbound("inbound")
         self.assertFalse(self.conv.running())
-        yield self.dispatch_to_conv(msg, self.conv)
+        self.assertEqual([], self.app.msgs)
+        yield self.app_helper.make_dispatch_inbound("inbound", conv=self.conv)
         self.assertEqual([], self.app.msgs)
 
     @inlineCallbacks
     def test_message_processed_while_running(self):
+        yield self.app_helper.start_conversation(self.conv)
         self.assertEqual([], self.app.msgs)
-        msg = self.msg_helper.make_inbound("inbound")
-        yield self.start_conversation(self.conv)
-        self.conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
-        self.assertTrue(self.conv.running())
-        yield self.dispatch_to_conv(msg, self.conv)
+        msg = yield self.app_helper.make_dispatch_inbound(
+            "inbound", conv=self.conv)
         self.assertEqual([msg], self.app.msgs)
 
     @inlineCallbacks
     def test_event_not_processed_while_stopped(self):
-        self.assertEqual([], self.app.events)
-        event = self.msg_helper.make_ack()
         self.assertFalse(self.conv.running())
-        yield self.dispatch_event_to_conv(event, self.conv)
+        self.assertEqual([], self.app.events)
+        yield self.app_helper.make_dispatch_ack(conv=self.conv)
         self.assertEqual([], self.app.events)
 
     @inlineCallbacks
     def test_event_processed_while_running(self):
         self.assertEqual([], self.app.events)
-        event = self.msg_helper.make_ack()
-        yield self.start_conversation(self.conv)
-        self.conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
-        self.assertTrue(self.conv.running())
-        yield self.dispatch_event_to_conv(event, self.conv)
-        self.assertEqual([event], self.app.events)
+        yield self.app_helper.start_conversation(self.conv)
+        ack = yield self.app_helper.make_dispatch_ack(conv=self.conv)
+        self.assertEqual([ack], self.app.events)
 
     @inlineCallbacks
     def test_collect_metrics(self):
-        yield self.start_conversation(self.conv)
+        yield self.app_helper.start_conversation(self.conv)
 
-        self.assertEqual(
-            self.get_published_metrics(self.app),
-            [])
+        self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
 
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             'collect_metrics',
             conversation_key=self.conv.key,
-            user_account_key=self.user_account.key)
+            user_account_key=self.conv.user_account.key)
 
         prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
 
         self.assertEqual(
-            self.get_published_metrics(self.app),
+            self.app_helper.get_published_metrics(self.app),
             [("%s.dummy_metric" % prefix, 42)])
 
     @inlineCallbacks
     def test_conversation_metric_publishing(self):
-        yield self.start_conversation(self.conv)
+        yield self.app_helper.start_conversation(self.conv)
 
-        self.assertEqual(
-            self.get_published_metrics(self.app),
-            [])
+        self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
 
+        user_helper = self.app_helper.vumi_helper.get_user_helper(
+            self.conv.user_account.key)
         yield self.app.publish_conversation_metrics(
-            self.user_api,
-            self.conv.key)
+            user_helper.user_api, self.conv.key)
 
         prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
 
         self.assertEqual(
-            self.get_published_metrics(self.app),
+            self.app_helper.get_published_metrics(self.app),
             [("%s.dummy_metric" % prefix, 42)])
 
     @inlineCallbacks
     def test_account_metric_publishing(self):
-        yield self.start_conversation(self.conv)
+        yield self.app_helper.start_conversation(self.conv)
 
-        self.assertEqual(
-            self.get_published_metrics(self.app),
-            [])
+        self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
 
         yield self.app.publish_account_metric(
-            self.user_account.key,
-            'some-store',
-            'some-metric',
-            42)
+            self.conv.user_account.key, 'some-store', 'some-metric', 42)
 
         self.assertEqual(
-            self.get_published_metrics(self.app),
+            self.app_helper.get_published_metrics(self.app),
             [("campaigns.test-0-user.stores.some-store.some-metric", 42)])

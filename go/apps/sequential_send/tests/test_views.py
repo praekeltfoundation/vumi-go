@@ -1,32 +1,35 @@
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
 
 
-class SequentialSendTestCase(DjangoGoApplicationTestCase):
-    TEST_CONVERSATION_TYPE = u'sequential_send'
+class TestSequentialSendViews(GoDjangoTestCase):
+    def setUp(self):
+        self.app_helper = self.add_helper(
+            AppViewsHelper(u'sequential_send'))
+        self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation()
-        response = self.client.get(self.get_view_url('show'))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
+        response = self.client.get(conv_helper.get_view_url('show'))
+        self.assertContains(response, u"<h1>myconv</h1>")
 
     def test_show_running(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True)
-        response = self.client.get(self.get_view_url('show'))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv", started=True)
+        response = self.client.get(conv_helper.get_view_url('show'))
+        self.assertContains(response, u"<h1>myconv</h1>")
 
     def test_edit_conversation_schedule_config(self):
-        self.setup_conversation()
-        conversation = self.get_wrapped_conv()
-        self.assertEqual(conversation.config, {})
-        response = self.client.post(self.get_view_url('edit'), {
+        conv_helper = self.app_helper.create_conversation_helper(started=True)
+        self.assertEqual(conv_helper.get_conversation().config, {})
+        response = self.client.post(conv_helper.get_view_url('edit'), {
             'schedule-recurring': ['daily'],
             'schedule-days': [''],
             'schedule-time': ['12:00:00'],
@@ -36,8 +39,8 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
             'messages-0-message': [''],
             'messages-0-DELETE': [''],
         })
-        self.assertRedirects(response, self.get_view_url('show'))
-        conversation = self.get_wrapped_conv()
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        conversation = conv_helper.get_conversation()
         self.assertEqual(conversation.config, {
             u'messages': [],
             u'schedule': {

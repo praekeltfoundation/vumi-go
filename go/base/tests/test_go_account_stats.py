@@ -2,17 +2,16 @@
 from StringIO import StringIO
 from datetime import datetime
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.management.commands import go_account_stats
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
-class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
-    use_riak = True
-
+class TestGoAccountStatsCommand(GoDjangoTestCase):
     def setUp(self):
-        super(GoAccountStatsCommandTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.user_email = self.user_helper.get_django_user().email
 
         self.command = go_account_stats.Command()
         self.command.stdout = StringIO()
@@ -25,40 +24,48 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
         self.assertEqual(output[1], 'list_conversations:')
 
     def test_list_conversations(self):
-        active_conv = self.create_conversation(name=u'active')
-        inactive_conv = self.create_conversation(name=u'inactive')
+        active_conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'active')
+        inactive_conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'inactive')
         inactive_conv.archive_conversation()
 
-        self.command.handle(self.django_user.email, 'list_conversations')
+        self.command.handle(self.user_email, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 2)
         self.assertTrue(active_conv.key in output[0])
         self.assertTrue(inactive_conv.key in output[1])
 
     def test_list_conversations_with_unicode(self):
-        self.create_conversation(name=u'active')
-        unicode_conv = self.create_conversation(name=u'Zoë destroyer of Ascii')
-        self.command.handle(self.django_user.email, 'list_conversations')
+        self.user_helper.create_conversation(u'bulk_message', name=u'active')
+        unicode_conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'Zoë destroyer of Ascii')
+        self.command.handle(self.user_email, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 2)
         self.assertTrue(unicode_conv.key in output[1])
         self.assertTrue('Zo\xc3\xab' in output[1])
 
     def test_list_conversations_active(self):
-        active_conv = self.create_conversation(name=u'active')
-        inactive_conv = self.create_conversation(name=u'inactive')
+        active_conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'active')
+        inactive_conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'inactive')
         inactive_conv.archive_conversation()
         self.command.handle(
-            self.django_user.email, 'list_conversations', 'active')
+            self.user_email, 'list_conversations', 'active')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 1)
         self.assertTrue(active_conv.key in output[0])
 
     def test_stats(self):
-        conv = self.create_conversation(started=True, name=u'active')
-        self.add_messages_to_conv(5, conv, reply=True, time_multiplier=0)
+        msg_helper = GoMessageHelper(vumi_helper=self.vumi_helper)
+        conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'active', started=True)
+        msgs = msg_helper.add_inbound_to_conv(conv, 5, time_multiplier=0)
+        msg_helper.add_replies_to_conv(conv, msgs)
 
-        self.command.handle(self.django_user.email, 'stats', conv.key)
+        self.command.handle(self.user_email, 'stats', conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(output, [
             u'Conversation: active',

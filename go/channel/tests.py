@@ -3,31 +3,30 @@ import urllib
 
 from django.core.urlresolvers import reverse
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.channel.views import get_channel_view_definition
 
 
-class ChannelViewsTestCase(VumiGoDjangoTestCase):
-    use_riak = True
+class TestChannelViews(GoDjangoTestCase):
 
     def setUp(self):
-        super(ChannelViewsTestCase, self).setUp()
-        self.setup_api()
-        self.setup_user_api()
-        self.setup_client()
-        self.declare_tags(u'longcode', 4)
-        self.add_tagpool_permission(u"longcode")
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.vumi_helper.setup_tagpool(
+            u'longcode', [u'default1000%s' % i for i in [1, 2, 3, 4]])
+        self.user_helper.add_tagpool_permission(u'longcode')
+        self.client = self.vumi_helper.get_client()
 
     def assert_active_channel_tags(self, expected):
         self.assertEqual(
             set(':'.join(tag) for tag in expected),
-            set(ch.key for ch in self.user_api.active_channels()))
+            set(ch.key for ch in self.user_helper.user_api.active_channels()))
 
     def add_tagpool_permission(self, tagpool, max_keys=None):
         permission = self.api.account_store.tag_permissions(
             uuid4().hex, tagpool=tagpool, max_keys=max_keys)
         permission.save()
-        account = self.user_api.get_user_account()
+        account = self.user_helper.user_api.get_user_account()
         account.tagpools.add(permission)
         account.save()
 
@@ -41,7 +40,7 @@ class ChannelViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.get(reverse('channels:index'))
         self.assertNotContains(response, urllib.quote(channel_key))
 
-        self.user_api.acquire_specific_tag(tag)
+        self.user_helper.user_api.acquire_specific_tag(tag)
         response = self.client.get(reverse('channels:index'))
         self.assertContains(response, urllib.quote(channel_key))
 
@@ -67,7 +66,7 @@ class ChannelViewsTestCase(VumiGoDjangoTestCase):
     def test_show_channel(self):
         tag = (u'longcode', u'default10002')
         channel_key = u'%s:%s' % tag
-        self.user_api.acquire_specific_tag(tag)
+        self.user_helper.user_api.acquire_specific_tag(tag)
         response = self.client.get(self.get_view_url('show', channel_key))
         self.assertContains(response, tag[0])
         self.assertContains(response, tag[1])
@@ -75,7 +74,7 @@ class ChannelViewsTestCase(VumiGoDjangoTestCase):
     def test_release_channel(self):
         tag = (u'longcode', u'default10002')
         channel_key = u'%s:%s' % tag
-        self.user_api.acquire_specific_tag(tag)
+        self.user_helper.user_api.acquire_specific_tag(tag)
         self.assert_active_channel_tags([tag])
         response = self.client.post(self.get_view_url('release', channel_key))
         self.assertRedirects(response, reverse('conversations:index'))

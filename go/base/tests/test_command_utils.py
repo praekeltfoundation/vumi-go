@@ -3,7 +3,7 @@ from optparse import make_option
 from django.core.management.base import CommandError
 
 from go.base.command_utils import BaseGoAccountCommand, make_command_option
-from go.base.tests.utils import GoAccountCommandTestCase
+from go.base.tests.helpers import GoAccountCommandTestCase
 
 
 class DummyGoDjangoAccountCommand(BaseGoAccountCommand):
@@ -21,7 +21,8 @@ class DummyGoDjangoAccountCommand(BaseGoAccountCommand):
 
 
 class TestBaseGoAccountCommand(GoAccountCommandTestCase):
-    command_class = DummyGoDjangoAccountCommand
+    def setUp(self):
+        self.setup_command(DummyGoDjangoAccountCommand)
 
     def test_user_email_required(self):
         self.assertRaisesRegexp(

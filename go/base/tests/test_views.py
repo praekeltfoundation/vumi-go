@@ -3,14 +3,14 @@
 from mock import patch, Mock
 from django.core.urlresolvers import reverse
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class BaseViewsTestCase(VumiGoDjangoTestCase):
+class TestBaseViews(GoDjangoTestCase):
     def setUp(self):
-        super(BaseViewsTestCase, self).setUp()
-        self.setup_user_api()
-        self.setup_client()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
 
     def cross_domain_xhr(self, url):
         return self.client.post(reverse('cross_domain_xhr'), {'url': url})

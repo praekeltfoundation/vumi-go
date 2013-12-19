@@ -5,41 +5,29 @@
 from twisted.internet.defer import inlineCallbacks, returnValue, DeferredQueue
 from twisted.internet.task import Clock
 
-from vumi.message import TransportUserMessage
 from vumi.components.window_manager import WindowManager
+from vumi.message import TransportUserMessage
+from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
-from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.api import VumiApiCommand
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.apps.tests.helpers import AppWorkerHelper
+from go.vumitools.api import VumiApiCommand
 
 
-class TestBulkMessageApplication(AppWorkerTestCase):
-
-    application_class = BulkMessageApplication
+class TestBulkMessageApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestBulkMessageApplication, self).setUp()
+        self.app_helper = self.add_helper(
+            AppWorkerHelper(BulkMessageApplication))
 
         # Patch the clock so we can control time
         self.clock = Clock()
         self.patch(WindowManager, 'get_clock', lambda _: self.clock)
 
-        self.config = self.mk_config({})
-        self.app = yield self.get_application(self.config)
-
-        # Steal app's vumi_api
-        self.vumi_api = self.app.vumi_api  # YOINK!
-
-        # Create a test user account
-        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
-        yield self.setup_tagpools()
+        self.app = yield self.app_helper.get_app_worker({})
         self._setup_wait_for_window_monitor()
-        self.msg_helper = self.add_helper(
-            GoMessageHelper(self.user_api.api.mdb))
 
     def _setup_wait_for_window_monitor(self):
         # Hackery to wait for the window manager on the app.
@@ -65,21 +53,10 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             self._wm_state['expected'] -= 1
 
     @inlineCallbacks
-    def setup_conversation(self, contact_count=2,
-                           from_addr=u'+27831234567{0}'):
-        user_api = self.user_api
-        group = yield user_api.contact_store.new_group(u'test group')
-
-        for i in range(contact_count):
-            yield user_api.contact_store.new_contact(
-                name=u'First', surname=u'Surname %s' % (i,),
-                msisdn=from_addr.format(i), groups=[group])
-
-        conversation = yield self.create_conversation(
-            description=u'message')
-        conversation.add_group(group)
-        yield conversation.save()
-        returnValue(conversation)
+    def setup_conversation(self):
+        group = yield self.app_helper.create_group_with_contacts(u'group', 2)
+        conv = yield self.app_helper.create_conversation(groups=[group])
+        returnValue(conv)
 
     @inlineCallbacks
     def get_opted_in_contacts(self, conversation):
@@ -91,10 +68,10 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_start(self):
         conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
+        yield self.app_helper.start_conversation(conversation)
 
         # Force processing of messages
-        yield self._amqp.kick_delivery()
+        yield self.app_helper.kick_delivery()
 
         # Go past the monitoring interval to ensure the window is
         # being worked through for delivery
@@ -102,17 +79,17 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         yield self.wait_for_window_monitor()
 
         # Force processing of messages again
-        yield self._amqp.kick_delivery()
+        yield self.app_helper.kick_delivery()
 
         # Assert that we've sent no messages
-        self.assertEqual([], (yield self.get_dispatched_messages()))
+        self.assertEqual([], self.app_helper.get_dispatched_outbound())
 
     @inlineCallbacks
     def test_consume_events(self):
         conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
+        yield self.app_helper.start_conversation(conversation)
         batch_id = conversation.batch.key
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             "bulk_send",
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
@@ -123,14 +100,14 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             msg_options={},
         )
         window_id = self.app.get_window_id(conversation.key, batch_id)
-        yield self._amqp.kick_delivery()
+        yield self.app_helper.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)
         yield self.wait_for_window_monitor()
 
-        [msg1, msg2] = yield self.get_dispatched_messages()
-        yield self.msg_helper.store_outbound(
+        [msg1, msg2] = yield self.app_helper.get_dispatched_outbound()
+        yield self.app_helper.store_outbound(
             conversation, TransportUserMessage(**msg1.payload))
-        yield self.msg_helper.store_outbound(
+        yield self.app_helper.store_outbound(
             conversation, TransportUserMessage(**msg2.payload))
 
         # We should have two in flight
@@ -138,12 +115,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             (yield self.app.window_manager.count_in_flight(window_id)), 2)
 
         # Create an ack and a nack for the messages
-        ack = self.msg_helper.make_ack(msg1)
-        yield self.dispatch_event(ack)
-        nack = self.msg_helper.make_nack(msg2, nack_reason='unknown')
-        yield self.dispatch_event(nack)
-
-        yield self._amqp.kick_delivery()
+        yield self.app_helper.make_dispatch_ack(msg1)
+        yield self.app_helper.make_dispatch_nack(msg2, nack_reason='unknown')
 
         # We should have zero in flight
         self.assertEqual(
@@ -152,15 +125,15 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_send_message_command(self):
         msg_options = {
-            'transport_name': 'sphex_transport',
+            'transport_name': self.app_helper.transport_name,
             'from_addr': '666666',
             'transport_type': 'sphex',
             'helper_metadata': {'foo': {'bar': 'baz'}},
         }
         conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
+        yield self.app_helper.start_conversation(conversation)
         batch_id = conversation.batch.key
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             "send_message",
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
@@ -171,15 +144,16 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 "msg_options": msg_options,
             })
 
-        [msg] = yield self.get_dispatched_messages()
+        [msg] = yield self.app_helper.get_dispatched_outbound()
         self.assertEqual(msg.payload['to_addr'], "123456")
         self.assertEqual(msg.payload['from_addr'], "666666")
         self.assertEqual(msg.payload['content'], "hello world")
-        self.assertEqual(msg.payload['transport_name'], "sphex_transport")
+        self.assertEqual(
+            msg.payload['transport_name'], self.app_helper.transport_name)
         self.assertEqual(msg.payload['transport_type'], "sphex")
         self.assertEqual(msg.payload['message_type'], "user_message")
         self.assertEqual(msg.payload['helper_metadata']['go'], {
-            'user_account': self.user_account.key,
+            'user_account': conversation.user_account.key,
             'conversation_type': 'bulk_message',
             'conversation_key': conversation.key,
         })
@@ -189,9 +163,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
         conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
+        yield self.app_helper.start_conversation(conversation)
         batch_id = conversation.batch.key
-        msg = yield self.msg_helper.make_stored_inbound(conversation, "foo")
+        msg = yield self.app_helper.make_stored_inbound(conversation, "foo")
         command = VumiApiCommand.command(
             'worker', 'send_message',
             user_account_key=conversation.user_account.key,
@@ -208,23 +182,23 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 },
             })
         yield self.app.consume_control_command(command)
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
 
     @inlineCallbacks
     def test_reconcile_cache(self):
-        conv = yield self.create_conversation()
+        conv = yield self.app_helper.create_conversation()
 
         with LogCatcher() as logger:
-            yield self.dispatch_command(
+            yield self.app_helper.dispatch_command(
                 'reconcile_cache', conversation_key='bogus key',
-                user_account_key=self.user_account.key)
+                user_account_key=conv.user_account.key)
 
-            yield self.dispatch_command(
+            yield self.app_helper.dispatch_command(
                 'reconcile_cache', conversation_key=conv.key,
-                user_account_key=self.user_account.key)
+                user_account_key=conv.user_account.key)
 
             [err] = logger.errors
             [msg1, msg2] = [msg for msg in logger.messages()

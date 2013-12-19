@@ -1,15 +1,14 @@
 """Tests for go.api.go_api.api_types"""
 
-from twisted.trial.unittest import TestCase
-
 from vumi.rpc import RpcCheckError
+from vumi.tests.helpers import VumiTestCase
 
 from go.api.go_api.api_types import (
     CampaignType, EndpointType, ConversationType, ChannelType,
     RouterType, RoutingEntryType, RoutingType)
 
 
-class BaseTypeTest(TestCase):
+class BaseTypeTestCase(VumiTestCase):
     DEFAULTS = {}
 
     def mk_dict(self, without=(), **kw):
@@ -27,7 +26,7 @@ class BaseTypeTest(TestCase):
                 self.mk_dict(without=(key,)))
 
 
-class CampaignTypeTestCase(BaseTypeTest):
+class TestCampaignType(BaseTypeTestCase):
     DEFAULTS = {
         u'key': u'campaign-1',
         u'name': u'Campaign One',
@@ -37,7 +36,7 @@ class CampaignTypeTestCase(BaseTypeTest):
         self.basic_checks(CampaignType())
 
 
-class EndpointTypeTestCase(BaseTypeTest):
+class TestEndpointType(BaseTypeTestCase):
     DEFAULTS = {
         u'uuid': u'endpoint-1',
         u'name': u'Endpoint 1',
@@ -55,7 +54,7 @@ class EndpointTypeTestCase(BaseTypeTest):
                          ('foo::bar', 'baz'))
 
 
-class ConversationTypeTestCase(BaseTypeTest):
+class TestConversationType(BaseTypeTestCase):
     DEFAULTS = {
         u'uuid': u'conv-1',
         u'type': u'jsbox',
@@ -70,7 +69,7 @@ class ConversationTypeTestCase(BaseTypeTest):
         self.basic_checks(ConversationType())
 
 
-class ChannelTypeTestCase(BaseTypeTest):
+class TestChannelType(BaseTypeTestCase):
     DEFAULTS = {
         u'uuid': u'channel-1',
         u'tag': [u'apposit_sms', u'*121#'],
@@ -85,7 +84,7 @@ class ChannelTypeTestCase(BaseTypeTest):
         self.basic_checks(ChannelType())
 
 
-class RouterTypeTestCase(BaseTypeTest):
+class TestRouterType(BaseTypeTestCase):
     DEFAULTS = {
         u'uuid': u'router-uuid-1',
         u'type': u'keyword',
@@ -103,7 +102,7 @@ class RouterTypeTestCase(BaseTypeTest):
         self.basic_checks(RouterType())
 
 
-class RoutingEntryTypeTestCase(BaseTypeTest):
+class TestRoutingEntryType(BaseTypeTestCase):
     DEFAULTS = {
         u'source': {u'uuid': u'endpoint-uuid-1'},
         u'target': {u'uuid': u'endpoint-uuid-2'},
@@ -113,12 +112,12 @@ class RoutingEntryTypeTestCase(BaseTypeTest):
         self.basic_checks(RoutingEntryType())
 
 
-class RoutingTypeTestCase(BaseTypeTest):
+class TestRoutingType(BaseTypeTestCase):
     DEFAULTS = {
-        u'channels': [ChannelTypeTestCase.DEFAULTS],
-        u'routers': [RouterTypeTestCase.DEFAULTS],
-        u'conversations': [ConversationTypeTestCase.DEFAULTS],
-        u'routing_entries': [RoutingEntryTypeTestCase.DEFAULTS],
+        u'channels': [TestChannelType.DEFAULTS],
+        u'routers': [TestRouterType.DEFAULTS],
+        u'conversations': [TestConversationType.DEFAULTS],
+        u'routing_entries': [TestRoutingEntryType.DEFAULTS],
     }
 
     def test_basic_checks(self):

@@ -1,24 +1,19 @@
 import time
-import json
-
-from django.test import TestCase
-from django.test.client import RequestFactory
 from django.http import HttpResponse
+from django.test.client import RequestFactory
 
 from go.api.go_api.session_manager import SessionManager
-from go.base.amqp import AmqpConnection
 from go.base.middleware import VumiUserApiMiddleware, ResponseTimeMiddleware
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.api import VumiUserApi
 
-from mock import patch
 
+class TestVumiUserApiMiddleware(GoDjangoTestCase):
 
-class VumiUserApiMiddlewareTestCase(VumiGoDjangoTestCase):
     def setUp(self):
-        super(VumiUserApiMiddlewareTestCase, self).setUp()
-        self.setup_api()
-        self.user = self.mk_django_user()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+
         self.factory = RequestFactory()
         self.mw = VumiUserApiMiddleware()
 
@@ -30,18 +25,20 @@ class VumiUserApiMiddlewareTestCase(VumiGoDjangoTestCase):
 
     def test_authenticated_access(self):
         request = self.factory.get('/accounts/login/')
-        request.user = self.user
+        request.user = self.user_helper.get_django_user()
         request.session = {}
         self.mw.process_request(request)
         self.assertTrue(isinstance(request.user_api, VumiUserApi))
         self.assertEqual(
             SessionManager.get_user_account_key(request.session),
-            self.user.get_profile().user_account)
+            self.user_helper.account_key)
 
 
-class ResponseTimeMiddlewareTestcase(TestCase):
+class ResponseTimeMiddlewareTestcase(GoDjangoTestCase):
 
     def setUp(self):
+        self.vumi_helper = self.add_helper(
+            DjangoVumiApiHelper(), setup_vumi_api=False)
         self.factory = RequestFactory()
         self.mw = ResponseTimeMiddleware()
 
@@ -51,11 +48,7 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         self.mw.process_request(request)
         self.assertTrue(request.start_time)
 
-    @patch.object(AmqpConnection, 'is_connected')
-    @patch.object(AmqpConnection, 'publish')
-    def test_calculating_response_time(self, publish, is_connected):
-        is_connected.return_value = True
-        publish.return_value = True
+    def test_calculating_response_time(self):
         response = HttpResponse('ok')
 
         request = self.factory.get('/accounts/login/')
@@ -66,33 +59,21 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         self.assertTrue(response_time_header)
         self.assertTrue(float(response_time_header))
 
-        call = publish.call_args
-        args, kwargs = call
-        command = json.loads(args[0])
-        [datapoint] = command['datapoints']
+        [metric] = self.vumi_helper.amqp_connection.get_metrics()
+        [datapoint] = metric['datapoints']
         self.assertEqual(datapoint[0],
             'go.django.django.contrib.auth.views.login.get')
-        self.assertEqual(datapoint[1], ['avg'])
+        self.assertEqual(datapoint[1], ('avg',))
         self.assertTrue(datapoint[2])
-        self.assertEqual(kwargs['routing_key'], 'vumi.metrics')
-        exchange = kwargs['exchange']
-        self.assertEqual(exchange.name, 'vumi.metrics')
-        self.assertEqual(exchange.type, 'direct')
 
-    @patch.object(AmqpConnection, 'is_connected')
-    @patch.object(AmqpConnection, 'publish')
-    def test_method_differentiation(self, publish, is_connected):
-        is_connected.return_value = True
-        publish.return_value = True
+    def test_method_differentiation(self):
         response = HttpResponse('ok')
 
         request = self.factory.post('/accounts/login/')
         request.start_time = time.time()
         self.mw.process_response(request, response)
 
-        call = publish.call_args
-        args, kwargs = call
-        command = json.loads(args[0])
-        [datapoint] = command['datapoints']
+        [metric] = self.vumi_helper.amqp_connection.get_metrics()
+        [datapoint] = metric['datapoints']
         self.assertEqual(datapoint[0],
             'go.django.django.contrib.auth.views.login.post')
