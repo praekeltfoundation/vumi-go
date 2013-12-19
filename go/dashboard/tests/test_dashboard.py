@@ -1,4 +1,4 @@
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.dashboard import client
 from go.dashboard.tests.utils import FakeDiamondashApiClient
 from go.dashboard.dashboard import (
@@ -17,9 +17,9 @@ class ToyDashboardLayout(DashboardLayout):
         return "bar.%s" % target['name']
 
 
-class TestDashboard(VumiGoDjangoTestCase):
+class TestDashboard(GoDjangoTestCase):
     def setUp(self):
-        super(TestDashboard, self).setUp()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.diamondash_api = FakeDiamondashApiClient()
 
         layout = ToyDashboardLayout([{
@@ -41,9 +41,7 @@ class TestDashboard(VumiGoDjangoTestCase):
         }])
 
         self.monkey_patch(
-            client,
-            'get_diamondash_api',
-            lambda: self.diamondash_api)
+            client, 'get_diamondash_api', lambda: self.diamondash_api)
 
         self.dashboard = Dashboard('ackbar-the-dashboard', layout)
 
@@ -78,9 +76,8 @@ class TestDashboard(VumiGoDjangoTestCase):
         self.assertRaises(self.dashboard.get_config, DashboardError)
 
 
-class TestDashboardLayout(VumiGoDjangoTestCase):
+class TestDashboardLayout(GoDjangoTestCase):
     def setUp(self):
-        super(TestDashboardLayout, self).setUp()
         self.layout = ToyDashboardLayout()
 
     @staticmethod
@@ -244,11 +241,11 @@ class TestDashboardLayout(VumiGoDjangoTestCase):
             })
 
 
-class TestConversationReportsLayout(VumiGoDjangoTestCase):
+class TestConversationReportsLayout(GoDjangoTestCase):
     def setUp(self):
-        super(TestConversationReportsLayout, self).setUp()
-        self.setup_user_api()
-        self.conv = self.create_conversation()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.conv = self.user_helper.create_conversation(u'dummy')
         self.layout = ConversationReportsLayout(self.conv)
 
     def test_conversation_metric_handling(self):

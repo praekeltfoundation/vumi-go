@@ -2,23 +2,19 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
-import uuid
 import json
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
+from vumi.tests.helpers import VumiTestCase
 
 from go.apps.surveys.vumi_app import SurveyApplication
-from go.vumitools.tests.utils import AppWorkerTestCase
+from go.apps.tests.helpers import AppWorkerHelper
 from go.vumitools.api import VumiApiCommand
-from go.vumitools.tests.helpers import GoMessageHelper
 
 
-class TestSurveyApplication(AppWorkerTestCase):
-
-    application_class = SurveyApplication
-    transport_type = u'sms'
+class TestSurveyApplication(VumiTestCase):
 
     default_questions = [{
         'copy': 'What is your favorite color? 1. Red 2. Yellow '
@@ -46,70 +42,20 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestSurveyApplication, self).setUp()
-
-        # Setup the SurveyApplication
-        self.app = yield self.get_application({
-                'vxpolls': {'prefix': 'test.'},
-                })
-
-        # Steal app's vumi_api
-        self.vumi_api = self.app.vumi_api  # YOINK!
-
-        # Create a test user account
-        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
-
-        # Add tags
-        yield self.setup_tagpools()
-
-        # Setup the poll manager
+        self.app_helper = self.add_helper(AppWorkerHelper(SurveyApplication))
+        self.app = yield self.app_helper.get_app_worker({
+            'vxpolls': {'prefix': 'test.'},
+        })
         self.pm = self.app.pm
 
-        # Give a user access to a tagpool
-        self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
-            tagpool=u"pool", max_keys=None)
+        self.group = yield self.app_helper.create_group(u'test group')
+        self.conversation = yield self.app_helper.create_conversation(
+            groups=[self.group])
 
-        # Create a group and a conversation
-        self.group = yield self.create_group(u'test group')
-
-        # Make the contact store searchable
-        yield self.user_api.contact_store.contacts.enable_search()
-
-        self.conversation = yield self.create_conversation()
-        self.conversation.add_group(self.group)
-        yield self.conversation.save()
-        self.msg_helper = self.add_helper(
-            GoMessageHelper(self.user_api.api.mdb))
-
-    @inlineCallbacks
-    def create_group(self, name):
-        group = yield self.user_api.contact_store.new_group(name)
-        yield group.save()
-        returnValue(group)
-
-    @inlineCallbacks
-    def create_contact(self, name, surname, **kw):
-        contact = yield self.user_api.contact_store.new_contact(name=name,
-            surname=surname, **kw)
-        yield contact.save()
-        returnValue(contact)
-
-    def get_contact(self, contact_key):
-        return self.user_api.contact_store.get_contact_by_key(contact_key)
-
-    @inlineCallbacks
-    def reply_to(self, msg, content, continue_session=True, **kw):
-        reply = TransportUserMessage(
-            to_addr=msg['from_addr'],
-            from_addr=msg['to_addr'],
-            group=msg['group'],
-            content=content,
-            transport_name=msg['transport_name'],
-            transport_type=msg['transport_type'],
-            **kw)
-        yield self.dispatch_to_conv(reply, self.conversation)
-        returnValue(reply)
+    def reply_to(self, msg, content, **kw):
+        return self.app_helper.make_dispatch_inbound(
+            content, to_addr=msg['from_addr'], from_addr=msg['to_addr'],
+            conv=self.conversation, **kw)
 
     @inlineCallbacks
     def create_survey(self, conversation, questions=None, end_response=None):
@@ -119,7 +65,6 @@ class TestSurveyApplication(AppWorkerTestCase):
         config = yield self.pm.get_config(poll_id)
         config.update({
             'poll_id': poll_id,
-            'transport_name': self.transport_name,
             'questions': questions
         })
 
@@ -131,15 +76,15 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def wait_for_messages(self, nr_of_messages, total_length):
-        msgs = yield self.wait_for_dispatched_messages(total_length)
+        msgs = yield self.app_helper.wait_for_dispatched_outbound(total_length)
         returnValue(msgs[-1 * nr_of_messages:])
 
     @inlineCallbacks
     def send_send_survey_command(self, conversation):
         batch_id = self.conversation.batch.key
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             "send_survey",
-            user_account_key=self.user_account.key,
+            user_account_key=self.conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=batch_id,
             msg_options={},
@@ -148,8 +93,9 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_clearing_old_survey_data(self):
-        contact = yield self.create_contact(u'First', u'Contact',
-            msisdn=u'+27831234567', groups=[self.group])
+        contact = yield self.app_helper.create_contact(
+            u'+27831234567', name=u'First', surname=u'Contact',
+            groups=[self.group])
         # Populate all the known labels with 'to-be-cleared', these should
         # be overwritten with new values later
         for question in self.default_questions:
@@ -159,8 +105,8 @@ class TestSurveyApplication(AppWorkerTestCase):
         contact.extra['litmus'] = u'test'
         yield contact.save()
 
-        self.create_survey(self.conversation)
-        yield self.start_conversation(self.conversation)
+        yield self.create_survey(self.conversation)
+        yield self.app_helper.start_conversation(self.conversation)
         yield self.send_send_survey_command(self.conversation)
         yield self.submit_answers(self.default_questions,
             answers=[
@@ -174,7 +120,9 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.assertEqual(closing_message['content'],
             'Thanks for completing the survey')
 
-        contact = yield self.get_contact(contact.key)
+        user_helper = yield self.app_helper.vumi_helper.get_or_create_user()
+        contact_store = user_helper.user_api.contact_store
+        contact = yield contact_store.get_contact_by_key(contact.key)
         self.assertEqual(contact.extra['litmus'], u'test')
         self.assertTrue('to-be-cleared' not in contact.extra.values())
 
@@ -201,7 +149,8 @@ class TestSurveyApplication(AppWorkerTestCase):
             last_sent_msg = yield self.reply_to(msg, response)
 
         nr_of_messages = 1 + len(questions) + start_at
-        all_messages = yield self.wait_for_dispatched_messages(nr_of_messages)
+        all_messages = yield self.app_helper.wait_for_dispatched_outbound(
+            nr_of_messages)
         last_msg = all_messages[-1]
         self.assertEqual(last_msg['content'],
             'Thanks for completing the survey')
@@ -210,14 +159,15 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         poll_id = 'poll-%s' % (self.conversation.key,)
 
-        [app_event] = self.get_dispatched_app_events()
+        [app_event] = self.app_helper.get_dispatched_app_events()
 
         # The poll has been completed and so the results have been
         # archived, get the participant from the archive
         [participant] = (yield self.pm.get_archive(poll_id,
             last_sent_msg['from_addr']))
 
-        self.assertEqual(app_event['account_key'], self.user_account.key)
+        self.assertEqual(
+            app_event['account_key'], self.conversation.user_account.key)
         self.assertEqual(app_event['conversation_key'], self.conversation.key)
 
         # make sure we have a participant, pop it out and
@@ -244,19 +194,21 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_survey_completion(self):
-        yield self.create_contact(u'First', u'Contact',
-            msisdn=u'+27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
-        yield self.start_conversation(self.conversation)
+        yield self.app_helper.create_contact(
+            u'+27831234567', name=u'First', surname=u'Contact',
+            groups=[self.group])
+        yield self.create_survey(self.conversation)
+        yield self.app_helper.start_conversation(self.conversation)
         yield self.send_send_survey_command(self.conversation)
         yield self.complete_survey(self.default_questions)
 
     @inlineCallbacks
     def test_ensure_participant_cleared_after_archiving(self):
-        contact = yield self.create_contact(u'First', u'Contact',
-            msisdn=u'+27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
-        yield self.start_conversation(self.conversation)
+        contact = yield self.app_helper.create_contact(
+            u'+27831234567', name=u'First', surname=u'Contact',
+            groups=[self.group])
+        yield self.create_survey(self.conversation)
+        yield self.app_helper.start_conversation(self.conversation)
         yield self.send_send_survey_command(self.conversation)
         yield self.complete_survey(self.default_questions)
         # This participant should be empty
@@ -272,20 +224,20 @@ class TestSurveyApplication(AppWorkerTestCase):
             'transport_type': 'sphex',
             'helper_metadata': {'foo': {'bar': 'baz'}},
         }
-        yield self.start_conversation(self.conversation)
+        yield self.app_helper.start_conversation(self.conversation)
         batch_id = self.conversation.batch.key
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             "send_message",
-            user_account_key=self.user_account.key,
+            user_account_key=self.conversation.user_account.key,
             conversation_key=self.conversation.key,
             command_data={
-            "batch_id": batch_id,
-            "to_addr": "123456",
-            "content": "hello world",
-            "msg_options": msg_options,
-        })
+                "batch_id": batch_id,
+                "to_addr": "123456",
+                "content": "hello world",
+                "msg_options": msg_options,
+            })
 
-        [msg] = yield self.get_dispatched_messages()
+        [msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(msg.payload['to_addr'], "123456")
         self.assertEqual(msg.payload['from_addr'], "666666")
         self.assertEqual(msg.payload['content'], "hello world")
@@ -293,7 +245,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.assertEqual(msg.payload['transport_type'], "sphex")
         self.assertEqual(msg.payload['message_type'], "user_message")
         self.assertEqual(msg.payload['helper_metadata']['go'], {
-            'user_account': self.user_account.key,
+            'user_account': self.conversation.user_account.key,
             'conversation_type': 'survey',
             'conversation_key': self.conversation.key,
         })
@@ -302,13 +254,13 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
-        yield self.start_conversation(self.conversation)
+        yield self.app_helper.start_conversation(self.conversation)
         batch_id = self.conversation.batch.key
-        msg = yield self.msg_helper.make_stored_inbound(
+        msg = yield self.app_helper.make_stored_inbound(
             self.conversation, "foo")
         command = VumiApiCommand.command(
             'worker', 'send_message',
-            user_account_key=self.user_account.key,
+            user_account_key=self.conversation.user_account.key,
             conversation_key=self.conversation.key,
             command_data={
                 u'batch_id': batch_id,
@@ -322,7 +274,7 @@ class TestSurveyApplication(AppWorkerTestCase):
                 },
             })
         yield self.app.consume_control_command(command)
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
@@ -333,11 +285,10 @@ class TestSurveyApplication(AppWorkerTestCase):
         config = yield self.pm.get_config(poll_id)
         self.assertEqual(config, {})  # incomplete or empty
 
-        msg = self.msg_helper.make_inbound("foo", helper_metadata={
-            "poll_id": poll_id,
-        })
-        yield self.dispatch_to_conv(msg, self.conversation)
-        [reply] = yield self.wait_for_dispatched_messages(1)
+        yield self.app_helper.make_dispatch_inbound(
+            "foo", helper_metadata={"poll_id": poll_id},
+            conv=self.conversation)
+        [reply] = yield self.app_helper.wait_for_dispatched_outbound(1)
         self.assertTrue('Service Unavailable' in reply['content'])
         self.assertEqual(reply['session_event'],
                          TransportUserMessage.SESSION_CLOSE)

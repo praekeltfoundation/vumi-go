@@ -1,25 +1,20 @@
-from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.paginator import Paginator
 
-from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base import utils
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.vumitools.api import VumiApi, VumiUserApi
 from go.vumitools.conversation.definition import ConversationDefinitionBase
 from go.conversation.view_definition import ConversationViewDefinitionBase
-from go.vumitools.api import VumiApi, VumiUserApi
 
 
-class AuthenticationTestCase(VumiGoDjangoTestCase):
-
-    use_riak = True
+class TestAuthentication(GoDjangoTestCase):
 
     def setUp(self):
-        super(AuthenticationTestCase, self).setUp()
-        self.setup_api()
-        self.user = self.mk_django_user()
-        self.client = Client()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user = self.vumi_helper.make_django_user().get_django_user()
 
     def test_user_account_created(self):
         """test that we have a user account"""
@@ -51,12 +46,11 @@ class FakeTemplateToken(object):
         self.contents = contents
 
 
-class UtilsTestCase(VumiGoDjangoTestCase):
+class TestUtils(GoDjangoTestCase):
 
     def setUp(self):
-        super(UtilsTestCase, self).setUp()
-        self.setup_api()
-        self.user = self.mk_django_user()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user = self.vumi_helper.make_django_user().get_django_user()
 
     def test_vumi_api_for_user(self):
         user_api = utils.vumi_api_for_user(self.user)

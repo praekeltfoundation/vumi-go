@@ -16,7 +16,7 @@ class TestConversationWrapper(VumiTestCase):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'username')
         self.msg_helper = self.add_helper(
-            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
+            GoMessageHelper(vumi_helper=self.vumi_helper))
 
         self.conv = yield self.user_helper.create_conversation(u'dummy')
         yield self.vumi_helper.setup_tagpool(

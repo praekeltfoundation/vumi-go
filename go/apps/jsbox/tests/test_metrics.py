@@ -2,16 +2,15 @@
 
 import mock
 
-from twisted.trial.unittest import TestCase
-
 from vumi.application.sandbox import SandboxCommand
+from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
 from go.apps.jsbox.metrics import (
     MetricEvent, MetricEventError, MetricsResource)
 
 
-class TestMetricEvent(TestCase):
+class TestMetricEvent(VumiTestCase):
 
     SUM = MetricEvent.AGGREGATORS['sum']
 
@@ -90,7 +89,7 @@ class TestMetricEvent(TestCase):
                 'store': 'mystore', 'metric': 'foo', 'value': 1.5})
 
 
-class TestMetricsResource(TestCase):
+class TestMetricsResource(VumiTestCase):
 
     SUM = MetricEvent.AGGREGATORS['sum']
 
