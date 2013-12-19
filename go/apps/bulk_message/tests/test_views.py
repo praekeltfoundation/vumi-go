@@ -2,102 +2,112 @@ from django.core.urlresolvers import reverse
 
 from vumi.tests.utils import RegexMatcher
 
-from go.vumitools.tests.utils import VumiApiCommand
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.api import VumiApiCommand
 from go.vumitools.token_manager import TokenManager
-from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
-class BulkMessageTestCase(DjangoGoApplicationTestCase):
+class TestBulkMessageViews(GoDjangoTestCase):
 
-    TEST_CONVERSATION_TYPE = u'bulk_message'
-    TEST_CHANNEL_METADATA = {
-        "supports": {
-            "generic_sends": True,
-        },
-    }
+    def setUp(self):
+        self.app_helper = self.add_helper(AppViewsHelper(u'bulk_message'))
+        self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation()
-        response = self.client.get(self.get_view_url('show'))
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
+        response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        self.assertEqual(conversation.name, u"myconv")
         self.assertContains(response, 'Write and send bulk message')
-        self.assertNotContains(response, self.get_action_view_url('bulk_send'))
+        self.assertNotContains(
+            response, conv_helper.get_action_view_url('bulk_send'))
 
     def test_show_running(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
-        response = self.client.get(self.get_view_url('show'))
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv", started=True, channel=channel, groups=[group])
+        response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        self.assertEqual(conversation.name, u"myconv")
         self.assertContains(response, 'Write and send bulk message')
-        self.assertContains(response, self.get_action_view_url('bulk_send'))
+        self.assertContains(
+            response, conv_helper.get_action_view_url('bulk_send'))
 
     def test_action_bulk_send_view(self):
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
-        response = self.client.get(self.get_action_view_url('bulk_send'))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
-        self.assertEqual([], self.get_api_commands_sent())
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, channel=channel, groups=[group])
+        response = self.client.get(
+            conv_helper.get_action_view_url('bulk_send'))
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
         self.assertContains(response, 'name="message"')
         self.assertContains(response, '<h1>Write and send bulk message</h1>')
         self.assertContains(response, '>Send message</button>')
 
     def test_action_bulk_send_no_group(self):
-        self.setup_conversation(started=True)
+        conv_helper = self.app_helper.create_conversation_helper(started=True)
         response = self.client.post(
-            self.get_action_view_url('bulk_send'),
+            conv_helper.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True},
             follow=True)
-        self.assertRedirects(response, self.get_view_url('show'))
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
             str(msg), "Action disabled: This action needs a contact group.")
-        self.assertEqual([], self.get_api_commands_sent())
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
 
     def test_action_bulk_send_not_running(self):
-        self.setup_conversation(with_group=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        conv_helper = self.app_helper.create_conversation_helper(
+            groups=[group])
         response = self.client.post(
-            self.get_action_view_url('bulk_send'),
+            conv_helper.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True},
             follow=True)
-        self.assertRedirects(response, self.get_view_url('show'))
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
             str(msg),
             "Action disabled: This action needs a running conversation.")
-        self.assertEqual([], self.get_api_commands_sent())
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
 
     def test_action_bulk_send_no_channel(self):
-        self.setup_conversation(started=True, with_group=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, groups=[group])
         response = self.client.post(
-            self.get_action_view_url('bulk_send'),
+            conv_helper.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True},
             follow=True)
-        self.assertRedirects(response, self.get_view_url('show'))
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
             str(msg),
             "Action disabled: This action needs channels capable of sending"
             " messages attached to this conversation.")
-        self.assertEqual([], self.get_api_commands_sent())
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
 
     def test_action_bulk_send_dedupe(self):
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, channel=channel, groups=[group])
         response = self.client.post(
-            self.get_action_view_url('bulk_send'),
+            conv_helper.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True})
-        self.assertRedirects(response, self.get_view_url('show'))
-        [bulk_send_cmd] = self.get_api_commands_sent()
-        conversation = self.get_wrapped_conv()
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        [bulk_send_cmd] = self.app_helper.get_api_commands_sent()
+        conversation = conv_helper.get_conversation()
         self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'bulk_send',
@@ -108,14 +118,16 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             content='I am ham, not spam.', dedupe=True))
 
     def test_action_bulk_send_no_dedupe(self):
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, channel=channel, groups=[group])
         response = self.client.post(
-            self.get_action_view_url('bulk_send'),
+            conv_helper.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': False})
-        self.assertRedirects(response, self.get_view_url('show'))
-        [bulk_send_cmd] = self.get_api_commands_sent()
-        conversation = self.get_wrapped_conv()
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        [bulk_send_cmd] = self.app_helper.get_api_commands_sent()
+        conversation = conv_helper.get_conversation()
         self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'bulk_send',
@@ -131,26 +143,28 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         # TODO: Break this test into smaller bits and move them to a more
         #       appropriate module.
-        user_account = self.user_api.get_user_account()
+        user_account = self.app_helper.get_or_create_user().get_user_account()
         user_account.msisdn = u'+27761234567'
         user_account.confirm_start_conversation = True
         user_account.save()
 
         # Start the conversation
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, channel=channel, groups=[group])
 
         # POST the action with a mock token manager
         self.monkey_patch(
             TokenManager, 'generate_token', lambda s: ('abcdef', '123456'))
         response = self.client.post(
-            self.get_action_view_url('bulk_send'),
+            conv_helper.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True})
-        self.assertRedirects(response, self.get_view_url('show'))
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
 
         # Check that we get a confirmation message
-        [token_send_cmd] = self.get_api_commands_sent()
-        conversation = self.get_wrapped_conv()
+        [token_send_cmd] = self.app_helper.get_api_commands_sent()
+        conversation = conv_helper.get_conversation()
         self.assertEqual(
             VumiApiCommand.command(
                 '%s_application' % (conversation.conversation_type,),
@@ -172,15 +186,14 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             reverse('token', kwargs={'token': 'abcdef'}))
         self.assertRedirects(
             confirm_response,
-            self.get_view_url('confirm') + '?token=6-abcdef123456')
+            conv_helper.get_view_url('confirm') + '?token=6-abcdef123456')
 
         # POST the full token to the confirmation URL
-        final_response = self.client.post(self.get_view_url('confirm'), {
-            'token': '6-abcdef123456',
-        })
-        self.assertRedirects(final_response, self.get_view_url('show'))
+        final_response = self.client.post(
+            conv_helper.get_view_url('confirm'), {'token': '6-abcdef123456'})
+        self.assertRedirects(final_response, conv_helper.get_view_url('show'))
 
-        [bulk_send_cmd] = self.get_api_commands_sent()
+        [bulk_send_cmd] = self.app_helper.get_api_commands_sent()
         self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'bulk_send',

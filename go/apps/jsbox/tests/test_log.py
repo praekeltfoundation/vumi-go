@@ -6,19 +6,19 @@ import datetime
 import re
 
 from mock import Mock
-from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.tests.utils import LogCatcher
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
+from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+from vumi.tests.utils import LogCatcher
 
 from go.apps.jsbox.log import LogManager, GoLoggingResource
-from go.vumitools.tests.utils import GoPersistenceMixin
 
 
 class LogCheckerMixin(object):
     """Mixing for test cases that want to check logs."""
+    # TODO: Make this a helper.
     def parse_iso_format(self, iso_string):
         dt_string, _sep, micro_string = iso_string.partition(".")
         dt = datetime.datetime.strptime(dt_string, "%Y-%m-%dT%H:%M:%S")
@@ -44,19 +44,13 @@ class LogCheckerMixin(object):
         self.assertEqual(len(actual), len(expected))
 
 
-class TestTxLogManager(TestCase, GoPersistenceMixin, LogCheckerMixin):
+class TestTxLogManager(VumiTestCase, LogCheckerMixin):
     @inlineCallbacks
     def setUp(self):
-        super(TestTxLogManager, self).setUp()
-        yield self._persist_setUp()
-        self.parent_redis = yield self.get_redis_manager()
+        self.persistence_helper = self.add_helper(PersistenceHelper())
+        self.parent_redis = yield self.persistence_helper.get_redis_manager()
         self.redis = self.parent_redis.sub_manager(
             LogManager.DEFAULT_SUB_STORE)
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield super(TestTxLogManager, self).tearDown()
-        yield self._persist_tearDown()
 
     def log_manager(self, max_logs=None):
         return LogManager(self.parent_redis, max_logs)
@@ -106,16 +100,15 @@ class StubbedAppWorker(DummyAppWorker):
         return self.conversation
 
 
-class TestGoLoggingResource(ResourceTestCaseBase, GoPersistenceMixin,
-                            LogCheckerMixin):
+class TestGoLoggingResource(ResourceTestCaseBase, LogCheckerMixin):
     app_worker_cls = StubbedAppWorker
     resource_cls = GoLoggingResource
 
     @inlineCallbacks
     def setUp(self):
         super(TestGoLoggingResource, self).setUp()
-        yield self._persist_setUp()
-        self.parent_redis = yield self.get_redis_manager()
+        self.persistence_helper = self.add_helper(PersistenceHelper())
+        self.parent_redis = yield self.persistence_helper.get_redis_manager()
         self.redis = self.parent_redis.sub_manager(
             LogManager.DEFAULT_SUB_STORE)
         yield self.create_resource({
@@ -128,11 +121,6 @@ class TestGoLoggingResource(ResourceTestCaseBase, GoPersistenceMixin,
         self.user_account = Mock(key="campaign-1")
         self.conversation = Mock(key="conv-1", user_account=self.user_account)
         self.resource.app_worker.conversation = self.conversation
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield super(TestGoLoggingResource, self).tearDown()
-        yield self._persist_tearDown()
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)

@@ -1,19 +1,19 @@
 from django.contrib.auth import get_user_model
-from go.base.tests.utils import VumiGoDjangoTestCase
+
 from go.base.management.commands import go_create_user
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class GoCreateUserCommandTestCase(VumiGoDjangoTestCase):
-
-    use_riak = True
+class TestGoCreateUserCommand(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.command = go_create_user.Command()
 
     def test_user_creation(self):
-        self.setup_api()
         user_model = get_user_model()
         user_query = user_model.objects.filter(email='test@user.com')
         self.assertFalse(user_query.exists())
-        command = go_create_user.Command()
-        command.handle(**{
+        self.command.handle(**{
             'email-address': 'test@user.com',
             'password': '123',
             'name': 'Name',

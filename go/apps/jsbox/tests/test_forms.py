@@ -1,11 +1,10 @@
 
-from django.test import TestCase
-
 from go.apps.jsbox.forms import (JsboxForm, JsboxAppConfigForm,
                                  JsboxAppConfigFormset)
+from go.base.tests.helpers import GoDjangoTestCase
 
 
-class JsboxFormTestCase(TestCase):
+class TestJsboxForm(GoDjangoTestCase):
     def test_initial_form_metadata(self):
         initial = JsboxForm.initial_from_config({
             'javascript': 'x = 1;',
@@ -28,7 +27,7 @@ class JsboxFormTestCase(TestCase):
         })
 
 
-class JsboxAppConfigFormTestCase(TestCase):
+class TestJsboxAppConfigForm(GoDjangoTestCase):
     def test_initial_from_config(self):
         initial = JsboxAppConfigForm.initial_from_config({
             'key': 'foo',
@@ -55,7 +54,7 @@ class JsboxAppConfigFormTestCase(TestCase):
         })
 
 
-class JsboxAppConfigFormsetTestCase(TestCase):
+class TestJsboxAppConfigFormset(GoDjangoTestCase):
     def test_initial_from_config(self):
         initials = JsboxAppConfigFormset.initial_from_config({
             'foo1': {'value': 'bar', 'source_url': 'http://example.com/1'},

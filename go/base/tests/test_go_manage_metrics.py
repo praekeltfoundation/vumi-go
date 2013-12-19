@@ -1,19 +1,15 @@
 from StringIO import StringIO
 
-from go.base.utils import vumi_api_for_user
-from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_manage_metrics
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
+class TestGoManageMetricsCommand(GoDjangoTestCase):
 
     def setUp(self):
-        super(GoManageApplicationCommandTestCase, self).setUp()
-        self.setup_api()
-        self.user = self.mk_django_user()
-        user_api = vumi_api_for_user(self.user)
-        self.user_account_key = user_api.user_account_key
-        self.redis = user_api.api.redis
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.redis = self.vumi_helper.get_vumi_api().redis
 
         self.stdout = StringIO()
         self.stderr = StringIO()
@@ -24,21 +20,21 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
         command.stderr = self.stderr
         command.handle(**kw)
 
-    def set_metrics(self, user, disabled):
+    def set_metrics(self, disabled):
         command = "disable" if disabled else "enable"
         self.run_command(**{
-            'email_address': user.email,
+            'email_address': self.user_helper.get_django_user().email,
             'command': [command],
         })
 
     def test_enable_metrics(self):
-        self.set_metrics(self.user, disabled=True)
+        self.set_metrics(disabled=True)
 
         self.assertEqual(
-            set([self.user_account_key]),
+            set([self.user_helper.account_key]),
             self.redis.smembers('disabled_metrics_accounts'))
 
-        self.set_metrics(self.user, disabled=False)
+        self.set_metrics(disabled=False)
 
         self.assertEqual(
             set(),
@@ -49,10 +45,10 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
             set(),
             self.redis.smembers('disabled_metrics_accounts'))
 
-        self.set_metrics(self.user, disabled=True)
+        self.set_metrics(disabled=True)
 
         self.assertEqual(
-            set([self.user_account_key]),
+            set([self.user_helper.account_key]),
             self.redis.smembers('disabled_metrics_accounts'))
 
     def test_enable_metrics_when_not_disabled(self):
@@ -60,20 +56,20 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
             set(),
             self.redis.smembers('disabled_metrics_accounts'))
 
-        self.set_metrics(self.user, disabled=False)
+        self.set_metrics(disabled=False)
 
         self.assertEqual(
             set(),
             self.redis.smembers('disabled_metrics_accounts'))
 
     def test_listing(self):
-        self.set_metrics(self.user, disabled=True)
+        self.set_metrics(disabled=True)
         self.run_command(command=['list'])
 
         self.assertEqual(
             self.stdout.getvalue(),
             '0. Test User <user@domain.com> [%s]\n' % (
-                self.user.get_profile().user_account))
+                self.user_helper.account_key,))
 
     def test_listing_for_no_accounts_disabled(self):
         self.run_command(command=['list'])

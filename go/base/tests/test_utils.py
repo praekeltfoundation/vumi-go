@@ -1,14 +1,14 @@
 """Test for go.base.utils."""
 
-from go.base.tests.utils import VumiGoDjangoTestCase
-from go.errors import UnknownConversationType, UnknownRouterType
-
+from go.base.tests.helpers import GoDjangoTestCase
 import go.base.utils
 from go.base.utils import (
     get_conversation_view_definition, get_router_view_definition)
+from go.errors import UnknownConversationType, UnknownRouterType
 
 
-class ConversationDefinitionHelpersTestCase(VumiGoDjangoTestCase):
+class TestConversationDefinitionHelpers(GoDjangoTestCase):
+
     def test_get_conversation_view_definition(self):
         view_def = get_conversation_view_definition('bulk_message')
         from go.apps.bulk_message.view_definition import (
@@ -26,13 +26,15 @@ class ConversationDefinitionHelpersTestCase(VumiGoDjangoTestCase):
             get_conversation_view_definition, 'not_droids')
 
     def test_get_conversation_view_definition_obsolete_conv_type(self):
-        self.monkey_patch(go.base.utils, 'obsolete_conversation_types',
-                   lambda: set(['old_conv']))
+        self.monkey_patch(
+            go.base.utils, 'obsolete_conversation_types',
+            lambda: set(['old_conv']))
         view_def = get_conversation_view_definition('old_conv')
         self.assertEqual(view_def._conv_def.conversation_type, 'old_conv')
 
 
-class RouterDefinitionHelpersTestCase(VumiGoDjangoTestCase):
+class TestRouterDefinitionHelpers(GoDjangoTestCase):
+
     def test_get_router_view_definition(self):
         view_def = get_router_view_definition('keyword')
         from go.routers.keyword.view_definition import (
@@ -50,7 +52,8 @@ class RouterDefinitionHelpersTestCase(VumiGoDjangoTestCase):
             get_router_view_definition, 'not_the_router_we_are_looking_for')
 
     def test_get_router_view_definition_obsolete_router_type(self):
-        self.monkey_patch(go.base.utils, 'obsolete_router_types',
-                   lambda: set(['old_router']))
+        self.monkey_patch(
+            go.base.utils, 'obsolete_router_types',
+            lambda: set(['old_router']))
         view_def = get_router_view_definition('old_router')
         self.assertEqual(view_def._router_def.router_type, 'old_router')
