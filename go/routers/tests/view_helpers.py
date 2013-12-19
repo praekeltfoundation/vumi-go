@@ -19,7 +19,6 @@ class RouterViewsHelper(object):
         self.vumi_helper = DjangoVumiApiHelper()
         self._router_helper = RouterHelper(
             router_type, self.vumi_helper)
-        self._router_helper.router_wrapper = self.get_router_helper
 
         # Create the things we need to create
         self.vumi_helper.setup_vumi_api()
@@ -40,6 +39,10 @@ class RouterViewsHelper(object):
 
     def get_router_helper(self, router):
         return self.get_router_helper_by_key(router.key)
+
+    def create_router_helper(self, *args, **kw):
+        router = self.create_router(*args, **kw)
+        return self.get_router_helper(router)
 
     def get_router_helper_by_key(self, router_key):
         return RouterViewHelper(self, router_key)

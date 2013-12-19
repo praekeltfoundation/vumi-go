@@ -16,7 +16,6 @@ class RouterHelper(object):
         self.is_sync = vumi_helper.is_sync
         self._router_type = router_type
         self.vumi_helper = vumi_helper
-        self.router_wrapper = None
 
     def setup(self):
         pass
@@ -58,8 +57,6 @@ class RouterHelper(object):
         user_helper = yield self.vumi_helper.get_or_create_user()
         router = yield user_helper.create_router(
             self._router_type, started=started, **router_kw)
-        if self.router_wrapper is not None:
-            router = self.router_wrapper(router)
         returnValue(router)
 
     @proxyable

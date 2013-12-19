@@ -23,7 +23,7 @@ class KeywordViewTests(GoDjangoTestCase):
         self.assertRedirects(response, rtr_helper.get_view_url('edit'))
 
     def test_show_stopped(self):
-        rtr_helper = self.router_helper.create_router(name=u"myrouter")
+        rtr_helper = self.router_helper.create_router_helper(name=u"myrouter")
         response = self.client.get(rtr_helper.get_view_url('show'))
         router = response.context[0].get('router')
         self.assertEqual(router.name, u"myrouter")
@@ -31,7 +31,7 @@ class KeywordViewTests(GoDjangoTestCase):
         self.assertNotContains(response, rtr_helper.get_view_url('stop'))
 
     def test_show_running(self):
-        rtr_helper = self.router_helper.create_router(
+        rtr_helper = self.router_helper.create_router_helper(
             name=u"myrouter", started=True)
         response = self.client.get(rtr_helper.get_view_url('show'))
         router = response.context[0].get('router')
@@ -40,7 +40,7 @@ class KeywordViewTests(GoDjangoTestCase):
         self.assertContains(response, rtr_helper.get_view_url('stop'))
 
     def test_start(self):
-        rtr_helper = self.router_helper.create_router(started=False)
+        rtr_helper = self.router_helper.create_router_helper(started=False)
 
         response = self.client.post(rtr_helper.get_view_url('start'))
         self.assertRedirects(response, rtr_helper.get_view_url('show'))
@@ -54,7 +54,7 @@ class KeywordViewTests(GoDjangoTestCase):
                 router_key=router.key))
 
     def test_stop(self):
-        rtr_helper = self.router_helper.create_router(started=True)
+        rtr_helper = self.router_helper.create_router_helper(started=True)
 
         response = self.client.post(rtr_helper.get_view_url('stop'))
         self.assertRedirects(response, rtr_helper.get_view_url('show'))
@@ -68,21 +68,24 @@ class KeywordViewTests(GoDjangoTestCase):
                 router_key=router.key))
 
     def test_get_edit_empty_config(self):
-        rtr_helper = self.router_helper.create_router(started=True)
+        rtr_helper = self.router_helper.create_router_helper(started=True)
         response = self.client.get(rtr_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
 
     def test_get_edit_small_config(self):
-        rtr_helper = self.router_helper.create_router(started=True, config={
-            'keyword_endpoint_mapping': {'mykeyw[o0]rd': 'target_endpoint'},
-        })
+        rtr_helper = self.router_helper.create_router_helper(
+            started=True, config={
+                'keyword_endpoint_mapping': {
+                    'mykeyw[o0]rd': 'target_endpoint',
+                },
+            })
         response = self.client.get(rtr_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'mykeyw[o0]rd')
         self.assertContains(response, 'target_endpoint')
 
     def test_edit_router_keyword_config(self):
-        rtr_helper = self.router_helper.create_router(started=True)
+        rtr_helper = self.router_helper.create_router_helper(started=True)
         router = rtr_helper.get_router()
         self.assertEqual(router.config, {})
         response = self.client.post(rtr_helper.get_view_url('edit'), {
