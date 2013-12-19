@@ -21,9 +21,8 @@ class TestDialogueViews(GoDjangoTestCase):
                 self.app_helper.create_group_with_contacts(u'test_group', 0))
         channel = None
         if with_channel:
-            channel = self.app_helper.create_channel({
-                "supports": {"generic_sends": True},
-            })
+            channel = self.app_helper.create_channel(
+                supports_generic_sends=True)
         return self.app_helper.create_conversation(
             channel=channel, groups=groups, **kw)
 

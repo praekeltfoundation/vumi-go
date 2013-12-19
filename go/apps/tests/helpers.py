@@ -74,7 +74,12 @@ class ApplicationHelper(object):
 
     @proxyable
     @maybe_async
-    def create_channel(self, metadata=None):
+    def create_channel(self, metadata=None, supports_generic_sends=None):
+        if supports_generic_sends is not None:
+            if metadata is None:
+                metadata = {}
+            supports = metadata.setdefault('supports', {})
+            supports['generic_sends'] = supports_generic_sends
         yield self.vumi_helper.setup_tagpool(u"pool", [u"tag"], metadata)
         user_helper = yield self.vumi_helper.get_or_create_user()
         yield user_helper.add_tagpool_permission(u"pool")

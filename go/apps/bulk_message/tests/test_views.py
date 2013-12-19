@@ -31,9 +31,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
         Test showing the conversation
         """
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
-        channel = self.app_helper.create_channel({
-            "supports": {"generic_sends": True},
-        })
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
         conv_helper = self.app_helper.create_conversation(
             name=u"myconv", started=True, channel=channel, groups=[group])
         response = self.client.get(conv_helper.get_view_url('show'))
@@ -45,9 +43,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
 
     def test_action_bulk_send_view(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
-        channel = self.app_helper.create_channel({
-            "supports": {"generic_sends": True},
-        })
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
         conv_helper = self.app_helper.create_conversation(
             started=True, channel=channel, groups=[group])
         response = self.client.get(
@@ -101,9 +97,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
 
     def test_action_bulk_send_dedupe(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
-        channel = self.app_helper.create_channel({
-            "supports": {"generic_sends": True},
-        })
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
         conv_helper = self.app_helper.create_conversation(
             started=True, channel=channel, groups=[group])
         response = self.client.post(
@@ -123,9 +117,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
 
     def test_action_bulk_send_no_dedupe(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
-        channel = self.app_helper.create_channel({
-            "supports": {"generic_sends": True},
-        })
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
         conv_helper = self.app_helper.create_conversation(
             started=True, channel=channel, groups=[group])
         response = self.client.post(
@@ -156,9 +148,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
 
         # Start the conversation
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
-        channel = self.app_helper.create_channel({
-            "supports": {"generic_sends": True},
-        })
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
         conv_helper = self.app_helper.create_conversation(
             started=True, channel=channel, groups=[group])
 
