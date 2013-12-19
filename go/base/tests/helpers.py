@@ -60,6 +60,7 @@ class DjangoVumiApiHelper(object):
         # TODO: Better/more generic way to do this patching?
         self._settings_patches = []
         self.replace_django_bits()
+        self.amqp_connection = self._vumi_helper.django_amqp_connection
 
     def setup(self, setup_vumi_api=True):
         if setup_vumi_api:
@@ -155,11 +156,6 @@ class DjangoVumiApiHelper(object):
         # wrapping it because we only need the one thing.
         user_helper.get_django_user = lambda: (
             get_user_model().objects.get(pk=instance.pk))
-
-    @property
-    def amqp_connection(self):
-        # This is a property so that we get the patched version.
-        return base_utils.connection
 
 
 class GoAccountCommandTestCase(GoDjangoTestCase):

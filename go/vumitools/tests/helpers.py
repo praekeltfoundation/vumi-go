@@ -297,9 +297,11 @@ class VumiApiHelper(object):
         # We might need an AMQP connection at some point.
         broker = self.get_worker_helper().broker
         broker.exchange_declare('vumi', 'direct')
-        amqp_connection = FakeAmqpConnection(broker)
-        self.monkey_patch(go.base.utils, 'connection', amqp_connection)
-        self.monkey_patch(go.base.amqp, 'connection', amqp_connection)
+        self.django_amqp_connection = FakeAmqpConnection(broker)
+        self.monkey_patch(
+            go.base.utils, 'connection', self.django_amqp_connection)
+        self.monkey_patch(
+            go.base.amqp, 'connection', self.django_amqp_connection)
 
     def get_worker_helper(self, connector_name=None):
         if connector_name not in self._worker_helpers:
