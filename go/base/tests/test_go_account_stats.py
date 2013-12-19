@@ -59,7 +59,7 @@ class TestGoAccountStatsCommand(GoDjangoTestCase):
         self.assertTrue(active_conv.key in output[0])
 
     def test_stats(self):
-        msg_helper = GoMessageHelper(mdb=self.vumi_helper.get_vumi_api().mdb)
+        msg_helper = GoMessageHelper(vumi_helper=self.vumi_helper)
         conv = self.user_helper.create_conversation(
             u'bulk_message', name=u'active', started=True)
         msgs = msg_helper.add_inbound_to_conv(conv, 5, time_multiplier=0)

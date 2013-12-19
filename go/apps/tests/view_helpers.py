@@ -70,11 +70,11 @@ class ConversationViewHelper(object):
         return self.app_helper.get_conversation(self.conversation_key)
 
     def add_stored_inbound(self, count, **kw):
-        msg_helper = GoMessageHelper(mdb=self.app_helper.get_vumi_api().mdb)
+        msg_helper = GoMessageHelper(vumi_helper=self.app_helper)
         conv = self.get_conversation()
         return msg_helper.add_inbound_to_conv(conv, count, **kw)
 
     def add_stored_replies(self, msgs):
-        msg_helper = GoMessageHelper(mdb=self.app_helper.get_vumi_api().mdb)
+        msg_helper = GoMessageHelper(vumi_helper=self.app_helper)
         conv = self.get_conversation()
         return msg_helper.add_replies_to_conv(conv, msgs)

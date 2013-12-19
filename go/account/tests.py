@@ -186,7 +186,7 @@ class TestEmail(GoDjangoTestCase):
         self.assertTrue('bar' in email.body)
 
     def test_daily_account_summary(self):
-        msg_helper = GoMessageHelper(mdb=self.vumi_helper.get_vumi_api().mdb)
+        msg_helper = GoMessageHelper(vumi_helper=self.vumi_helper)
         conv = self.user_helper.create_conversation(
             u'bulk_message', name=u'Test Conversation', started=True)
         self.user_helper.contact_store.new_contact(

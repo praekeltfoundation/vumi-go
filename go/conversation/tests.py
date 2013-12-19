@@ -304,7 +304,7 @@ class TestConversationViews(BaseConversationViewTestCase):
     def setUp(self):
         super(TestConversationViews, self).setUp()
         self.msg_helper = self.add_helper(
-            GoMessageHelper(mdb=self.vumi_helper.get_vumi_api().mdb))
+            GoMessageHelper(vumi_helper=self.vumi_helper))
 
     def test_show_no_content_block(self):
         conv = self.user_helper.create_conversation(u'dummy')

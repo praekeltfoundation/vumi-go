@@ -47,10 +47,13 @@ class PatchHelper(object):
 class GoMessageHelper(object):
     implements(IHelper)
 
-    def __init__(self, mdb=None, **kw):
+    def __init__(self, vumi_helper=None, **kw):
         self._msg_helper = MessageHelper(**kw)
         self.transport_name = self._msg_helper.transport_name
-        self.mdb = mdb
+        self._vumi_helper = vumi_helper
+        self.mdb = None
+        if self._vumi_helper is not None:
+            self.mdb = self._vumi_helper.get_vumi_api().mdb
 
     def setup(self):
         pass
