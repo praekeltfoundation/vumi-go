@@ -149,13 +149,10 @@ class DjangoVumiApiHelper(object):
             return
 
         user_helper = self.make_user(
-            unicode(instance.email), enable_search=False)
+            unicode(instance.email), enable_search=False,
+            django_user_pk=instance.pk)
         base_models.UserProfile.objects.create(
             user=instance, user_account=user_helper.account_key)
-        # We add this to the helper instance rather than subclassing or
-        # wrapping it because we only need the one thing.
-        user_helper.get_django_user = lambda: (
-            get_user_model().objects.get(pk=instance.pk))
 
 
 class GoAccountCommandTestCase(GoDjangoTestCase):

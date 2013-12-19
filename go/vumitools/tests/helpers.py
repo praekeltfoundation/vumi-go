@@ -346,11 +346,11 @@ class VumiApiHelper(object):
 
     @proxyable
     @maybe_async
-    def make_user(self, username, enable_search=True):
+    def make_user(self, username, enable_search=True, django_user_pk=None):
         key = u"test-%s-user" % (len(self._user_helpers),)
         user = self.get_vumi_api().account_store.users(key, username=username)
         yield user.save()
-        user_helper = UserApiHelper(self, key)
+        user_helper = UserApiHelper(self, key, django_user_pk=django_user_pk)
         self._user_helpers[key] = user_helper
         if enable_search:
             contact_store = user_helper.user_api.contact_store
@@ -387,11 +387,14 @@ class VumiApiHelper(object):
 class UserApiHelper(object):
     implements(IHelper)
 
-    def __init__(self, vumi_helper, account_key):
+    def __init__(self, vumi_helper, account_key, django_user_pk=None):
         self.is_sync = vumi_helper.is_sync
         self._vumi_helper = vumi_helper
         self.account_key = account_key
         self.user_api = vumi_helper.get_vumi_api().get_user_api(account_key)
+
+        # For use in get_django_user, if applicable.
+        self._django_user_pk = django_user_pk
 
         # Easier access to these stores is useful.
         self.contact_store = self.user_api.contact_store
@@ -405,6 +408,12 @@ class UserApiHelper(object):
     @proxyable
     def get_user_account(self):
         return self.user_api.get_user_account()
+
+    def get_django_user(self):
+        if self._django_user_pk is None:
+            raise RuntimeError("get_django_user() only works in Django-land.")
+        from django.contrib.auth import get_user_model
+        return get_user_model().objects.get(pk=self._django_user_pk)
 
     @proxyable
     @maybe_async
