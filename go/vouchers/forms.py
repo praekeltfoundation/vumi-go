@@ -74,7 +74,7 @@ class BaseVoucherPoolForm(forms.ModelForm):
         """
         account = self.user.get_account()
         pool_name = re.sub(r'\W+', '_', pool_name.strip().lower())
-        return "%s%s_%s" % (settings.GO_POOL_NAME_PREFIX,
+        return "%s%s_%s" % (settings.GO_VOUCHER_POOL_PREFIX,
                             account.account_number, pool_name)
 
     def _import_csv_file(self, voucher_pool):
