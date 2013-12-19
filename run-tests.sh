@@ -11,7 +11,7 @@ echo "=== Running tests..."
 # This is necessary so that we import test modules from the working dir instead
 # of the installed package.
 export PYTHONPATH=.
-./run-tests-pytest.sh --cov=go
+./run-tests-pytest.sh --cov=go go/
 echo "=== Checking for PEP-8 violations..."
 pep8 --repeat go | grep -v '^go/\(base\|billing\)/\(auth_\|registration_\)\?migrations/' | tee pep8.txt
 echo "=== Done."
