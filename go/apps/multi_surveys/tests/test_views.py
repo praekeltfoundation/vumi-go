@@ -32,13 +32,15 @@ class TestMultiSurveyViews(GoDjangoTestCase):
         """
         Test showing the conversation
         """
-        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
         response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'myconv')
 
     def test_export_messages(self):
-        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
         msgs = conv_helper.add_stored_inbound(
             5, start_date=date(2012, 1, 1), time_multiplier=12)
         conversation = conv_helper.get_conversation()

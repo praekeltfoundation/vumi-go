@@ -15,14 +15,15 @@ class TestJsBoxViews(GoDjangoTestCase):
         self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):
-        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
         response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, u"myconv")
         self.assertContains(response, '<h1>myconv</h1>')
 
     def test_show_running(self):
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             name=u"myconv", started=True)
         response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
@@ -30,7 +31,7 @@ class TestJsBoxViews(GoDjangoTestCase):
         self.assertContains(response, '<h1>myconv</h1>')
 
     def setup_and_save_conversation(self, app_config):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         # render the form
         response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
@@ -84,7 +85,7 @@ class TestJsBoxViews(GoDjangoTestCase):
         self.assertEqual(list(conversation.extra_endpoints), ['foo:bar'])
 
     def test_jsbox_logs(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         campaign_key = conv_helper.get_conversation().user_account.key
         log_manager = LogManager(
             self.app_helper.vumi_helper.get_vumi_api().redis)
@@ -97,19 +98,19 @@ class TestJsBoxViews(GoDjangoTestCase):
             self.assertContains(response, "INFO] test %d" % i)
 
     def test_jsbox_empty_logs(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         response = self.client.get(conv_helper.get_view_url('jsbox_logs'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No logs yet.")
 
     def test_jsbox_logs_action(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         response = self.client.get(
             conv_helper.get_action_view_url('view_logs'))
         self.assertRedirects(response, conv_helper.get_view_url('jsbox_logs'))
 
     def test_jsbox_report_layout_building(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         conversation = conv_helper.get_conversation()
         conversation.config['jsbox_app_config'] = {
             'reports': {
@@ -141,7 +142,7 @@ class TestJsBoxViews(GoDjangoTestCase):
         }])
 
     def test_jsbox_report_layout_building_for_no_report_config(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         conversation = conv_helper.get_conversation()
 
         default_reports_view = ConversationReportsView()

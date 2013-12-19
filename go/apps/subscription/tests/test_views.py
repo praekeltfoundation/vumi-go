@@ -13,7 +13,8 @@ class TestSubscriptionViews(GoDjangoTestCase):
         """
         Test showing the conversation
         """
-        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
         response = self.client.get(conv_helper.get_view_url('show'))
         self.assertContains(response, u"<h1>myconv</h1>")
 
@@ -21,7 +22,7 @@ class TestSubscriptionViews(GoDjangoTestCase):
         """
         Test showing the conversation
         """
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             name=u"myconv", started=True)
         response = self.client.get(conv_helper.get_view_url('show'))
         self.assertContains(response, u"<h1>myconv</h1>")

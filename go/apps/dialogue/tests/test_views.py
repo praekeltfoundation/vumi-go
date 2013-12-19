@@ -23,7 +23,7 @@ class TestDialogueViews(GoDjangoTestCase):
         if with_channel:
             channel = self.app_helper.create_channel(
                 supports_generic_sends=True)
-        return self.app_helper.create_conversation(
+        return self.app_helper.create_conversation_helper(
             channel=channel, groups=groups, **kw)
 
     def test_action_send_dialogue_get(self):

@@ -26,7 +26,7 @@ class TestSurveysViews(GoDjangoTestCase):
     def test_action_send_survey_get(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             name=u"myconv", started=True, channel=channel, groups=[group])
         response = self.client.get(
             conv_helper.get_action_view_url('send_survey'))
@@ -37,7 +37,7 @@ class TestSurveysViews(GoDjangoTestCase):
     def test_action_send_survey_post(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=True, channel=channel, groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('send_survey'), {}, follow=True)
@@ -54,7 +54,7 @@ class TestSurveysViews(GoDjangoTestCase):
 
     def test_action_send_survey_no_group(self):
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=True, channel=channel)
         response = self.client.post(
             conv_helper.get_action_view_url('send_survey'), {}, follow=True)
@@ -67,7 +67,7 @@ class TestSurveysViews(GoDjangoTestCase):
     def test_action_send_survey_not_running(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=False, channel=channel, groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('send_survey'), {}, follow=True)
@@ -80,7 +80,7 @@ class TestSurveysViews(GoDjangoTestCase):
 
     def test_action_send_survey_no_channel(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=True, groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('send_survey'), {}, follow=True)
@@ -96,7 +96,8 @@ class TestSurveysViews(GoDjangoTestCase):
         """
         Test showing the conversation
         """
-        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
         response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, u"myconv")
@@ -109,7 +110,7 @@ class TestSurveysViews(GoDjangoTestCase):
         """
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             name=u"myconv", started=True, channel=channel, groups=[group])
         response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
@@ -118,7 +119,7 @@ class TestSurveysViews(GoDjangoTestCase):
             response, conv_helper.get_action_view_url('send_survey'))
 
     def test_edit(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         response = self.client.post(conv_helper.get_view_url('edit'), {
             'questions-TOTAL_FORMS': 1,
             'questions-INITIAL_FORMS': 0,
@@ -140,7 +141,7 @@ class TestSurveysViews(GoDjangoTestCase):
         self.assertEqual(question['label'], 'favorite music')
 
     def test_edit_continue_editing(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         response = self.client.post(conv_helper.get_view_url('edit'), {
             'questions-TOTAL_FORMS': 1,
             'questions-INITIAL_FORMS': 0,
@@ -165,7 +166,7 @@ class TestSurveysViews(GoDjangoTestCase):
     def test_action_export_user_data_get(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             name=u"myconv", started=True, channel=channel, groups=[group])
         response = self.client.get(
             conv_helper.get_action_view_url('download_user_data'))
@@ -206,7 +207,7 @@ class TestSurveysViews(GoDjangoTestCase):
         self.assertTrue(lines[1].endswith(',' + ','.join(answers)))
 
     def test_action_export_user_data_post(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         conversation = conv_helper.get_conversation()
         self.setup_poll(conversation, questions=2, answer=True)
 
@@ -220,7 +221,7 @@ class TestSurveysViews(GoDjangoTestCase):
         )
 
     def test_action_export_user_data_post_with_old_questions(self):
-        conv_helper = self.app_helper.create_conversation()
+        conv_helper = self.app_helper.create_conversation_helper()
         conversation = conv_helper.get_conversation()
         self.setup_poll(conversation, questions=2, answer=True)
 

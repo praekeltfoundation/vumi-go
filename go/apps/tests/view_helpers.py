@@ -19,7 +19,6 @@ class AppViewsHelper(object):
         self.vumi_helper = DjangoVumiApiHelper()
         self._app_helper = ApplicationHelper(
             conversation_type, self.vumi_helper)
-        self._app_helper.conversation_wrapper = self.get_conversation_helper
 
         # Create the things we need to create
         self.vumi_helper.setup_vumi_api()
@@ -40,6 +39,10 @@ class AppViewsHelper(object):
 
     def get_conversation_helper(self, conversation):
         return ConversationViewHelper(self, conversation.key)
+
+    def create_conversation_helper(self, *args, **kw):
+        conversation = self.create_conversation(*args, **kw)
+        return self.get_conversation_helper(conversation)
 
     def get_api_commands_sent(self):
         return base_utils.connection.get_commands()

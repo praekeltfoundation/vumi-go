@@ -18,7 +18,8 @@ class TestBulkMessageViews(GoDjangoTestCase):
         """
         Test showing the conversation
         """
-        conv_helper = self.app_helper.create_conversation(name=u"myconv")
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
         response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, u"myconv")
@@ -32,7 +33,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
         """
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             name=u"myconv", started=True, channel=channel, groups=[group])
         response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
@@ -44,7 +45,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
     def test_action_bulk_send_view(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=True, channel=channel, groups=[group])
         response = self.client.get(
             conv_helper.get_action_view_url('bulk_send'))
@@ -54,7 +55,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
         self.assertContains(response, '>Send message</button>')
 
     def test_action_bulk_send_no_group(self):
-        conv_helper = self.app_helper.create_conversation(started=True)
+        conv_helper = self.app_helper.create_conversation_helper(started=True)
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True},
@@ -67,7 +68,8 @@ class TestBulkMessageViews(GoDjangoTestCase):
 
     def test_action_bulk_send_not_running(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
-        conv_helper = self.app_helper.create_conversation(groups=[group])
+        conv_helper = self.app_helper.create_conversation_helper(
+            groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True},
@@ -81,7 +83,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
 
     def test_action_bulk_send_no_channel(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=True, groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
@@ -98,7 +100,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
     def test_action_bulk_send_dedupe(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=True, channel=channel, groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
@@ -118,7 +120,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
     def test_action_bulk_send_no_dedupe(self):
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=True, channel=channel, groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
@@ -149,7 +151,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
         # Start the conversation
         group = self.app_helper.create_group_with_contacts(u'test_group', 0)
         channel = self.app_helper.create_channel(supports_generic_sends=True)
-        conv_helper = self.app_helper.create_conversation(
+        conv_helper = self.app_helper.create_conversation_helper(
             started=True, channel=channel, groups=[group])
 
         # POST the action with a mock token manager

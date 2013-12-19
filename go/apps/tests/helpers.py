@@ -16,7 +16,6 @@ class ApplicationHelper(object):
         self.is_sync = vumi_helper.is_sync
         self._conversation_type = conversation_type
         self.vumi_helper = vumi_helper
-        self.conversation_wrapper = None
 
     def setup(self):
         pass
@@ -68,8 +67,6 @@ class ApplicationHelper(object):
                 channel.get_connector(), 'default',
                 conversation.get_connector(), 'default')
             yield user_account.save()
-        if self.conversation_wrapper is not None:
-            conversation = self.conversation_wrapper(conversation)
         returnValue(conversation)
 
     @proxyable
