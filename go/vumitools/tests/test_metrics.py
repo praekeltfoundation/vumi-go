@@ -143,7 +143,7 @@ class TestTxMetrics(VumiTestCase):
     def setUp(self):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.msg_helper = self.add_helper(
-            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
+            GoMessageHelper(vumi_helper=self.vumi_helper))
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         self.patch(time, 'time', lambda: 1985)
 
@@ -247,7 +247,7 @@ class TestMetricSet(VumiTestCase):
     def setUp(self):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.msg_helper = self.add_helper(
-            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
+            GoMessageHelper(vumi_helper=self.vumi_helper))
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         self.patch(time, 'time', lambda: 1985)
 
@@ -321,7 +321,7 @@ class TestConversationMetricSet(VumiTestCase):
     def setUp(self):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.msg_helper = self.add_helper(
-            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
+            GoMessageHelper(vumi_helper=self.vumi_helper))
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         self.conv = yield self.user_helper.create_conversation(
             conversation_type=u'some_conversation')
