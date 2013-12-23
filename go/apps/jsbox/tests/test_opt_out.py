@@ -1,58 +1,45 @@
 # -*- coding: utf-8 -*-
 
-from mock import Mock
-
-from twisted.internet.defer import inlineCallbacks, returnValue, succeed
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
 from go.apps.jsbox.opt_out import OptOutResource
-from go.vumitools.tests.utils import GoPersistenceMixin
-from go.vumitools.account import AccountStore
-from go.vumitools.contact import ContactStore
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
 
 
 class StubbedAppWorker(DummyAppWorker):
     def __init__(self):
         super(StubbedAppWorker, self).__init__()
-        self.user_api = Mock()
+        self.user_api = None
 
     def user_api_for_api(self, api):
         return self.user_api
 
 
-class OptOutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
-    use_riak = True
+class TestOptOutResource(ResourceTestCaseBase):
     app_worker_cls = StubbedAppWorker
     resource_cls = OptOutResource
 
     @inlineCallbacks
     def setUp(self):
-        super(OptOutResourceTestCase, self).setUp()
-        yield self._persist_setUp()
+        super(TestOptOutResource, self).setUp()
 
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.msg_helper = self.add_helper(GoMessageHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        user_account = yield self.user_helper.get_user_account()
+        user_account.can_manage_optouts = True
+        yield user_account.save()
 
-        # We pass `self` in as the VumiApi object here, because mk_user() just
-        # grabs .account_store off it.
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.account.can_manage_optouts = True
-        self.contact_store = ContactStore.from_user_account(self.account)
-        self.optout_store = OptOutStore.from_user_account(self.account)
-        yield self.contact_store.contacts.enable_search()
+        self.app_worker.user_api = self.user_helper.user_api
+
+        self.contact_store = self.user_helper.user_api.contact_store
+        self.optout_store = OptOutStore.from_user_account(user_account)
 
         yield self.create_resource({})
-
-        self.user_api = self.app_worker.user_api
-        self.user_api.contact_store = self.contact_store
-        self.user_api.optout_store = self.optout_store
-        self.user_api.get_user_account = Mock(
-            return_value=succeed(self.account))
 
         self.contact1 = yield self.new_contact(
             name=u'A',
@@ -63,10 +50,6 @@ class OptOutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
             name=u'B',
             surname=u'Person',
             msisdn=u'+27000000000')
-
-    def tearDown(self):
-        super(OptOutResourceTestCase, self).tearDown()
-        return self._persist_tearDown()
 
     def optout(self, msisdn):
         return self.optout_store.new_opt_out(
@@ -151,7 +134,9 @@ class OptOutResourceTestCase(ResourceTestCaseBase, GoPersistenceMixin):
 
     @inlineCallbacks
     def test_account_can_manage_optouts(self):
-        self.account.can_manage_optouts = False
+        user_account = yield self.user_helper.get_user_account()
+        user_account.can_manage_optouts = False
+        yield user_account.save()
         reply = yield self.dispatch_command('count')
         self.assertFalse(reply['success'])
         self.assertEqual(

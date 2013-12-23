@@ -4,32 +4,30 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.token_manager import TokenManager
 from go.token.django_token_manager import DjangoTokenManager
 
 
-class DjangoTokenManagerTestCase(VumiGoDjangoTestCase):
-
-    use_riak = False
+class TestDjangoTokenManager(GoDjangoTestCase):
 
     def setUp(self):
-        super(DjangoTokenManagerTestCase, self).setUp()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.user_pk = self.user_helper.get_django_user().pk
         self.client = Client()
-        self.redis = self.get_redis_manager()
-        token_manager = TokenManager(
-                        self.redis.sub_manager('token_manager'))
-        self.user = self.mk_django_user()
-        self.tm = DjangoTokenManager(token_manager)
+
+        self.tm = DjangoTokenManager(TokenManager(
+            self.vumi_helper.get_redis_manager().sub_manager('token_manager')))
 
     def test_generate_callback(self):
         token = self.tm.generate_callback_token('/foo/', 'It worked',
             callback_for_test, callback_args=['arg'],
             callback_kwargs={'kwarg': 'kwarg'}, message_level=messages.SUCCESS,
-            user_id=self.user.pk)
+            user_id=self.user_pk)
         token_data = self.tm.get(token)
         self.assertEqual(token_data['redirect_to'], reverse('token_task'))
-        self.assertEqual(token_data['user_id'], str(self.user.pk))
+        self.assertEqual(token_data['user_id'], str(self.user_pk))
         self.assertEqual(token_data['extra_params'], {
             'callback_args': ['arg'],
             'callback_kwargs': {'kwarg': 'kwarg'},
@@ -46,7 +44,7 @@ class DjangoTokenManagerTestCase(VumiGoDjangoTestCase):
             kwargs={'token': 'foo'})))
 
     def test_token_require_login(self):
-        token = self.tm.generate('/path/', user_id=self.user.pk)
+        token = self.tm.generate('/path/', user_id=self.user_pk)
         token_url = reverse('token', kwargs={'token': token})
         response = self.client.get(token_url)
         self.assertRedirects(response,
@@ -55,7 +53,7 @@ class DjangoTokenManagerTestCase(VumiGoDjangoTestCase):
                         })))
 
     def test_token_with_login(self):
-        token = self.tm.generate('/path/', user_id=self.user.pk)
+        token = self.tm.generate('/path/', user_id=self.user_pk)
         token_url = reverse('token', kwargs={'token': token})
         token_data = self.tm.get(token)
         self.client.login(email='user@domain.com', password='password')
@@ -75,7 +73,7 @@ class DjangoTokenManagerTestCase(VumiGoDjangoTestCase):
                         })))
 
     def test_invalid_token(self):
-        token = self.tm.generate('/foo/', user_id=self.user.pk)
+        token = self.tm.generate('/foo/', user_id=self.user_pk)
         token_url = reverse('token', kwargs={'token': token})
         response = self.client.get(token_url)
         self.assertTrue(response.status_code, 404)

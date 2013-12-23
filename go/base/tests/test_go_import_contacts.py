@@ -3,38 +3,36 @@ from cStringIO import StringIO
 
 from django.conf import settings
 
-from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_import_contacts
-from go.base.utils import vumi_api_for_user
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class GoImportContactsCommandTestCase(VumiGoDjangoTestCase):
-
-    use_riak = True
+class TestGoImportContactsCommand(GoDjangoTestCase):
 
     def setUp(self):
-        super(GoImportContactsCommandTestCase, self).setUp()
-        self.setup_api()
-        self.user = self.mk_django_user()
-        self.user_api = vumi_api_for_user(self.user)
-        self.profile = self.user.get_profile()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.contact_store = self.user_helper.user_api.contact_store
+
+        self.command = go_import_contacts.Command()
+        self.command.stdout = StringIO()
+        self.command.stderr = StringIO()
+        self.vumi_helper.setup_tagpool(u"pool", [u"tag1", u"tag2"])
 
     def invoke_command(self, **kw):
         options = {
-            'email-address': self.user.email,
+            'email-address': self.user_helper.get_django_user().email,
             'contacts-csv': os.path.join(
                 settings.PROJECT_ROOT, 'base', 'fixtures',
                 'sample-contacts-with-headers.csv'),
             'groups': [],
         }
         options.update(kw)
-        command = go_import_contacts.Command()
-        command.stdout = StringIO()
-        command.handle(**options)
-        return command.stdout.getvalue()
+        self.command.handle(**options)
+        return self.command.stdout.getvalue()
 
     def assert_contacts_count(self, count):
-        contacts = self.user_api.contact_store.list_contacts()
+        contacts = self.contact_store.list_contacts()
         self.assertEqual(len(contacts), count)
 
     def test_import_no_groups(self):
@@ -43,7 +41,7 @@ class GoImportContactsCommandTestCase(VumiGoDjangoTestCase):
         self.assert_contacts_count(3)
 
     def test_import_one_group(self):
-        group = self.user_api.contact_store.new_group(u'test group')
+        group = self.contact_store.new_group(u'test group')
         self.assert_contacts_count(0)
         self.assertEqual(len(group.backlinks.contacts()), 0)
         self.invoke_command(groups=[group.key])
@@ -51,8 +49,8 @@ class GoImportContactsCommandTestCase(VumiGoDjangoTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
     def test_import_two_groups(self):
-        group1 = self.user_api.contact_store.new_group(u'test group 1')
-        group2 = self.user_api.contact_store.new_group(u'test group 1')
+        group1 = self.contact_store.new_group(u'test group 1')
+        group2 = self.contact_store.new_group(u'test group 1')
         self.assert_contacts_count(0)
         self.assertEqual(len(group1.backlinks.contacts()), 0)
         self.assertEqual(len(group2.backlinks.contacts()), 0)

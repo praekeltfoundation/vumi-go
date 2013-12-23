@@ -5,19 +5,20 @@ import base64
 from twisted.cred import error
 from twisted.cred.credentials import UsernamePassword
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 from twisted.web import resource
 from twisted.web.test.test_web import DummyRequest
+
+from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 
 from go.api.go_api.auth import (
     GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper)
 from go.api.go_api.session_manager import SessionManager
-from go.vumitools.tests.utils import GoTestCase
+from go.vumitools.tests.helpers import VumiApiHelper
 
 import mock
 
 
-class GoUserRealmTestCase(TestCase):
+class TestGoUserRealm(VumiTestCase):
     def test_request_avatar(self):
         expected_resource = object()
         getter = mock.Mock(return_value=expected_resource)
@@ -40,11 +41,12 @@ class GoUserRealmTestCase(TestCase):
                           realm.requestAvatar, u"user", mind)
 
 
-class GoUserSessionAccessCheckerTestCase(GoTestCase):
+class TestGoUserSessionAccessChecker(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
-        super(GoUserSessionAccessCheckerTestCase, self).setUp()
-        self.redis = yield self.get_redis_manager()
+        self.persistence_helper = self.add_helper(
+            PersistenceHelper(is_sync=False))
+        self.redis = yield self.persistence_helper.get_redis_manager()
         self.sm = SessionManager(self.redis)
 
     @inlineCallbacks
@@ -82,14 +84,12 @@ class GoUserSessionAccessCheckerTestCase(GoTestCase):
         self.assertTrue(errored)
 
 
-class GoUserAuthSessionWrapperTestCase(GoTestCase):
-
-    use_riak = True
+class TestGoUserAuthSessionWrapper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(GoUserAuthSessionWrapperTestCase, self).setUp()
-        self.vumi_api = yield self.get_vumi_api()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.vumi_api = yield self.vumi_helper.get_vumi_api()
 
     def mk_request(self, user=None, password=None):
         request = DummyRequest([''])
