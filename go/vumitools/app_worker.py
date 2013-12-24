@@ -15,22 +15,22 @@ from go.vumitools.metrics import AccountMetric
 from go.vumitools.utils import MessageMetadataHelper
 
 
-class GoApplicationConfigData(object):
+class GoWorkerConfigData(object):
     implements(IConfigData)
 
-    def __init__(self, config_dict, conversation):
-        self.config_dict = config_dict
-        self.conv = conversation
+    def __init__(self, static_config, dynamic_config):
+        self._static_config = static_config
+        self._dynamic_config = dynamic_config
 
     def get(self, field_name, default):
-        if self.conv.config and field_name in self.conv.config:
-            return self.conv.config[field_name]
-        return self.config_dict.get(field_name, default)
+        if field_name in self._dynamic_config:
+            return self._dynamic_config[field_name]
+        return self._static_config.get(field_name, default)
 
     def has_key(self, field_name):
-        if self.conv.config and field_name in self.conv.config:
+        if field_name in self._dynamic_config:
             return True
-        return self.config_dict.has_key(field_name)
+        return self._static_config.has_key(field_name)
 
 
 class GoWorkerConfigMixin(object):
@@ -295,7 +295,7 @@ class GoApplicationMixin(GoWorkerMixin):
         if not conversation.running():
             raise IgnoreMessage(
                 "Conversation '%s' not running." % (conversation.key,))
-        config_data = GoApplicationConfigData(self.config, conversation)
+        config_data = GoWorkerConfigData(self.config, conversation.config)
         return self.CONFIG_CLASS(config_data)
 
     @inlineCallbacks
@@ -381,7 +381,7 @@ class GoRouterMixin(GoWorkerMixin):
         # getting the config.
         if not router.running():
             raise IgnoreMessage("Router '%s' not running." % (router.key,))
-        config_data = GoApplicationConfigData(self.config, router)
+        config_data = GoWorkerConfigData(self.config, router.config)
         return self.CONFIG_CLASS(config_data)
 
     @inlineCallbacks
