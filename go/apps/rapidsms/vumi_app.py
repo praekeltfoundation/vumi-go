@@ -5,13 +5,13 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.applications.rapidsms_relay import RapidSMSRelay, RapidSMSRelayConfig
+from vumi.application.rapidsms_relay import RapidSMSRelay
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
 
 
-class RapidSMSConfig(GoWorkerConfigMixin, RapidSMSRelayConfig):
+class RapidSMSConfig(RapidSMSRelay.CONFIG_CLASS, GoWorkerConfigMixin):
 
     @property
     def vumi_username(self):
@@ -30,6 +30,9 @@ class RapidSMSConfig(GoWorkerConfigMixin, RapidSMSRelayConfig):
 
 
 class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
+
+    CONFIG_CLASS = RapidSMSConfig
+
     worker_name = 'rapidsms_application'
 
     @inlineCallbacks
