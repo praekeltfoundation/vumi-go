@@ -118,6 +118,85 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
+  var makeMessage = function(message) {
+    var $message = $('<p>').addClass('message');
+    $message.text(message);
+    return $message;
+  }
+
+  var makeError = function(error) {
+    var $error = $('<p>').addClass('error');
+    $error.text(error);
+    return $error;
+  }
+
+  var makeErrorlist = function(formErrors, fieldName) {
+    var $errorList = $('<ul>').addClass('errorlist');
+    var fieldErrors = formErrors[fieldName];
+    for (index in fieldErrors) {
+      var $listItem = $('<li>');
+      var $helpBlock = $('<span>').addClass('help-block');
+      $helpBlock.text(fieldErrors[index]);
+      $listItem.append($helpBlock);
+      $errorList.append($listItem);
+    }
+    return $errorList;
+  }
+
+  var ajaxForm = function($form, success, error) {
+    var options = {
+      beforeSubmit: function (formData, $form, options) {
+        $form.find('div.form-group.error').removeClass('error');
+        $form.find('div.controls ul.errorlist').remove();
+        $form.find('div.form-messages').empty();
+      },
+      success: function (responseText, statusText, jqXHR, $form) {
+        if (statusText == 'success') {
+          $form.find('input[type=text], textarea, select').val("");
+
+          var $formMessages = $form.find('div.form-messages');
+          var contentType = jqXHR.getResponseHeader('Content-Type');
+          if (contentType.indexOf('application/json') != -1) {
+            var responseData = $.parseJSON(jqXHR.responseText);
+            for (index in responseData) {
+              $formMessages.append(makeMessage(responseData[index]));
+            }
+
+          } else {
+            $formMessages.append(makeMessage(responseText));
+          }
+
+          if (success) {
+            success(responseText);
+          }
+        }
+      },
+      error: function (jqXHR, textStatus, errorThrown) {
+        var status = jqXHR.status;
+        var contentType = jqXHR.getResponseHeader('Content-Type');
+        if (status == 400 /* Bad Request */
+            && contentType.indexOf('application/json') != -1) {
+          var responseData = $.parseJSON(jqXHR.responseText);
+          for (fieldName in responseData) {
+            var $field = $form.find('*[name="' + fieldName + '"]');
+            $field.parents('div.form-group:first').addClass('error');
+            var $controls = $field.parents('div.controls:first');
+            $controls.append(makeErrorlist(responseData, fieldName));
+          }
+
+        } else {
+          var $formMessages = $form.find('div.form-messages');
+          $formMessages.append(makeError(jqXHR.responseText));
+        }
+
+        if (error) {
+          error(jqXHR.responseText);
+        }
+      }
+    };
+    $form.ajaxForm(options);
+  };
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -131,6 +210,7 @@
     bindEvents: bindEvents,
     delayed: delayed,
     capitalise: capitalise,
-    highlightActiveLinks: highlightActiveLinks
+    highlightActiveLinks: highlightActiveLinks,
+    ajaxForm: ajaxForm
   });
 })(go.utils = {});

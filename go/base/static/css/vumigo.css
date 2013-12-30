@@ -243,15 +243,18 @@ button {
   margin: 0;
   color: #e32;
 }
-.messagelist {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.errorlist li .help-block {
+  color: #e32;
 }
-.messagelist li {
-  padding: 0;
-  margin: 0;
+.form-messages p {
   font-weight: bold;
+}
+.form-messages .error {
+  color: #e32;
+}
+.help-text {
+  margin-top: 5px;
+  margin-bottom: 10px;
 }
 .alert {
   margin: 1em 0;

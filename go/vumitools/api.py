@@ -22,6 +22,10 @@ from vumi import log
 from go.config import (
     configured_conversations,
     configured_routers)
+
+from go.services.airtime.models import (
+    VoucherPoolStore as AirtimeVoucherPoolStore)
+
 from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
@@ -96,6 +100,8 @@ class VumiUserApi(object):
                                           self.user_account_key)
         self.optout_store = OptOutStore(self.api.manager,
                                         self.user_account_key)
+        self.airtime_voucher_pool_store = AirtimeVoucherPoolStore(
+            self.api.manager, self.user_account_key)
 
     def exists(self):
         return self.api.user_exists(self.user_account_key)

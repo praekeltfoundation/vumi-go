@@ -1,0 +1,67 @@
+{% load go_tags %}
+
+{% if form_config.as_modal %}
+<div class="modal-dialog">
+    <div class="modal-content">
+{% endif %}
+
+        <form method="{% firstof form_config.form_method "POST" %}"
+              action="{% firstof form_config.form_action request.get_full_path %}"
+              enctype="multipart/form-data">
+
+            {% if form_config.as_modal %}
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">{{ form_config.form_title }}</h4>
+            </div>
+            <div class="modal-body">
+            {% endif %}
+
+                {% csrf_token %}
+                {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+                <div class="form-messages">
+                    {% for error in form.non_field_errors %}
+                    <p class="error">{{ error }}</p>
+                    {% endfor %}
+                    {% for message in form.messages %}
+                    <p class="message">{{ message }}</p>
+                    {% endfor %}
+                </div>
+                {% for field in form.visible_fields %}
+                <div class="form-group{% if field.errors %} error{% endif %}">
+                    <label class="control-label" for="id_{{ field.name }}">
+                        {% if form.visible_fields|length > 1 %}{{ forloop.counter }})&nbsp;{% endif %}
+                        {{ field.label }}
+                    </label>
+                    <div class="controls">
+                        {{ field|attr_class:"form-control" }}
+                        {% if field.errors %}
+                        <ul class="errorlist">
+                            {% for error in field.errors %}
+                            <li><span class="help-block">{{ error }}</span></li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    <div class="help-text">
+                        {% autoescape off %}{{ field.help_text }}{% endautoescape %}
+                    </div>
+                </div>
+                {% endfor %}
+
+            {% if form_config.as_modal %}
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">{% firstof form_config.submit_text "Submit" %}</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+            {% else %}
+            <button type="submit" class="btn btn-primary">{% firstof form_config.submit_text "Submit" %}</button>
+            {% endif %}
+
+        </form>
+
+{% if form_config.as_modal %}
+    </div>
+</div>
+{% endif %}
