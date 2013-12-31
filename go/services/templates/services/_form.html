@@ -1,18 +1,19 @@
 {% load go_tags %}
+{% load i18n %}
 
-{% if form_config.as_modal %}
+{% if form.config.as_modal %}
 <div class="modal-dialog">
     <div class="modal-content">
 {% endif %}
 
-        <form method="{% firstof form_config.form_method "POST" %}"
-              action="{% firstof form_config.form_action request.get_full_path %}"
+        <form method="{% firstof form.config.method "POST" %}"
+              action="{% firstof form.config.action request.get_full_path %}"
               enctype="multipart/form-data">
 
-            {% if form_config.as_modal %}
+            {% if form.config.as_modal %}
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">{{ form_config.form_title }}</h4>
+                <h4 class="modal-title">{{ form.config.title }}</h4>
             </div>
             <div class="modal-body">
             {% endif %}
@@ -49,19 +50,23 @@
                 </div>
                 {% endfor %}
 
-            {% if form_config.as_modal %}
+            {% if form.config.as_modal %}
             </div>
             <div class="modal-footer">
-                <button type="submit" class="btn btn-primary">{% firstof form_config.submit_text "Submit" %}</button>
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">
+                    {% if form.config.submit_text %}{{ form.config.submit_text }}{% else %}{% trans "Submit" %}{% endif %}
+                </button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Close" %}</button>
             </div>
             {% else %}
-            <button type="submit" class="btn btn-primary">{% firstof form_config.submit_text "Submit" %}</button>
+            <button type="submit" class="btn btn-primary">
+                {% if form.config.submit_text %}{{ form.config.submit_text }}{% else %}{% trans "Submit" %}{% endif %}
+            </button>
             {% endif %}
 
         </form>
 
-{% if form_config.as_modal %}
+{% if form.config.as_modal %}
     </div>
 </div>
 {% endif %}

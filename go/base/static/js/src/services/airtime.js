@@ -4,18 +4,11 @@
 (function(exports) {
   var BaseVoucherPoolView = go.services.BaseVoucherPoolView;
 
-  var VoucherPoolListView = BaseVoucherPoolView.extend({
-
-    initialize: function() {
-    },
-
-    getModal: function() {
-        return this.$('div#airtime-modal');
-    }
-
+  var AirtimeVoucherPoolView = BaseVoucherPoolView.extend({
   });
 
   _.extend(exports, {
-    VoucherPoolListView: VoucherPoolListView
+    AirtimeVoucherPoolView: AirtimeVoucherPoolView
   });
+
 })(go.services.airtime = {});

@@ -12,7 +12,7 @@ from go.services.view_definition import (ServiceView,
 
 from go.services.airtime import settings
 from go.services.airtime.forms import VoucherPoolForm, VoucherQueryForm
-from go.services.airtime.utils import voucher_pool_or_404, VoucherService
+from go.services.airtime.utils import voucher_pool_or_404
 
 
 class IndexView(ServiceTemplateView):
@@ -23,7 +23,7 @@ class IndexView(ServiceTemplateView):
 
     def get(self, request):
         voucher_pool_store = request.user_api.airtime_voucher_pool_store
-        paginator = Paginator(voucher_pool_store.list_voucher_pools(),
+        paginator = Paginator(voucher_pool_store.get_all_voucher_pools(),
                               settings.VOUCHER_POOLS_PER_PAGE)
 
         try:
@@ -48,21 +48,24 @@ class AddVoucherPoolView(ServiceTemplateView):
 
     def _get_form_config(self, request, **extra_config):
         form_config = {
+            'title': self.FORM_TITLE,
+            'submit_text': self.SUBMIT_TEXT,
             'as_modal': request.GET.get('as_modal', False),
-            'form_title': self.FORM_TITLE,
-            'submit_text': self.SUBMIT_TEXT
         }
         form_config.update(extra_config)
         return form_config
 
     def get(self, request):
-        form = VoucherPoolForm(user_api=request.user_api)
-        return self.render_to_response({
-            'form': form,
-            'form_config': self._get_form_config(request)})
+        form = VoucherPoolForm(config=self._get_form_config(request),
+                               service_def=self.service_def,
+                               user_api=request.user_api)
+
+        return self.render_to_response({'form': form})
 
     def post(self, request):
         form = VoucherPoolForm(request.POST, request.FILES,
+                               config=self._get_form_config(request),
+                               service_def=self.service_def,
                                user_api=request.user_api)
 
         if form.is_valid():
@@ -82,9 +85,7 @@ class AddVoucherPoolView(ServiceTemplateView):
             else:
                 messages.add_message(request, messages.ERROR, msg)
 
-        return self.render_to_response({
-            'form': form,
-            'form_config': self._get_form_config(request)})
+        return self.render_to_response({'form': form})
 
 
 class ImportVouchersView(ServiceTemplateView):
@@ -98,9 +99,9 @@ class ImportVouchersView(ServiceTemplateView):
 
     def _get_form_config(self, request, **extra_config):
         form_config = {
+            'title': self.FORM_TITLE,
+            'submit_text': self.SUBMIT_TEXT,
             'as_modal': request.GET.get('as_modal', False),
-            'form_title': self.FORM_TITLE,
-            'submit_text': self.SUBMIT_TEXT
         }
         form_config.update(extra_config)
         return form_config
@@ -109,18 +110,20 @@ class ImportVouchersView(ServiceTemplateView):
         voucher_pool = voucher_pool_or_404(
             request.user_api, request.GET.get('voucher_pool_key', None))
 
-        form = VoucherPoolForm(user_api=request.user_api,
+        form = VoucherPoolForm(config=self._get_form_config(request),
+                               service_def=self.service_def,
+                               user_api=request.user_api,
                                voucher_pool=voucher_pool)
 
-        return self.render_to_response({
-            'form': form,
-            'form_config': self._get_form_config(request)})
+        return self.render_to_response({'form': form})
 
     def post(self, request):
         voucher_pool = voucher_pool_or_404(
             request.user_api, request.GET.get('voucher_pool_key', None))
 
         form = VoucherPoolForm(request.POST, request.FILES,
+                               config=self._get_form_config(request),
+                               service_def=self.service_def,
                                user_api=request.user_api,
                                voucher_pool=voucher_pool)
 
@@ -141,9 +144,7 @@ class ImportVouchersView(ServiceTemplateView):
             else:
                 messages.add_message(request, messages.ERROR, msg)
 
-        return self.render_to_response({
-            'form': form,
-            'form_config': self._get_form_config(request)})
+        return self.render_to_response({'form': form})
 
 
 class ExportVouchersView(ServiceView):
@@ -163,7 +164,7 @@ class ExportVouchersView(ServiceView):
         writer = csv.writer(response)
         headings = settings.FILE_FORMAT
         writer.writerow(headings)
-        voucher_service = VoucherService()
+        voucher_service = self.view_def.voucher_service
         voucher_list = voucher_service.export_vouchers(voucher_pool)
         for voucher in voucher_list:
             writer.writerow([
@@ -185,9 +186,9 @@ class QueryVouchersView(ServiceTemplateView):
 
     def _get_form_config(self, request, **extra_config):
         form_config = {
+            'title': self.FORM_TITLE,
+            'submit_text': self.SUBMIT_TEXT,
             'as_modal': request.GET.get('as_modal', False),
-            'form_title': self.FORM_TITLE,
-            'submit_text': self.SUBMIT_TEXT
         }
         form_config.update(extra_config)
         return form_config
@@ -196,15 +197,21 @@ class QueryVouchersView(ServiceTemplateView):
         voucher_pool = voucher_pool_or_404(
             request.user_api, request.GET.get('voucher_pool_key', None))
 
-        return self.render_to_response({
-            'form': VoucherQueryForm(voucher_pool=voucher_pool),
-            'form_config': self._get_form_config(request)})
+        form = VoucherQueryForm(config=self._get_form_config(request),
+                                service_def=self.service_def,
+                                voucher_pool=voucher_pool)
+
+        return self.render_to_response({'form': form})
 
     def post(self, request):
         voucher_pool = voucher_pool_or_404(
             request.user_api, request.GET.get('voucher_pool_key', None))
 
-        form = VoucherQueryForm(request.POST, voucher_pool=voucher_pool)
+        form = VoucherQueryForm(request.POST,
+                                config=self._get_form_config(request),
+                                service_def=self.service_def,
+                                voucher_pool=voucher_pool)
+
         if form.is_valid():
             form.submit_query()
             if request.is_ajax():
@@ -222,9 +229,7 @@ class QueryVouchersView(ServiceTemplateView):
             else:
                 messages.add_message(request, messages.ERROR, msg)
 
-        return self.render_to_response({
-            'form': form,
-            'form_config': self._get_form_config(request)})
+        return self.render_to_response({'form': form})
 
 
 class ServiceViewDefinition(ServiceViewDefinitionBase):

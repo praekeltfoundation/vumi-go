@@ -26,13 +26,23 @@ class VoucherPoolStore(PerAccountStore):
         self.voucher_pools = self.manager.proxy(VoucherPool)
 
     def list_voucher_pools(self):
-        voucher_pool_list = []
-        for key in self.list_keys(self.voucher_pools):
-            voucher_pool_list.append(self.get_voucher_pool_by_key(key))
-        return voucher_pool_list
+        return self.list_keys(self.voucher_pools)
 
     def get_voucher_pool_by_key(self, key):
         return self.voucher_pools.load(key)
+
+    def get_all_voucher_pools(self):
+        voucher_pool_list = []
+        for key in self.list_voucher_pools():
+            voucher_pool_list.append(self.get_voucher_pool_by_key(key))
+        return voucher_pool_list
+
+    def get_voucher_pool_by_name(self, name):
+        for key in self.list_voucher_pools():
+            voucher_pool = self.get_voucher_pool_by_key(key)
+            if voucher_pool.name == name:
+                return voucher_pool
+        return None
 
     @Manager.calls_manager
     def new_voucher_pool(self, name, config, **fields):

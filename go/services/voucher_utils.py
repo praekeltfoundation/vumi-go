@@ -6,27 +6,10 @@ import StringIO
 from django import forms
 
 from go.services import settings as app_settings
+from go.services.forms import BaseServiceForm, AjaxFormMixin
 
 
-class AjaxFormMixin(object):
-    """Implements some useful methods for AJAX forms"""
-
-    def errors_as_json(self):
-        """Return all field errors as a JSON object"""
-        obj = {}
-        for field in self:
-            errors = []
-            for error in field.errors:
-                errors.append(error)
-            if len(errors) > 0:
-                field_name = field.name
-                if self.prefix:
-                    field_name = '%s-%s' % (self.prefix, field.name)
-                obj[field_name] = errors
-        return obj
-
-
-class BaseVoucherPoolForm(forms.Form, AjaxFormMixin):
+class BaseVoucherPoolForm(BaseServiceForm, AjaxFormMixin):
     """Base class for a voucher pool form"""
 
     EXCEL_CONTENT_TYPES = (
@@ -104,7 +87,7 @@ class BaseVoucherPoolForm(forms.Form, AjaxFormMixin):
                 writer.writerow(row)
                 record_count += 1
                 if record_count >= self.REQUEST_RECORD_LIMIT:
-                    self.voucher_service.import_vouchers(
+                    self.service_def.voucher_service.import_vouchers(
                         voucher_pool, vouchers_file.name, content.getvalue())
 
                     content.close()
@@ -114,7 +97,7 @@ class BaseVoucherPoolForm(forms.Form, AjaxFormMixin):
                     record_count = 0
 
             if record_count > 0:
-                self.voucher_service.import_vouchers(
+                self.service_def.voucher_service.import_vouchers(
                     voucher_pool, vouchers_file.name, content.getvalue())
 
             content.close()
@@ -151,7 +134,7 @@ class BaseVoucherPoolForm(forms.Form, AjaxFormMixin):
                 writer.writerow(record)
                 record_count += 1
                 if record_count >= self.REQUEST_RECORD_LIMIT:
-                    self.voucher_service.import_vouchers(
+                    self.service_def.voucher_service.import_vouchers(
                         voucher_pool, vouchers_file.name, content.getvalue())
 
                     content.close()
@@ -161,7 +144,7 @@ class BaseVoucherPoolForm(forms.Form, AjaxFormMixin):
                     record_count = 0
 
             if record_count > 0:
-                self.voucher_service.import_vouchers(
+                self.service_def.voucher_service.import_vouchers(
                     voucher_pool, vouchers_file.name, content.getvalue())
 
             content.close()
@@ -193,14 +176,6 @@ class VoucherServiceError(Exception):
 
 class BaseVoucherService(object):
     """Base class for voucher service proxies"""
-
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        """Singleton implementation"""
-        if not isinstance(cls._instance, cls):
-            cls._instance = object.__new__(cls, *args, **kwargs)
-        return cls._instance
 
     def _is_success(self, response):
         """Return `True` if the HTTP response code is either 200 (OK)

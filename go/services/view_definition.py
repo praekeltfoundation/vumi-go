@@ -12,6 +12,10 @@ class ServiceViewMixin(object):
     csrf_exempt = False
     view_def = None
 
+    @property
+    def service_def(self):
+        return self.view_def.service_def
+
     def redirect_to(self, view_name, **kwargs):
         """Return an HTTP redirect to the given ``view_name``"""
         return redirect(self.get_view_url(view_name, **kwargs))
@@ -46,7 +50,7 @@ class ServiceViewDefinitionBase(object):
     views = ()
 
     def __init__(self, service_def=None):
-        self._service_def = service_def
+        self.service_def = service_def
         self._view_mapping = {}
         self._path_suffix_mapping = {}
         for view in self.views:
@@ -55,15 +59,15 @@ class ServiceViewDefinitionBase(object):
 
     @property
     def service_type(self):
-        return self._service_def.service_type
+        return self.service_def.service_type
 
     @property
     def service_display_name(self):
-        return self._service_def.service_display_name
+        return self.service_def.service_display_name
 
     def get_view_url(self, view_name, **kwargs):
         """Return the URL for the given ``view_name``"""
-        kwargs['service_type'] = self._service_def.service_type
+        kwargs['service_type'] = self.service_def.service_type
         view = self._view_mapping[view_name]
         if view.path_suffix:
             kwargs['path_suffix'] = view.path_suffix

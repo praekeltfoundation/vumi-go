@@ -10,31 +10,35 @@
       'click a[rel="modal"]': 'showModal'
     },
 
-    initialize: function() {
+    initialize: function(options) {
+        this.url = options.url;
+        this.$modal = options.$modal;
     },
 
-    getModal: function() {
-        return null;
+    refresh: function() {
+        this.$el.load(this.url);
     },
 
     showModal: function(event) {
+      var self = this;
+
       event.preventDefault();
       event.stopPropagation();
 
-      var $modal = this.getModal();
       var $link = $(event.currentTarget);
       var url = $link.attr('href');
-      var keepOpen = $link.data('keep-open');
-      $modal.load(url, function() {
-        var $form = $modal.find('form');
+      var keepOpen = $link.data('keep-modal-open');
+      this.$modal.load(url, function() {
+        var $form = self.$modal.find('form');
         if ($form.length > 0) {
           ajaxForm($form, function() {
             if (!keepOpen) {
-              $modal.modal('hide');
+              self.$modal.modal('hide');
+              self.refresh();
             }
           });
         }
-        $modal.modal('show');
+        self.$modal.modal('show');
       });
     }
   });

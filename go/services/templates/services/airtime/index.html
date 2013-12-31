@@ -9,7 +9,11 @@
 {% block content_title %}{% trans "Airtime vouchers" %}{% endblock %}
 
 {% block content_main %}
+
+{% if not request.is_ajax %}
 <div class="row main-content">
+{% endif %}
+
     <div class="col-md-12">
         <table class="table" id="airtime-voucher-pool-list">
             <thead>
@@ -37,7 +41,7 @@
 
                                 <a href="{% url "services:service" service_type="airtime" path_suffix="query" %}?voucher_pool_key={{ voucher_pool.key }}&as_modal=1"
                                    title="{% trans "Query airtime vouchers" %}"
-                                   rel="modal" data-keep-open="true">
+                                   rel="modal" data-keep-modal-open="true">
                                     {% trans "Query" %}</a>
                             </td>
                         </tr>
@@ -55,7 +59,11 @@
             <span>{% trans "Add airtime to your account" %}<span>
         </a>
     </div>
+
+{% if not request.is_ajax %}
 </div>
+{% endif %}
+
 {% endblock %}
 
 {% block modals %}
@@ -65,5 +73,9 @@
 {% endblock %}
 
 {% block ondomready %}
-    var view = new go.services.airtime.VoucherPoolListView({el: 'body'});
+    var view = new go.services.airtime.AirtimeVoucherPoolView({
+        el: 'div.main-content',
+        url: '{{ request.get_full_path }}',
+        $modal: $('div#airtime-modal')
+    });
 {% endblock %}
