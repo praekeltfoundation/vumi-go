@@ -300,10 +300,10 @@ CELERYBEAT_SCHEDULE = {
         'schedule': crontab(hour=0, minute=0),
         'args': ('daily',)
     },
-    'generate-monthly-account-statements': {
-        'task': 'go.billing.tasks.generate_monthly_account_statements',
-        'schedule': crontab(day_of_month=1),
-    },
+#    'generate-monthly-account-statements': {
+#        'task': 'go.billing.tasks.generate_monthly_account_statements',
+#        'schedule': crontab(day_of_month=1),
+#    },
 }
 
 try:
