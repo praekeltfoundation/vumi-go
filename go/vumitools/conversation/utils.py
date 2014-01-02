@@ -1,6 +1,7 @@
 # -*- test-case-name: go.vumitools.conversation.tests.test_utils -*-
 # -*- coding: utf-8 -*-
 
+import warnings
 from datetime import datetime
 from collections import defaultdict
 
@@ -258,9 +259,17 @@ class ConversationWrapper(object):
                     collection.append(scrubbed_msg)
         returnValue(collection)
 
-    @Manager.calls_manager
     def received_messages(self, start=0, limit=100, include_sensitive=False,
                           scrubber=None):
+        warnings.warn('received_messages() is deprecated. Please use '
+                      'received_messages_in_cache() instead.',
+                      category=DeprecationWarning)
+        return self.received_messages_in_cache(start, limit, include_sensitive,
+                                               scrubber)
+
+    @Manager.calls_manager
+    def received_messages_in_cache(self, start=0, limit=100,
+                                   include_sensitive=False, scrubber=None):
         """
         Get a list of replies from the message store. The keys come from
         the message store's cache.
@@ -290,9 +299,17 @@ class ConversationWrapper(object):
 
         returnValue(replies)
 
-    @Manager.calls_manager
     def sent_messages(self, start=0, limit=100, include_sensitive=False,
                       scrubber=None):
+        warnings.warn('sent_messages() is deprecated. Please use '
+                      'sent_messages_in_cache() instead.',
+                      category=DeprecationWarning)
+        return self.sent_messages_in_cache(start, limit, include_sensitive,
+                                           scrubber)
+
+    @Manager.calls_manager
+    def sent_messages_in_cache(self, start=0, limit=100,
+                               include_sensitive=False, scrubber=None):
         """
         Get a list of sent_messages from the message store. The keys come from
         the message store's cache.
