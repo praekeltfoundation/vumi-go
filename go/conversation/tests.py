@@ -538,6 +538,28 @@ class TestConversationViews(BaseConversationViewTestCase):
             '',  # csv ends with a blank line
             ]))
 
+    def test_export_messages(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msgs = self.msg_helper.add_inbound_to_conv(
+            conv, 5, start_date=date(2012, 1, 1), time_multiplier=12)
+        self.msg_helper.add_replies_to_conv(conv, msgs)
+        response = self.client.post(self.get_view_url(conv, 'message_list'), {
+            '_export_conversation_messages': True,
+        })
+        self.assertRedirects(response, self.get_view_url(conv, 'message_list'))
+        [email] = mail.outbox
+        self.assertEqual(
+            email.recipients(), [self.user_helper.get_django_user().email])
+        self.assertTrue(conv.name in email.subject)
+        self.assertTrue(conv.name in email.body)
+        [(file_name, zipcontent, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+        zipfile = ZipFile(StringIO(zipcontent), 'r')
+        content = zipfile.open('messages-export.csv', 'r').read()
+        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
+        self.assertEqual(12, len(content.split('\n')))
+        self.assertEqual(mime_type, 'application/zip')
+
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         # Create 21 inbound messages, since we have 20 messages per page it
