@@ -1,5 +1,6 @@
 import json
 import logging
+import csv
 from datetime import date
 from StringIO import StringIO
 from zipfile import ZipFile
@@ -14,6 +15,8 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
+from go.conversation.tasks import (export_conversation_messages_unsorted,
+                                   export_conversation_messages_sorted)
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
@@ -535,28 +538,6 @@ class TestConversationViews(BaseConversationViewTestCase):
             '',  # csv ends with a blank line
             ]))
 
-    def test_export_messages(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        msgs = self.msg_helper.add_inbound_to_conv(
-            conv, 5, start_date=date(2012, 1, 1), time_multiplier=12)
-        self.msg_helper.add_replies_to_conv(conv, msgs)
-        response = self.client.post(self.get_view_url(conv, 'message_list'), {
-            '_export_conversation_messages': True,
-        })
-        self.assertRedirects(response, self.get_view_url(conv, 'message_list'))
-        [email] = mail.outbox
-        self.assertEqual(
-            email.recipients(), [self.user_helper.get_django_user().email])
-        self.assertTrue(conv.name in email.subject)
-        self.assertTrue(conv.name in email.body)
-        [(file_name, zipcontent, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.zip')
-        zipfile = ZipFile(StringIO(zipcontent), 'r')
-        content = zipfile.open('messages-export.csv', 'r').read()
-        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
-        self.assertEqual(12, len(content.split('\n')))
-        self.assertEqual(mime_type, 'application/zip')
-
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         # Create 21 inbound messages, since we have 20 messages per page it
@@ -839,3 +820,62 @@ class TestConversationReportsView(BaseConversationViewTestCase):
 
         self.assertEqual(self.error_log, [':('])
         self.assertEqual(response.context['dashboard_config'], None)
+
+
+class TestConversationTasks(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(
+            DjangoVumiApiHelper(), setup_vumi_api=False)
+        self.vumi_helper.setup_vumi_api()
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(vumi_helper=self.vumi_helper))
+
+    def create_conversation(self, name=u'dummy', reply_count=5,
+                            time_multiplier=12,
+                            start_date=date(2013, 1, 1)):
+        conv = self.user_helper.create_conversation(name)
+        inbound_msgs = self.msg_helper.add_inbound_to_conv(
+            conv, reply_count, start_date=start_date,
+            time_multiplier=time_multiplier)
+        self.msg_helper.add_replies_to_conv(conv, inbound_msgs)
+        return conv
+
+    def test_export_conversation_messages_unsorted(self):
+        conv = self.create_conversation()
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        self.assertEqual(
+            email.recipients(), [self.user_helper.get_django_user().email])
+        self.assertTrue(conv.name in email.subject)
+        self.assertTrue(conv.name in email.body)
+        [(file_name, zipcontent, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+        zipfile = ZipFile(StringIO(zipcontent), 'r')
+        content = zipfile.open('messages-export.csv', 'r').read()
+        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
+        self.assertEqual(12, len(content.split('\n')))
+        self.assertEqual(mime_type, 'application/zip')
+
+    def test_export_conversation_messages_sorted(self):
+        conv = self.create_conversation(reply_count=2)
+        export_conversation_messages_sorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+
+        self.assertEqual(
+            email.recipients(), [self.user_helper.get_django_user().email])
+        self.assertTrue(conv.name in email.subject)
+        self.assertTrue(conv.name in email.body)
+        [(file_name, zipcontent, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+        zipfile = ZipFile(StringIO(zipcontent), 'r')
+        fp = zipfile.open('messages-export.csv', 'r')
+        reader = csv.reader(fp)
+        threads = [row[1:3] for row in reader]
+        self.assertEqual(threads, [
+            ['from_addr', 'to_addr'],
+            ['9292', 'from-0'],
+            ['from-0', '9292'],
+            ['9292', 'from-1'],
+            ['from-1', '9292'],
+        ])

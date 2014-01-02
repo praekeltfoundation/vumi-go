@@ -31,6 +31,40 @@ def write_messages(writer, messages):
     return messages
 
 
+def load_messages_in_chunks(conversation, direction=None, size=20,
+                            include_sensitive=False, scrubber=None):
+    """
+    Load the conversation's messages in chunks of `size`.
+    Uses `proxy.load_all_bunches()` lower down but allows skipping and/or
+    scrubbing of messages depending on `include_sensitive` and `scrubber`.
+
+    :param Conversation conv:
+        The conversation.
+    :param str direction:
+        The direction, either ``'inbound'`` or ``'outbound'``.
+    :param int size:
+        How big the chunks should be. Default 20.
+    :param bool include_sensitive:
+        If ``true`` then all messages marked as `sensitive` are skipped.
+    :param callable scrubber:
+        If provided, this is called for every message allowing it to be
+        modified on the fly.
+    """
+    direction = ('inbound' if direction == 'inbound' else 'outbound')
+    keys_func = getattr(conversation, '%s_keys' % (direction,))
+    proxy = getattr(conversation.mdb, '%s_messages' % (direction,))
+
+    keys = keys_func()
+    for chunk in grouper(keys, size):
+        # grouper() pads with `None` if less than `size` available,
+        # we unpad here.
+        chunk = filter(None, chunk)
+        messages = conversation.collect_messages(
+            chunk, proxy, include_sensitive=include_sensitive,
+            scrubber=scrubber)
+        yield messages
+
+
 def email_export(user_profile, conversation, io):
     zipio = StringIO()
     zf = ZipFile(zipio, "a", ZIP_DEFLATED)
@@ -60,25 +94,15 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     user_profile = UserProfile.objects.get(user_account=account_key)
     conversation = api.get_wrapped_conversation(conversation_key)
-    mdb = conversation.mdb
-    io = StringIO()
 
+    io = StringIO()
     writer = UnicodeCSVWriter(io)
     writer.writerow(conversation_export_field_names)
 
-    inbound_keys = conversation.inbound_keys()
-    outbound_keys = conversation.outbound_keys()
-
-    for keys_chunk in grouper(inbound_keys, 20):
-        messages = conversation.collect_messages(
-            message_keys, conversation.messages.inbound_messages,
-            include_sensitive=False, scrubber=None)
+    for messages in load_messages_in_chunks(conversation, 'inbound'):
         write_messages(writer, messages)
 
-    for keys_chunk in grouper(outbound_keys, 20):
-        messages = conversation.collect_messages(
-            message_keys, conversation.messages.outbound_messages,
-            include_sensitive=False, scrubber=None)
+    for messages in load_messages_in_chunks(conversation, 'outbound'):
         write_messages(writer, messages)
 
     email_export(user_profile, conversation, io)
