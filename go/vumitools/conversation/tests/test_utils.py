@@ -64,10 +64,22 @@ class TestConversationWrapper(VumiTestCase):
         self.assertEqual((yield self.conv.count_replies()), 5)
 
     @inlineCallbacks
+    def test_inbound_keys(self):
+        messages = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        keys = set([message['message_id'] for message in messages])
+        self.assertEqual(set((yield self.conv.inbound_keys())), keys)
+
+    @inlineCallbacks
     def test_count_sent_messages(self):
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
         self.assertEqual((yield self.conv.count_sent_messages()), 5)
+
+    @inlineCallbacks
+    def test_outbound_keys(self):
+        messages = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
+        keys = set([message['message_id'] for message in messages])
+        self.assertEqual(set((yield self.conv.outbound_keys())), keys)
 
     @inlineCallbacks
     def test_count_inbound_uniques(self):
