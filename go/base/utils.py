@@ -2,7 +2,6 @@
 
 import csv
 import codecs
-from itertools import izip_longest
 from StringIO import StringIO
 
 from django import forms
