@@ -116,14 +116,6 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
 
 
 @task(ignore_result=True)
-def export_conversation_messages(account_key, conversation_key):
-    warnings.warn('export_conversation_messages() is deprecated. '
-                  'Please use export_conversation_messages_sorted() instead',
-                  category=DeprecationWarning)
-    return export_conversation_messages_sorted(account_key, conversation_key)
-
-
-@task(ignore_result=True)
 def export_conversation_messages_sorted(account_key, conversation_key):
     """
     Export the messages (threaded and sorted) in a conversation via email.
