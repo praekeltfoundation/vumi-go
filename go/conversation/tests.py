@@ -874,10 +874,13 @@ class TestConversationTasks(GoDjangoTestCase):
         [(file_name, zipcontent, mime_type)] = email.attachments
         self.assertEqual(file_name, 'messages-export.zip')
         zipfile = ZipFile(StringIO(zipcontent), 'r')
-        content = zipfile.open('messages-export.csv', 'r').read()
-        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
-        self.assertEqual(12, len(content.split('\n')))
-        self.assertEqual(mime_type, 'application/zip')
+        fp = zipfile.open('messages-export.csv', 'r')
+        reader = csv.reader(fp)
+        message_ids = [row[4] for row in reader]
+        self.assertEqual('message_id', message_ids.pop(0))
+        self.assertEqual(
+            set(message_ids),
+            set(conv.inbound_keys() + conv.outbound_keys()))
 
     def test_export_conversation_messages_sorted(self):
         conv = self.create_conversation(reply_count=2)
