@@ -147,10 +147,12 @@ def export_conversation_messages_sorted(account_key, conversation_key):
     # limiting to 0 results in getting the full set, creating lists of tuples
     # with direction sort we can sort sent & received messages in a somewhat
     # threaded fashion further down.
-    sent_messages = [('sent', msg)
-                     for msg in conversation.sent_messages(limit=0)]
-    received_messages = [('received', msg)
-                         for msg in conversation.received_messages(limit=0)]
+    sent_messages = [
+        ('sent', msg)
+        for msg in conversation.sent_messages_in_cache(limit=0)]
+    received_messages = [
+        ('received', msg)
+        for msg in conversation.received_messages_in_cache(limit=0)]
 
     def sort_by_addr_and_timestap(entry):
         """

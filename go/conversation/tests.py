@@ -716,7 +716,7 @@ class TestConversationViews(BaseConversationViewTestCase):
     def test_send_one_off_reply(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         self.msg_helper.add_inbound_to_conv(conv, 1)
-        [msg] = conv.received_messages()
+        [msg] = conv.received_messages_in_cache()
         response = self.client.post(self.get_view_url(conv, 'message_list'), {
             'in_reply_to': msg['message_id'],
             'content': 'foo',

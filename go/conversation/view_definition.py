@@ -222,11 +222,11 @@ class MessageListView(ConversationTemplateView):
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(
             PagedMessageCache(conversation.count_replies(),
-                lambda start, stop: conversation.received_messages(
+                lambda start, stop: conversation.received_messages_in_cache(
                     start, stop)), 20)
         outbound_message_paginator = Paginator(
             PagedMessageCache(conversation.count_sent_messages(),
-                lambda start, stop: conversation.sent_messages(
+                lambda start, stop: conversation.sent_messages_in_cache(
                     start, stop)), 20)
 
         tag_context = {
