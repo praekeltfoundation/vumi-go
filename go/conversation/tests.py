@@ -847,8 +847,7 @@ class TestConversationReportsView(BaseConversationViewTestCase):
 class TestConversationTasks(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(
-            DjangoVumiApiHelper(), setup_vumi_api=False)
-        self.vumi_helper.setup_vumi_api()
+            DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
         self.msg_helper = self.add_helper(
             GoMessageHelper(vumi_helper=self.vumi_helper))
