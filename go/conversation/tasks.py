@@ -31,7 +31,7 @@ def write_messages(writer, messages):
     return messages
 
 
-def load_messages_in_chunks(conversation, direction=None, size=20,
+def load_messages_in_chunks(conversation, direction='inbound', size=20,
                             include_sensitive=False, scrubber=None):
     """
     Load the conversation's messages in chunks of `size`.
@@ -58,8 +58,9 @@ def load_messages_in_chunks(conversation, direction=None, size=20,
         keys = conversation.outbound_keys()
         proxy = conversation.mdb.outbound_messages
     else:
-        raise ValueError('Invalid value received for `direction`. '
-                         'Only `inbound` and `outbound` are allowed.')
+        raise ValueError('Invalid value (%s) received for `direction`. '
+                         'Only `inbound` and `outbound` are allowed.' %
+                         (direction,))
 
     for chunk in grouper(keys, size):
         # grouper() pads with `None` if less than `size` available,
