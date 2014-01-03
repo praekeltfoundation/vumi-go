@@ -1,5 +1,6 @@
 import json
 import logging
+import csv
 from datetime import date
 from StringIO import StringIO
 from zipfile import ZipFile
@@ -14,6 +15,8 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
+from go.conversation.tasks import (export_conversation_messages_unsorted,
+                                   export_conversation_messages_sorted)
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
@@ -713,7 +716,7 @@ class TestConversationViews(BaseConversationViewTestCase):
     def test_send_one_off_reply(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         self.msg_helper.add_inbound_to_conv(conv, 1)
-        [msg] = conv.received_messages()
+        [msg] = conv.received_messages_in_cache()
         response = self.client.post(self.get_view_url(conv, 'message_list'), {
             'in_reply_to': msg['message_id'],
             'content': 'foo',
@@ -839,3 +842,64 @@ class TestConversationReportsView(BaseConversationViewTestCase):
 
         self.assertEqual(self.error_log, [':('])
         self.assertEqual(response.context['dashboard_config'], None)
+
+
+class TestConversationTasks(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(
+            DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(vumi_helper=self.vumi_helper))
+
+    def create_conversation(self, name=u'dummy', reply_count=5,
+                            time_multiplier=12,
+                            start_date=date(2013, 1, 1)):
+        conv = self.user_helper.create_conversation(name)
+        inbound_msgs = self.msg_helper.add_inbound_to_conv(
+            conv, reply_count, start_date=start_date,
+            time_multiplier=time_multiplier)
+        self.msg_helper.add_replies_to_conv(conv, inbound_msgs)
+        return conv
+
+    def test_export_conversation_messages_unsorted(self):
+        conv = self.create_conversation()
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        self.assertEqual(
+            email.recipients(), [self.user_helper.get_django_user().email])
+        self.assertTrue(conv.name in email.subject)
+        self.assertTrue(conv.name in email.body)
+        [(file_name, zipcontent, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+        zipfile = ZipFile(StringIO(zipcontent), 'r')
+        fp = zipfile.open('messages-export.csv', 'r')
+        reader = csv.reader(fp)
+        message_ids = [row[4] for row in reader]
+        self.assertEqual('message_id', message_ids.pop(0))
+        self.assertEqual(
+            set(message_ids),
+            set(conv.inbound_keys() + conv.outbound_keys()))
+
+    def test_export_conversation_messages_sorted(self):
+        conv = self.create_conversation(reply_count=2)
+        export_conversation_messages_sorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+
+        self.assertEqual(
+            email.recipients(), [self.user_helper.get_django_user().email])
+        self.assertTrue(conv.name in email.subject)
+        self.assertTrue(conv.name in email.body)
+        [(file_name, zipcontent, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+        zipfile = ZipFile(StringIO(zipcontent), 'r')
+        fp = zipfile.open('messages-export.csv', 'r')
+        reader = csv.reader(fp)
+        threads = [row[1:3] for row in reader]
+        self.assertEqual(threads, [
+            ['from_addr', 'to_addr'],
+            ['9292', 'from-0'],
+            ['from-0', '9292'],
+            ['9292', 'from-1'],
+            ['from-1', '9292'],
+        ])
