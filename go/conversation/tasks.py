@@ -1,5 +1,3 @@
-import warnings
-
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 
