@@ -246,6 +246,21 @@ class ConversationWrapper(object):
         for bunch in bunches:
             messages.extend((yield bunch))
 
+        returnValue(self.filter_and_scrub_messages(
+            messages, include_sensitive=include_sensitive, scrubber=scrubber))
+
+    def filter_and_scrub_messages(self, messages, include_sensitive, scrubber):
+        """
+        Filter and scrub the given messages.
+
+        :param list messages:
+            The list of messages to filter and scrub.
+        :param bool include_sensitive:
+            Whether or not to include hidden messages.
+        :param callable scrubber:
+            The scrubber to use on hidden messages. Should return a message
+            object or None.
+        """
         collection = []
         for message in messages:
             # vumi message is an attribute on the inbound message object
@@ -257,7 +272,7 @@ class ConversationWrapper(object):
                 scrubbed_msg = scrubber(msg)
                 if scrubbed_msg:
                     collection.append(scrubbed_msg)
-        returnValue(collection)
+        return collection
 
     def received_messages(self, start=0, limit=100, include_sensitive=False,
                           scrubber=None):

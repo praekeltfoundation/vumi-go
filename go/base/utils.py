@@ -165,9 +165,3 @@ def get_router_view_definition(router_type, router=None):
     if not hasattr(router_pkg, 'view_definition'):
         return RouterViewDefinitionBase(router_def)
     return router_pkg.view_definition.RouterViewDefinition(router_def)
-
-
-# Thanks Craz @ SO: http://stackoverflow.com/a/434411
-def grouper(iterable, n, fillvalue=None):
-    args = [iter(iterable)] * n
-    return izip_longest(*args, fillvalue=fillvalue)

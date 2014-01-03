@@ -8,7 +8,7 @@ from django.core.mail import EmailMessage
 
 from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
-from go.base.utils import UnicodeCSVWriter, grouper
+from go.base.utils import UnicodeCSVWriter
 
 
 # The field names to export
@@ -29,7 +29,7 @@ def write_messages(writer, messages):
     return messages
 
 
-def load_messages_in_chunks(conversation, direction='inbound', size=20,
+def load_messages_in_chunks(conversation, direction='inbound',
                             include_sensitive=False, scrubber=None):
     """
     Load the conversation's messages in chunks of `size`.
@@ -40,8 +40,6 @@ def load_messages_in_chunks(conversation, direction='inbound', size=20,
         The conversation.
     :param str direction:
         The direction, either ``'inbound'`` or ``'outbound'``.
-    :param int size:
-        How big the chunks should be. Default 20.
     :param bool include_sensitive:
         If ``False`` then all messages marked as `sensitive` are skipped.
         Defaults to ``False``.
@@ -50,24 +48,19 @@ def load_messages_in_chunks(conversation, direction='inbound', size=20,
         modified on the fly.
     """
     if direction == 'inbound':
-        keys = conversation.inbound_keys()
-        proxy = conversation.mdb.inbound_messages
+        bunches = conversation.mdb.inbound_messages.load_all_bunches(
+            conversation.inbound_keys())
     elif direction == 'outbound':
-        keys = conversation.outbound_keys()
-        proxy = conversation.mdb.outbound_messages
+        bunches = conversation.mdb.outbound_messages.load_all_bunches(
+            conversation.outbound_keys())
     else:
         raise ValueError('Invalid value (%s) received for `direction`. '
                          'Only `inbound` and `outbound` are allowed.' %
                          (direction,))
 
-    for chunk in grouper(keys, size):
-        # grouper() pads with `None` if less than `size` available,
-        # we unpad here.
-        chunk = filter(None, chunk)
-        messages = conversation.collect_messages(
-            chunk, proxy, include_sensitive=include_sensitive,
-            scrubber=scrubber)
-        yield messages
+    for messages in bunches:
+        yield conversation.filter_and_scrub_messages(
+            messages, include_sensitive=include_sensitive, scrubber=scrubber)
 
 
 def email_export(user_profile, conversation, io):
