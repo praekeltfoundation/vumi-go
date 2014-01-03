@@ -51,11 +51,16 @@ def load_messages_in_chunks(conversation, direction=None, size=20,
         If provided, this is called for every message allowing it to be
         modified on the fly.
     """
-    direction = ('inbound' if direction == 'inbound' else 'outbound')
-    keys_func = getattr(conversation, '%s_keys' % (direction,))
-    proxy = getattr(conversation.mdb, '%s_messages' % (direction,))
+    if direction == 'inbound':
+        keys = conversation.inbound_keys()
+        proxy = conversation.mdb.inbound_messages
+    elif direction == 'outbound':
+        keys = conversation.outbound_keys()
+        proxy = conversation.mdb.outbound_messages
+    else:
+        raise ValueError('Invalid value received for `direction`. '
+                         'Only `inbound` and `outbound` are allowed.')
 
-    keys = keys_func()
     for chunk in grouper(keys, size):
         # grouper() pads with `None` if less than `size` available,
         # we unpad here.
