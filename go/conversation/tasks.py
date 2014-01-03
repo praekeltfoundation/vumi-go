@@ -45,7 +45,8 @@ def load_messages_in_chunks(conversation, direction=None, size=20,
     :param int size:
         How big the chunks should be. Default 20.
     :param bool include_sensitive:
-        If ``true`` then all messages marked as `sensitive` are skipped.
+        If ``False`` then all messages marked as `sensitive` are skipped.
+        Defaults to ``False``.
     :param callable scrubber:
         If provided, this is called for every message allowing it to be
         modified on the fly.
