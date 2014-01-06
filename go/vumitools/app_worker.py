@@ -289,13 +289,16 @@ class GoWorkerMixin(object):
 
 
 class GoApplicationMixin(GoWorkerMixin):
+    def get_config_data_for_conversation(self, conversation):
+        return GoWorkerConfigData(self.config, conversation.config)
+
     def get_config_for_conversation(self, conversation):
         # If the conversation isn't running, we want to ignore the message
         # instead of getting the config.
         if not conversation.running():
             raise IgnoreMessage(
                 "Conversation '%s' not running." % (conversation.key,))
-        config_data = GoWorkerConfigData(self.config, conversation.config)
+        config_data = self.get_config_data_for_conversation(conversation)
         return self.CONFIG_CLASS(config_data)
 
     @inlineCallbacks
@@ -376,12 +379,15 @@ class GoApplicationMixin(GoWorkerMixin):
 
 
 class GoRouterMixin(GoWorkerMixin):
+    def get_config_data_for_router(self, router):
+        return GoWorkerConfigData(self.config, router.config)
+
     def get_config_for_router(self, router):
         # If the router isn't running, we want to ignore the message instead of
         # getting the config.
         if not router.running():
             raise IgnoreMessage("Router '%s' not running." % (router.key,))
-        config_data = GoWorkerConfigData(self.config, router.config)
+        config_data = self.get_config_data_for_router(router)
         return self.CONFIG_CLASS(config_data)
 
     @inlineCallbacks
