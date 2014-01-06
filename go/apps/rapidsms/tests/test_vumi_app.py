@@ -22,6 +22,15 @@ class RapidSMSApplicationTestCase(VumiTestCase):
     }
 
     CONV_CONFIG = {
+        'rapidsms': {
+            "rapidsms_url": "http://www.example.com/",
+            "rapidsms_username": "rapid-user",
+            "rapidsms_password": "rapid-pass",
+            "rapidsms_auth_method": "basic",
+            "rapidsms_http_method": "POST",
+            "allowed_endpoints": [u"default", u"extra"],
+            "api_tokens": [u"token-1"],
+        },
     }
 
     def setUp(self):

@@ -8,7 +8,8 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.application.rapidsms_relay import RapidSMSRelay
 from vumi import log
 
-from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
+from go.vumitools.app_worker import (
+    GoApplicationMixin, GoWorkerConfigMixin, GoWorkerConfigData)
 
 
 class RapidSMSConfig(RapidSMSRelay.CONFIG_CLASS, GoWorkerConfigMixin):
@@ -44,6 +45,10 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
     def teardown_application(self):
         yield super(RapidSMSApplication, self).teardown_application()
         yield self._go_teardown_worker()
+
+    def get_config_data_for_conversation(self, conversation):
+        return GoWorkerConfigData(
+            self.config, conversation.config.get('rapidsms', {}))
 
     def get_config(self, msg):
         return self.get_message_config(msg)
