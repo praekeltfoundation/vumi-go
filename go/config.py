@@ -116,6 +116,10 @@ _VUMI_INSTALLED_APPS = {
         'namespace': 'http_api_nostream',
         'display_name': 'HTTP API (No Streaming)',
     },
+    'go.apps.rapidsms': {
+        'namespace': 'rapidsms',
+        'display_name': 'Rapid SMS',
+    },
     'go.apps.static_reply': {
         'namespace': 'static_reply',
         'display_name': 'Static Reply',

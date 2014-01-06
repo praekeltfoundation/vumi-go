@@ -52,7 +52,7 @@ class RapidSmsForm(forms.Form):
 
     # User-configurable RapidSMS options:
 
-    rapidsms_url = forms.UrlField(
+    rapidsms_url = forms.URLField(
         help_text="URL of the rapidsms http backend.",
         required=True)
     rapidsms_username = forms.CharField(
@@ -62,20 +62,20 @@ class RapidSmsForm(forms.Form):
     rapidsms_password = forms.CharField(
         help_text="Password to use for the `rapidsms_url`",
         required=True)
-    rapidsms_auth_method = forms.ChoicesField(
+    rapidsms_auth_method = forms.ChoiceField(
         help_text="Authentication method to use with `rapidsms_url`."
                   " The 'basic' method is currently the only"
                   " available method.",
-        choices=['basic'], default='basic',
+        choices=[('basic', 'basic')], initial='basic',
         required=True)
-    rapidsms_http_method = forms.ChoicesField(
+    rapidsms_http_method = forms.ChoiceField(
         help_text="HTTP request method to use for the `rapidsms_url`",
-        choices=['POST', 'GET'], default='POST',
+        choices=[('POST', 'POST'), ('GET', 'GET')], initial='POST',
         required=True)
 
     allowed_endpoints = EndpointsField(
         help_text="Comma-separated list of endpoints to allow.",
-        default="default",
+        initial="default",
     )
 
     # Authentication token:
