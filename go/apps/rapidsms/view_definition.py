@@ -92,11 +92,11 @@ class RapidSmsForm(forms.Form):
                       "rapidsms_http_method"):
             if field in data:
                 initial[field] = data[field]
-        initial["allowed_endpoints"] = data.setdefault(
-            "allowed_endpoints", ["default"])
-        data.setdefault('api_tokens', [])
+        allowed_endpoints = data.get('allowed_endpoints', ["default"])
+        initial["allowed_endpoints"] = u",".join(allowed_endpoints)
+        api_tokens = data.get('api_tokens', [])
         initial["auth_token"] = (
-            data['api_tokens'][0] if data['api_tokens'] else None)
+            api_tokens[0] if api_tokens else None)
         return initial
 
     def to_config(self):
