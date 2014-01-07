@@ -208,7 +208,6 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
 
-        print repr(response.delivered_body)
         put_msg = json.loads(response.delivered_body)
         self.assertEqual(response.code, http.OK)
 
