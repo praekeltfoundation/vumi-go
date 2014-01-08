@@ -84,12 +84,17 @@ class RapidSmsForm(forms.Form):
         help_text='The access token for this RapidSMS conversation.',
         required=True)
 
-    @staticmethod
-    def initial_from_config(data):
+    # Fields to copy directly to / from conversation config
+
+    _COPIED_FIELDS = (
+        "rapidsms_url", "rapidsms_username", "rapidsms_password",
+        "rapidsms_auth_method", "rapidsms_http_method",
+    )
+
+    @classmethod
+    def initial_from_config(cls, data):
         initial = {}
-        for field in ("rapidsms_url", "rapidsms_username",
-                      "rapidsms_password", "rapidsms_auth_method",
-                      "rapidsms_http_method"):
+        for field in cls._COPIED_FIELDS:
             if field in data:
                 initial[field] = data[field]
         allowed_endpoints = data.get('allowed_endpoints', ["default"])
@@ -102,12 +107,9 @@ class RapidSmsForm(forms.Form):
     def to_config(self):
         data = self.cleaned_data
         config = {}
-        for field in ("rapidsms_url", "rapidsms_username",
-                      "rapidsms_password", "rapidsms_auth_method",
-                      "rapidsms_http_method"):
+        for field in self._COPIED_FIELDS:
             config[field] = data[field]
         config["allowed_endpoints"] = data["allowed_endpoints"]
-
         config["api_tokens"] = [data["auth_token"]]
         return config
 
