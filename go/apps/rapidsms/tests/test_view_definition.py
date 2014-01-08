@@ -87,7 +87,7 @@ class TestRapidSmsForm(VumiTestCase):
         })
 
 
-class TestRapidSmsForm(VumiTestCase):
+class TestAuthTokensForm(VumiTestCase):
     def test_initial_from_config_with_auth_token(self):
         initial = AuthTokensForm.initial_from_config({
             'api_tokens': ["token-1"]
