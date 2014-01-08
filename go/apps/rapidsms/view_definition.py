@@ -96,8 +96,9 @@ class RapidSmsForm(forms.Form):
             if field in data:
                 initial[field] = data[field]
         allowed_endpoints = data.get('allowed_endpoints', ["default"])
-        initial["allowed_endpoints"] = cls.allowed_endpoints.from_endpoints(
-            allowed_endpoints)
+        initial["allowed_endpoints"] = (
+            cls.base_fields['allowed_endpoints'].from_endpoints(
+                allowed_endpoints))
         return initial
 
     def to_config(self):
