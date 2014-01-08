@@ -32,6 +32,13 @@ class TestEndpointsField(VumiTestCase):
         f = EndpointsField()
         self.assertRaises(forms.ValidationError, f.clean, u"foo:bar")
 
+    def test_from_endpoints(self):
+        f1 = EndpointsField()
+        self.assertEqual(f1.from_endpoints([u"foo", u"bar"]), u"foo,bar")
+        self.assertEqual(f1.from_endpoints([]), u"")
+        f2 = EndpointsField(separator=u"+")
+        self.assertEqual(f2.from_endpoints([u"foo", u"bar"]), u"foo+bar")
+
 
 class TestRapidSmsForm(VumiTestCase):
     def test_initial_from_config(self):

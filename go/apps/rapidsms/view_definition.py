@@ -12,10 +12,14 @@ from go.conversation.view_definition import (
 
 
 class EndpointsField(forms.Field):
-    def __init__(self, pattern="^[a-zA-Z0-9_.]*$", separator=",", *args, **kw):
+    def __init__(self, pattern=u"^[a-zA-Z0-9_.]*$", separator=u",",
+                 *args, **kw):
         self._item_re = re.compile(pattern)
         self._separator = separator
         super(EndpointsField, self).__init__(*args, **kw)
+
+    def from_endpoints(self, items):
+        return self._separator.join(items)
 
     def clean(self, value):
         if not value:
@@ -92,7 +96,8 @@ class RapidSmsForm(forms.Form):
             if field in data:
                 initial[field] = data[field]
         allowed_endpoints = data.get('allowed_endpoints', ["default"])
-        initial["allowed_endpoints"] = u",".join(allowed_endpoints)
+        initial["allowed_endpoints"] = cls.allowed_endpoints.from_endpoints(
+            allowed_endpoints)
         return initial
 
     def to_config(self):
