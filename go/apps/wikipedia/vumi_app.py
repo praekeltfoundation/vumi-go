@@ -3,11 +3,12 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi_wikipedia.wikipedia import WikipediaWorker, TimerWrapper
 
-from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
+from go.vumitools.app_worker import (
+    GoApplicationMixin, GoApplicationConfigMixin)
 from go.vumitools.metrics import ConversationMetric
 
 
-class WikipediaConfig(WikipediaWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+class WikipediaConfig(WikipediaWorker.CONFIG_CLASS, GoApplicationConfigMixin):
     pass
 
 
@@ -37,7 +38,7 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         pass
 
     def get_timer_metric(self, config, metric_name):
-        metric = ConversationMetric(config.get_conversation(), metric_name)
+        metric = ConversationMetric(config.conversation, metric_name)
         # TODO: Make this less horrible.
         metric.set = lambda value: metric.oneshot(self.metrics, value)
         return TimerWrapper(metric)
@@ -47,7 +48,7 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
 
     def send_sms_non_reply(self, msg, config, sms_content):
         helper_metadata = {}
-        config.get_conversation().set_go_helper_metadata(helper_metadata)
+        config.conversation.set_go_helper_metadata(helper_metadata)
         return self.send_to(
             msg['from_addr'], sms_content, transport_type='sms',
             endpoint='sms_content', helper_metadata=helper_metadata)
