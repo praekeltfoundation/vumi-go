@@ -9,7 +9,8 @@ from vumi.config import ConfigDict
 from vumi.application.sandbox import JsSandbox, SandboxResource
 from vumi import log
 
-from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
+from go.vumitools.app_worker import (
+    GoApplicationMixin, GoApplicationConfigMixin)
 
 
 class ConversationConfigResource(SandboxResource):
@@ -26,7 +27,7 @@ class ConversationConfigResource(SandboxResource):
         return self.reply(command, value=value, success=True)
 
 
-class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoWorkerConfigMixin):
+class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoApplicationConfigMixin):
     jsbox_app_config = ConfigDict(
         "Custom configuration passed to the javascript code.", default={})
     jsbox = ConfigDict(
@@ -40,7 +41,7 @@ class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoWorkerConfigMixin):
 
     @property
     def sandbox_id(self):
-        return self.get_conversation().user_account.key
+        return self.conversation.user_account.key
 
 
 class JsBoxApplication(GoApplicationMixin, JsSandbox):
@@ -76,7 +77,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         yield self._go_teardown_worker()
 
     def conversation_for_api(self, api):
-        return api.config.get_conversation()
+        return api.config.conversation
 
     def user_api_for_api(self, api):
         conv = self.conversation_for_api(api)
@@ -103,7 +104,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         config = yield self.get_config(msg)
         if not config.javascript:
             log.warning("No JS for conversation: %s" % (
-                config.get_conversation().key,))
+                config.conversation.key,))
             return
         yield super(JsBoxApplication, self).process_message_in_sandbox(msg)
 

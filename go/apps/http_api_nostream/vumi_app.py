@@ -106,7 +106,7 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 event['user_message_id'], event['event_id']))
 
         config = yield self.get_message_config(event)
-        conversation = config.get_conversation()
+        conversation = config.conversation
         push_url = self.get_api_config(conversation, 'push_event_url')
         yield self.send_event_to_client(event, conversation, push_url)
 

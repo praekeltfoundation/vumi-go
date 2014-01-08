@@ -6,7 +6,7 @@ from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager
-from vumi.config import IConfigData, ConfigText, ConfigDict
+from vumi.config import IConfigData, ConfigText, ConfigDict, ConfigField
 from vumi.connectors import IgnoreMessage
 
 from go.config import get_conversation_definition
@@ -15,22 +15,30 @@ from go.vumitools.metrics import AccountMetric
 from go.vumitools.utils import MessageMetadataHelper
 
 
-class GoApplicationConfigData(object):
+class ConfigConversation(ConfigField):
+    pass
+
+
+class ConfigRouter(ConfigField):
+    pass
+
+
+class GoWorkerConfigData(object):
     implements(IConfigData)
 
-    def __init__(self, config_dict, conversation):
-        self.config_dict = config_dict
-        self.conv = conversation
+    def __init__(self, static_config, dynamic_config):
+        self._static_config = static_config
+        self._dynamic_config = dynamic_config
 
     def get(self, field_name, default):
-        if self.conv.config and field_name in self.conv.config:
-            return self.conv.config[field_name]
-        return self.config_dict.get(field_name, default)
+        if field_name in self._dynamic_config:
+            return self._dynamic_config[field_name]
+        return self._static_config.get(field_name, default)
 
     def has_key(self, field_name):
-        if self.conv.config and field_name in self.conv.config:
+        if field_name in self._dynamic_config:
             return True
-        return self.config_dict.has_key(field_name)
+        return self._static_config.has_key(field_name)
 
 
 class GoWorkerConfigMixin(object):
@@ -43,9 +51,6 @@ class GoWorkerConfigMixin(object):
 
     api_routing = ConfigDict("AMQP config for API commands.", static=True)
     app_event_routing = ConfigDict("AMQP config for app events.", static=True)
-
-    def get_conversation(self):
-        return self._config_data.conv
 
 
 class GoWorkerMixin(object):
@@ -289,13 +294,18 @@ class GoWorkerMixin(object):
 
 
 class GoApplicationMixin(GoWorkerMixin):
+    def get_config_data_for_conversation(self, conversation):
+        config = conversation.config.copy()
+        config["conversation"] = conversation
+        return GoWorkerConfigData(self.config, config)
+
     def get_config_for_conversation(self, conversation):
         # If the conversation isn't running, we want to ignore the message
         # instead of getting the config.
         if not conversation.running():
             raise IgnoreMessage(
                 "Conversation '%s' not running." % (conversation.key,))
-        config_data = GoApplicationConfigData(self.config, conversation)
+        config_data = self.get_config_data_for_conversation(conversation)
         return self.CONFIG_CLASS(config_data)
 
     @inlineCallbacks
@@ -376,12 +386,17 @@ class GoApplicationMixin(GoWorkerMixin):
 
 
 class GoRouterMixin(GoWorkerMixin):
+    def get_config_data_for_router(self, router):
+        config = router.config.copy()
+        config["router"] = router
+        return GoWorkerConfigData(self.config, config)
+
     def get_config_for_router(self, router):
         # If the router isn't running, we want to ignore the message instead of
         # getting the config.
         if not router.running():
             raise IgnoreMessage("Router '%s' not running." % (router.key,))
-        config_data = GoApplicationConfigData(self.config, router)
+        config_data = self.get_config_data_for_router(router)
         return self.CONFIG_CLASS(config_data)
 
     @inlineCallbacks
@@ -429,7 +444,13 @@ class GoRouterMixin(GoWorkerMixin):
         yield router.save()
 
 
-class GoApplicationConfig(ApplicationWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+class GoApplicationConfigMixin(GoWorkerConfigMixin):
+    conversation = ConfigConversation(
+        "Conversation instance for this message", required=False)
+
+
+class GoApplicationConfig(ApplicationWorker.CONFIG_CLASS,
+                          GoApplicationConfigMixin):
     pass
 
 
@@ -463,13 +484,19 @@ class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
             message, endpoint_name)
 
 
-class GoRouterConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+class GoRouterConfigMixin(GoWorkerConfigMixin):
     ri_connector_name = ConfigText(
         "The name of the receive_inbound connector.",
         required=True, static=True)
     ro_connector_name = ConfigText(
         "The name of the receive_outbound connector.",
         required=True, static=True)
+    router = ConfigRouter(
+        "Router instance for this message", required=False)
+
+
+class GoRouterConfig(BaseWorker.CONFIG_CLASS, GoRouterConfigMixin):
+    pass
 
 
 class GoRouterWorker(GoRouterMixin, BaseWorker):
@@ -495,7 +522,7 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
         self.pause_connectors()
         return self.teardown_router()
 
-    def get_config(self, msg):
+    def get_config(self, msg, ctxt=None):
         return self.get_message_config(msg)
 
     def handle_inbound(self, config, msg):
