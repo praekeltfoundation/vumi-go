@@ -3,7 +3,7 @@ from django import forms
 from vumi.tests.helpers import VumiTestCase
 
 from go.apps.rapidsms.view_definition import (
-    EndpointsField, RapidSmsForm, EditRapidSmsView,
+    EndpointsField, RapidSmsForm, AuthTokensForm, EditRapidSmsView,
     ConversationViewDefinition)
 
 
@@ -49,7 +49,6 @@ class TestRapidSmsForm(VumiTestCase):
             'rapidsms_auth_method': 'basic',
             'rapidsms_http_method': 'POST',
             'allowed_endpoints': u'default',
-            'auth_token': None,
         })
 
     def test_initial_from_config_with_endpoints(self):
@@ -58,16 +57,6 @@ class TestRapidSmsForm(VumiTestCase):
         })
         self.assertEqual(initial, {
             'allowed_endpoints': u'default,extra',
-            'auth_token': None,
-        })
-
-    def test_initial_from_config_with_auth_token(self):
-        initial = RapidSmsForm.initial_from_config({
-            'api_tokens': ["token-1"]
-        })
-        self.assertEqual(initial, {
-            'allowed_endpoints': u'default',
-            'auth_token': "token-1",
         })
 
     def test_to_config(self):
@@ -78,7 +67,6 @@ class TestRapidSmsForm(VumiTestCase):
             'rapidsms_auth_method': 'basic',
             'rapidsms_http_method': 'POST',
             'allowed_endpoints': 'default, extra',
-            'auth_token': u"token-1",
         })
         form.is_valid()
         self.assertEqual(form.errors, {})
@@ -89,7 +77,26 @@ class TestRapidSmsForm(VumiTestCase):
             'rapidsms_auth_method': u'basic',
             'rapidsms_http_method': u'POST',
             'allowed_endpoints': ['default', 'extra'],
-            'api_tokens': [u'token-1'],
+        })
+
+
+class TestRapidSmsForm(VumiTestCase):
+    def test_initial_from_config_with_auth_token(self):
+        initial = AuthTokensForm.initial_from_config({
+            'api_tokens': ["token-1"]
+        })
+        self.assertEqual(initial, {
+            'auth_token': "token-1",
+        })
+
+    def test_to_config(self):
+        form = AuthTokensForm({
+            'auth_token': "token-1",
+        })
+        form.is_valid()
+        self.assertEqual(form.errors, {})
+        self.assertEqual(form.to_config(), {
+            'api_tokens': ["token-1"]
         })
 
 
@@ -98,6 +105,7 @@ class TestEditRapidSmsView(VumiTestCase):
         view = EditRapidSmsView()
         self.assertEqual(view.edit_forms, (
             ('rapidsms', RapidSmsForm),
+            ('auth_tokens', AuthTokensForm),
         ))
 
 

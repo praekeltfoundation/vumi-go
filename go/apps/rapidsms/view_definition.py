@@ -78,12 +78,6 @@ class RapidSmsForm(forms.Form):
         initial="default",
     )
 
-    # Authentication token:
-
-    auth_token = forms.CharField(
-        help_text='The access token for this RapidSMS conversation.',
-        required=True)
-
     # Fields to copy directly to / from conversation config
 
     _COPIED_FIELDS = (
@@ -99,9 +93,6 @@ class RapidSmsForm(forms.Form):
                 initial[field] = data[field]
         allowed_endpoints = data.get('allowed_endpoints', ["default"])
         initial["allowed_endpoints"] = u",".join(allowed_endpoints)
-        api_tokens = data.get('api_tokens', [])
-        initial["auth_token"] = (
-            api_tokens[0] if api_tokens else None)
         return initial
 
     def to_config(self):
@@ -110,6 +101,28 @@ class RapidSmsForm(forms.Form):
         for field in self._COPIED_FIELDS:
             config[field] = data[field]
         config["allowed_endpoints"] = data["allowed_endpoints"]
+        return config
+
+
+class AuthTokensForm(forms.Form):
+    """Auth tokens form.
+    """
+
+    auth_token = forms.CharField(
+        help_text='The access token for this RapidSMS conversation.',
+        required=True)
+
+    @classmethod
+    def initial_from_config(cls, data):
+        initial = {}
+        api_tokens = data.get('api_tokens', [])
+        initial["auth_token"] = (
+            api_tokens[0] if api_tokens else None)
+        return initial
+
+    def to_config(self):
+        data = self.cleaned_data
+        config = {}
         config["api_tokens"] = [data["auth_token"]]
         return config
 
@@ -117,6 +130,7 @@ class RapidSmsForm(forms.Form):
 class EditRapidSmsView(EditConversationView):
     edit_forms = (
         ('rapidsms', RapidSmsForm),
+        ('auth_tokens', AuthTokensForm),
     )
 
 
