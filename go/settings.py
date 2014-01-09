@@ -140,6 +140,9 @@ TEMPLATE_DIRS = (
     abspath("channel", "templates"),
     abspath("routing", "templates"),
     abspath("wizard", "templates"),
+    abspath("services", "templates"),
+    abspath("services", "vouchers", "airtime", "templates"),
+    abspath("services", "vouchers", "unique_codes", "templates"),
 )
 
 INSTALLED_APPS = (
