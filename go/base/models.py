@@ -69,16 +69,6 @@ class GoUser(AbstractBaseUser, PermissionsMixin):
     def get_profile(self):
         return self.userprofile
 
-    def get_account(self):
-        """Return the user's account or `None` if the user has no accounts.
-
-        If the user has multiple accounts, return the first one.
-        """
-        try:
-            return self.account_set.all()[0]
-        except IndexError:
-            return None
-
 
 class UserOrganisation(models.Model):
     """A group of users belong to an organisations"""
