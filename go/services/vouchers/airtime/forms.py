@@ -57,7 +57,8 @@ class VoucherPoolForm(BaseVoucherPoolForm):
                 csvfile.close()
         if list(headings) != list(service_settings.FILE_FORMAT):
             raise forms.ValidationError(
-                "Invalid file format.")
+                "Invalid file format. Headers should be %r" %
+                (service_settings.FILE_FORMAT,))
 
     def _validate_excel_format(self):
         """Validate the Excel spreadsheet format"""
@@ -73,14 +74,12 @@ class VoucherPoolForm(BaseVoucherPoolForm):
                     "The file is empty.")
 
             sheet = sheets[0]
-            if sheet.ncols != len(service_settings.FILE_FORMAT):
-                raise forms.ValidationError("Invalid file format.")
-
-            headings = [sheet.cell(0, 0).value, sheet.cell(0, 1).value,
-                        sheet.cell(0, 2).value]
-
+            headings = [sheet.cell(0, i).value for i in range(sheet.ncols)]
             if headings != list(service_settings.FILE_FORMAT):
-                raise forms.ValidationError("Invalid file format.")
+                raise forms.ValidationError(
+                    "Invalid file format. Headers should be %r" %
+                    (service_settings.FILE_FORMAT,))
+
         finally:
             book.release_resources()
 
