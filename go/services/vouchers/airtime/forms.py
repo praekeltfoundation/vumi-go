@@ -6,8 +6,8 @@ from django import forms
 from django.utils.translation import ugettext_lazy as _
 
 from go.services.forms import AjaxFormMixin, BaseServiceForm
-from go.services.voucher_utils import BaseVoucherPoolForm
-from go.services.airtime import settings as service_settings
+from go.services.vouchers.forms import BaseVoucherPoolForm
+from go.services.vouchers.airtime import settings as service_settings
 
 
 class VoucherPoolForm(BaseVoucherPoolForm):

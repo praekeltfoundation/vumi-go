@@ -40,8 +40,7 @@ class ServiceTemplateView(ServiceViewMixin, TemplateView):
 
     def get_template_name(self, view_name):
         """Return the full template name"""
-        return '%s/%s/%s.html' % (self.template_base,
-                                  self.view_def.service_type, view_name)
+        return '%s/%s.html' % (self.template_base, view_name)
 
 
 class ServiceViewDefinitionBase(object):

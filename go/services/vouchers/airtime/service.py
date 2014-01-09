@@ -5,10 +5,8 @@ from hashlib import md5
 from urlparse import urljoin
 from uuid import uuid4
 
-from django.http import Http404
-
-from go.services.voucher_utils import BaseVoucherService
-from go.services.airtime import settings
+from go.services.vouchers.service import BaseVoucherService
+from go.services.vouchers.airtime import settings as service_settings
 
 
 class VoucherService(BaseVoucherService):
@@ -18,7 +16,7 @@ class VoucherService(BaseVoucherService):
         """Import the vouchers `content` into the given `voucher_pool`"""
         pool_name = voucher_pool.config['ext_pool_name']
         request_id = uuid4().get_hex()
-        url = urljoin(settings.SERVICE_URL,
+        url = urljoin(service_settings.SERVICE_URL,
                       '%s/import/%s' % (pool_name, request_id))
 
         content_md5 = md5(content).hexdigest().lower()
@@ -31,7 +29,7 @@ class VoucherService(BaseVoucherService):
     def voucher_counts(self, voucher_pool):
         """Return voucher counts for the given `voucher_pool`"""
         pool_name = voucher_pool.config['ext_pool_name']
-        url = urljoin(settings.SERVICE_URL,
+        url = urljoin(service_settings.SERVICE_URL,
                       '%s/voucher_counts' % (pool_name,))
 
         response = requests.get(url)
@@ -51,7 +49,7 @@ class VoucherService(BaseVoucherService):
         pool_name = voucher_pool.config['ext_pool_name']
         voucher_list = []
         for request_id in voucher_pool.imports:
-            url = urljoin(settings.SERVICE_URL,
+            url = urljoin(service_settings.SERVICE_URL,
                           '%s/export/%s' % (pool_name, request_id))
 
             response = requests.put(url, data=json.dumps({}))
@@ -62,19 +60,10 @@ class VoucherService(BaseVoucherService):
     def audit_query(self, voucher_pool, msisdn):
         """Return all vouchers for the given `voucher_pool`"""
         pool_name = voucher_pool.config['ext_pool_name']
-        url = urljoin(settings.SERVICE_URL,
+        url = urljoin(service_settings.SERVICE_URL,
                       '%s/audit_query' % (pool_name,))
 
         params = {'field': 'user_id', 'value': msisdn}
         response = requests.get(url, params=params)
         result = self._get_result(response)
         return result.get('results', [])
-
-
-def voucher_pool_or_404(user_api, key):
-    """Return the voucher pool with the given `key` or raise `Http404`"""
-    voucher_pool_store = user_api.airtime_voucher_pool_store
-    voucher_pool = voucher_pool_store.get_voucher_pool_by_key(key)
-    if voucher_pool is None:
-        raise Http404("Voucher pool not found.")
-    return voucher_pool

@@ -10,21 +10,22 @@ from go.services.view_definition import (ServiceView,
                                          ServiceTemplateView,
                                          ServiceViewDefinitionBase)
 
-from go.services.airtime import settings
-from go.services.airtime.forms import VoucherPoolForm, VoucherQueryForm
-from go.services.airtime.utils import voucher_pool_or_404
+from go.services.vouchers.airtime import settings as service_settings
+from go.services.vouchers.airtime.forms import VoucherPoolForm, VoucherQueryForm
+from go.services.vouchers.airtime.utils import voucher_pool_or_404
 
 
 class IndexView(ServiceTemplateView):
     """Render the Airtime Voucher service page"""
 
+    template_base = 'airtime'
     view_name = 'index'
     path_suffix = None
 
     def get(self, request):
         voucher_pool_store = request.user_api.airtime_voucher_pool_store
         paginator = Paginator(voucher_pool_store.get_all_voucher_pools(),
-                              settings.VOUCHER_POOLS_PER_PAGE)
+                              service_settings.VOUCHER_POOLS_PER_PAGE)
 
         try:
             page = paginator.page(request.GET.get('p', 1))
@@ -43,6 +44,7 @@ class AddVoucherPoolView(ServiceTemplateView):
     FORM_TITLE = _("Upload airtime vouchers")
     SUBMIT_TEXT = _("Upload vouchers")
 
+    template_base = 'airtime'
     view_name = 'add'
     path_suffix = 'add'
 
@@ -94,6 +96,7 @@ class ImportVouchersView(ServiceTemplateView):
     FORM_TITLE = _("Upload airtime vouchers")
     SUBMIT_TEXT = _("Upload vouchers")
 
+    template_base = 'airtime'
     view_name = 'import'
     path_suffix = 'import'
 
@@ -162,9 +165,9 @@ class ExportVouchersView(ServiceView):
         response['Content-Disposition'] = 'attachment; filename=%s' % (filename,)
 
         writer = csv.writer(response)
-        headings = settings.FILE_FORMAT
+        headings = service_settings.FILE_FORMAT
         writer.writerow(headings)
-        voucher_service = self.view_def.voucher_service
+        voucher_service = self.view_def.service_def.voucher_service
         voucher_list = voucher_service.export_vouchers(voucher_pool)
         for voucher in voucher_list:
             writer.writerow([

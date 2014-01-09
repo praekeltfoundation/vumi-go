@@ -1,11 +1,11 @@
 from django.conf import settings
 
 DEFAULT_INSTALLED_SERVICES = {
-    'go.services.airtime': {
+    'go.services.vouchers.airtime': {
         'namespace': 'airtime',
         'display_name': 'Airtime vouchers',
     },
-    'go.services.unique_codes': {
+    'go.services.vouchers.unique_codes': {
         'namespace': 'unique_codes',
         'display_name': 'Unique codes',
     },

@@ -1,5 +1,5 @@
 from go.services.definition import ServiceDefinitionBase
-from go.services.airtime.utils import VoucherService
+from go.services.vouchers.airtime.service import VoucherService
 
 
 class ServiceDefinition(ServiceDefinitionBase):

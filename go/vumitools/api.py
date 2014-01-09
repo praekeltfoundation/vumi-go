@@ -23,7 +23,7 @@ from go.config import (
     configured_conversations,
     configured_routers)
 
-from go.services.airtime.models import (
+from go.services.vouchers.airtime.models import (
     VoucherPoolStore as AirtimeVoucherPoolStore)
 
 from go.vumitools.account import AccountStore

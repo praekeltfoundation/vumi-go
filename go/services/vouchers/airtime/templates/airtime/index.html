@@ -3,7 +3,7 @@
 {% load i18n %}
 {% load go_tags %}
 {% load crispy_forms_tags %}
-{% load vouchers_tags %}
+{% load services_tags %}
 
 {% block content_extraclass %}services airtime index{% endblock %}
 {% block content_title %}{% trans "Airtime vouchers" %}{% endblock %}
@@ -28,7 +28,7 @@
                     {% for voucher_pool in page.object_list %}
                         <tr>
                             <td>{{ voucher_pool.name }}</td>
-                            <td>{% total_vouchers 'airtime' voucher_pool %}</td>
+                            <td>{% airtime_vouchers_total voucher_pool %}</td>
                             <td>
                                 <a href="{% url "services:service" service_type="airtime" path_suffix="import" %}?voucher_pool_key={{ voucher_pool.key }}&as_modal=1"
                                    title="{% trans "Import airtime vouchers" %}"
