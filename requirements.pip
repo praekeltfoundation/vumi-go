@@ -1,6 +1,10 @@
 # Our dependencies are all specified in setup.py.
 
-# The following three packages need to be installed from the their repositories because we depend on dev versions.
+# The following three packages need to be installed from the their repositories
+# because we depend on dev versions. To upgrade, use the following command:
+#   pip install --exists-action i -U -r requirements.pip
+# This will ignore any existing repository clones. They can be updated manually
+# if desired.
 
 -e git+https://github.com/praekelt/vumi.git#egg=vumi
 -e git+https://github.com/praekelt/vxpolls.git#egg=vxpolls
