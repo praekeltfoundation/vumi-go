@@ -1,6 +1,5 @@
 import csv
 import xlrd
-import StringIO
 
 from django import forms
 from django.utils.translation import ugettext_lazy as _
@@ -8,6 +7,7 @@ from django.utils.translation import ugettext_lazy as _
 from go.services.forms import AjaxFormMixin, BaseServiceForm
 from go.services.vouchers.forms import BaseVoucherPoolForm
 from go.services.vouchers.airtime import settings as service_settings
+from go.services.vouchers.airtime.tasks import import_vouchers_file
 
 
 class VoucherPoolForm(BaseVoucherPoolForm):
@@ -44,17 +44,9 @@ class VoucherPoolForm(BaseVoucherPoolForm):
     def _validate_csv_format(self):
         """Validate the CSV file format"""
         vouchers_file = self.cleaned_data['vouchers_file']
-        if (hasattr(vouchers_file, 'temporary_file_path')):
-            with open(vouchers_file.temporary_file_path, 'rb') as csvfile:
-                reader = csv.reader(csvfile)
-                headings = reader.next()
-        else:  # File is stored in memory
-            csvfile = StringIO.StringIO(vouchers_file.read())
-            try:
-                reader = csv.reader(csvfile)
-                headings = reader.next()
-            finally:
-                csvfile.close()
+        with open(vouchers_file.temporary_file_path(), 'rb') as csvfile:
+            reader = csv.reader(csvfile)
+            headings = reader.next()
         if list(headings) != list(service_settings.FILE_FORMAT):
             raise forms.ValidationError(
                 "Invalid file format. Headers should be %r" %
@@ -63,10 +55,7 @@ class VoucherPoolForm(BaseVoucherPoolForm):
     def _validate_excel_format(self):
         """Validate the Excel spreadsheet format"""
         vouchers_file = self.cleaned_data['vouchers_file']
-        if (hasattr(vouchers_file, 'temporary_file_path')):
-            book = xlrd.open_workbook(vouchers_file.temporary_file_path)
-        else:  # File is stored in memory
-            book = xlrd.open_workbook(file_contents=vouchers_file.read())
+        book = xlrd.open_workbook(vouchers_file.temporary_file_path())
         try:
             sheets = book.sheets()
             if not sheets:
@@ -107,7 +96,12 @@ class VoucherPoolForm(BaseVoucherPoolForm):
             self.voucher_pool = voucher_pool_store.new_voucher_pool(
                 pool_name, config, imports=list())
 
-        self._import_vouchers(self.voucher_pool)
+        vouchers_file = self.cleaned_data['vouchers_file']
+        import_vouchers_file.delay(self.user_api.user_account_key,
+                                   self.voucher_pool.key,
+                                   vouchers_file.name,
+                                   vouchers_file.temporary_file_path(),
+                                   vouchers_file.content_type)
 
 
 class VoucherQueryForm(BaseServiceForm, AjaxFormMixin):

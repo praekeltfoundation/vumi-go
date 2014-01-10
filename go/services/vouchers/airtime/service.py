@@ -12,7 +12,7 @@ from go.services.vouchers.airtime import settings as service_settings
 class VoucherService(BaseVoucherService):
     """Airtime Voucher service proxy"""
 
-    def import_vouchers(self, voucher_pool, filename, content):
+    def import_vouchers(self, voucher_pool, content):
         """Import the vouchers `content` into the given `voucher_pool`"""
         pool_name = voucher_pool.config['ext_pool_name']
         request_id = uuid4().get_hex()

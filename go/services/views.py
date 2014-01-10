@@ -1,3 +1,5 @@
+from django.core.files.uploadhandler import TemporaryFileUploadHandler
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
@@ -12,10 +14,17 @@ def index(request):
 
 
 @login_required
+@csrf_exempt
 def service(request, service_type, path_suffix=None):
     """Delegate request handling to the view definition of the given
     ``service_type``.
     """
+    # Force uploaded files to be written to a temporary file on disk
+    request.upload_handlers = [TemporaryFileUploadHandler()]
+    return _service(request, service_type, path_suffix)
+
+
+def _service(request, service_type, path_suffix=None):
     view_def = get_service_view_definition(service_type)
     view = view_def.get_view(path_suffix)
     return view(request)
