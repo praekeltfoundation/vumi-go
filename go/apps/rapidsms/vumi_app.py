@@ -32,10 +32,15 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         yield super(RapidSMSApplication, self).teardown_application()
         yield self._go_teardown_worker()
 
+    @staticmethod
+    def vumi_username_for_conversation(conversation):
+        return "%s:%s" % (conversation.user_account.key, conversation.key)
+
     def get_config_data_for_conversation(self, conversation):
         dynamic_config = conversation.config.get('rapidsms', {}).copy()
         dynamic_config["vumi_auth_method"] = "basic"
-        dynamic_config["vumi_username"] = conversation.key
+        dynamic_config["vumi_username"] = self.vumi_username_for_conversation(
+            conversation)
         auth_config = conversation.config.get('auth_tokens', {})
         api_tokens = auth_config.get("api_tokens", [])
         dynamic_config["vumi_password"] = api_tokens[0] if api_tokens else None

@@ -63,6 +63,9 @@ class RapidSMSApplicationTestCase(VumiTestCase):
     def setUp(self):
         self.app_helper = self.add_helper(AppWorkerHelper(RapidSMSApplication))
 
+    def _username_for_conv(self, conv):
+        return RapidSMSApplication.vumi_username_for_conversation(conv)
+
     @inlineCallbacks
     def test_setup_application(self):
         app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
@@ -82,6 +85,7 @@ class RapidSMSApplicationTestCase(VumiTestCase):
         msg = yield self.app_helper.make_stored_inbound(conv, "foo")
         config = yield app.get_config(msg)
         self.assertTrue(isinstance(config, RapidSMSConfig))
+        self.assertEqual(config.vumi_username, self._username_for_conv(conv))
 
     @inlineCallbacks
     def test_get_config_for_username(self):
@@ -92,6 +96,7 @@ class RapidSMSApplicationTestCase(VumiTestCase):
             username="%s:%s" % (conv.user_account.key, conv.key))
         config = yield app.get_config(None, ctxt=ctxt)
         self.assertTrue(isinstance(config, RapidSMSConfig))
+        self.assertEqual(config.vumi_username, self._username_for_conv(conv))
 
     @inlineCallbacks
     def test_process_command_start(self):
