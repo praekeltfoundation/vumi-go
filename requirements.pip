@@ -1,31 +1,9 @@
-Django==1.5.5
-django-nose==1.0
-nose==1.1.2
-gunicorn==0.15.0
-pep8==0.6.1
-pyflakes==0.4.0
-supervisor==3.0a10
-coverage==3.7
-South==0.8.2
-psycopg2==2.4
-Fabric==1.2.2
-celery==3.0.23
-django-celery==3.0.23
-django-celery-email
-https://github.com/praekelt/vumi/tarball/develop#egg=vumi-dev
-https://github.com/praekelt/vxpolls/tarball/develop#egg=vxpolls-dev
-Markdown==2.1.1
-django-registration==1.0
-lesscpy==0.9h
-xlrd==0.8.0
-https://github.com/praekelt/vumi-wikipedia/tarball/develop#egg=vumi-wikipedia-dev
-requests==0.14.2
-mock==1.0.1
-raven>=2.0,<3.0
-django-debug-toolbar==0.9.4
-kombu==2.5.6
-librabbitmq==1.0.1
-hiredis==0.1.1
-django-pipeline==1.3.6
-txpostgres==1.1.0
-django-crispy-forms==1.4.0
+# Our dependencies are all specified in setup.py.
+
+# The following three packages need to be installed from the their repositories because we depend on dev versions.
+
+-e git+https://github.com/praekelt/vumi.git#egg=vumi
+-e git+https://github.com/praekelt/vxpolls.git#egg=vxpolls
+-e git+https://github.com/praekelt/vumi-wikipedia.git#egg=vumi-wikipedia
+
+-e .
