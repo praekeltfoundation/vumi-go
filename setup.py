@@ -1,36 +1,5 @@
 from setuptools import setup, find_packages
-import re
 
-
-def listify(filename):
-    return filter(None, open(filename, 'r').read().split('\n'))
-
-
-_SIMPLE_VERSION_RE = re.compile("(?P<name>.*)-(?P<version>[0-9.]+|dev)$")
-
-
-def parse_requirements(filename):
-    install_requires = []
-    dependency_links = []
-    for requirement in listify(filename):
-        if requirement.startswith("#"):
-            continue
-        if requirement.startswith("-e"):
-            continue
-        if requirement.startswith("https:") or requirement.startswith("http:"):
-            (_, _, name) = requirement.partition('#egg=')
-            ver_match = _SIMPLE_VERSION_RE.match(name)
-            if ver_match:
-                # egg names with versions need to be converted to
-                # an == requirement.
-                name = "%(name)s==%(version)s" % ver_match.groupdict()
-            install_requires.append(name)
-            dependency_links.append(requirement)
-        else:
-            install_requires.append(requirement)
-    return install_requires, dependency_links
-
-install_requires, dependency_links = parse_requirements("requirements.pip")
 
 setup(
     name="vumi-go",
@@ -42,8 +11,38 @@ setup(
     author='Praekelt Foundation',
     author_email='dev@praekeltfoundation.org',
     packages=find_packages(),
-    install_requires=install_requires,
-    dependency_links=dependency_links,
+    install_requires=[
+        'vumi>0.4',
+        'vxpolls',
+        'vumi-wikipedia',
+        # We need dev versions of the three packages above, so they have to be
+        # installed before us. They're listed first so that we fail fast
+        # instead of working through all the other requirements before
+        # discovering that they aren't available should that be the case.
+        'Django==1.5.5',
+        'django-nose==1.0',
+        'nose==1.1.2',
+        'gunicorn==0.15.0',
+        'South==0.8.2',
+        'psycopg2==2.4',
+        'celery==3.0.23',
+        'django-celery==3.0.23',
+        'django-celery-email',
+        'Markdown==2.1.1',
+        'django-registration==1.0',
+        'lesscpy==0.9h',
+        'xlrd==0.8.0',
+        'requests==0.14.2',
+        'mock==1.0.1',
+        'raven>=2.0,<3.0',
+        'django-debug-toolbar==0.9.4',
+        'kombu==2.5.6',
+        'librabbitmq==1.0.1',
+        'hiredis==0.1.1',
+        'django-pipeline==1.3.6',
+        'txpostgres==1.1.0',
+        'django-crispy-forms==1.4.0',
+    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
