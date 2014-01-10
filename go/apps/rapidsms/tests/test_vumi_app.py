@@ -4,6 +4,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.tests.utils import LogCatcher
 from vumi.tests.helpers import VumiTestCase
+from vumi.config import ConfigContext
 
 from go.apps.tests.helpers import AppWorkerHelper
 from go.apps.rapidsms.vumi_app import RapidSMSApplication, RapidSMSConfig
@@ -76,12 +77,22 @@ class RapidSMSApplicationTestCase(VumiTestCase):
         # TODO: check something?
 
     @inlineCallbacks
-    def test_get_config(self):
+    def test_get_config_for_message(self):
         app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
         conv = yield self.app_helper.create_conversation(
             config=self.CONV_CONFIG, started=True)
         msg = yield self.app_helper.make_stored_inbound(conv, "foo")
         config = yield app.get_config(msg)
+        self.assertTrue(isinstance(config, RapidSMSConfig))
+
+    @inlineCallbacks
+    def test_get_config_for_username(self):
+        app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
+        conv = yield self.app_helper.create_conversation(
+            config=self.CONV_CONFIG, started=True)
+        ctxt = ConfigContext(
+            username="%s:%s" % (conv.user_account.key, conv.key))
+        config = yield app.get_config(None, ctxt=ctxt)
         self.assertTrue(isinstance(config, RapidSMSConfig))
 
     @inlineCallbacks

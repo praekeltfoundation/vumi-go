@@ -3,7 +3,7 @@
 
 """Vumi Go application worker for RapidSMS."""
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.rapidsms_relay import RapidSMSRelay
 from vumi import log
@@ -41,8 +41,30 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         dynamic_config["vumi_password"] = api_tokens[0] if api_tokens else None
         return GoWorkerConfigData(self.config, dynamic_config)
 
-    def get_config(self, msg):
-        return self.get_message_config(msg)
+    @inlineCallbacks
+    def get_ctxt_config(self, ctxt):
+        username = getattr(ctxt, 'username', None)
+        if username is None:
+            raise ValueError("No username provided for retrieving"
+                             " RapidSMS conversation.")
+        user_account_key, _, conversation_key = username.partition(":")
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning("Cannot find conversation '%s' for user '%s'." % (
+                conversation_key, user_account_key))
+            raise ValueError("No conversation found for retrieiving"
+                             " RapidSMS configuration.")
+        config = yield self.get_config_for_conversation(conv)
+        returnValue(config)
+
+    def get_config(self, msg, ctxt=None):
+        if msg is not None:
+            return self.get_message_config(msg)
+        elif ctxt is not None:
+            return self.get_ctxt_config(ctxt)
+        else:
+            raise ValueError("No msg or context provided for"
+                             " retrieving a RapidSMS config.")
 
     def process_command_start(self, user_account_key, conversation_key):
         log.info("Starting RapidSMS conversation (key: %r)." %
