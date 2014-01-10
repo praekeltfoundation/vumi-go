@@ -67,14 +67,12 @@ class RapidSMSApplicationTestCase(VumiTestCase):
     def test_setup_application(self):
         app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
         yield app.startService()
-        # TODO: check something?
 
     @inlineCallbacks
     def test_teardown_application(self):
         app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
         yield app.startService()
         yield app.stopService()
-        # TODO: check something?
 
     @inlineCallbacks
     def test_get_config_for_message(self):
