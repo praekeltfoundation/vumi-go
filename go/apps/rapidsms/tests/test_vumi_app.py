@@ -4,6 +4,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.tests.utils import LogCatcher
 from vumi.tests.helpers import VumiTestCase
+from vumi.config import ConfigContext
 
 from go.apps.tests.helpers import AppWorkerHelper
 from go.apps.rapidsms.vumi_app import RapidSMSApplication, RapidSMSConfig
@@ -62,27 +63,50 @@ class RapidSMSApplicationTestCase(VumiTestCase):
     def setUp(self):
         self.app_helper = self.add_helper(AppWorkerHelper(RapidSMSApplication))
 
+    def _username_for_conv(self, conv):
+        return RapidSMSApplication.vumi_username_for_conversation(conv)
+
     @inlineCallbacks
     def test_setup_application(self):
         app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
         yield app.startService()
-        # TODO: check something?
 
     @inlineCallbacks
     def test_teardown_application(self):
         app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
         yield app.startService()
         yield app.stopService()
-        # TODO: check something?
 
     @inlineCallbacks
-    def test_get_config(self):
+    def test_vumi_username_for_conversation(self):
+        app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
+        conv = yield self.app_helper.create_conversation(
+            config=self.CONV_CONFIG)
+        self.assertEqual(
+            app.vumi_username_for_conversation(conv),
+            "%s:%s" % (conv.user_account.key, conv.key)
+        )
+
+    @inlineCallbacks
+    def test_get_config_for_message(self):
         app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
         conv = yield self.app_helper.create_conversation(
             config=self.CONV_CONFIG, started=True)
         msg = yield self.app_helper.make_stored_inbound(conv, "foo")
         config = yield app.get_config(msg)
         self.assertTrue(isinstance(config, RapidSMSConfig))
+        self.assertEqual(config.vumi_username, self._username_for_conv(conv))
+
+    @inlineCallbacks
+    def test_get_config_for_username(self):
+        app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
+        conv = yield self.app_helper.create_conversation(
+            config=self.CONV_CONFIG, started=True)
+        ctxt = ConfigContext(
+            username="%s:%s" % (conv.user_account.key, conv.key))
+        config = yield app.get_config(None, ctxt=ctxt)
+        self.assertTrue(isinstance(config, RapidSMSConfig))
+        self.assertEqual(config.vumi_username, self._username_for_conv(conv))
 
     @inlineCallbacks
     def test_process_command_start(self):

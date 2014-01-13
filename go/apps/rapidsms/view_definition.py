@@ -50,7 +50,7 @@ class RapidSmsForm(forms.Form):
 
     # Dynamic RapidSMS options that are not user configurable:
     #
-    # vumi_username -> conversation ID
+    # vumi_username -> <account-key>:<conversation-key>
     # vumi_password -> authentication token for conversation
     # vumi_auth_method -> "basic"
 
