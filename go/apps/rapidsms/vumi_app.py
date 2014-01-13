@@ -22,8 +22,8 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
 
     worker_name = 'rapidsms_application'
 
-    # RapidSMS truncates usernames at the first colon to don't use those
-    # as the separator.
+    # Basic AUTH uses colon to combine the username and password so don't use
+    # colon as the separator.
     AUTH_SEP = "@"
 
     @inlineCallbacks
