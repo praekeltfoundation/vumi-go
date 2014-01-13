@@ -1,0 +1,9 @@
+Hi {{ user.get_full_name }}!
+
+We've successfully imported the airtime vouchers in {{ file_name }}.
+
+Please visit http://go.vumi.org.
+
+thanks!
+
+Vumi Go.

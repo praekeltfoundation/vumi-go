@@ -42,6 +42,7 @@ def import_vouchers_file(account_key, voucher_pool_key, file_name, file_path,
             "Airtime voucher import completed successfully.",
             render_to_string('airtime/email/import_completed.txt', {
                 'user': user_profile.user,
+                'file_name': file_name
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
             fail_silently=False)
 
@@ -60,7 +61,7 @@ def import_vouchers_file(account_key, voucher_pool_key, file_name, file_path,
                     traceback.format_tb(exc_traceback)),
             }), settings.DEFAULT_FROM_EMAIL, [
                 user_profile.user.email,
-                'support+contact-import@vumi.org',
+                'support@vumi.org',
             ], fail_silently=False)
 
     finally:
