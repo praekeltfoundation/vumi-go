@@ -22,6 +22,10 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
 
     worker_name = 'rapidsms_application'
 
+    # RapidSMS truncates usernames at the first colon to don't use those
+    # as the separator.
+    AUTH_SEP = "@"
+
     @inlineCallbacks
     def setup_application(self):
         yield super(RapidSMSApplication, self).setup_application()
@@ -32,9 +36,10 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         yield super(RapidSMSApplication, self).teardown_application()
         yield self._go_teardown_worker()
 
-    @staticmethod
-    def vumi_username_for_conversation(conversation):
-        return "%s:%s" % (conversation.user_account.key, conversation.key)
+    @classmethod
+    def vumi_username_for_conversation(cls, conversation):
+        return cls.AUTH_SEP.join(
+            [conversation.user_account.key, conversation.key])
 
     def get_config_data_for_conversation(self, conversation):
         dynamic_config = conversation.config.get('rapidsms', {}).copy()
@@ -52,7 +57,10 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         if username is None:
             raise ValueError("No username provided for retrieving"
                              " RapidSMS conversation.")
-        user_account_key, _, conversation_key = username.partition(":")
+        user_account_key, _, conversation_key = username.partition(
+            self.AUTH_SEP)
+        if not user_account_key or not conversation_key:
+            raise ValueError("Invalid username for RapidSMS conversation.")
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (

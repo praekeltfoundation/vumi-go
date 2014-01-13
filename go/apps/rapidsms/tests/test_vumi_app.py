@@ -84,7 +84,7 @@ class RapidSMSApplicationTestCase(VumiTestCase):
             config=self.CONV_CONFIG)
         self.assertEqual(
             app.vumi_username_for_conversation(conv),
-            "%s:%s" % (conv.user_account.key, conv.key)
+            "%s@%s" % (conv.user_account.key, conv.key)
         )
 
     @inlineCallbacks
@@ -103,10 +103,24 @@ class RapidSMSApplicationTestCase(VumiTestCase):
         conv = yield self.app_helper.create_conversation(
             config=self.CONV_CONFIG, started=True)
         ctxt = ConfigContext(
-            username="%s:%s" % (conv.user_account.key, conv.key))
+            username="%s@%s" % (conv.user_account.key, conv.key))
         config = yield app.get_config(None, ctxt=ctxt)
         self.assertTrue(isinstance(config, RapidSMSConfig))
         self.assertEqual(config.vumi_username, self._username_for_conv(conv))
+
+    @inlineCallbacks
+    def test_get_config_for_missing_username(self):
+        app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
+        ctxt = ConfigContext(username=None)
+        d = app.get_config(None, ctxt=ctxt)
+        self.assertFailure(d, ValueError)
+
+    @inlineCallbacks
+    def test_get_config_for_badly_formatted_username(self):
+        app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
+        ctxt = ConfigContext(username="foo")
+        d = app.get_config(None, ctxt=ctxt)
+        self.assertFailure(d, ValueError)
 
     @inlineCallbacks
     def test_process_command_start(self):
