@@ -49,6 +49,7 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         auth_config = conversation.config.get('auth_tokens', {})
         api_tokens = auth_config.get("api_tokens", [])
         dynamic_config["vumi_password"] = api_tokens[0] if api_tokens else None
+        dynamic_config["conversation"] = conversation
         return GoWorkerConfigData(self.config, dynamic_config)
 
     @inlineCallbacks
@@ -78,6 +79,16 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         else:
             raise ValueError("No msg or context provided for"
                              " retrieving a RapidSMS config.")
+
+    def send_rapidsms_nonreply(self, to_addr, content, config, endpoint):
+        """Call .send_to() for a message from RapidSMS that is not a reply.
+
+        This overrides the base method and adds conversation metadata.
+        """
+        helper_metadata = {}
+        config.conversation.set_go_helper_metadata(helper_metadata)
+        return self.send_to(to_addr, content, endpoint=endpoint,
+                            helper_metadata=helper_metadata)
 
     def process_command_start(self, user_account_key, conversation_key):
         log.info("Starting RapidSMS conversation (key: %r)." %

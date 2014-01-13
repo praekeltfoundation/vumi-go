@@ -123,6 +123,28 @@ class RapidSMSApplicationTestCase(VumiTestCase):
         self.assertFailure(d, ValueError)
 
     @inlineCallbacks
+    def test_send_rapidsms_nonreply(self):
+        app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
+        conv = yield self.app_helper.create_conversation(
+            config=self.CONV_CONFIG, started=True)
+        ctxt = ConfigContext(
+            username="%s@%s" % (conv.user_account.key, conv.key))
+        config = yield app.get_config(None, ctxt=ctxt)
+        yield app.send_rapidsms_nonreply(
+            "to:123", "Hello!", endpoint="default", config=config)
+        [msg] = self.app_helper.get_dispatched_outbound()
+        self.assertEqual(msg["content"], "Hello!")
+        self.assertEqual(msg["to_addr"], "to:123")
+        self.assertEqual(msg.get_routing_endpoint(), "default")
+        self.assertEqual(msg["helper_metadata"], {
+            u'go': {
+                u'conversation_type': "rapidsms",
+                u'user_account': conv.user_account.key,
+                u'conversation_key': conv.key,
+            }
+        })
+
+    @inlineCallbacks
     def test_process_command_start(self):
         yield self.app_helper.get_app_worker(self.APP_CONFIG)
         conv = yield self.app_helper.create_conversation(
