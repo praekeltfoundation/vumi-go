@@ -22,6 +22,10 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
 
     worker_name = 'rapidsms_application'
 
+    # Basic AUTH uses colon to combine the username and password so don't use
+    # colon as the separator.
+    AUTH_SEP = "@"
+
     @inlineCallbacks
     def setup_application(self):
         yield super(RapidSMSApplication, self).setup_application()
@@ -32,9 +36,10 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         yield super(RapidSMSApplication, self).teardown_application()
         yield self._go_teardown_worker()
 
-    @staticmethod
-    def vumi_username_for_conversation(conversation):
-        return "%s:%s" % (conversation.user_account.key, conversation.key)
+    @classmethod
+    def vumi_username_for_conversation(cls, conversation):
+        return cls.AUTH_SEP.join(
+            [conversation.user_account.key, conversation.key])
 
     def get_config_data_for_conversation(self, conversation):
         dynamic_config = conversation.config.get('rapidsms', {}).copy()
@@ -44,6 +49,7 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         auth_config = conversation.config.get('auth_tokens', {})
         api_tokens = auth_config.get("api_tokens", [])
         dynamic_config["vumi_password"] = api_tokens[0] if api_tokens else None
+        dynamic_config["conversation"] = conversation
         return GoWorkerConfigData(self.config, dynamic_config)
 
     @inlineCallbacks
@@ -52,7 +58,10 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         if username is None:
             raise ValueError("No username provided for retrieving"
                              " RapidSMS conversation.")
-        user_account_key, _, conversation_key = username.partition(":")
+        user_account_key, _, conversation_key = username.partition(
+            self.AUTH_SEP)
+        if not user_account_key or not conversation_key:
+            raise ValueError("Invalid username for RapidSMS conversation.")
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (
@@ -70,6 +79,16 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         else:
             raise ValueError("No msg or context provided for"
                              " retrieving a RapidSMS config.")
+
+    def send_rapidsms_nonreply(self, to_addr, content, config, endpoint):
+        """Call .send_to() for a message from RapidSMS that is not a reply.
+
+        This overrides the base method and adds conversation metadata.
+        """
+        helper_metadata = {}
+        config.conversation.set_go_helper_metadata(helper_metadata)
+        return self.send_to(to_addr, content, endpoint=endpoint,
+                            helper_metadata=helper_metadata)
 
     def process_command_start(self, user_account_key, conversation_key):
         log.info("Starting RapidSMS conversation (key: %r)." %
