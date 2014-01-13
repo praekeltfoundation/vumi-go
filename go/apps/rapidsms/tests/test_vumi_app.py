@@ -78,6 +78,16 @@ class RapidSMSApplicationTestCase(VumiTestCase):
         yield app.stopService()
 
     @inlineCallbacks
+    def test_vumi_username_for_conversation(self):
+        app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
+        conv = yield self.app_helper.create_conversation(
+            config=self.CONV_CONFIG)
+        self.assertEqual(
+            app.vumi_username_for_conversation(conv),
+            "%s:%s" % (conv.user_account.key, conv.key)
+        )
+
+    @inlineCallbacks
     def test_get_config_for_message(self):
         app = yield self.app_helper.get_app_worker(self.APP_CONFIG)
         conv = yield self.app_helper.create_conversation(
