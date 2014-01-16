@@ -1,3 +1,7 @@
+pep8
+pyflakes
+supervisor
+coverage
 pytest
 pytest-django
 pytest-xdist

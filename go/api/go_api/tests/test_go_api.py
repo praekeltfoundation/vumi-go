@@ -10,35 +10,28 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.web.server import Site
 
 from vumi.utils import http_request
+from vumi.tests.helpers import VumiTestCase
 
-from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class GoApiServerTestCase(GoWorkerTestCase):
-
-    worker_name = 'GoApiServer'
-    transport_name = 'sphex'
-    transport_type = 'sphex_type'
+class TestGoApiServer(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(GoApiServerTestCase, self).setUp()
-        self.vumi_api = yield self.get_vumi_api()
-        self.account = yield self.mk_user(self.vumi_api, u'user')
-        self.user_api = self.vumi_api.get_user_api(self.account.key)
-        self.campaign_key = self.account.key
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u'user')
+        self.user_api = self.user_helper.user_api
+        self.campaign_key = self.user_helper.account_key
 
-        site = Site(GoApiServer(self.account.key, self.vumi_api))
+        site = Site(GoApiServer(
+            self.campaign_key, self.vumi_helper.get_vumi_api()))
         self.server = yield reactor.listenTCP(0, site)
+        self.add_cleanup(self.server.loseConnection)
         addr = self.server.getHost()
         self.proxy = Proxy("http://%s:%d/" % (addr.host, addr.port))
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield self.server.loseConnection()
-        yield super(GoApiServerTestCase, self).tearDown()
 
     @inlineCallbacks
     def assert_faults(self, d, fault_code, fault_string):
@@ -119,7 +112,8 @@ class GoApiServerTestCase(GoWorkerTestCase):
 
     @inlineCallbacks
     def test_channels(self):
-        yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.vumi_helper.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.user_helper.add_tagpool_permission(u"pool")
         yield self.user_api.acquire_tag(u"pool")  # acquires tag1
         result = yield self.proxy.callRemote(
             "channels", self.campaign_key)
@@ -216,7 +210,8 @@ class GoApiServerTestCase(GoWorkerTestCase):
             u'jsbox', u'My Conversation', u'A description', {})
         router = yield self.user_api.new_router(
             u'keyword', u'My Router', u'A description', {})
-        yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.vumi_helper.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.user_helper.add_tagpool_permission(u"pool")
         tag = yield self.user_api.acquire_tag(u"pool")  # acquires tag1
         channel = yield self.user_api.get_channel(tag)
         yield self._connect_conv_to_channel_through_router(
@@ -429,8 +424,11 @@ class GoApiServerTestCase(GoWorkerTestCase):
                                  u"no such sub-handler unknown")
 
 
-class GoApiWorkerTestCase(GoWorkerTestCase):
-    worker_class = GoApiWorker
+class TestGoApiWorker(VumiTestCase):
+
+    def setUp(self):
+        self.vumi_helper = self.add_helper(
+            VumiApiHelper(), setup_vumi_api=False)
 
     @inlineCallbacks
     def get_api_worker(self, config=None, start=True, auth=True):
@@ -439,17 +437,19 @@ class GoApiWorkerTestCase(GoWorkerTestCase):
         config.setdefault('twisted_endpoint', 'tcp:0')
         config.setdefault('web_path', 'api')
         config.setdefault('health_path', 'health')
-        config = self.mk_config(config)
-        worker = yield self.get_worker(config, start)
+        config = self.vumi_helper.mk_config(config)
+        worker = yield self.vumi_helper.get_worker_helper().get_worker(
+            GoApiWorker, config, start)
 
         vumi_api = worker.vumi_api
+        self.vumi_helper.set_vumi_api(vumi_api)
         user, password = None, None
         if auth:
-            account = yield self.mk_user(vumi_api, u"user-1")
+            user_helper = yield self.vumi_helper.make_user(u"user-1")
             session_id = "session-1"
             session = {}
             vumi_api.session_manager.set_user_account_key(
-                session, account.key)
+                session, user_helper.account_key)
             yield vumi_api.session_manager.create_session(
                 session_id, session, expire_seconds=30)
             user, password = "session_id", session_id

@@ -6,7 +6,7 @@ from ConfigParser import ConfigParser
 
 from django.contrib.auth import authenticate
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.management.commands import go_setup_env
 from go.base.utils import vumi_api_for_user
 from go.vumitools.routing_table import RoutingTable
@@ -29,20 +29,17 @@ class FakeFile(StringIO):
         pass
 
 
-class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
-    use_riak = True
+class TestGoSetupEnv(GoDjangoTestCase):
 
     def setUp(self):
-        super(GoBootstrapEnvTestCase, self).setUp()
-        self.setup_api()
-        self.config = self.mk_config({})
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
 
         self.command = go_setup_env.Command()
-        self.command.setup_backend(self.config)
-        self.tagpool = self.command.tagpool
-        # do whatever setup command.handle() does manually
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
+        # do whatever setup command.handle() does manually
+        self.command.setup_backend(self.vumi_helper.mk_config({}))
+        self.tagpool = self.command.tagpool
         self.command.file_name_template = 'go_%(file_name)s.%(suffix)s'
         self.command.dest_dir = 'setup_env'
         self.command.config = {

@@ -1,14 +1,14 @@
 import json
 
 from django.conf import settings
-from django.test import TestCase
 
 from go.api.go_api import client
+from go.base.tests.helpers import GoDjangoTestCase
 
 from mock import patch
 
 
-class ClientTestCase(TestCase):
+class TestClient(GoDjangoTestCase):
     @patch('requests.post')
     def test_rpc(self, mock_req):
         client.rpc('123', 'do_something', ['foo', 'bar'], id='abc')

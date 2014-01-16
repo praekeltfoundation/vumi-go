@@ -15,7 +15,6 @@ pools:
       display_name: "Long code"
       delivery_class: sms
       transport_type: sms
-      server_initiated: true
       transport_name: sms_transport
       country_name: "South Africa"
       supports:
@@ -35,7 +34,6 @@ pools:
       display_name: "Long code"
       delivery_class: sms
       transport_type: sms
-      client_initiated: true
       transport_name: sms_transport_2
       country_name: "Star Kingdom of Manticore"
       supports:
@@ -55,6 +53,5 @@ pools:
       display_name: "USSD code"
       delivery_class: ussd
       transport_type: ussd
-      client_initiated: true
       transport_name: ussd_transport
       country_name: "South Africa"

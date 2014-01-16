@@ -1,38 +1,42 @@
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
 
 
-class HttpApiNoStreamTestCase(DjangoGoApplicationTestCase):
-    TEST_CONVERSATION_TYPE = u'http_api_nostream'
+class TestHttpApiNoStreamViews(GoDjangoTestCase):
+
+    def setUp(self):
+        self.app_helper = self.add_helper(AppViewsHelper(u'http_api_nostream'))
+        self.client = self.app_helper.get_client()
 
     def test_show_stopped(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation()
-        response = self.client.get(self.get_view_url('show'))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
+        response = self.client.get(conv_helper.get_view_url('show'))
+        self.assertContains(response, u"<h1>myconv</h1>")
 
     def test_show_running(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True)
-        response = self.client.get(self.get_view_url('show'))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv", started=True)
+        response = self.client.get(conv_helper.get_view_url('show'))
+        self.assertContains(response, u"<h1>myconv</h1>")
 
     def test_edit_view(self):
-        self.setup_conversation(started=True)
-        self.assertEqual(self.conversation.config, {})
-        response = self.client.post(self.get_view_url('edit'), {
+        conv_helper = self.app_helper.create_conversation_helper()
+        conversation = conv_helper.get_conversation()
+        self.assertEqual(conversation.config, {})
+        response = self.client.post(conv_helper.get_view_url('edit'), {
             'http_api_nostream-api_tokens': 'token',
             'http_api_nostream-push_message_url': 'http://messages/',
             'http_api_nostream-push_event_url': 'http://events/',
             })
-        self.assertRedirects(response, self.get_view_url('show'))
-        reloaded_conv = self.user_api.get_wrapped_conversation(
-            self.conversation.key)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        reloaded_conv = conv_helper.get_conversation()
         self.assertEqual(reloaded_conv.config, {
             'http_api_nostream': {
                 'push_event_url': 'http://events/',
@@ -40,14 +44,15 @@ class HttpApiNoStreamTestCase(DjangoGoApplicationTestCase):
                 'api_tokens': ['token'],
             }
         })
-        self.assertEqual(self.conversation.config, {})
-        response = self.client.get(self.get_view_url('edit'))
+        self.assertEqual(conversation.config, {})
+        response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertContains(response, 'http://events/')
         self.assertContains(response, 'http://messages/')
         self.assertEqual(response.status_code, 200)
 
     def test_get_edit_view_no_config(self):
-        self.setup_conversation(started=True)
-        self.assertEqual(self.conversation.config, {})
-        response = self.client.get(self.get_view_url('edit'))
+        conv_helper = self.app_helper.create_conversation_helper()
+        conversation = conv_helper.get_conversation()
+        self.assertEqual(conversation.config, {})
+        response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
