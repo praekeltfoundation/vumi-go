@@ -57,8 +57,10 @@ class VoucherService(BaseVoucherService):
             voucher_list.extend(result.get('vouchers', []))
         return voucher_list
 
-    def audit_query(self, voucher_pool, msisdn):
-        """Return all vouchers for the given `voucher_pool`"""
+    def query_msisdn(self, voucher_pool, msisdn):
+        """Return all vouchers in the given `voucher_pool` that match the
+        given `msisdn`.
+        """
         pool_name = voucher_pool.config['ext_pool_name']
         url = urljoin(service_settings.SERVICE_URL,
                       '%s/audit_query' % (pool_name,))

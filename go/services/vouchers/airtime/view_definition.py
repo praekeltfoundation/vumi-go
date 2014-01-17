@@ -184,6 +184,7 @@ class QueryVouchersView(ServiceTemplateView):
     FORM_TITLE = _("Query airtime vouchers")
     SUBMIT_TEXT = _("Go")
 
+    template_base = 'airtime'
     view_name = 'query'
     path_suffix = 'query'
 

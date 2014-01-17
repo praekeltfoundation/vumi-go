@@ -1,0 +1,20 @@
+{% extends request.is_ajax|yesno:"ajax_base.html,account/base.html" %}
+
+{% load i18n %}
+{% load go_tags %}
+{% load crispy_forms_tags %}
+
+{% block content_extraclass %}services airtime add{% endblock %}
+{% block content_title %}{% if form_config.form_title %}{{ form_config.form_title }}{% else %}{% trans "Add unique code pool" %}{% endif %}{% endblock %}
+
+{% block content_main %}
+{% if request.is_ajax %}
+    {% include "services/_form.html" %}
+{% else %}
+<div class="row main-content">
+    <div class="col-md-12">
+        {% include "services/_form.html" %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

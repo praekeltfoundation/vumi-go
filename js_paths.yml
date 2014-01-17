@@ -89,6 +89,7 @@ client:
       - 'go/base/static/js/src/channel/show.js'
       - 'go/base/static/js/src/services/services.js'
       - 'go/base/static/js/src/services/airtime.js'
+      - 'go/base/static/js/src/services/unique_codes.js'
 
   styles:
     vendor:

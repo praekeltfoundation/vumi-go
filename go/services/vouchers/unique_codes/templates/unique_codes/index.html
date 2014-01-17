@@ -1,0 +1,77 @@
+{% extends request.is_ajax|yesno:"ajax_base.html,account/base.html" %}
+
+{% load i18n %}
+{% load go_tags %}
+{% load crispy_forms_tags %}
+{% load services_tags %}
+
+{% block content_extraclass %}services airtime index{% endblock %}
+{% block content_title %}{% trans "Unique codes" %}{% endblock %}
+
+{% block content_main %}
+
+{% if not request.is_ajax %}
+<div class="row main-content">
+{% endif %}
+
+    <div class="col-md-12">
+        <table class="table" id="unique-code-pool-list">
+            <thead>
+                <tr>
+                    <th>{% trans "Unique code pool" %}</th>
+                    <th>{% trans "Vouchers" %}</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if page.object_list %}
+                    {% for unique_code_pool in page.object_list %}
+                        <tr>
+                            <td>{{ unique_code_pool.name }}</td>
+                            <td>{% unique_codes_total unique_code_pool %}</td>
+                            <td>
+                                <a href="{% url "services:service" service_type="unique_codes" path_suffix="import" %}?unique_code_pool_key={{ unique_code_pool.key }}&as_modal=1"
+                                   title="{% trans "Import unique codes" %}"
+                                   rel="modal">
+                                    {% trans "Import" %}</a>&nbsp;
+
+                                <a href="{% url "services:service" service_type="unique_codes" path_suffix="query" %}?unique_code_pool_key={{ unique_code_pool.key }}&as_modal=1"
+                                   title="{% trans "Query unique codes" %}"
+                                   rel="modal" data-keep-modal-open="true">
+                                    {% trans "Query" %}</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="2">{% trans "You don't have any unique codes yet." %}</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {% include "base/includes/pagination.html" %}
+        <a href="{% url "services:service" service_type="unique_codes" path_suffix="add" %}?as_modal=1"
+           title="{% trans "Add unique codes to your account" %}"
+           rel="modal">
+            <i class="glyphicon glyphicon-plus"></i>
+            <span>{% trans "Add unique codes to your account" %}<span>
+        </a>
+    </div>
+
+{% if not request.is_ajax %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="unique-codes-modal">
+    <!-- To be populated with AJAX -->
+</div>
+{% endblock %}
+
+{% block ondomready %}
+    var view = new go.services.unique_codes.UniqueCodesPoolView({
+        el: 'div.main-content',
+        url: '{{ request.get_full_path }}',
+        $modal: $('div#unique-codes-modal')
+    });
+{% endblock %}
