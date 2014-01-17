@@ -3,24 +3,19 @@ from zipfile import ZipFile
 
 from django.core import mail
 
-from go.vumitools.tests.utils import VumiApiCommand
-from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.surveys.view_definition import get_poll_config
+from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.api import VumiApiCommand
 
 
-class SurveyTestCase(DjangoGoApplicationTestCase):
-
-    TEST_CONVERSATION_TYPE = u'survey'
-    TEST_CHANNEL_METADATA = {
-        "supports": {
-            "generic_sends": True,
-        },
-    }
+class TestSurveysViews(GoDjangoTestCase):
 
     def setUp(self):
-        super(SurveyTestCase, self).setUp()
-        self.patch_settings(
-            VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
+        self.app_helper = self.add_helper(AppViewsHelper(u'survey'))
+        self.client = self.app_helper.get_client()
+        redis_config = self.app_helper.mk_config({})['redis_manager']
+        self.app_helper.patch_settings(VXPOLLS_REDIS_CONFIG=redis_config)
 
     def create_poll(self, conversation, **kwargs):
         poll_id = 'poll-%s' % (conversation.key,)
@@ -29,21 +24,26 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         return pm, pm.register(poll_id, config)
 
     def test_action_send_survey_get(self):
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
-        response = self.client.get(self.get_action_view_url('send_survey'))
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv", started=True, channel=channel, groups=[group])
+        response = self.client.get(
+            conv_helper.get_action_view_url('send_survey'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
-        self.assertEqual([], self.get_api_commands_sent())
+        self.assertEqual(conversation.name, u"myconv")
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
 
     def test_action_send_survey_post(self):
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, channel=channel, groups=[group])
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {}, follow=True)
-        self.assertRedirects(response, self.get_view_url('show'))
-        [send_survey_cmd] = self.get_api_commands_sent()
-        conversation = self.get_wrapped_conv()
+            conv_helper.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        [send_survey_cmd] = self.app_helper.get_api_commands_sent()
+        conversation = conv_helper.get_conversation()
         self.assertEqual(send_survey_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'send_survey',
@@ -53,63 +53,74 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             delivery_class=conversation.delivery_class))
 
     def test_action_send_survey_no_group(self):
-        self.setup_conversation(started=True)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, channel=channel)
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {}, follow=True)
-        self.assertRedirects(response, self.get_view_url('show'))
+            conv_helper.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
             str(msg), "Action disabled: This action needs a contact group.")
-        self.assertEqual([], self.get_api_commands_sent())
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
 
     def test_action_send_survey_not_running(self):
-        self.setup_conversation(with_group=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=False, channel=channel, groups=[group])
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {}, follow=True)
-        self.assertRedirects(response, self.get_view_url('show'))
+            conv_helper.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
             str(msg),
             "Action disabled: This action needs a running conversation.")
-        self.assertEqual([], self.get_api_commands_sent())
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
 
     def test_action_send_survey_no_channel(self):
-        self.setup_conversation(started=True, with_group=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, groups=[group])
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {}, follow=True)
-        self.assertRedirects(response, self.get_view_url('show'))
+            conv_helper.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
             str(msg),
             "Action disabled: This action needs channels capable"
             " of sending messages attached to this conversation.")
-        self.assertEqual([], self.get_api_commands_sent())
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
 
     def test_show_stopped(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation()
-        response = self.client.get(self.get_view_url('show'))
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv")
+        response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, 'Test Conversation')
+        self.assertEqual(conversation.name, u"myconv")
         self.assertNotContains(
-            response, self.get_action_view_url('send_survey'))
+            response, conv_helper.get_action_view_url('send_survey'))
 
     def test_show_running(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
-        response = self.client.get(self.get_view_url('show'))
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv", started=True, channel=channel, groups=[group])
+        response = self.client.get(conv_helper.get_view_url('show'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, 'Test Conversation')
-        self.assertContains(response, self.get_action_view_url('send_survey'))
+        self.assertEqual(conversation.name, u"myconv")
+        self.assertContains(
+            response, conv_helper.get_action_view_url('send_survey'))
 
     def test_edit(self):
-        self.setup_conversation()
-        response = self.client.post(self.get_view_url('edit'), {
+        conv_helper = self.app_helper.create_conversation_helper()
+        response = self.client.post(conv_helper.get_view_url('edit'), {
             'questions-TOTAL_FORMS': 1,
             'questions-INITIAL_FORMS': 0,
             'questions-MAX_NUM_FORMS': '',
@@ -120,8 +131,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'completed_response-INITIAL_FORMS': 0,
             'completed_response-MAX_NUM_FORMS': '',
         })
-        self.assertRedirects(response, self.get_view_url('show'))
-        poll_id = 'poll-%s' % (self.conv_key,)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        poll_id = 'poll-%s' % (conv_helper.conversation_key,)
         pm, config = get_poll_config(poll_id)
         [question] = config['questions']
         self.assertEqual(question['copy'], 'What is your favorite music?')
@@ -130,8 +141,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(question['label'], 'favorite music')
 
     def test_edit_continue_editing(self):
-        self.setup_conversation()
-        response = self.client.post(self.get_view_url('edit'), {
+        conv_helper = self.app_helper.create_conversation_helper()
+        response = self.client.post(conv_helper.get_view_url('edit'), {
             'questions-TOTAL_FORMS': 1,
             'questions-INITIAL_FORMS': 0,
             'questions-MAX_NUM_FORMS': '',
@@ -143,8 +154,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'completed_response-MAX_NUM_FORMS': '',
             '_save_contents': 1
         })
-        self.assertRedirects(response, self.get_view_url('edit'))
-        poll_id = 'poll-%s' % (self.conv_key,)
+        self.assertRedirects(response, conv_helper.get_view_url('edit'))
+        poll_id = 'poll-%s' % (conv_helper.conversation_key,)
         pm, config = get_poll_config(poll_id)
         [question] = config['questions']
         self.assertEqual(question['copy'], 'What is your favorite music?')
@@ -153,18 +164,20 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(question['label'], 'favorite music')
 
     def test_action_export_user_data_get(self):
-        self.setup_conversation(started=True, with_group=True,
-                                with_channel=True)
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            name=u"myconv", started=True, channel=channel, groups=[group])
         response = self.client.get(
-            self.get_action_view_url('download_user_data'))
+            conv_helper.get_action_view_url('download_user_data'))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
-        self.assertEqual([], self.get_api_commands_sent())
+        self.assertEqual(conversation.name, u"myconv")
+        self.assertEqual([], self.app_helper.get_api_commands_sent())
         self.assertContains(response, '>Send CSV via e-mail</button>')
 
-    def setup_poll(self, questions=2, answer=False, user='user-1'):
+    def setup_poll(self, conv, questions=2, answer=False, user='user-1'):
         question_numbers = list(range(1, 1 + questions))
-        pm, poll = self.create_poll(self.conversation, questions=[
+        pm, poll = self.create_poll(conv, questions=[
             {
                 'copy': 'question-%d' % i,
                 'label': 'label-%d' % i,
@@ -194,33 +207,35 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(lines[1].endswith(',' + ','.join(answers)))
 
     def test_action_export_user_data_post(self):
-        self.setup_conversation()
-        self.setup_poll(questions=2, answer=True)
+        conv_helper = self.app_helper.create_conversation_helper()
+        conversation = conv_helper.get_conversation()
+        self.setup_poll(conversation, questions=2, answer=True)
 
         response = self.client.post(
-            self.get_action_view_url('download_user_data'))
+            conv_helper.get_action_view_url('download_user_data'))
 
-        self.assertRedirects(response, self.get_view_url('show'))
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
         self.check_csv_email(
             headers=['user_id', 'user_timestamp', 'label-1', 'label-2'],
             answers=['answer 1', 'answer 2'],
         )
 
     def test_action_export_user_data_post_with_old_questions(self):
-        self.setup_conversation()
-        self.setup_poll(questions=2, answer=True)
+        conv_helper = self.app_helper.create_conversation_helper()
+        conversation = conv_helper.get_conversation()
+        self.setup_poll(conversation, questions=2, answer=True)
 
         # overwrite poll
-        pm, poll = self.create_poll(self.conversation, questions=[{
+        pm, poll = self.create_poll(conversation, questions=[{
                 'copy': 'question-1',
                 'label': 'label-1',
             }])
 
         response = self.client.post(
-            self.get_action_view_url('download_user_data'),
+            conv_helper.get_action_view_url('download_user_data'),
             {'include_old_questions': True})
 
-        self.assertRedirects(response, self.get_view_url('show'))
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
         self.check_csv_email(
             headers=['user_id', 'user_timestamp', 'label-1', 'label-2'],
             answers=['answer 1', 'answer 2'],

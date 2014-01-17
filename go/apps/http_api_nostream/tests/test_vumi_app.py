@@ -1,7 +1,7 @@
 import base64
 import json
 
-from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
+from twisted.internet.defer import inlineCallbacks, DeferredQueue
 from twisted.internet.error import DNSLookupError
 from twisted.web.error import SchemeNotSupported
 from twisted.web import http
@@ -10,44 +10,36 @@ from twisted.web.server import NOT_DONE_YET
 from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer, LogCatcher
+from vumi.tests.helpers import VumiTestCase
 
-from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.http_api_nostream.vumi_app import NoStreamingHTTPWorker
 from go.apps.http_api_nostream.resource import ConversationResource
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.apps.tests.helpers import AppWorkerHelper
 
 
-class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
-    application_class = NoStreamingHTTPWorker
+class TestNoStreamingHTTPWorker(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(NoStreamingHTTPWorkerTestCase, self).setUp()
-        self.config = self.mk_config({
+        self.app_helper = self.add_helper(
+            AppWorkerHelper(NoStreamingHTTPWorker))
+
+        self.config = {
             'health_path': '/health/',
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
-        })
-        self.app = yield self.get_application(self.config)
+        }
+        self.app = yield self.app_helper.get_app_worker(self.config)
         self.addr = self.app.webserver.getHost()
         self.url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['web_path'])
 
-        # Steal app's vumi_api
-        self.vumi_api = self.app.vumi_api  # YOINK!
-
-        # Create a test user account
-        self.account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = self.vumi_api.get_user_api(self.account.key)
-
-        yield self.setup_tagpools()
-
         # Mock server to test HTTP posting of inbound messages & events
         self.mock_push_server = MockHttpServer(self.handle_request)
         yield self.mock_push_server.start()
+        self.add_cleanup(self.mock_push_server.stop)
         self.push_calls = DeferredQueue()
-        self._setup_wait_for_request()
 
         conv_config = {
             'http_api_nostream': {
@@ -61,24 +53,19 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
                 'metrics_store': 'metrics_store',
             }
         }
-        conversation = yield self.create_conversation(config=conv_config)
-        yield self.start_conversation(conversation)
-        self.conversation = yield self.user_api.get_wrapped_conversation(
+        conversation = yield self.app_helper.create_conversation(
+            config=conv_config)
+        yield self.app_helper.start_conversation(conversation)
+        self.conversation = yield self.app_helper.get_conversation(
             conversation.key)
 
         self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
-                self.account.key, 'token-1'))],
+                conversation.user_account.key, 'token-1'))],
         }
 
-        self.msg_helper = self.add_helper(
-            GoMessageHelper(self.user_api.api.mdb))
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield self._wait_for_requests()
-        yield self.mock_push_server.stop()
-        yield super(NoStreamingHTTPWorkerTestCase, self).tearDown()
+        self._setup_wait_for_request()
+        self.add_cleanup(self._wait_for_requests)
 
     def _setup_wait_for_request(self):
         # Hackery to wait for the request to finish
@@ -166,13 +153,13 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(response.code, http.OK)
         put_msg = json.loads(response.delivered_body)
 
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
                 'conversation_key': self.conversation.key,
                 'conversation_type': 'http_api_nostream',
-                'user_account': self.account.key,
+                'user_account': self.conversation.user_account.key,
             },
         })
         # We do not respect the message_id that's been given.
@@ -209,7 +196,7 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_in_reply_to(self):
-        inbound_msg = yield self.msg_helper.make_stored_inbound(
+        inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
         msg = {
@@ -221,17 +208,16 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
 
-        print repr(response.delivered_body)
         put_msg = json.loads(response.delivered_body)
         self.assertEqual(response.code, http.OK)
 
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], put_msg['to_addr'])
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
                 'conversation_key': self.conversation.key,
                 'conversation_type': 'http_api_nostream',
-                'user_account': self.account.key,
+                'user_account': self.conversation.user_account.key,
             },
         })
         self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
@@ -241,7 +227,7 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_in_reply_to_with_evil_content(self):
-        inbound_msg = yield self.msg_helper.make_stored_inbound(
+        inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
         msg = {
@@ -270,8 +256,9 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_invalid_in_reply_to_with_missing_conversation_key(self):
         # create a message with no (None) conversation
-        inbound_msg = self.msg_helper.make_inbound('in 1', message_id='msg-1')
-        yield self.msg_helper.mdb.add_inbound_message(inbound_msg)
+        inbound_msg = self.app_helper.make_inbound('in 1', message_id='msg-1')
+        vumi_api = self.app_helper.vumi_helper.get_vumi_api()
+        yield vumi_api.mdb.add_inbound_message(inbound_msg)
 
         msg = {
             'content': 'foo',
@@ -290,7 +277,7 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_in_reply_to_with_evil_session_event(self):
-        inbound_msg = yield self.msg_helper.make_stored_inbound(
+        inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
         msg = {
@@ -306,11 +293,11 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assert_bad_request(
             response,
             "Invalid or missing value for payload key 'session_event'")
-        self.assertEqual(self.get_dispatched_messages(), [])
+        self.assertEqual(self.app_helper.get_dispatched_outbound(), [])
 
     @inlineCallbacks
     def test_in_reply_to_with_evil_message_id(self):
-        inbound_msg = yield self.msg_helper.make_stored_inbound(
+        inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
         msg = {
@@ -325,7 +312,7 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         self.assertEqual(response.code, http.OK)
         put_msg = json.loads(response.delivered_body)
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
 
         # We do not respect the message_id that's been given.
         self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
@@ -350,20 +337,9 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         prefix = "campaigns.test-0-user.stores.metrics_store"
 
         self.assertEqual(
-            self.get_published_metrics(self.app),
+            self.app_helper.get_published_metrics(self.app),
             [("%s.vumi.test.v1" % prefix, 1234),
              ("%s.vumi.test.v2" % prefix, 3456)])
-
-    @inlineCallbacks
-    def receive_pushed_message(self, publish_d=None):
-        req = yield self.push_calls.get()
-        received = req.content.read()
-        self.assertEqual(
-            req.requestHeaders.getRawHeaders('content-type'),
-            ['application/json; charset=utf-8'])
-        req.finish()
-        yield publish_d
-        returnValue(json.loads(received))
 
     @inlineCallbacks
     def test_health_response(self):
@@ -375,11 +351,18 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_post_inbound_message(self):
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
-        posted_json = yield self.receive_pushed_message(
-            self.dispatch_to_conv(msg, self.conversation))
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
 
-        posted_msg = TransportUserMessage.from_json(json.dumps(posted_json))
+        req = yield self.push_calls.get()
+        posted_json = req.content.read()
+        self.assertEqual(
+            req.requestHeaders.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
+        req.finish()
+        msg = yield msg_d
+
+        posted_msg = TransportUserMessage.from_json(posted_json)
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
 
     def _patch_http_request_full(self, exception_class):
@@ -396,9 +379,9 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         with LogCatcher(message='push_message_url not configured') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
             [url_not_configured_log] = lc.messages()
         self.assertTrue(self.conversation.key in url_not_configured_log)
 
@@ -410,41 +393,44 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         self._patch_http_request_full(SchemeNotSupported)
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         with LogCatcher(message='Unsupported') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
             [unsupported_scheme_log] = lc.messages()
         self.assertTrue('example.com' in unsupported_scheme_log)
 
     @inlineCallbacks
     def test_post_inbound_message_timeout(self):
         self._patch_http_request_full(HttpTimeoutError)
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         with LogCatcher(message='Timeout') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
             [timeout_log] = lc.messages()
         self.assertTrue(self.mock_push_server.url in timeout_log)
 
     @inlineCallbacks
     def test_post_inbound_message_dns_lookup_error(self):
         self._patch_http_request_full(DNSLookupError)
-        msg = self.msg_helper.make_inbound('in 1', message_id='1')
         with LogCatcher(message='DNS lookup error') as lc:
-            yield self.dispatch_to_conv(msg, self.conversation)
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
             [dns_log] = lc.messages()
         self.assertTrue(self.mock_push_server.url in dns_log)
 
     @inlineCallbacks
     def test_post_inbound_event(self):
-        msg1 = yield self.msg_helper.make_stored_outbound(
+        msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
-        event_d = self.dispatch_event_to_conv(ack1, self.conversation)
+        event_d = self.app_helper.make_dispatch_ack(
+            msg1, conv=self.conversation)
 
         req = yield self.push_calls.get()
         posted_json_data = req.content.read()
+        self.assertEqual(
+            req.requestHeaders.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
         req.finish()
-        yield event_d
+        ack1 = yield event_d
 
         self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
 
@@ -455,35 +441,36 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        msg1 = yield self.msg_helper.make_stored_outbound(
+        msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
+
         with LogCatcher(message='push_event_url not configured') as lc:
-            yield self.dispatch_event_to_conv(ack1, self.conversation)
+            yield self.app_helper.make_dispatch_ack(
+                msg1, conv=self.conversation)
             [url_not_configured_log] = lc.messages()
         self.assertTrue(self.conversation.key in url_not_configured_log)
 
     @inlineCallbacks
     def test_post_inbound_event_timeout(self):
-        msg1 = yield self.msg_helper.make_stored_outbound(
+        msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
 
         self._patch_http_request_full(HttpTimeoutError)
         with LogCatcher(message='Timeout') as lc:
-            yield self.dispatch_event_to_conv(ack1, self.conversation)
+            yield self.app_helper.make_dispatch_ack(
+                msg1, conv=self.conversation)
             [timeout_log] = lc.messages()
         self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
 
     @inlineCallbacks
     def test_post_inbound_event_dns_lookup_error(self):
-        msg1 = yield self.msg_helper.make_stored_outbound(
+        msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
-        ack1 = self.msg_helper.make_ack(msg1)
 
         self._patch_http_request_full(DNSLookupError)
         with LogCatcher(message='DNS lookup error') as lc:
-            yield self.dispatch_event_to_conv(ack1, self.conversation)
+            yield self.app_helper.make_dispatch_ack(
+                msg1, conv=self.conversation)
             [dns_log] = lc.messages()
         self.assertTrue(self.mock_push_server.url in dns_log)
 
@@ -505,9 +492,9 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_send_message_command(self):
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             'send_message',
-            user_account_key=self.account.key,
+            user_account_key=self.conversation.user_account.key,
             conversation_key=self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
@@ -519,33 +506,29 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
                             u'tag': [u'longcode', u'default10080']
                         }
                     },
-                    u'transport_name': self.transport_name,
-                    u'transport_type': self.transport_type,
                     u'from_addr': u'default10080',
                 }
             })
 
-        [msg] = yield self.get_dispatched_messages()
+        [msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(msg.payload['to_addr'], "to_addr")
         self.assertEqual(msg.payload['from_addr'], "default10080")
         self.assertEqual(msg.payload['content'], "foo")
-        self.assertEqual(msg.payload['transport_name'], self.transport_name)
-        self.assertEqual(msg.payload['transport_type'], self.transport_type)
         self.assertEqual(msg.payload['message_type'], "user_message")
         self.assertEqual(
             msg.payload['helper_metadata']['go']['user_account'],
-            self.account.key)
+            self.conversation.user_account.key)
         self.assertEqual(
             msg.payload['helper_metadata']['tag']['tag'],
             ['longcode', 'default10080'])
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
-        msg = yield self.msg_helper.make_stored_inbound(
+        msg = yield self.app_helper.make_stored_inbound(
             self.conversation, "foo")
-        yield self.dispatch_command(
+        yield self.app_helper.dispatch_command(
             'send_message',
-            user_account_key=self.account.key,
+            user_account_key=self.conversation.user_account.key,
             conversation_key=self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
@@ -563,7 +546,7 @@ class NoStreamingHTTPWorkerTestCase(AppWorkerTestCase):
                     u'from_addr': u'default10080',
                 }
             })
-        [sent_msg] = self.get_dispatched_messages()
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])

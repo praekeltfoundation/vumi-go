@@ -1,41 +1,38 @@
-from go.base.tests.utils import VumiGoDjangoTestCase
-
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import TagPool, Account, MessageCost, Transaction
 
 
-class TestTagPool(VumiGoDjangoTestCase):
+class TestTagPool(GoDjangoTestCase):
     def test_unicode(self):
         tp = TagPool(name=u"pool", description=u"pool of long codes")
         self.assertEqual(unicode(tp), u"pool")
 
 
-class TestAccount(VumiGoDjangoTestCase):
+class TestAccount(GoDjangoTestCase):
     def setUp(self):
-        super(TestAccount, self).setUp()
-        self.setup_user_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
 
     def test_unicode(self):
+        django_user = self.user_helper.get_django_user()
         acc = Account(
-            user=self.django_user,
-            account_number=self.user_api.user_account_key)
+            user=django_user, account_number=self.user_helper.account_key)
         self.assertEqual(
             unicode(acc),
-            u"%s (%s)" % (
-                self.user_api.user_account_key, self.django_user.email
-            )
+            u"%s (%s)" % (self.user_helper.account_key, django_user)
         )
 
 
-class TestMessageCost(VumiGoDjangoTestCase):
+class TestMessageCost(GoDjangoTestCase):
     def setUp(self):
-        super(TestMessageCost, self).setUp()
-        self.setup_user_api()
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
 
     def mk_msg_cost(self, account=None, tag_pool=None, **kw):
         if account is None:
             account = Account(
-                user=self.django_user,
-                account_number=self.user_api.user_account_key)
+                user=self.user_helper.get_django_user(),
+                account_number=self.user_helper.account_key)
             account.save()
         if tag_pool is None:
             tag_pool = TagPool(name=u"pool", description=u"description")
@@ -47,7 +44,7 @@ class TestMessageCost(VumiGoDjangoTestCase):
         self.assertEqual(unicode(mc), u"pool (inbound)")
 
 
-class TestTransaction(VumiGoDjangoTestCase):
+class TestTransaction(GoDjangoTestCase):
     def test_unicode(self):
         trans = Transaction(
             account_number="1234",

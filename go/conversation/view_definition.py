@@ -22,7 +22,7 @@ from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
                                    ConversationDetailForm)
-from go.conversation.tasks import export_conversation_messages
+from go.conversation.tasks import export_conversation_messages_unsorted
 from go.conversation.utils import PagedMessageCache
 from go.dashboard.dashboard import Dashboard, ConversationReportsLayout
 
@@ -222,11 +222,11 @@ class MessageListView(ConversationTemplateView):
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(
             PagedMessageCache(conversation.count_replies(),
-                lambda start, stop: conversation.received_messages(
+                lambda start, stop: conversation.received_messages_in_cache(
                     start, stop)), 20)
         outbound_message_paginator = Paginator(
             PagedMessageCache(conversation.count_sent_messages(),
-                lambda start, stop: conversation.sent_messages(
+                lambda start, stop: conversation.sent_messages_in_cache(
                     start, stop)), 20)
 
         tag_context = {
@@ -301,7 +301,7 @@ class MessageListView(ConversationTemplateView):
 
     def post(self, request, conversation):
         if '_export_conversation_messages' in request.POST:
-            export_conversation_messages.delay(
+            export_conversation_messages_unsorted.delay(
                 request.user_api.user_account_key, conversation.key)
             messages.info(request, 'Conversation messages CSV file export '
                                     'scheduled. CSV file should arrive in '

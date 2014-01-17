@@ -1,33 +1,28 @@
 from os import path
 
-from django.test import TestCase
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
+from go.base.tests.helpers import GoDjangoTestCase
 from go.contacts.parsers.csv_parser import CSVFileParser
 from go.contacts.parsers.xls_parser import XLSFileParser
 
 
-class ParserTestCase(TestCase):
+class ParserTestCase(GoDjangoTestCase):
     def setUp(self):
-        self._fixture_paths = []
         self.parser = self.PARSER_CLASS()
-
-    def tearDown(self):
-        for fpath in self._fixture_paths:
-            default_storage.delete(fpath)
 
     def fixture(self, fixture_name):
         fixture_path = path.join(settings.PROJECT_ROOT, 'base', 'fixtures',
             fixture_name)
         content_file = ContentFile(open(fixture_path, 'r').read())
         fpath = default_storage.save('tmp/%s' % (fixture_name,), content_file)
-        self._fixture_paths.append(fpath)
+        self.add_cleanup(default_storage.delete, fpath)
         return fpath
 
 
-class CSVParserTestCase(ParserTestCase):
+class TestCSVParser(ParserTestCase):
     PARSER_CLASS = CSVFileParser
 
     def test_guess_headers_and_row_without_headers(self):
@@ -98,7 +93,7 @@ class CSVParserTestCase(ParserTestCase):
             ])
 
 
-class XLSParserTestCase(ParserTestCase):
+class TestXLSParser(ParserTestCase):
     PARSER_CLASS = XLSFileParser
 
     def test_guess_headers_and_row_without_headers(self):

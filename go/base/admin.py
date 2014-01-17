@@ -14,6 +14,11 @@ class UserProfileInline(admin.StackedInline):
 
 
 class GoUserAdmin(UserAdmin):
+    def get_inline_instances(self, request, obj=None):
+        if obj is None:
+            return []
+        return super(GoUserAdmin, self).get_inline_instances(request, obj=obj)
+
     # The forms to add and change user instances
     inlines = (UserProfileInline,)
 

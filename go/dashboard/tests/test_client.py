@@ -2,7 +2,7 @@ import json
 
 import requests
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.dashboard.client import DiamondashApiError, DiamondashApiClient
 from go.dashboard.tests.utils import FakeDiamondashApiClient
 
@@ -24,13 +24,14 @@ class FakeErrorResponse(object):
         raise requests.exceptions.HTTPError(self.content)
 
 
-class TestDashboardApiClient(VumiGoDjangoTestCase):
+class TestDashboardApiClient(GoDjangoTestCase):
     def setUp(self):
-        super(TestDashboardApiClient, self).setUp()
-        self.patch_settings(DIAMONDASH_API_URL='http://diamondash.moc/api')
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.vumi_helper.patch_settings(
+            DIAMONDASH_API_URL='http://diamondash.moc/api')
 
     def test_raw_request(self):
-        self.patch_settings(
+        self.vumi_helper.patch_settings(
             DIAMONDASH_API_USERNAME='username',
             DIAMONDASH_API_PASSWORD='password')
 
@@ -72,7 +73,7 @@ class TestDashboardApiClient(VumiGoDjangoTestCase):
         client.raw_request('put', 'foo'),
 
     def test_request(self):
-        self.patch_settings(
+        self.vumi_helper.patch_settings(
             DIAMONDASH_API_USERNAME='username',
             DIAMONDASH_API_PASSWORD='password')
 

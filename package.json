@@ -10,7 +10,7 @@
   "dependencies": {
     "q": "~0.9.7",
     "jed": "~0.5.4",
-    "vumigo_v01": "~0.1.17",
+    "vumigo_v01": "~0.1.22",
     "libxmljs": "~0.8.1"
   },
   "devDependencies": {

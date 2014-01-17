@@ -7,7 +7,7 @@ from django.forms.models import BaseModelFormSet
 
 from go.vumitools.api import VumiApi
 
-from go.billing import settings
+from go.billing import settings as app_settings
 from go.billing.models import Account, TagPool, MessageCost, Transaction
 
 
@@ -27,11 +27,11 @@ class MessageCostForm(ModelForm):
 
             resulting_price = message_cost + markup_amount
             credit_cost = resulting_price * Decimal(
-                settings.CREDIT_CONVERSION_FACTOR)
+                app_settings.CREDIT_CONVERSION_FACTOR)
 
             context = Context()
-            credit_cost = credit_cost.quantize(settings.QUANTIZATION_EXPONENT,
-                                               context=context)
+            credit_cost = credit_cost.quantize(
+                app_settings.QUANTIZATION_EXPONENT, context=context)
 
             if context.flags[Inexact] and credit_cost == Decimal('0.0'):
                 raise forms.ValidationError("The resulting credit cost is 0.")

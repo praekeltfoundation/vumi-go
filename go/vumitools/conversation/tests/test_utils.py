@@ -16,7 +16,7 @@ class TestConversationWrapper(VumiTestCase):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'username')
         self.msg_helper = self.add_helper(
-            GoMessageHelper(self.vumi_helper.get_vumi_api().mdb))
+            GoMessageHelper(vumi_helper=self.vumi_helper))
 
         self.conv = yield self.user_helper.create_conversation(u'dummy')
         yield self.vumi_helper.setup_tagpool(
@@ -24,7 +24,6 @@ class TestConversationWrapper(VumiTestCase):
                 "display_name": "pool",
                 "delivery_class": "sms",
                 "transport_type": "sms",
-                "server_initiated": True,
                 "transport_name": self.msg_helper.transport_name,
             })
         yield self.user_helper.add_tagpool_permission(u"pool")
@@ -64,10 +63,22 @@ class TestConversationWrapper(VumiTestCase):
         self.assertEqual((yield self.conv.count_replies()), 5)
 
     @inlineCallbacks
+    def test_inbound_keys(self):
+        messages = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        keys = set([message['message_id'] for message in messages])
+        self.assertEqual(set((yield self.conv.inbound_keys())), keys)
+
+    @inlineCallbacks
     def test_count_sent_messages(self):
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
         self.assertEqual((yield self.conv.count_sent_messages()), 5)
+
+    @inlineCallbacks
+    def test_outbound_keys(self):
+        messages = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
+        keys = set([message['message_id'] for message in messages])
+        self.assertEqual(set((yield self.conv.outbound_keys())), keys)
 
     @inlineCallbacks
     def test_count_inbound_uniques(self):
@@ -93,11 +104,14 @@ class TestConversationWrapper(VumiTestCase):
     def test_received_messages(self):
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
-        received_messages = yield self.conv.received_messages()
+        received_messages = yield self.conv.received_messages_in_cache()
         self.assertEqual(len(received_messages), 5)
-        self.assertEqual(len((yield self.conv.received_messages(0, 2))), 2)
-        self.assertEqual(len((yield self.conv.received_messages(2, 4))), 2)
-        self.assertEqual(len((yield self.conv.received_messages(5, 10))), 0)
+        self.assertEqual(
+            len((yield self.conv.received_messages_in_cache(0, 2))), 2)
+        self.assertEqual(
+            len((yield self.conv.received_messages_in_cache(2, 4))), 2)
+        self.assertEqual(
+            len((yield self.conv.received_messages_in_cache(5, 10))), 0)
 
     @inlineCallbacks
     def test_received_messages_include_sensitive(self):
@@ -106,10 +120,11 @@ class TestConversationWrapper(VumiTestCase):
             self.conv, "hi", helper_metadata={
                 'go': {'sensitive': True},
             })
-        self.assertEqual([], (yield self.conv.received_messages()))
+        self.assertEqual([], (yield self.conv.received_messages_in_cache()))
         self.assertEqual(
             1,
-            len((yield self.conv.received_messages(include_sensitive=True))))
+            len((yield self.conv.received_messages_in_cache(
+                include_sensitive=True))))
 
     @inlineCallbacks
     def test_received_messages_include_sensitive_and_scrub(self):
@@ -123,7 +138,7 @@ class TestConversationWrapper(VumiTestCase):
             msg['content'] = 'scrubbed'
             return msg
 
-        [scrubbed_messages] = yield self.conv.received_messages(
+        [scrubbed_messages] = yield self.conv.received_messages_in_cache(
             include_sensitive=True, scrubber=scrubber)
         self.assertEqual(scrubbed_messages['content'], 'scrubbed')
 
@@ -131,18 +146,21 @@ class TestConversationWrapper(VumiTestCase):
     def test_received_messages_dictionary(self):
         yield self.conv.start()
         msg = yield self.msg_helper.make_stored_inbound(self.conv, "hi")
-        [reply] = yield self.conv.received_messages()
+        [reply] = yield self.conv.received_messages_in_cache()
         self.assertEqual(msg['message_id'], reply['message_id'])
 
     @inlineCallbacks
     def test_sent_messages(self):
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        sent_messages = yield self.conv.sent_messages()
+        sent_messages = yield self.conv.sent_messages_in_cache()
         self.assertEqual(len(sent_messages), 5)
-        self.assertEqual(len((yield self.conv.sent_messages(0, 2))), 2)
-        self.assertEqual(len((yield self.conv.sent_messages(2, 4))), 2)
-        self.assertEqual(len((yield self.conv.sent_messages(5, 10))), 0)
+        self.assertEqual(
+            len((yield self.conv.sent_messages_in_cache(0, 2))), 2)
+        self.assertEqual(
+            len((yield self.conv.sent_messages_in_cache(2, 4))), 2)
+        self.assertEqual(
+            len((yield self.conv.sent_messages_in_cache(5, 10))), 0)
 
     @inlineCallbacks
     def test_sent_messages_include_sensitive(self):
@@ -151,9 +169,11 @@ class TestConversationWrapper(VumiTestCase):
             self.conv, "hi", helper_metadata={
                 'go': {'sensitive': True},
             })
-        self.assertEqual([], (yield self.conv.sent_messages()))
+        self.assertEqual([], (yield self.conv.sent_messages_in_cache()))
         self.assertEqual(
-            1, len((yield self.conv.sent_messages(include_sensitive=True))))
+            1,
+            len((yield self.conv.sent_messages_in_cache(
+                include_sensitive=True))))
 
     @inlineCallbacks
     def test_sent_messages_include_sensitive_and_scrub(self):
@@ -167,7 +187,7 @@ class TestConversationWrapper(VumiTestCase):
             msg['content'] = 'scrubbed'
             return msg
 
-        [scrubbed_message] = yield self.conv.sent_messages(
+        [scrubbed_message] = yield self.conv.sent_messages_in_cache(
             include_sensitive=True, scrubber=scrubber)
         self.assertEqual(scrubbed_message['content'], 'scrubbed')
 
@@ -175,7 +195,7 @@ class TestConversationWrapper(VumiTestCase):
     def test_sent_messages_dictionary(self):
         yield self.conv.start()
         msg = yield self.msg_helper.make_stored_outbound(self.conv, "hi")
-        [sent_message] = yield self.conv.sent_messages()
+        [sent_message] = yield self.conv.sent_messages_in_cache()
         self.assertEqual(msg['message_id'], sent_message['message_id'])
 
     @inlineCallbacks
@@ -452,3 +472,10 @@ class TestConversationWrapper(VumiTestCase):
         self.conv.groups.add_key(group.key)
         [found_group] = yield self.conv.get_groups()
         self.assertEqual(found_group.key, group.key)
+
+    def test_set_go_helper_metadata(self):
+        self.assertEqual(self.conv.set_go_helper_metadata(), {'go': {
+            'user_account': self.conv.user_account.key,
+            'conversation_type': self.conv.conversation_type,
+            'conversation_key': self.conv.key,
+        }})

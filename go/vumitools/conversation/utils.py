@@ -1,6 +1,7 @@
 # -*- test-case-name: go.vumitools.conversation.tests.test_utils -*-
 # -*- coding: utf-8 -*-
 
+import warnings
 from datetime import datetime
 from collections import defaultdict
 
@@ -9,7 +10,7 @@ from twisted.internet.defer import returnValue
 from vumi.persist.model import Manager
 
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.utils import MessageMetadataDictHelper, MessageMetadataHelper
 
 
 class ConversationWrapper(object):
@@ -149,10 +150,8 @@ class ConversationWrapper(object):
     def set_go_helper_metadata(self, helper_metadata=None):
         if helper_metadata is None:
             helper_metadata = {}
-        go_metadata = helper_metadata.setdefault('go', {})
-        go_metadata['user_account'] = self.user_account.key
-        go_metadata['conversation_type'] = self.conversation_type
-        go_metadata['conversation_key'] = self.key
+        mdh = MessageMetadataDictHelper(helper_metadata)
+        mdh.add_conversation_metadata(self)
         return helper_metadata
 
     @Manager.calls_manager
@@ -181,8 +180,10 @@ class ConversationWrapper(object):
     def send_token_url(self, token_url, msisdn):
         """Send a confirmation/token link.
         """
+        msg_options = {'helper_metadata': {}}
         # specify this message as being sensitive
-        msg_options = {'helper_metadata': {'go': {'sensitive': True}}}
+        msg_mdh = MessageMetadataDictHelper(msg_options['helper_metadata'])
+        msg_mdh.set_sensitive(True)
 
         yield self.dispatch_command(
             'send_message',
@@ -245,6 +246,21 @@ class ConversationWrapper(object):
         for bunch in bunches:
             messages.extend((yield bunch))
 
+        returnValue(self.filter_and_scrub_messages(
+            messages, include_sensitive=include_sensitive, scrubber=scrubber))
+
+    def filter_and_scrub_messages(self, messages, include_sensitive, scrubber):
+        """
+        Filter and scrub the given messages.
+
+        :param list messages:
+            The list of messages to filter and scrub.
+        :param bool include_sensitive:
+            Whether or not to include hidden messages.
+        :param callable scrubber:
+            The scrubber to use on hidden messages. Should return a message
+            object or None.
+        """
         collection = []
         for message in messages:
             # vumi message is an attribute on the inbound message object
@@ -256,11 +272,19 @@ class ConversationWrapper(object):
                 scrubbed_msg = scrubber(msg)
                 if scrubbed_msg:
                     collection.append(scrubbed_msg)
-        returnValue(collection)
+        return collection
 
-    @Manager.calls_manager
     def received_messages(self, start=0, limit=100, include_sensitive=False,
                           scrubber=None):
+        warnings.warn('received_messages() is deprecated. Please use '
+                      'received_messages_in_cache() instead.',
+                      category=DeprecationWarning)
+        return self.received_messages_in_cache(start, limit, include_sensitive,
+                                               scrubber)
+
+    @Manager.calls_manager
+    def received_messages_in_cache(self, start=0, limit=100,
+                                   include_sensitive=False, scrubber=None):
         """
         Get a list of replies from the message store. The keys come from
         the message store's cache.
@@ -290,9 +314,17 @@ class ConversationWrapper(object):
 
         returnValue(replies)
 
-    @Manager.calls_manager
     def sent_messages(self, start=0, limit=100, include_sensitive=False,
                       scrubber=None):
+        warnings.warn('sent_messages() is deprecated. Please use '
+                      'sent_messages_in_cache() instead.',
+                      category=DeprecationWarning)
+        return self.sent_messages_in_cache(start, limit, include_sensitive,
+                                           scrubber)
+
+    @Manager.calls_manager
+    def sent_messages_in_cache(self, start=0, limit=100,
+                               include_sensitive=False, scrubber=None):
         """
         Get a list of sent_messages from the message store. The keys come from
         the message store's cache.
@@ -440,6 +472,20 @@ class ConversationWrapper(object):
             aggregates[bucket].append(key)
 
         returnValue(sorted(aggregates.items()))
+
+    def inbound_keys(self):
+        """
+        Return the keys for this conversation's received messages in
+        whatever order the message store decides to give them back to us.
+        """
+        return self.mdb.batch_inbound_keys(self.batch.key)
+
+    def outbound_keys(self):
+        """
+        Return the keys for this conversation's sent messages in
+        whatever order the message store decides to give them back to us.
+        """
+        return self.mdb.batch_outbound_keys(self.batch.key)
 
     @property
     def worker_name(self):

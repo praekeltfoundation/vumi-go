@@ -2,51 +2,39 @@
 
 import json
 
-from mock import Mock
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
 from go.apps.jsbox.contacts import ContactsResource, GroupsResource
-from go.vumitools.tests.utils import GoPersistenceMixin
-from go.vumitools.account import AccountStore
-from go.vumitools.contact import ContactStore
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
 class StubbedAppWorker(DummyAppWorker):
     def __init__(self):
         super(StubbedAppWorker, self).__init__()
-        self.user_api = Mock()
+        self.user_api = None
 
     def user_api_for_api(self, api):
         return self.user_api
 
 
-class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
-    use_riak = True
+class TestContactsResource(ResourceTestCaseBase):
+    # TODO: Make this resource stuff into a helper in vumi.
     app_worker_cls = StubbedAppWorker
     resource_cls = ContactsResource
 
     @inlineCallbacks
     def setUp(self):
         super(TestContactsResource, self).setUp()
-        yield self._persist_setUp()
 
-        # We pass `self` in as the VumiApi object here, because mk_user() just
-        # grabs .account_store off it.
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.contact_store = ContactStore.from_user_account(self.account)
-        yield self.contact_store.contacts.enable_search()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u"user")
+        self.app_worker.user_api = self.user_helper.user_api
+        self.contact_store = self.user_helper.user_api.contact_store
 
-        self.app_worker.user_api.contact_store = self.contact_store
         yield self.create_resource({'delivery_class': u'sms'})
-
-    def tearDown(self):
-        super(TestContactsResource, self).tearDown()
-        return self._persist_tearDown()
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)
@@ -489,32 +477,126 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_save_for_nonexistent_contacts(self):
         return self.assert_bad_command('save', contact={'key': u'213123'})
 
+    @inlineCallbacks
+    def test_handle_search(self):
+        contact = yield self.new_contact(
+            surname=u'Jackal',
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b'])
+        reply = yield self.dispatch_command('search', query=u'surname:Jack*')
+        self.assertTrue(reply['success'])
+        self.assertFalse('reason' in reply)
 
-class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
-    use_riak = True
+        self.assertTrue('keys' in reply)
+        self.assertEqual(reply['keys'][0], contact.key)
+
+    @inlineCallbacks
+    def test_handle_search_bad_query(self):
+        reply = yield self.dispatch_command(
+            'search', query=u'name:[BAD_QUERY!]')
+        self.assertFalse(reply['success'])
+        self.assertFalse('keys' in reply)
+        self.assertTrue('reason' in reply)
+
+        self.assertTrue('Error running MapReduce' in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_search_results(self):
+        reply = yield self.dispatch_command('search', query=u'name:foo*')
+        self.assertTrue(reply['success'])
+        self.assertFalse('reason' in reply)
+        self.assertEqual(reply['keys'], [])
+
+    @inlineCallbacks
+    def test_handle_search_missing_param(self):
+        reply = yield self.dispatch_command('search')
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('keys' in reply)
+        self.assertTrue("Expected 'query' field in request" in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_search_max_keys(self):
+        keys = set()
+        for i in range(0, 6):
+            contact = yield self.new_contact(
+                surname=unicode('Jackal%s' % i),
+                msisdn=u'+27831234567',
+                groups=[u'group-a', u'group-b'])
+            keys.add(contact.key)
+
+        # subset
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*',
+                                            max_keys=3)
+        self.assertTrue(reply['success'])
+        self.assertEqual(len(reply['keys']), 3)
+        self.assertTrue(set(reply['keys']).issubset(keys))
+
+        # no limit
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*')
+        self.assertTrue(reply['success'])
+        self.assertEqual(set(reply['keys']), keys)
+
+        # bad value for max_keys
+        reply = yield self.dispatch_command('search',
+                                            query=u'surname:Jack*',
+                                            max_keys="Haha!")
+        self.assertFalse(reply['success'])
+        self.assertTrue(
+            "Value for parameter 'max_keys' is invalid" in reply['reason']
+        )
+
+    @inlineCallbacks
+    def test_handle_get_by_key(self):
+        contact = yield self.new_contact(
+            surname=u'Jackal',
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b'])
+
+        reply = yield self.dispatch_command('get_by_key', key=contact.key)
+
+        self.assertTrue(reply['success'])
+        self.assertFalse('reason' in reply)
+        self.assertTrue('contact' in reply)
+
+        self.assertEqual(reply['contact']['key'], contact.key)
+
+    @inlineCallbacks
+    def test_handle_get_by_key_missing_param(self):
+        reply = yield self.dispatch_command('get_by_key')
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('contact' in reply)
+        self.assertTrue("Expected 'key' field in request" in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_get_by_key_no_results(self):
+        reply = yield self.dispatch_command('get_by_key', key="Haha!")
+        self.assertFalse(reply['success'])
+        self.assertTrue('reason' in reply)
+        self.assertFalse('contact' in reply)
+
+        self.assertTrue(
+            "Contact with key 'Haha!' not found." in reply['reason']
+        )
+
+
+class TestGroupsResource(ResourceTestCaseBase):
     app_worker_cls = StubbedAppWorker
     resource_cls = GroupsResource
 
     @inlineCallbacks
     def setUp(self):
         super(TestGroupsResource, self).setUp()
-        yield self._persist_setUp()
 
-        # We pass `self` in as the VumiApi object here, because mk_user() just
-        # grabs .account_store off it.
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.account = yield self.mk_user(self, u'user')
-        self.contact_store = ContactStore.from_user_account(self.account)
-        yield self.contact_store.groups.enable_search()
-        yield self.contact_store.contacts.enable_search()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u"user")
+        self.app_worker.user_api = self.user_helper.user_api
+        self.contact_store = self.user_helper.user_api.contact_store
 
-        self.app_worker.user_api.contact_store = self.contact_store
         yield self.create_resource({})
-
-    def tearDown(self):
-        super(TestGroupsResource, self).tearDown()
-        return self._persist_tearDown()
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)
