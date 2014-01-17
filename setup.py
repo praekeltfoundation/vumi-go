@@ -24,7 +24,7 @@ setup(
         'nose==1.1.2',
         'gunicorn==0.15.0',
         'South==0.8.2',
-        'psycopg2==2.4',
+        'psycopg2cffi',
         'celery==3.0.23',
         'django-celery==3.0.23',
         'django-celery-email',

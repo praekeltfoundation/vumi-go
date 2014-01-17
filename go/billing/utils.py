@@ -4,6 +4,10 @@ import datetime
 
 from StringIO import StringIO
 
+# For psycopg2.
+from psycopg2cffi import compat
+compat.register()
+
 import psycopg2
 import psycopg2.extras
 
