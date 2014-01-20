@@ -25,7 +25,7 @@
                     <p class="error">{{ error }}</p>
                     {% endfor %}
                     {% for message in form.messages %}
-                    <p class="message">{{ message }}</p>
+                    <p class="message">{% autoescape off %}{{ message }}{% endautoescape %}</p>
                     {% endfor %}
                 </div>
                 {% for field in form.visible_fields %}
