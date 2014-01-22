@@ -125,20 +125,24 @@ class UniqueCodeQueryForm(BaseServiceForm, AjaxFormMixin):
             self.unique_code_pool, query_string)
 
         if results:
+            response_data = results[0].get('response_data')
             self.messages.append(
                 _("The MSISDN associated with code '%(unique_code)s' is: "
                   "'%(msisdn)s'")
-                % {'unique_code': query_string, 'msisdn': ''})
+                % {'unique_code': query_string,
+                   'msisdn': response_data.get('user_id')})
 
         else:
             results = voucher_service.query_msisdn(
                 self.unique_code_pool, query_string)
 
         if results:
+            response_data = results[0].get('response_data')
             self.messages.append(
                 _("The code associated with MSISDN '%(msisdn)s' is: "
                   "'%(unique_code)s'")
-                % {'msisdn': query_string, 'unique_code': ''})
+                % {'msisdn': query_string,
+                   'unique_code': response_data.get('unique_code')})
 
         else:
             self.messages.append(

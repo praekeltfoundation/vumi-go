@@ -2,7 +2,6 @@ import requests
 
 from hashlib import md5
 from urlparse import urljoin
-from uuid import uuid4
 
 from go.services.vouchers.service import BaseVoucherService
 from go.services.vouchers.unique_codes import settings as service_settings
@@ -16,7 +15,7 @@ class UniqueCodeService(BaseVoucherService):
         `unique_code_pool`.
         """
         pool_name = unique_code_pool.config['ext_pool_name']
-        request_id = uuid4().get_hex()
+        request_id = self.make_request_id()
         url = urljoin(service_settings.SERVICE_URL,
                       '%s/import/%s' % (pool_name, request_id))
 

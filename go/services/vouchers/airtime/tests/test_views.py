@@ -2,12 +2,12 @@ import os
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
-
 from go.base.tests.helpers import GoDjangoTestCase
 
 from go.services.vouchers.airtime.service import VoucherService
 from go.services.vouchers.airtime.forms import VoucherPoolForm
+
+from go.services.tests.helpers import FakeUploadedFile
 
 from .helpers import ServiceViewHelper
 
@@ -74,24 +74,25 @@ class TestAddVoucherPoolView(GoDjangoTestCase):
                       'name="vouchers_file" type="file" />')
 
     def test_post(self):
-        csv_file = open(os.path.join(settings.PROJECT_ROOT, 'base',
-                        'fixtures', 'sample-airtime-vouchers.csv'), 'rb')
+        file_name = os.path.join(settings.PROJECT_ROOT, 'base', 'fixtures',
+                                 'sample-airtime-vouchers.csv')
 
-        url = reverse('services:service',
-                      kwargs={'service_type': 'airtime',
-                              'path_suffix': 'add'})
+        with open(file_name, 'rb') as csv_file:
+            url = reverse('services:service',
+                          kwargs={'service_type': 'airtime',
+                                  'path_suffix': 'add'})
 
-        data = {
-            'pool_name': 'test_pool',
-            'vouchers_file': SimpleUploadedFile(
-                csv_file.name, csv_file.read(), content_type='text/csv')
-        }
+            data = {
+                'pool_name': 'test_pool',
+                'vouchers_file': FakeUploadedFile(
+                    csv_file, content_type='text/csv')
+            }
 
-        response = self.client.post(url, data)
-        redirect_url = reverse('services:service_index',
-                               kwargs={'service_type': 'airtime'})
+            response = self.client.post(url, data)
+            redirect_url = reverse('services:service_index',
+                                   kwargs={'service_type': 'airtime'})
 
-        self.assertRedirects(response, redirect_url)
+            self.assertRedirects(response, redirect_url)
 
 
 class TestImportVouchersView(GoDjangoTestCase):
@@ -127,25 +128,27 @@ class TestImportVouchersView(GoDjangoTestCase):
 
     def test_post(self):
         voucher_pool = self.service_helper.create_voucher_pool()
-        csv_file = open(os.path.join(settings.PROJECT_ROOT, 'base',
-                        'fixtures', 'sample-airtime-vouchers.csv'), 'rb')
 
-        url = reverse('services:service',
-                      kwargs={'service_type': 'airtime',
-                              'path_suffix': 'import'})
+        file_name = os.path.join(settings.PROJECT_ROOT, 'base', 'fixtures',
+                                 'sample-airtime-vouchers.csv')
 
-        data = {
-            'vouchers_file': SimpleUploadedFile(
-                csv_file.name, csv_file.read(), content_type='text/csv')
-        }
+        with open(file_name, 'rb') as csv_file:
+            url = reverse('services:service',
+                          kwargs={'service_type': 'airtime',
+                                  'path_suffix': 'import'})
 
-        response = self.client.post(
-            "%s?voucher_pool_key=%s" % (url, voucher_pool.key), data)
+            data = {
+                'vouchers_file': FakeUploadedFile(csv_file,
+                                                  content_type='text/csv')
+            }
 
-        redirect_url = reverse('services:service_index',
-                               kwargs={'service_type': 'airtime'})
+            response = self.client.post(
+                "%s?voucher_pool_key=%s" % (url, voucher_pool.key), data)
 
-        self.assertRedirects(response, redirect_url)
+            redirect_url = reverse('services:service_index',
+                                   kwargs={'service_type': 'airtime'})
+
+            self.assertRedirects(response, redirect_url)
 
 
 class TestExportVouchersView(GoDjangoTestCase):
@@ -187,7 +190,7 @@ class TestExportVouchersView(GoDjangoTestCase):
                                            'Tank,green,Tg0\r\n')
 
 
-class QueryVouchersView(GoDjangoTestCase):
+class TestQueryVouchersView(GoDjangoTestCase):
 
     def setUp(self):
         self.service_helper = self.add_helper(ServiceViewHelper())
@@ -196,11 +199,7 @@ class QueryVouchersView(GoDjangoTestCase):
                           self._query_msisdn)
 
     def _query_msisdn(self, voucher_pool, msisdn):
-        return [{
-            'response_data': {
-                'voucher': 'Tr0'
-            }
-        }]
+        return [{'response_data': {'voucher': 'Tr0'}}]
 
     def test_get(self):
         voucher_pool = self.service_helper.create_voucher_pool()
@@ -211,7 +210,6 @@ class QueryVouchersView(GoDjangoTestCase):
         response = self.client.get(
             "%s?voucher_pool_key=%s" % (url, voucher_pool.key))
 
-        print response.content
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response, '<input class="form-control" id="id_msisdn" '

@@ -1,13 +1,29 @@
-from twisted.internet.defer import returnValue
+import os
 
 from zope.interface import implements
 
-from vumi.tests.helpers import (
-    proxyable, generate_proxies, maybe_async, IHelper)
+from vumi.tests.helpers import generate_proxies, IHelper
 
-from go.base import utils as base_utils
+from django.core.files.uploadedfile import UploadedFile
 
 from go.base.tests.helpers import DjangoVumiApiHelper
+
+
+class FakeUploadedFile(UploadedFile):
+
+    def __init__(self, sample_file, content_type=None):
+        super(FakeUploadedFile, self).__init__(
+            sample_file, sample_file.name, content_type,
+            os.path.getsize(sample_file.name), None)
+
+    def temporary_file_path(self):
+        return self.file.name
+
+    def close(self):
+        try:
+            return self.file.close()
+        except OSError:
+            pass
 
 
 class ServiceHelper(object):
@@ -22,22 +38,6 @@ class ServiceHelper(object):
 
     def cleanup(self):
         pass
-
-    @proxyable
-    @maybe_async
-    def get_user_api(self):
-        user_helper = yield self.vumi_helper.get_or_create_user()
-        returnValue(user_helper.user_api)
-
-    @proxyable
-    @maybe_async
-    def create_voucher_pool(self, name=u"test_pool", imports=[]):
-        user_api = self.get_user_api()
-        voucher_pool_store = user_api.airtime_voucher_pool_store
-        pool = yield voucher_pool_store.new_voucher_pool(name, config={
-            'ext_pool_name': name}, imports=imports)
-
-        returnValue(pool)
 
 
 class ServiceViewHelper(object):
@@ -58,6 +58,3 @@ class ServiceViewHelper(object):
 
     def cleanup(self):
         return self.vumi_helper.cleanup()
-
-    def get_api_commands_sent(self):
-        return base_utils.connection.get_commands()

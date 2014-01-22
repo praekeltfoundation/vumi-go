@@ -31,10 +31,10 @@ class ServiceHelper(object):
 
     @proxyable
     @maybe_async
-    def create_voucher_pool(self, name=u"test_pool", imports=[]):
+    def create_unique_code_pool(self, name=u"test_pool", imports=[]):
         user_api = self.get_user_api()
-        voucher_pool_store = user_api.airtime_voucher_pool_store
-        pool = yield voucher_pool_store.new_voucher_pool(name, config={
+        pool_store = user_api.unique_code_pool_store
+        pool = yield pool_store.new_pool(name, config={
             'ext_pool_name': name}, imports=imports)
 
         returnValue(pool)

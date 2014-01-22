@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 
 class VoucherServiceError(Exception):
     """Raised when an error occurs with the voucher service"""
@@ -36,3 +38,7 @@ class BaseVoucherService(object):
             if not is_success:
                 raise VoucherServiceError(result)
         return result
+
+    def make_request_id(self):
+        """Return a new request ID"""
+        return uuid4().get_hex()

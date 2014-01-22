@@ -3,7 +3,6 @@ import json
 
 from hashlib import md5
 from urlparse import urljoin
-from uuid import uuid4
 
 from go.services.vouchers.service import BaseVoucherService
 from go.services.vouchers.airtime import settings as service_settings
@@ -15,7 +14,7 @@ class VoucherService(BaseVoucherService):
     def import_vouchers(self, voucher_pool, content):
         """Import the vouchers `content` into the given `voucher_pool`"""
         pool_name = voucher_pool.config['ext_pool_name']
-        request_id = uuid4().get_hex()
+        request_id = self.make_request_id()
         url = urljoin(service_settings.SERVICE_URL,
                       '%s/import/%s' % (pool_name, request_id))
 
