@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.http_api_nostream.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.internet.error import DNSLookupError
+from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web import http
 from twisted.web.error import SchemeNotSupported
 
@@ -136,6 +136,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning("Timeout pushing message to %s" % (url,))
         except DNSLookupError:
             log.warning("DNS lookup error pushing message to %s" % (url,))
+        except ConnectionRefusedError:
+            log.warning("Connection refused pushing message to %s" % (url,))
 
     def get_health_response(self):
         return "OK"
