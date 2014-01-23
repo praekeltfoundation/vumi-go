@@ -2,7 +2,7 @@ import base64
 import json
 
 from twisted.internet.defer import inlineCallbacks, DeferredQueue
-from twisted.internet.error import DNSLookupError
+from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
@@ -418,6 +418,15 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
         self.assertTrue(self.mock_push_server.url in dns_log)
 
     @inlineCallbacks
+    def test_post_inbound_message_connection_refused_error(self):
+        self._patch_http_request_full(ConnectionRefusedError)
+        with LogCatcher(message='Connection refused') as lc:
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
+            [dns_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in dns_log)
+
+    @inlineCallbacks
     def test_post_inbound_event(self):
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
@@ -469,6 +478,18 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
 
         self._patch_http_request_full(DNSLookupError)
         with LogCatcher(message='DNS lookup error') as lc:
+            yield self.app_helper.make_dispatch_ack(
+                msg1, conv=self.conversation)
+            [dns_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in dns_log)
+
+    @inlineCallbacks
+    def test_post_inbound_event_connection_refused_error(self):
+        msg1 = yield self.app_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+
+        self._patch_http_request_full(ConnectionRefusedError)
+        with LogCatcher(message='Connection refused') as lc:
             yield self.app_helper.make_dispatch_ack(
                 msg1, conv=self.conversation)
             [dns_log] = lc.messages()
