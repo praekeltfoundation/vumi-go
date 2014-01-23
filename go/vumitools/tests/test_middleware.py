@@ -47,7 +47,7 @@ class MiddlewareHelper(object):
         generate_proxies(self, self._msg_helper)
 
     def setup(self):
-        pass
+        return self._vumi_helper.setup(setup_vumi_api=False)
 
     @inlineCallbacks
     def cleanup(self):

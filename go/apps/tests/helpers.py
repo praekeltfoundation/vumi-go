@@ -124,7 +124,7 @@ class AppWorkerHelper(object):
         return self._worker_name().rpartition('_')[0].decode('utf-8')
 
     def setup(self):
-        pass
+        return self.vumi_helper.setup(setup_vumi_api=False)
 
     def cleanup(self):
         return self.vumi_helper.cleanup()
