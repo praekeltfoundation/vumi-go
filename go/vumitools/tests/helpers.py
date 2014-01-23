@@ -274,8 +274,6 @@ class VumiApiHelper(object):
             use_riak=use_riak, is_sync=is_sync)
         self.broker = None  # Will be replaced by the first worker_helper.
         self._worker_helpers = {}
-        if is_sync:
-            self._django_amqp_setup()
         self._users_created = 0
         self._user_helpers = {}
         self._vumi_api = None
@@ -283,6 +281,9 @@ class VumiApiHelper(object):
         generate_proxies(self, self._persistence_helper)
 
     def setup(self, setup_vumi_api=True):
+        self._persistence_helper.setup()
+        if self.is_sync:
+            self._django_amqp_setup()
         if setup_vumi_api:
             return self.setup_vumi_api()
 
@@ -490,7 +491,7 @@ class EventHandlerHelper(object):
         self.worker_helper = self.vumi_helper.get_worker_helper()
 
     def setup(self):
-        pass
+        return self.vumi_helper.setup(setup_vumi_api=False)
 
     def cleanup(self):
         return self.vumi_helper.cleanup()
