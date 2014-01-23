@@ -35,7 +35,7 @@
                     <p>View a list of monthly statements</p>
                 </li>
                 <li>
-                    <h5><a href="{% url "vouchers:voucher_list" %}">Airtime vouchers & unique codes</a><h5>
+                    <h5><a href="{% url "services:service_index" service_type="airtime" %}">Airtime vouchers</a> & <a href="{% url "services:service_index" service_type="unique_codes" %}">unique codes</a><h5>
                     <p>Add airtime & codes to campaigns</p>
                 </li>
             </ul>
