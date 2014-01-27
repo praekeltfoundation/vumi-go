@@ -5,6 +5,7 @@ from twisted.internet.task import Clock, LoopingCall
 
 from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
+from vumi.tests.utils import LogCatcher
 
 from go.apps.sequential_send.vumi_app import SequentialSendApplication
 from go.apps.sequential_send import vumi_app as sequential_send_module
@@ -190,11 +191,54 @@ class TestSequentialSendApplication(VumiTestCase):
         yield self.app_helper.create_conversation(
             config={'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
 
-        [c1, c2] = yield self.app.get_conversations(
+        convs = yield self.app.get_conversations([
+            [conv1.user_account.key, conv1.key],
+            [conv2.user_account.key, conv2.key]])
+
+        self.assertEqual(sorted([c.key for c in convs]),
+                         sorted([conv1.key, conv2.key]))
+
+    @inlineCallbacks
+    def test_get_conversations_batch_key(self):
+        """
+        Test get_conversation using the batch key fallback.
+        """
+
+        conv1 = yield self.app_helper.create_conversation(
+            config={'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield self.app_helper.start_conversation(conv1)
+
+        conv2 = yield self.app_helper.create_conversation(
+            config={'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
+        yield self.app_helper.start_conversation(conv2)
+
+        yield self.app_helper.create_conversation(
+            config={'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
+
+        convs = yield self.app.get_conversations(
             [[conv1.batch.key, conv1.key], [conv2.batch.key, conv2.key]])
 
-        self.assertEqual(sorted([c1.key, c2.key]),
+        self.assertEqual(sorted([c.key for c in convs]),
                          sorted([conv1.key, conv2.key]))
+
+    @inlineCallbacks
+    def test_get_conversations_missing_conv(self):
+        """
+        Test get_conversation when it's expecting a conversation that doesn't
+        exist.
+        """
+        conv = yield self.app_helper.create_conversation(
+            config={'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield self.app_helper.start_conversation(conv)
+
+        with LogCatcher(message='Conversation .* not found.') as lc:
+            convs = yield self.app.get_conversations(
+                [[conv.batch.key, conv.key], ['badaccount', 'badkey']])
+            self.assertEqual(
+                lc.messages(),
+                ['Conversation badkey for account badaccount not found.'])
+
+        self.assertEqual([c.key for c in convs], [conv.key])
 
     @inlineCallbacks
     def test_sends(self):
