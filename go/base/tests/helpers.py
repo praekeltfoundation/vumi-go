@@ -65,12 +65,13 @@ class DjangoVumiApiHelper(object):
         generate_proxies(self, self._vumi_helper)
         # TODO: Better/more generic way to do this patching?
         self._settings_patches = []
-        self.replace_django_bits()
-        self.amqp_connection = self._vumi_helper.django_amqp_connection
 
     def setup(self, setup_vumi_api=True):
+        # We defer `setup_vumi_api` until we've patched Django.
+        self._vumi_helper.setup(False)
+        self.replace_django_bits()
         if setup_vumi_api:
-            self.setup_vumi_api()
+            return self.setup_vumi_api()
 
     def cleanup(self):
         self._vumi_helper.cleanup()
@@ -81,6 +82,10 @@ class DjangoVumiApiHelper(object):
     @property
     def is_sync(self):
         return self._vumi_helper.is_sync
+
+    @property
+    def amqp_connection(self):
+        return getattr(self._vumi_helper, 'django_amqp_connection', None)
 
     def replace_django_bits(self):
         self._replace_settings()

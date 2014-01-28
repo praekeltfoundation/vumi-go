@@ -128,7 +128,7 @@ class RouterWorkerHelper(object):
         return self._worker_name().rpartition('_')[0].decode('utf-8')
 
     def setup(self):
-        pass
+        self.vumi_helper.setup(setup_vumi_api=False)
 
     @inlineCallbacks
     def cleanup(self):
