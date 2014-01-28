@@ -1,6 +1,10 @@
 {% load go_tags %}
 {% load crispy_forms_tags %}
 
+<div class="fieldset">
+    {{ poll_form|crispy }}
+</div>
+
 {% for form in questions_formset %}
 <div class="fieldset">
     <legend>Question {{forloop.counter}}:</legend>
