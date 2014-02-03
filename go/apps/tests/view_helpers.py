@@ -20,16 +20,14 @@ class AppViewsHelper(object):
         self._app_helper = ApplicationHelper(
             conversation_type, self.vumi_helper)
 
-        # Create the things we need to create
-        self.vumi_helper.setup_vumi_api()
-        self.vumi_helper.make_django_user()
-
         # Proxy methods from our helpers.
         generate_proxies(self, self._app_helper)
         generate_proxies(self, self.vumi_helper)
 
     def setup(self):
-        pass
+        # Create the things we need to create
+        self.vumi_helper.setup()
+        self.vumi_helper.make_django_user()
 
     def cleanup(self):
         return self.vumi_helper.cleanup()

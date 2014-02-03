@@ -83,10 +83,19 @@ class SequentialSendApplication(GoApplicationWorker):
         yield self._set_last_poll_time(now)
         returnValue((then, now))
 
+    @inlineCallbacks
     def get_conversations(self, conv_pointers):
-        return gatherResults([
-                self.get_conversation_fallback(account_key, conv_key)
-                for account_key, conv_key in conv_pointers])
+        results = yield gatherResults([
+            self.get_conversation_fallback(account_key, conv_key)
+            for account_key, conv_key in conv_pointers])
+        conversations = []
+        for pointer, conv in zip(conv_pointers, results):
+            if conv is None:
+                log.warning("Conversation %s for account %s not found." % (
+                    pointer[1], pointer[0]))
+            else:
+                conversations.append(conv)
+        returnValue(conversations)
 
     @inlineCallbacks
     def get_conversation_fallback(self, account_key_or_batch_id, conv_key):
@@ -98,12 +107,12 @@ class SequentialSendApplication(GoApplicationWorker):
                     conv_key,))
             batch = yield self.vumi_api.mdb.get_batch(account_key_or_batch_id)
             if batch is None:
-                log.error('Cannot find batch for batch_id %s' % (
+                log.warning('Cannot find batch for batch_id %s' % (
                         account_key_or_batch_id,))
                 return
             user_account_key = batch.metadata["user_account"]
             if user_account_key is None:
-                log.error("No account key in batch metadata: %r" % (batch,))
+                log.warning("No account key in batch metadata: %r" % (batch,))
                 return
             yield self.redis.srem('scheduled_conversations', json.dumps(
                     [account_key_or_batch_id, conv_key]))
