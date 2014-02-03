@@ -47,14 +47,13 @@ class ServiceViewHelper(object):
         self.vumi_helper = DjangoVumiApiHelper()
         self._service_helper = ServiceHelper(self.vumi_helper)
 
-        self.vumi_helper.setup_vumi_api()
-        self.vumi_helper.make_django_user()
-
         generate_proxies(self, self._service_helper)
         generate_proxies(self, self.vumi_helper)
 
     def setup(self):
-        pass
+        # Create the things we need to create
+        self.vumi_helper.setup()
+        self.vumi_helper.make_django_user()
 
     def cleanup(self):
         return self.vumi_helper.cleanup()
