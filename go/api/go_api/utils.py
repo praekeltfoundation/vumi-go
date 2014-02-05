@@ -16,6 +16,9 @@ class GoApiSubHandler(BaseSubhandler, object):
 
     def __init__(self, user_account_key, vumi_api):
         super(GoApiSubHandler, self).__init__()
+        # We could get either bytes or unicode here. Decode if necessary.
+        if not isinstance(user_account_key, unicode):
+            user_account_key = user_account_key.decode('utf8')
         self.user_account_key = user_account_key
         self.vumi_api = vumi_api
 

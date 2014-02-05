@@ -89,6 +89,9 @@ class VumiUserApi(object):
     conversation_wrapper = ConversationWrapper
 
     def __init__(self, api, user_account_key):
+        # We could get either bytes or unicode here. Decode if necessary.
+        if not isinstance(user_account_key, unicode):
+            user_account_key = user_account_key.decode('utf8')
         self.api = api
         self.manager = self.api.manager
         self.user_account_key = user_account_key
