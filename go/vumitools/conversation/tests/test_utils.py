@@ -24,7 +24,6 @@ class TestConversationWrapper(VumiTestCase):
                 "display_name": "pool",
                 "delivery_class": "sms",
                 "transport_type": "sms",
-                "server_initiated": True,
                 "transport_name": self.msg_helper.transport_name,
             })
         yield self.user_helper.add_tagpool_permission(u"pool")
