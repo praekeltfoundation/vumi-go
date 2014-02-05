@@ -65,6 +65,16 @@ class TestTxVumiUserApi(VumiTestCase):
         self.account_store_vnone = AccountStoreVNone(self.vumi_api.manager)
         self.account_store_v1 = AccountStoreV1(self.vumi_api.manager)
 
+    def test_create_converts_key_to_unicode(self):
+        """
+        The user_account_key attr should be unicode even if a bytestring was
+        provided.
+        """
+        user_api_from_unicode = VumiUserApi(self.vumi_api, u'foo')
+        self.assertIsInstance(user_api_from_unicode.user_account_key, unicode)
+        user_api_from_bytes = VumiUserApi(self.vumi_api, 'foo')
+        self.assertIsInstance(user_api_from_bytes.user_account_key, unicode)
+
     @inlineCallbacks
     def test_optout_filtering(self):
         group = yield self.user_api.contact_store.new_group(u'test-group')
