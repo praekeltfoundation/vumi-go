@@ -351,7 +351,9 @@ class VumiApiHelper(object):
     @proxyable
     @maybe_async
     def make_user(self, username, enable_search=True, django_user_pk=None):
-        key = u"test-%s-user" % (len(self._user_helpers),)
+        # NOTE: We use bytes instead of unicode here because that's what the
+        #       real new_user gives us.
+        key = "test-%s-user" % (len(self._user_helpers),)
         user = self.get_vumi_api().account_store.users(key, username=username)
         yield user.save()
         user_helper = UserApiHelper(self, key, django_user_pk=django_user_pk)
