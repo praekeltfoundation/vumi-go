@@ -57,8 +57,6 @@ CELERY_DB_REUSE_MAX = 100
 
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
-NOSE_ARGS = ['-evumitools', '-evumi_app', '-ehandlers', '-m^test']
-
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'
 
