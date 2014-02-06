@@ -9,11 +9,7 @@ from django.contrib.auth.hashers import make_password
 
 from go.billing import settings as app_settings
 from go.billing.models import MessageCost
-from go.billing.utils import JSONEncoder, JSONDecoder
-
-
-class BillingError(Exception):
-    """Raised when an error occurs during billing."""
+from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 
 
 class BaseResource(Resource):
