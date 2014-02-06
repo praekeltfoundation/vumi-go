@@ -20,8 +20,6 @@ setup(
         # instead of working through all the other requirements before
         # discovering that they aren't available should that be the case.
         'Django==1.5.5',
-        'django-nose==1.0',
-        'nose==1.1.2',
         'gunicorn==0.15.0',
         'South==0.8.2',
         'psycopg2==2.4',
