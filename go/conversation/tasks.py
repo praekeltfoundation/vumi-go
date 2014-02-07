@@ -41,6 +41,33 @@ def get_network_status(acks_or_nacks):
     return event['event_type'], event.get('nack_reason', '')
 
 
+def row_for_inbound_message(message):
+    row = dict((field, unicode(message.payload[field]))
+               for field in conversation_export_field_names
+               if field in message)
+    row['direction'] = 'inbound'
+    return row
+
+
+def row_for_outbound_message(message, mdb):
+    events = sorted(mdb.get_events_for_message(message['message_id']),
+                    key=lambda event: event['timestamp'],
+                    reverse=True)
+    row = dict((field, unicode(message.payload[field]))
+               for field in conversation_export_field_names
+               if field in message)
+    row['direction'] = 'outbound'
+    delivery_reports = [event for event in events
+                        if event['event_type'] == 'delivery_report']
+    row['delivery_status'] = get_delivery_status(delivery_reports)
+    network_events = [event for event in events
+                      if event['event_type'] in ['ack', 'nack']]
+    status, reason = get_network_status(network_events)
+    row['network_handover_status'] = status
+    row['network_handover_reason'] = reason
+    return row
+
+
 def load_messages_in_chunks(conversation, direction='inbound',
                             include_sensitive=False, scrubber=None):
     """
@@ -112,30 +139,11 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
 
     for messages in load_messages_in_chunks(conversation, 'inbound'):
         for message in messages:
-            row = dict((field, unicode(message.payload[field]))
-                       for field in conversation_export_field_names
-                       if field in message)
-            row['direction'] = 'inbound'
-            writer.writerow(row)
+            writer.writerow(row_for_inbound_message(message))
 
     for messages in load_messages_in_chunks(conversation, 'outbound'):
         for message in messages:
             mdb = user_api.api.mdb
-            events = sorted(mdb.get_events_for_message(message['message_id']),
-                            key=lambda event: event['timestamp'],
-                            reverse=True)
-            row = dict((field, unicode(message.payload[field]))
-                       for field in conversation_export_field_names
-                       if field in message)
-            row['direction'] = 'outbound'
-            delivery_reports = [event for event in events
-                                if event['event_type'] == 'delivery_report']
-            row['delivery_status'] = get_delivery_status(delivery_reports)
-            network_events = [event for event in events
-                              if event['event_type'] in ['ack', 'nack']]
-            status, reason = get_network_status(network_events)
-            row['network_handover_status'] = status
-            row['network_handover_reason'] = reason
-            writer.writerow(row)
+            writer.writerow(row_for_outbound_message(message, mdb))
 
     email_export(user_profile, conversation, io)
