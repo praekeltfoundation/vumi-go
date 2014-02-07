@@ -10,6 +10,8 @@ from django.core import mail
 from django.core.urlresolvers import reverse
 from django.utils.unittest import skip
 
+from vumi.message import TransportUserMessage
+
 import go.base.utils
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.conversation.templatetags import conversation_tags
@@ -855,11 +857,24 @@ class TestConversationTasks(GoDjangoTestCase):
                             time_multiplier=12,
                             start_date=date(2013, 1, 1)):
         conv = self.user_helper.create_conversation(name)
-        inbound_msgs = self.msg_helper.add_inbound_to_conv(
-            conv, reply_count, start_date=start_date,
-            time_multiplier=time_multiplier)
-        self.msg_helper.add_replies_to_conv(conv, inbound_msgs)
+        if reply_count:
+            inbound_msgs = self.msg_helper.add_inbound_to_conv(
+                conv, reply_count, start_date=start_date,
+                time_multiplier=time_multiplier)
+            self.msg_helper.add_replies_to_conv(conv, inbound_msgs)
         return conv
+
+    def get_attachment(self, email, file_name):
+        for attachment in email.attachments:
+            fn, attachment_content, mime_type = attachment
+            if fn == file_name:
+                return StringIO(attachment_content)
+
+    def get_zipfile_attachment(
+            self, email, attachment_file_name, zipfile_file_name):
+        attachment = self.get_attachment(email, attachment_file_name)
+        zipfile = ZipFile(attachment, 'r')
+        return zipfile.open(zipfile_file_name, 'r')
 
     def test_export_conversation_messages_unsorted(self):
         conv = self.create_conversation()
@@ -869,13 +884,67 @@ class TestConversationTasks(GoDjangoTestCase):
             email.recipients(), [self.user_helper.get_django_user().email])
         self.assertTrue(conv.name in email.subject)
         self.assertTrue(conv.name in email.body)
-        [(file_name, zipcontent, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.zip')
-        zipfile = ZipFile(StringIO(zipcontent), 'r')
-        fp = zipfile.open('messages-export.csv', 'r')
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
         reader = csv.reader(fp)
         message_ids = [row[4] for row in reader]
         self.assertEqual('message_id', message_ids.pop(0))
         self.assertEqual(
             set(message_ids),
             set(conv.inbound_keys() + conv.outbound_keys()))
+
+    def test_export_conversation_message_session_events(self):
+        conv = self.create_conversation(reply_count=0)
+        msg = self.msg_helper.make_stored_inbound(
+            conv, "inbound", from_addr='from-1',
+            session_event=TransportUserMessage.SESSION_NEW)
+
+        reply = self.msg_helper.make_reply(
+            msg, "reply", session_event=TransportUserMessage.SESSION_CLOSE)
+
+        self.msg_helper.store_outbound(conv, reply)
+
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.reader(fp)
+        reader.next()  # Read past the header
+        events = [row[6] for row in reader]
+        self.assertEqual(
+            set(events),
+            set([TransportUserMessage.SESSION_NEW,
+                 TransportUserMessage.SESSION_CLOSE]))
+
+    def test_export_conversation_message_transport_types(self):
+        conv = self.create_conversation(reply_count=0)
+        # SMS message
+        self.msg_helper.make_stored_inbound(
+            conv, "inbound", from_addr='from-1', transport_type='sms')
+        # USSD message
+        self.msg_helper.make_stored_inbound(
+            conv, "inbound", from_addr='from-1', transport_type='ussd')
+
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.reader(fp)
+        reader.next()  # Read past the header
+        events = [row[7] for row in reader]
+        self.assertEqual(
+            set(events),
+            set(['sms', 'ussd']))
+
+    def test_export_conversation_message_directions(self):
+        conv = self.create_conversation()
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.reader(fp)
+        reader.next()  # Read past the header
+        directions = [row[8] for row in reader]
+        self.assertEqual(
+            set(directions),
+            set(['inbound', 'outbound']))
