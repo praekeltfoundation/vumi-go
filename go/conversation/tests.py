@@ -15,8 +15,7 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
-from go.conversation.tasks import (export_conversation_messages_unsorted,
-                                   export_conversation_messages_sorted)
+from go.conversation.tasks import export_conversation_messages_unsorted
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
@@ -880,26 +879,3 @@ class TestConversationTasks(GoDjangoTestCase):
         self.assertEqual(
             set(message_ids),
             set(conv.inbound_keys() + conv.outbound_keys()))
-
-    def test_export_conversation_messages_sorted(self):
-        conv = self.create_conversation(reply_count=2)
-        export_conversation_messages_sorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-
-        self.assertEqual(
-            email.recipients(), [self.user_helper.get_django_user().email])
-        self.assertTrue(conv.name in email.subject)
-        self.assertTrue(conv.name in email.body)
-        [(file_name, zipcontent, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.zip')
-        zipfile = ZipFile(StringIO(zipcontent), 'r')
-        fp = zipfile.open('messages-export.csv', 'r')
-        reader = csv.reader(fp)
-        threads = [row[1:3] for row in reader]
-        self.assertEqual(threads, [
-            ['from_addr', 'to_addr'],
-            ['9292', 'from-0'],
-            ['from-0', '9292'],
-            ['9292', 'from-1'],
-            ['from-1', '9292'],
-        ])

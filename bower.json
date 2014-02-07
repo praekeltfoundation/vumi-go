@@ -32,6 +32,9 @@
       "css": "dist/css/*",
       "fonts": "dist/fonts/*"
     },
+    "jquery-simulate": {
+        "js": "jquery.simulate.js"
+    },
     "jquery-ui": {
       "js": "ui/jquery-ui.js"
     },
