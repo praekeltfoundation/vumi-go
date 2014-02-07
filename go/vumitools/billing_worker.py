@@ -12,8 +12,7 @@ from vumi.utils import http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 
-from go.billing.api import BillingError
-from go.billing.utils import JSONEncoder, JSONDecoder
+from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 
 
 class BillingApi(object):

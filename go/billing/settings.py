@@ -3,11 +3,18 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
+from go.config import billing_quantization_exponent
+
+
 CREDIT_CONVERSION_FACTOR = getattr(
     settings, 'BILLING_CREDIT_CONVERSION_FACTOR', Decimal('0.25'))
 
-QUANTIZATION_EXPONENT = getattr(settings, 'BILLING_QUANTIZATION_EXPONENT',
-                                Decimal('.000001'))
+# This is currently pulled in from `go.config` to avoid pulling a pile of
+# Django stuff into `go.vumitools.billing_worker` through `go.billing.utils`.
+QUANTIZATION_EXPONENT = billing_quantization_exponent()
+if hasattr(settings, 'BILLING_QUANTIZATION_EXPONENT'):
+    raise ValueError(
+        "BILLING_QUANTIZATION_EXPONENT cannot be configured in settings.py.")
 
 API_MIN_CONNECTIONS = getattr(settings, 'BILLING_API_MIN_CONNECTIONS', 10)
 

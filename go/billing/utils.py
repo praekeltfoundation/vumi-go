@@ -13,7 +13,11 @@ from twisted.web.test import test_web
 
 from txpostgres import txpostgres
 
-from go.billing import settings
+from go.config import billing_quantization_exponent
+
+
+class BillingError(Exception):
+    """Raised when an error occurs during billing."""
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -25,7 +29,7 @@ class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
             context = decimal.Context()
-            value = obj.quantize(settings.QUANTIZATION_EXPONENT,
+            value = obj.quantize(billing_quantization_exponent(),
                                  context=context)
 
             if (context.flags[decimal.Inexact]
@@ -53,7 +57,7 @@ class JSONDecoder(json.JSONDecoder):
     def parse_float_str(self, num_str):
         context = decimal.Context()
         value = decimal.Decimal(num_str).quantize(
-            settings.QUANTIZATION_EXPONENT, context=context)
+            billing_quantization_exponent(), context=context)
 
         if (context.flags[decimal.Inexact]
                 and value == decimal.Decimal('0.0')):
