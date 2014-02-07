@@ -8,7 +8,7 @@ from django.core.mail import EmailMessage
 
 from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
-from go.base.utils import UnicodeCSVWriter
+from go.base.utils import UnicodeDictWriter
 
 
 # The field names to export
@@ -22,17 +22,50 @@ conversation_export_field_names = [
     'session_event',
     'transport_type',
     'direction',
+    'network_handover_status',
+    'network_handover_reason',
+    'delivery_status',
 ]
 
 
-def write_messages(writer, messages, extra=None):
-    extra = extra or {}
-    for message in messages:
-        message_payload = message.payload
-        message_payload.update(extra)
-        writer.writerow([unicode(message_payload.get(fn) or '')
-                         for fn in conversation_export_field_names])
-    return messages
+def get_delivery_status(delivery_reports):
+    if not delivery_reports:
+        return 'Unknown'
+    return delivery_reports[0]['delivery_status']
+
+
+def get_network_status(acks_or_nacks):
+    if not acks_or_nacks:
+        return 'Unknown', ''
+    event = acks_or_nacks[0]
+    return event['event_type'], event.get('nack_reason', '')
+
+
+def row_for_inbound_message(message):
+    row = dict((field, unicode(message.payload[field]))
+               for field in conversation_export_field_names
+               if field in message)
+    row['direction'] = 'inbound'
+    return row
+
+
+def row_for_outbound_message(message, mdb):
+    events = sorted(mdb.get_events_for_message(message['message_id']),
+                    key=lambda event: event['timestamp'],
+                    reverse=True)
+    row = dict((field, unicode(message.payload[field]))
+               for field in conversation_export_field_names
+               if field in message)
+    row['direction'] = 'outbound'
+    delivery_reports = [event for event in events
+                        if event['event_type'] == 'delivery_report']
+    row['delivery_status'] = get_delivery_status(delivery_reports)
+    network_events = [event for event in events
+                      if event['event_type'] in ['ack', 'nack']]
+    status, reason = get_network_status(network_events)
+    row['network_handover_status'] = status
+    row['network_handover_reason'] = reason
+    return row
 
 
 def load_messages_in_chunks(conversation, direction='inbound',
@@ -95,22 +128,22 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
     :param str conversation_key:
         The key of the conversation we want to export the messages for.
     """
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+    user_api = VumiUserApi.from_config_sync(
+        account_key, settings.VUMI_API_CONFIG)
     user_profile = UserProfile.objects.get(user_account=account_key)
-    conversation = api.get_wrapped_conversation(conversation_key)
+    conversation = user_api.get_wrapped_conversation(conversation_key)
 
     io = StringIO()
-    writer = UnicodeCSVWriter(io)
-    writer.writerow(conversation_export_field_names)
+    writer = UnicodeDictWriter(io, conversation_export_field_names)
+    writer.writeheader()
 
     for messages in load_messages_in_chunks(conversation, 'inbound'):
-        write_messages(writer, messages, extra={
-            'direction': 'inbound',
-        })
+        for message in messages:
+            writer.writerow(row_for_inbound_message(message))
 
     for messages in load_messages_in_chunks(conversation, 'outbound'):
-        write_messages(writer, messages, extra={
-            'direction': 'outbound',
-        })
+        for message in messages:
+            mdb = user_api.api.mdb
+            writer.writerow(row_for_outbound_message(message, mdb))
 
     email_export(user_profile, conversation, io)

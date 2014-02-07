@@ -886,9 +886,8 @@ class TestConversationTasks(GoDjangoTestCase):
         self.assertTrue(conv.name in email.body)
         fp = self.get_zipfile_attachment(
             email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.reader(fp)
-        message_ids = [row[4] for row in reader]
-        self.assertEqual('message_id', message_ids.pop(0))
+        reader = csv.DictReader(fp)
+        message_ids = [row['message_id'] for row in reader]
         self.assertEqual(
             set(message_ids),
             set(conv.inbound_keys() + conv.outbound_keys()))
@@ -908,9 +907,8 @@ class TestConversationTasks(GoDjangoTestCase):
         [email] = mail.outbox
         fp = self.get_zipfile_attachment(
             email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.reader(fp)
-        reader.next()  # Read past the header
-        events = [row[6] for row in reader]
+        reader = csv.DictReader(fp)
+        events = [row['session_event'] for row in reader]
         self.assertEqual(
             set(events),
             set([TransportUserMessage.SESSION_NEW,
@@ -929,9 +927,8 @@ class TestConversationTasks(GoDjangoTestCase):
         [email] = mail.outbox
         fp = self.get_zipfile_attachment(
             email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.reader(fp)
-        reader.next()  # Read past the header
-        events = [row[7] for row in reader]
+        reader = csv.DictReader(fp)
+        events = [row['transport_type'] for row in reader]
         self.assertEqual(
             set(events),
             set(['sms', 'ussd']))
@@ -942,9 +939,54 @@ class TestConversationTasks(GoDjangoTestCase):
         [email] = mail.outbox
         fp = self.get_zipfile_attachment(
             email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.reader(fp)
-        reader.next()  # Read past the header
-        directions = [row[8] for row in reader]
+        reader = csv.DictReader(fp)
+        directions = [row['direction'] for row in reader]
         self.assertEqual(
             set(directions),
             set(['inbound', 'outbound']))
+
+    def test_export_conversation_delivery_status(self):
+        conv = self.create_conversation(reply_count=0)
+
+        msg = self.msg_helper.make_stored_outbound(
+            conv, "outbound", to_addr='from-1')
+        self.msg_helper.make_stored_delivery_report(msg=msg, conv=conv)
+
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.DictReader(fp)
+        delivery_statuses = [row['delivery_status'] for row in reader]
+        self.assertEqual(set(delivery_statuses), set(['delivered']))
+
+    def test_export_conversation_ack(self):
+        conv = self.create_conversation(reply_count=0)
+
+        msg = self.msg_helper.make_stored_outbound(
+            conv, "outbound", to_addr='from-1')
+        self.msg_helper.make_stored_ack(msg=msg, conv=conv)
+
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.DictReader(fp)
+        [row] = list(reader)
+        self.assertEqual(row['network_handover_status'], 'ack')
+
+    def test_export_conversation_nack(self):
+        conv = self.create_conversation(reply_count=0)
+
+        msg = self.msg_helper.make_stored_outbound(
+            conv, "outbound", to_addr='from-1')
+        self.msg_helper.make_stored_nack(msg=msg, conv=conv, nack_reason='foo')
+
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.DictReader(fp)
+        [row] = list(reader)
+        self.assertEqual(row['network_handover_status'], 'nack')
+        self.assertEqual(row['network_handover_reason'], 'foo')
