@@ -104,7 +104,7 @@ STATICFILES_FINDERS = (
 
 # Make this unique, and don't share it with anybody.
 # override this in production_settings.py
-SECRET_KEY = ""
+SECRET_KEY = "b0b3b3"
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
