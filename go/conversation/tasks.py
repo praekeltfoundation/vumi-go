@@ -8,7 +8,7 @@ from django.core.mail import EmailMessage
 
 from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
-from go.base.utils import UnicodeCSVWriter
+from go.base.utils import UnicodeDictWriter
 
 
 # The field names to export
@@ -22,17 +22,12 @@ conversation_export_field_names = [
     'session_event',
     'transport_type',
     'direction',
+    'delivery_status',
 ]
 
 
-def write_messages(writer, messages, extra=None):
-    extra = extra or {}
-    for message in messages:
-        message_payload = message.payload
-        message_payload.update(extra)
-        writer.writerow([unicode(message_payload.get(fn) or '')
-                         for fn in conversation_export_field_names])
-    return messages
+def get_delivery_status(message):
+    return 'delivered'
 
 
 def load_messages_in_chunks(conversation, direction='inbound',
@@ -100,17 +95,25 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
     conversation = api.get_wrapped_conversation(conversation_key)
 
     io = StringIO()
-    writer = UnicodeCSVWriter(io)
-    writer.writerow(conversation_export_field_names)
+    writer = UnicodeDictWriter(io, conversation_export_field_names)
+    writer.writeheader()
 
     for messages in load_messages_in_chunks(conversation, 'inbound'):
-        write_messages(writer, messages, extra={
-            'direction': 'inbound',
-        })
+        for message in messages:
+            row = dict((field, unicode(message.payload[field]))
+                       for field in conversation_export_field_names
+                       if field in message)
+            row['direction'] = 'inbound'
+            row['delivery_status'] = get_delivery_status(message)
+            writer.writerow(row)
 
     for messages in load_messages_in_chunks(conversation, 'outbound'):
-        write_messages(writer, messages, extra={
-            'direction': 'outbound',
-        })
+        for message in messages:
+            row = dict((field, unicode(message.payload[field]))
+                       for field in conversation_export_field_names
+                       if field in message)
+            row['direction'] = 'inbound'
+            row['delivery_status'] = get_delivery_status(message)
+            writer.writerow(row)
 
     email_export(user_profile, conversation, io)
