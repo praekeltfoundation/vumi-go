@@ -20,12 +20,17 @@ conversation_export_field_names = [
     'message_id',
     'in_reply_to',
     'session_event',
+    'transport_type',
+    'direction',
 ]
 
 
-def write_messages(writer, messages):
+def write_messages(writer, messages, extra=None):
+    extra = extra or {}
     for message in messages:
-        writer.writerow([unicode(message.payload.get(fn) or '')
+        message_payload = message.payload
+        message_payload.update(extra)
+        writer.writerow([unicode(message_payload.get(fn) or '')
                          for fn in conversation_export_field_names])
     return messages
 
@@ -99,10 +104,14 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
     writer.writerow(conversation_export_field_names)
 
     for messages in load_messages_in_chunks(conversation, 'inbound'):
-        write_messages(writer, messages)
+        write_messages(writer, messages, extra={
+            'direction': 'inbound',
+        })
 
     for messages in load_messages_in_chunks(conversation, 'outbound'):
-        write_messages(writer, messages)
+        write_messages(writer, messages, extra={
+            'direction': 'outbound',
+        })
 
     email_export(user_profile, conversation, io)
 
