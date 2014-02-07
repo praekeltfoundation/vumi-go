@@ -22,12 +22,23 @@ conversation_export_field_names = [
     'session_event',
     'transport_type',
     'direction',
+    'network_handover_status',
+    'network_handover_reason',
     'delivery_status',
 ]
 
 
-def get_delivery_status(message):
-    return 'delivered'
+def get_delivery_status(delivery_reports):
+    if not delivery_reports:
+        return 'Unknown'
+    return delivery_reports[0]['delivery_status']
+
+
+def get_network_status(acks_or_nacks):
+    if not acks_or_nacks:
+        return 'Unknown', ''
+    event = acks_or_nacks[0]
+    return event['event_type'], event.get('nack_reason', '')
 
 
 def load_messages_in_chunks(conversation, direction='inbound',
@@ -90,9 +101,10 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
     :param str conversation_key:
         The key of the conversation we want to export the messages for.
     """
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+    user_api = VumiUserApi.from_config_sync(
+        account_key, settings.VUMI_API_CONFIG)
     user_profile = UserProfile.objects.get(user_account=account_key)
-    conversation = api.get_wrapped_conversation(conversation_key)
+    conversation = user_api.get_wrapped_conversation(conversation_key)
 
     io = StringIO()
     writer = UnicodeDictWriter(io, conversation_export_field_names)
@@ -104,16 +116,26 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
                        for field in conversation_export_field_names
                        if field in message)
             row['direction'] = 'inbound'
-            row['delivery_status'] = get_delivery_status(message)
             writer.writerow(row)
 
     for messages in load_messages_in_chunks(conversation, 'outbound'):
         for message in messages:
+            mdb = user_api.api.mdb
+            events = sorted(mdb.get_events_for_message(message['message_id']),
+                            key=lambda event: event['timestamp'],
+                            reverse=True)
             row = dict((field, unicode(message.payload[field]))
                        for field in conversation_export_field_names
                        if field in message)
-            row['direction'] = 'inbound'
-            row['delivery_status'] = get_delivery_status(message)
+            row['direction'] = 'outbound'
+            delivery_reports = [event for event in events
+                                if event['event_type'] == 'delivery_report']
+            row['delivery_status'] = get_delivery_status(delivery_reports)
+            network_events = [event for event in events
+                              if event['event_type'] in ['ack', 'nack']]
+            status, reason = get_network_status(network_events)
+            row['network_handover_status'] = status
+            row['network_handover_reason'] = reason
             writer.writerow(row)
 
     email_export(user_profile, conversation, io)
