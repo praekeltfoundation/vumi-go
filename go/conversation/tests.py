@@ -892,3 +892,59 @@ class TestConversationTasks(GoDjangoTestCase):
         self.assertEqual(
             set(message_ids),
             set(conv.inbound_keys() + conv.outbound_keys()))
+
+    def test_export_conversation_message_session_events(self):
+        conv = self.create_conversation(reply_count=0)
+        msg = self.msg_helper.make_stored_inbound(
+            conv, "inbound", from_addr='from-1',
+            session_event=TransportUserMessage.SESSION_NEW)
+
+        reply = self.msg_helper.make_reply(
+            msg, "reply", session_event=TransportUserMessage.SESSION_CLOSE)
+
+        self.msg_helper.store_outbound(conv, reply)
+
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.reader(fp)
+        reader.next()  # Read past the header
+        events = [row[6] for row in reader]
+        self.assertEqual(
+            set(events),
+            set([TransportUserMessage.SESSION_NEW,
+                 TransportUserMessage.SESSION_CLOSE]))
+
+    def test_export_conversation_message_transport_types(self):
+        conv = self.create_conversation(reply_count=0)
+        # SMS message
+        self.msg_helper.make_stored_inbound(
+            conv, "inbound", from_addr='from-1', transport_type='sms')
+        # USSD message
+        self.msg_helper.make_stored_inbound(
+            conv, "inbound", from_addr='from-1', transport_type='ussd')
+
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.reader(fp)
+        reader.next()  # Read past the header
+        events = [row[7] for row in reader]
+        self.assertEqual(
+            set(events),
+            set(['sms', 'ussd']))
+
+    def test_export_conversation_message_directions(self):
+        conv = self.create_conversation()
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.reader(fp)
+        reader.next()  # Read past the header
+        directions = [row[8] for row in reader]
+        self.assertEqual(
+            set(directions),
+            set(['inbound', 'outbound']))
