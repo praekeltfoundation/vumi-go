@@ -19,6 +19,7 @@ conversation_export_field_names = [
     'content',
     'message_id',
     'in_reply_to',
+    'session_event',
 ]
 
 
