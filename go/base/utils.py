@@ -126,10 +126,16 @@ class UnicodeCSVWriter(object):
 
 class UnicodeDictWriter(object):
     """
-    Essentially a copy of the built in csv.DictWriter with the exception
-    that the ``extrasaction`` keyword argument has been dropped.
-    This class will always raise an exception if the keys in the dict
-    do not match the known fieldnames.
+    Essentially a copy of the built-in csv.DictWriter with the following
+    exceptions:
+
+    1.  The writer used is ``go.base.utils.UnicodeCSVWriter`` instead of
+        ``csv.writer``
+
+    2.  The ``extrasaction`` keyword argument has been dropped.
+        This class will always raise an exception if the keys in the dict
+        do not match the known fieldnames.
+
     """
 
     def __init__(self, f, fieldnames, dialect=csv.excel, encoding='utf-8',
