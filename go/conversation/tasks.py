@@ -25,6 +25,7 @@ conversation_export_field_names = [
     'network_handover_status',
     'network_handover_reason',
     'delivery_status',
+    'endpoint',
 ]
 
 
@@ -46,6 +47,7 @@ def row_for_inbound_message(message):
                for field in conversation_export_field_names
                if field in message)
     row['direction'] = 'inbound'
+    row['endpoint'] = message.get_routing_endpoint()
     return row
 
 
@@ -65,6 +67,7 @@ def row_for_outbound_message(message, mdb):
     status, reason = get_network_status(network_events)
     row['network_handover_status'] = status
     row['network_handover_reason'] = reason
+    row['endpoint'] = message.get_routing_endpoint()
     return row
 
 
