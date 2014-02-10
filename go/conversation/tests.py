@@ -990,3 +990,27 @@ class TestConversationTasks(GoDjangoTestCase):
         [row] = list(reader)
         self.assertEqual(row['network_handover_status'], 'nack')
         self.assertEqual(row['network_handover_reason'], 'foo')
+
+    def test_export_conversation_endpoints(self):
+        conv = self.create_conversation(reply_count=0)
+
+        msg = self.msg_helper.make_outbound(
+            "outbound", conv=conv, to_addr='from-1')
+        msg.set_routing_endpoint('foo')
+        self.msg_helper.store_outbound(conv, msg)
+
+        msg = self.msg_helper.make_outbound(
+            "inbound", conv=conv, from_addr='from-1')
+        msg.set_routing_endpoint('bar')
+        self.msg_helper.store_inbound(conv, msg)
+
+        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
+        [email] = mail.outbox
+        fp = self.get_zipfile_attachment(
+            email, 'messages-export.zip', 'messages-export.csv')
+        reader = csv.DictReader(fp)
+        [row1, row2] = list(reader)
+        self.assertEqual(row1['direction'], 'inbound')
+        self.assertEqual(row1['endpoint'], 'bar')
+        self.assertEqual(row2['direction'], 'outbound')
+        self.assertEqual(row2['endpoint'], 'foo')
