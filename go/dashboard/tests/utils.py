@@ -21,7 +21,8 @@ class FakeDiamondashApiClient(DiamondashApiClient):
             'message': message
         })
 
-        self._response = DiamondashApiError("(%s) %s" % (code, data))
+        self._response = DiamondashApiError(
+            code, data, "(%s) %s" % (code, data))
 
     def set_raw_response(self, content="", code=200):
         self._response = {
