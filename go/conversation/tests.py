@@ -828,7 +828,7 @@ class TestConversationReportsView(BaseConversationViewTestCase):
         self.assertEqual(
             self.error_log,
             ['Dashboard sync failed: '
-             '(400) {"message": ":(", "success": false}'])
+             '400: {"message": ":(", "success": false}'])
 
         self.assertEqual(response.context['dashboard_config'], None)
 
