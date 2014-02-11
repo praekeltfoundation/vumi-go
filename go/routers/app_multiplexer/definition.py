@@ -5,4 +5,4 @@ class RouterDefinition(RouterDefinitionBase):
     router_type = 'application_multiplexer'
 
     def configured_outbound_endpoints(self, config):
-        return list(set(config.get('keyword_endpoint_mapping', {}).values()))
+        return list(set(config.get('endpoints', {}).values()))
