@@ -10,8 +10,10 @@
   "dependencies": {
     "q": "~0.9.7",
     "jed": "~0.5.4",
+    "libxmljs": "~0.8.1",
+    "underscore": "~1.6.0",
     "vumigo_v01": "~0.1.22",
-    "libxmljs": "~0.8.1"
+    "vumigo_v02": "~0.2.0-alpha"
   },
   "devDependencies": {
     "js-yaml": "~2.1.0",
