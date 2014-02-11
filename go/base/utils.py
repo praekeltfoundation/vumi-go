@@ -124,6 +124,47 @@ class UnicodeCSVWriter(object):
             self.writerow(row)
 
 
+class UnicodeDictWriter(object):
+    """
+    Essentially a copy of the built-in csv.DictWriter with the following
+    exceptions:
+
+    1.  The writer used is ``go.base.utils.UnicodeCSVWriter`` instead of
+        ``csv.writer``
+
+    2.  The ``extrasaction`` keyword argument has been dropped.
+        This class will always raise an exception if the keys in the dict
+        do not match the known fieldnames.
+
+    """
+
+    def __init__(self, f, fieldnames, dialect=csv.excel, encoding='utf-8',
+                 restval=u''):
+        self.fieldnames = fieldnames
+        self.restval = restval
+        self.writer = UnicodeCSVWriter(f, dialect=dialect, encoding=encoding)
+
+    def writeheader(self):
+        header = dict(zip(self.fieldnames, self.fieldnames))
+        self.writerow(header)
+
+    def _dict_to_list(self, rowdict):
+        wrong_fields = [k for k in rowdict if k not in self.fieldnames]
+        if wrong_fields:
+            raise ValueError("dict contains fields not in fieldnames: " +
+                             ", ".join(wrong_fields))
+        return [rowdict.get(key, self.restval) for key in self.fieldnames]
+
+    def writerow(self, rowdict):
+        return self.writer.writerow(self._dict_to_list(rowdict))
+
+    def writerows(self, rowdicts):
+        rows = []
+        for rowdict in rowdicts:
+            rows.append(self._dict_to_list(rowdict))
+        return self.writer.writerows(rows)
+
+
 def get_conversation_view_definition(conversation_type, conv=None):
     # Scoped import to avoid circular deps.
     from go.conversation.view_definition import ConversationViewDefinitionBase
