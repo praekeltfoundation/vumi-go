@@ -5,9 +5,9 @@ from django.contrib.auth import get_user_model
 
 from go.config import billing_quantization_exponent
 
-
+# 10 credits = 1 US cent
 CREDIT_CONVERSION_FACTOR = getattr(
-    settings, 'BILLING_CREDIT_CONVERSION_FACTOR', Decimal('0.25'))
+    settings, 'BILLING_CREDIT_CONVERSION_FACTOR', Decimal('10.00'))
 
 # This is currently pulled in from `go.config` to avoid pulling a pile of
 # Django stuff into `go.vumitools.billing_worker` through `go.billing.utils`.
