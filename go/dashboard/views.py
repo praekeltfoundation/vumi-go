@@ -29,7 +29,6 @@ def diamondash_api_proxy(request):
     try:
         response = api.raw_request(request.method, url, content=request.body)
     except client.DiamondashApiError as err:
-        logger.exception("Diamondash responded with an error.")
         response = {
             'content': err.content,
             'code': err.code,
