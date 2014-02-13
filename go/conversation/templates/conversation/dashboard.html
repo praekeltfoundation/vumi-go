@@ -37,7 +37,7 @@
                     <td title="{{conversation.created_at }}">{{ conversation.created_at|naturalday }}</td>
                     <td>
                         <a href="{% conversation_screen conversation 'message_list' %}">Messages</a>
-                        {# <a href="{% url 'todo' %}">Reports</a> #}
+                        <a href="{% conversation_screen conversation 'reports'  %}">Reports</a>
                     </td>
                     <td>
                       {% include "conversation/includes/actions.html" with conversation=conversation %}
