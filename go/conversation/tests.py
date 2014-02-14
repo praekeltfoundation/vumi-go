@@ -693,7 +693,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(r_out, 'from-me', 1)
         self.assertContains(r_out, 'bad horse (unsupported)', 1)
 
-    def test_message_list_with_new_query(self):
+    def test_message_search_query(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         # create some messages to search for
         self.msg_helper.add_inbound_to_conv(conv, 5)
@@ -713,6 +713,48 @@ class TestConversationViews(BaseConversationViewTestCase):
         }.items():
             self.assertContains(response,
                                 '"%s": %s' % (param, json.dumps(value)))
+
+        template_names = [t.name for t in response.templates]
+        self.assertTrue(
+            'generic/includes/message-load-results.html' in template_names)
+
+    def test_message_search_results(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        # create some messages to search for
+        self.msg_helper.add_inbound_to_conv(conv, 5)
+
+        #fake_result = FakeMatchResult(tries=2,
+        #    results=[self.mkmsg_out() for i in range(10)])
+
+        self.client.get(self.get_view_url(conv, 'message_list'),
+                        {"q": 'inbound 3'})
+        ms_client = self.message_store_helper.get_ms_client()
+        [token] = ms_client.get_tokens()
+
+        fetch_results_url = self.get_view_url(conv, 'message_search_result')
+        fetch_results_params = {
+            'q': 'hello world 1',
+            'batch_id': 'batch-id',
+            'direction': 'inbound',
+            'token': token,
+            'delay': 100,
+        }
+
+        response1 = self.client.get(fetch_results_url, fetch_results_params)
+        response2 = self.client.get(fetch_results_url, fetch_results_params)
+
+        # First time it should still show the loading page
+        self.assertTrue('generic/includes/message-load-results.html' in
+                        [t.name for t in response1.templates])
+        self.assertEqual(response1.context['delay'], 1.1 * 100)
+        # Second time it should still render the messages
+        self.assertTrue('generic/includes/message-list.html' in
+                        [t.name for t in response2.templates])
+        self.assertEqual(response1.context['token'], token)
+        # Second time we should list the matching messages
+        self.assertEqual(response2.context['token'], token)
+        self.assertEqual(
+            len(response2.context['message_page'].object_list), 10)
 
     def test_reply_on_inbound_messages_only(self):
         # Fake the routing setup.
