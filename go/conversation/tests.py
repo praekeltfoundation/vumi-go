@@ -13,7 +13,8 @@ from django.utils.unittest import skip
 from vumi.message import TransportUserMessage
 
 import go.base.utils
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.base.tests.helpers import (
+    GoDjangoTestCase, DjangoVumiApiHelper, MessageStoreClientHelper)
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
@@ -144,6 +145,8 @@ class BaseConversationViewTestCase(GoDjangoTestCase):
             VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
         self.vumi_helper.setup_vumi_api()
         self.user_helper = self.vumi_helper.make_django_user()
+        self.message_store_helper = self.add_helper(
+            MessageStoreClientHelper(self.vumi_helper.get_vumi_api().mdb))
         self.client = self.vumi_helper.get_client()
 
     def _get_conversation_pkg(self, conversation_type, from_list=()):
@@ -689,6 +692,27 @@ class TestConversationViews(BaseConversationViewTestCase):
 
         self.assertContains(r_out, 'from-me', 1)
         self.assertContains(r_out, 'bad horse (unsupported)', 1)
+
+    def test_message_list_with_new_query(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        # create some messages to search for
+        self.msg_helper.add_inbound_to_conv(conv, 5)
+        response = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {"q": 'inbound 3'})
+
+        ms_client = self.message_store_helper.get_ms_client()
+        [token] = ms_client.get_tokens()
+
+        for param, value in {
+            "q": "inbound 3",
+            "token": token,
+            "batch_id": conv.batch.key,
+            "direction": "inbound",
+            "delay": 100,
+        }.items():
+            self.assertContains(response,
+                                '"%s": %s' % (param, json.dumps(value)))
 
     def test_reply_on_inbound_messages_only(self):
         # Fake the routing setup.
