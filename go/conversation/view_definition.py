@@ -253,7 +253,7 @@ class MessageListView(ConversationTemplateView):
                 'query': query,
                 'token': token,
             })
-            return tag_context
+            return self.render_to_response(tag_context)
         elif query and token:
             match_result = ms_client.MatchResult(client, batch_id, direction,
                                                     token, page=int(page),
@@ -262,7 +262,8 @@ class MessageListView(ConversationTemplateView):
             tag_context.update({
                 'token': token,
                 'query': query,
-                })
+            })
+            return self.render_to_response(tag_context)
 
         elif direction == 'inbound':
             message_paginator = inbound_message_paginator
