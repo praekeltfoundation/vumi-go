@@ -69,64 +69,46 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
                 user_account_key=router.user_account.key,
                 router_key=router.key))
 
-    def test_get_edit_empty_config(self):
+    def test_initial_config(self):
+        rtr_helper = self.router_helper.create_router_helper(
+            started=True, config={
+                'menu_title': 'Please select an application',
+                'entries': [
+                    {
+                        'label': 'Flappy Bird',
+                        'endpoint': 'flappy-bird',
+
+                    },
+                ]
+            })
+        response = self.client.get(rtr_helper.get_view_url('edit'))
+        self.assertContains(response, 'Please select an application')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Flappy Bird')
+        self.assertContains(response, 'flappy-bird')
+
+    def test_initial_config_empty(self):
         rtr_helper = self.router_helper.create_router_helper(started=True)
         response = self.client.get(rtr_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
 
-    def test_get_edit_small_config(self):
-        rtr_helper = self.router_helper.create_router_helper(
-            started=True, config={
-                'endpoints': {
-                    'mykeyw[o0]rd': 'target_endpoint',
-                },
-            })
-        response = self.client.get(rtr_helper.get_view_url('edit'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'mykeyw[o0]rd')
-        self.assertContains(response, 'target_endpoint')
-
-    def test_config_validate_unique_endpoints(self):
+    def test_user_input_good(self):
         rtr_helper = self.router_helper.create_router_helper(started=True)
         router = rtr_helper.get_router()
         self.assertEqual(router.config, {})
         response = self.client.post(rtr_helper.get_view_url('edit'), {
-            'menu_title-menu_title': ['foo'],
-
+            'menu_title-menu_title': ['Please select an application'],
             'endpoints-TOTAL_FORMS': ['2'],
             'endpoints-INITIAL_FORMS': ['0'],
             'endpoints-MAX_NUM_FORMS': [''],
-            'endpoints-0-application_title': ['foo'],
-            'endpoints-0-target_endpoint': ['cat'],
+            'endpoints-0-application_label': ['Flappy Bird'],
+            'endpoints-0-endpoint_name': ['flappy-bird'],
             'endpoints-0-DELETE': [''],
-            'endpoints-1-application_title': ['foo'],
-            'endpoints-1-target_endpoint': ['dog'],
-            'endpoints-1-DELETE': [''],
+            'endpoints-0-ORDER': ['0'],
+            'endpoints-1-application_label': ['Mama'],
+            'endpoints-1-endpoint_name': ['mama'],
+            'endpoints-1-ORDER': ['1'],
         })
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, ('Application titles and endpoints '
-                                       'should be distinct.'))
-
-    def test_config_validate_menu_length(self):
-        rtr_helper = self.router_helper.create_router_helper(started=True)
-        router = rtr_helper.get_router()
-        self.assertEqual(router.config, {})
-
-        fields = {
-            'menu_title-menu_title': ['Please select:'],
-            'endpoints-TOTAL_FORMS': ['60'],
-            'endpoints-INITIAL_FORMS': ['0'],
-            'endpoints-MAX_NUM_FORMS': [''],
-        }
-        for i in range(0, 60):
-            fields.update({
-                'endpoints-%s-application_title' % i: ['foo-%s' % i],
-                'endpoints-%s-target_endpoint' % i: ['bar-%s' % i],
-                'endpoints-%s-DELETE' % i: [''],
-            })
-        response = self.client.post(rtr_helper.get_view_url('edit'), fields)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response,
-                            ("The generated menu is too large. Either reduce "
-                             "the length of application titles or the number "
-                             "of applications."))
+        self.assertContains(response, 'Flappy Bird')
+        self.assertContains(response, 'Mama')
