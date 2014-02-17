@@ -2,9 +2,9 @@ from django import forms
 
 
 class ApplicationMultiplexerTitleForm(forms.Form):
-    menu_title = forms.CharField(
+    content = forms.CharField(
         label="Menu title",
-        max_length=100,
+        max_length=100
     )
 
 

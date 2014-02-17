@@ -72,18 +72,17 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
     def test_initial_config(self):
         rtr_helper = self.router_helper.create_router_helper(
             started=True, config={
-                'menu_title': 'Please select an application',
+                'menu_title': {'content': 'Please select an application'},
                 'entries': [
                     {
                         'label': 'Flappy Bird',
                         'endpoint': 'flappy-bird',
 
                     },
-                ]
-            })
+                ]})
         response = self.client.get(rtr_helper.get_view_url('edit'))
-        self.assertContains(response, 'Please select an application')
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Please select an application')
         self.assertContains(response, 'Flappy Bird')
         self.assertContains(response, 'flappy-bird')
 
@@ -97,18 +96,29 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         router = rtr_helper.get_router()
         self.assertEqual(router.config, {})
         response = self.client.post(rtr_helper.get_view_url('edit'), {
-            'menu_title-menu_title': ['Please select an application'],
-            'endpoints-TOTAL_FORMS': ['2'],
-            'endpoints-INITIAL_FORMS': ['0'],
-            'endpoints-MAX_NUM_FORMS': [''],
-            'endpoints-0-application_label': ['Flappy Bird'],
-            'endpoints-0-endpoint_name': ['flappy-bird'],
-            'endpoints-0-DELETE': [''],
-            'endpoints-0-ORDER': ['0'],
-            'endpoints-1-application_label': ['Mama'],
-            'endpoints-1-endpoint_name': ['mama'],
-            'endpoints-1-ORDER': ['1'],
+            'menu_title-content': ['Please select an application'],
+            'entries-TOTAL_FORMS': ['2'],
+            'entries-INITIAL_FORMS': ['0'],
+            'entries-MAX_NUM_FORMS': [''],
+            'entries-0-application_label': ['Flappy Bird'],
+            'entries-0-endpoint_name': ['flappy-bird'],
+            'entries-0-DELETE': [''],
+            'entries-0-ORDER': ['0'],
+            'entries-1-application_label': ['Mama'],
+            'entries-1-endpoint_name': ['mama'],
+            'entries-1-DELETE': [''],
+            'entries-1-ORDER': ['1'],
         })
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Flappy Bird')
-        self.assertContains(response, 'Mama')
+        self.assertRedirects(response, rtr_helper.get_view_url('show'))
+        router = rtr_helper.get_router()
+        self.assertEqual(router.config, {
+            u'menu_title': {u'content': u'Please select an application'},
+            u'entries': [
+                {
+                    u'label': u'Flappy Bird',
+                    u'endpoint': u'flappy-bird',
+                },
+                {
+                    u'label': u'Mama',
+                    u'endpoint': u'mama',
+                }]})
