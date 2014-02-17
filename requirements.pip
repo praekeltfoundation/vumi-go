@@ -6,8 +6,8 @@
 # This will ignore any existing repository clones. They can be updated manually
 # if desired.
 
--e git+https://github.com/praekelt/vumi.git@develop#egg=vumi
--e git+https://github.com/praekelt/vxpolls.git@develop#egg=vxpolls
--e git+https://github.com/praekelt/vumi-wikipedia.git@develop#egg=vumi-wikipedia
+-e git+https://github.com/praekelt/vumi.git#egg=vumi
+-e git+https://github.com/praekelt/vxpolls.git#egg=vxpolls
+-e git+https://github.com/praekelt/vumi-wikipedia.git#egg=vumi-wikipedia
 
 -e .

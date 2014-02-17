@@ -1,3 +1,4 @@
+
 # Django settings for go project.
 import os
 import djcelery
@@ -103,7 +104,7 @@ STATICFILES_FINDERS = (
 
 # Make this unique, and don't share it with anybody.
 # override this in production_settings.py
-SECRET_KEY = "b0b3b3"
+SECRET_KEY = ""
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -116,8 +117,7 @@ MIDDLEWARE_CLASSES = (
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # NOTE: hack to bypass csrf errors
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'go.base.middleware.VumiUserApiMiddleware',
@@ -158,6 +158,7 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'south',
     'gunicorn',
+    'django_nose',
     'djcelery',
     'djcelery_email',
     'crispy_forms',
@@ -212,6 +213,10 @@ LOGGING = {
         },
     },
     'handlers': {
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler'
+        },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
@@ -226,12 +231,13 @@ LOGGING = {
         },
     },
     'root': {
-        'handlers': ['console'],
+        'handlers': ['mail_admins'],
         'level': 'ERROR',
     },
 }
 
 
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
 SOUTH_MIGRATION_MODULES = {

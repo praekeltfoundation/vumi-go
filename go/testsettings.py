@@ -57,12 +57,14 @@ CELERY_DB_REUSE_MAX = 100
 
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
+NOSE_ARGS = ['-evumitools', '-evumi_app', '-ehandlers', '-m^test']
+
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'
 
 # disable console logging to avoid log messages messing up test output
 LOGGING['loggers']['go']['handlers'].remove('console')
-#LOGGING['root']['handlers'].remove('mail_admins')
+LOGGING['root']['handlers'].remove('mail_admins')
 
 # disable response-time middleware during tests
 DISALLOWED_MIDDLEWARE = set([
