@@ -94,6 +94,33 @@ class TestGoManageMessageCache(GoCommandTestCase):
             active_conversations=True)
         self.assert_batches_reconciled(batch_ids)
 
+    def test_reconcile_archived_conversations_in_all_accounts(self):
+        user1 = self.vumi_helper.make_django_user("user1")
+        user2 = self.vumi_helper.make_django_user("user2")
+        conv1 = user1.create_conversation(u"http_api")
+        conv1.set_status_finished()
+        conv1.save()
+        conv2 = user2.create_conversation(u"http_api")
+        conv2.set_status_finished()
+        conv2.save()
+        batch_ids = [conv1.batch.key, conv2.batch.key]
+        self.clear_batches(batch_ids)
+        expected_output = "\n".join([
+            u'Processing account Test User <user1> [test-1-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % conv1.batch.key,
+            u'done.',
+            u'Processing account Test User <user2> [test-2-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % conv2.batch.key,
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'reconcile',
+            archived_conversations=True)
+        self.assert_batches_reconciled(batch_ids)
+
     def test_switch_to_counters(self):
         conv = self.user_helper.create_conversation(u"http_api")
         self.clear_batches([conv.batch.key])

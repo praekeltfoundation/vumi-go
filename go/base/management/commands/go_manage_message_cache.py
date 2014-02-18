@@ -23,6 +23,10 @@ class Command(BaseGoCommand):
                     dest='active_conversations',
                     action='store_true', default=False,
                     help='Act on all active conversations.'),
+        make_option('--archived-conversations',
+                    dest='archived_conversations',
+                    action='store_true', default=False,
+                    help='Act on all archived conversations.'),
         make_option('--dry-run',
                     dest='dry_run',
                     action='store_true', default=False,
@@ -42,6 +46,9 @@ class Command(BaseGoCommand):
         if self.options.get('active_conversations'):
             batches.update(
                 conv.batch.key for conv in user_api.active_conversations())
+        if self.options.get('archived_conversations'):
+            batches.update(
+                conv.batch.key for conv in user_api.finished_conversations())
         return list(batches)
 
     def _apply_to_batches(self, func, dry_run=None):
