@@ -1,4 +1,3 @@
-
 # Django settings for go project.
 import os
 import djcelery
@@ -158,7 +157,6 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'south',
     'gunicorn',
-    'django_nose',
     'djcelery',
     'djcelery_email',
     'crispy_forms',
@@ -241,7 +239,6 @@ LOGGING = {
 }
 
 
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
 SOUTH_MIGRATION_MODULES = {
