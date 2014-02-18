@@ -55,7 +55,7 @@ class Command(BaseGoCommand):
                 "Processing account %s ...\n" % user_details_as_string(user))
             for batch_id in sorted(batches):
                 self.stdout.write(
-                    "  Preforming %s on batch %s ...\n"
+                    "  Performing %s on batch %s ...\n"
                     % (func.__name__, batch_id))
                 if not dry_run:
                     func(user_api, batch_id)

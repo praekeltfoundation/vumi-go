@@ -12,7 +12,7 @@ class TestGoManageMessageCache(GoCommandTestCase):
         expected_output = "\n".join([
             u'Processing account Test User'
             u' <user@domain.com> [test-0-user] ...',
-            u'  Preforming reconcile on'
+            u'  Performing reconcile on'
             u' batch %s ...' % conv.batch.key,
             u'done.',
             u''
@@ -28,9 +28,9 @@ class TestGoManageMessageCache(GoCommandTestCase):
         expected_output = "\n".join([
             u'Processing account Test User'
             u' <user@domain.com> [test-0-user] ...',
-            u'  Preforming reconcile on'
+            u'  Performing reconcile on'
             u' batch %s ...' % batch_ids[0],
-            u'  Preforming reconcile on'
+            u'  Performing reconcile on'
             u' batch %s ...' % batch_ids[1],
             u'done.',
             u''
