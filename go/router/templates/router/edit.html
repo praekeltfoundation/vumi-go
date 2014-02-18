@@ -23,9 +23,10 @@
             <form id="form-router" class="indent" method="post" action="">
                 {% for edit_form in edit_forms %}
                     <fieldset>
+                        {% if edit_form.non_non_field_errors %}
+                          {{ edit_form.non_field_errors }}
+                        {% endif %}
                         {{ edit_form|crispy }}
-                        <!-- TODO: style this correctly -->
-                        <strong>{{ edit_form.non_form_errors }}</strong>
                     </fieldset>
                 {% endfor %}
             </form>
