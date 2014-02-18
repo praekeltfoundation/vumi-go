@@ -33,7 +33,7 @@ class Command(BaseGoCommand):
 
     def _get_batches(self, user_api):
         batches = set()
-        if 'conversation_key' in self.options:
+        if self.options.get('conversation_key'):
             conv = user_api.get_conversation(self.options['conversation_key'])
             batches.add(conv.batch.key)
         if self.options.get('active_conversations'):
