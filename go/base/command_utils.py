@@ -61,7 +61,9 @@ class BaseGoCommand(BaseCommand):
                 if opt.action == 'append_const' and opt.dest == 'command']
 
     def mk_all_user_apis(self):
-        return [(user, vumi_api_for_user(user)) for user in get_users()]
+        apis = [(user, vumi_api_for_user(user)) for user in get_users()]
+        apis.sort(key=lambda u: u[0].email)
+        return apis
 
     def mk_user_api(self, email_address=None, options=None):
         if email_address is None and options is None:
