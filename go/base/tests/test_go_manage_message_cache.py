@@ -31,6 +31,10 @@ class TestGoManageMessageCache(GoCommandTestCase):
     def assert_batches_reconciled(self, batches):
         self._assert_batches_recon_state(batches, False)
 
+    def uses_counters(self, batch_id):
+        vumi_api = self.vumi_helper.get_vumi_api()
+        return vumi_api.mdb.cache.uses_counters(batch_id)
+
     def test_reconcile_conversation(self):
         conv = self.user_helper.create_conversation(u"http_api")
         self.clear_batches([conv.batch.key])
@@ -89,3 +93,20 @@ class TestGoManageMessageCache(GoCommandTestCase):
             expected_output, 'reconcile',
             active_conversations=True)
         self.assert_batches_reconciled(batch_ids)
+
+    def test_switch_to_counters(self):
+        conv = self.user_helper.create_conversation(u"http_api")
+        self.clear_batches([conv.batch.key])
+        self.assertFalse(self.uses_counters(conv.batch.key))
+        expected_output = "\n".join([
+            u'Processing account Test User'
+            u' <user@domain.com> [test-0-user] ...',
+            u'  Performing switch_to_counters on'
+            u' batch %s ...' % conv.batch.key,
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'switch_to_counters',
+            email_address=self.user_email, conversation_key=conv.key)
+        self.assertTrue(self.uses_counters(conv.batch.key))

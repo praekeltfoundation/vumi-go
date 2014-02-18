@@ -9,7 +9,10 @@ class Command(BaseGoCommand):
     help = "Manage the message cache."
 
     option_list = BaseGoCommand.option_list + (
-        make_command_option('reconcile', help='Reconcile the message cache.'),
+        make_command_option(
+            'reconcile', help='Reconcile the message cache.'),
+        make_command_option(
+            'switch_to_counters', help='Switch cache to counters.'),
         make_option(
             '--email-address', dest='email_address',
             help="Act on the given user's batches."),
@@ -64,3 +67,9 @@ class Command(BaseGoCommand):
             user_api.api.mdb.reconcile_cache(batch_id)
 
         self._apply_to_batches(reconcile)
+
+    def handle_command_switch_to_counters(self, *args, **options):
+        def switch_to_counters(user_api, batch_id):
+            user_api.api.mdb.cache.switch_to_counters(batch_id)
+
+        self._apply_to_batches(switch_to_counters)
