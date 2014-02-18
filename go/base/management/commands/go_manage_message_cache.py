@@ -27,7 +27,7 @@ class Command(BaseGoCommand):
     )
 
     def _get_user_apis(self):
-        if "email_address" in self.options:
+        if self.options.get("email_address"):
             return [self.mk_user_api(self.options["email_address"])]
         return self.mk_all_user_apis()
 
