@@ -1,7 +1,5 @@
 from optparse import make_option
 
-from django.core.management.base import CommandError
-
 from go.base.command_utils import (
     BaseGoCommand, make_command_option,
     user_details_as_string)
