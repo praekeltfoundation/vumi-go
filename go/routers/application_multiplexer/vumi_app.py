@@ -1,7 +1,4 @@
-# Local Variables:
-# test-case-name: go.routers.application_multiplexer.tests.test_vumi_app
-# coding: utf-8
-# End:
+# -*- test-case-name: go.routers.application_multiplexer.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
