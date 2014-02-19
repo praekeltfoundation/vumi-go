@@ -4,6 +4,7 @@ from vumi.tests.helpers import VumiTestCase
 
 from go.routers.application_multiplexer.vumi_app import ApplicationMultiplexer
 from go.routers.tests.helpers import RouterWorkerHelper
+from vumi.tests.helpers import PersistenceHelper, MessageHelper
 
 
 class TestApplicationMultiplexerRouter(VumiTestCase):
@@ -13,9 +14,18 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
         self.router_helper = self.add_helper(
-            RouterWorkerHelper(ApplicationMultiplexer)
-        )
-        self.router_worker = yield self.router_helper.get_router_worker({})
+            RouterWorkerHelper(ApplicationMultiplexer))
+
+        self.msg_helper = yield self.add_helper(MessageHelper())
+        self.persistence_helper = yield self.add_helper(PersistenceHelper())
+        self.parent_redis = yield self.persistence_helper.get_redis_manager()
+        self.router_worker = yield self.router_helper.get_router_worker({
+            'worker_name': 'application_multiplexer',
+            'redis_manager': {
+                'FAKE_REDIS': self.parent_redis,
+                'key_prefix': self.parent_redis.get_key_prefix(),
+            }
+        })
 
     @inlineCallbacks
     def assert_routed_inbound(self, content, router, expected_endpoint):
@@ -64,8 +74,49 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         [nack] = self.router_helper.ro.get_dispatched_events()
         self.assertEqual(nack['event_type'], 'nack')
 
-    @inlineCallbacks
-    def test_inbound_no_config(self):
-        router = yield self.router_helper.create_router(started=True)
-        yield self.assert_routed_inbound("foo bar", router, 'default')
-        yield self.assert_routed_inbound("baz quux", router, 'default')
+    def test_get_menu_choice(self):
+        # good
+        msg = self.msg_helper.make_inbound(content='3 ')
+        choice = self.router_worker.get_menu_choice(msg, (1, 4))
+        self.assertEqual(choice, 3)
+
+        # bad - out of range
+        choice = self.router_worker.get_menu_choice(msg, (1, 2))
+        self.assertEqual(choice, None)
+
+        # bad - non-numeric input
+        msg = self.msg_helper.make_inbound(content='Foo ')
+        choice = self.router_worker.get_menu_choice(msg, (1, 2))
+        self.assertEqual(choice, None)
+
+    def test_scan_for_keywords(self):
+        config = self.router_worker.config
+        msg = self.msg_helper.make_inbound(content=':menu')
+        self.assertTrue(self.router_worker.scan_for_keywords(
+            config,
+            msg, (':menu',)))
+        msg = self.msg_helper.make_inbound(content='Foo bar baz')
+        self.assertFalse(self.router_worker.scan_for_keywords(
+            config,
+            msg, (':menu',)))
+
+    def test_create_menu(self):
+        config = self.router_worker.config.copy()
+        config.update({
+            'menu_title': {'content': 'Please select a choice'},
+            'entries': [
+                {
+                    'label': 'Flappy Bird',
+                    'endpoint': 'flappy-bird',
+                },
+                {
+                    'label': 'Mama',
+                    'endpoint': 'mama',
+                }
+            ]
+        })
+        config = self.router_worker.CONFIG_CLASS(config)
+
+        text = self.router_worker.create_menu(config)
+        self.assertEqual(text,
+                         'Please select a choice\n1) Flappy Bird\n2) Mama')
