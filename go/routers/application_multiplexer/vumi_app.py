@@ -66,12 +66,6 @@ class ApplicationMultiplexer(GoRouterWorker):
         STATE_BAD_INPUT: 'handle_state_bad_input'
     }
 
-    def setup_router(self):
-        return super(ApplicationMultiplexer, self).setup_router()
-
-    def teardown_router(self):
-        return super(ApplicationMultiplexer, self).teardown_router()
-
     def session_manager(self, config):
         """
         The implementation of SessionManager does the job of
