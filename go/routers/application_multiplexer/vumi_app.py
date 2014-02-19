@@ -76,14 +76,11 @@ class ApplicationMultiplexer(GoRouterWorker):
             max_session_length=config.session_expiry
         )
 
-    def valid_target_endpoint(self, config, active_endpoint):
+    def target_endpoints(self, config):
         """
         Make sure the currently active endpoint is still valid.
         """
-        endpoints = set([entry['endpoint'] for entry in config.entries])
-        if active_endpoint not in endpoints:
-            return False
-        return True
+        return set([entry['endpoint'] for entry in config.entries])
 
     @inlineCallbacks
     def handle_inbound(self, config, msg, conn_name):
@@ -161,7 +158,7 @@ class ApplicationMultiplexer(GoRouterWorker):
     @inlineCallbacks
     def handle_state_selected(self, config, session, msg):
         active_endpoint = session['active_endpoint']
-        if not self.valid_target_endpoint(config, active_endpoint):
+        if active_endpoint not in self.target_endpoints(config):
             reply_msg = msg.reply(
                 config.error_message,
                 continue_session=False
