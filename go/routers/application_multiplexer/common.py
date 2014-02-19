@@ -1,4 +1,8 @@
-# helpers from GFM
+# helpers lifted from GFM and Wikipedia
+
+
+def clean(content):
+    return (content or '').strip()
 
 
 def mkmenu(options, start=1, format='%s) %s'):
