@@ -1,34 +1,107 @@
+import copy
+
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.tests.helpers import VumiTestCase
-
 from go.routers.application_multiplexer.vumi_app import ApplicationMultiplexer
 from go.routers.tests.helpers import RouterWorkerHelper
-from vumi.tests.helpers import PersistenceHelper
-from vumi.message import TransportUserMessage
+
+
+def raise_error(*args, **kw):
+    raise RuntimeError("An anomaly has been detected")
 
 
 class TestApplicationMultiplexerRouter(VumiTestCase):
 
     router_class = ApplicationMultiplexer
 
+    ROUTER_CONFIG = {
+        'invalid_input_message': 'Bad choice.\n1) Try Again',
+        'error_message': 'Oops! Sorry!',
+        'keyword': ':menu',
+        'entries': [
+            {
+                'label': 'Flappy Bird',
+                'endpoint': 'flappy-bird',
+            },
+        ]
+    }
+
+
     @inlineCallbacks
     def setUp(self):
         self.router_helper = self.add_helper(
             RouterWorkerHelper(ApplicationMultiplexer))
-
-#        self.persistence_helper = yield self.add_helper(PersistenceHelper())
-#        self.parent_redis = yield self.persistence_helper.get_redis_manager()
-#        self.router_worker = yield self.router_helper.get_router_worker({
-#            'worker_name': 'application_multiplexer',
-#            'redis_manager': {
-#                'FAKE_REDIS': self.parent_redis,
-#                'key_prefix': self.parent_redis.get_key_prefix(),
-#            }
-
         self.router_worker = yield self.router_helper.get_router_worker({})
 
-#        })
+    @inlineCallbacks
+    def check_state(self, router, state):
+        """
+        A helper to validate routing behavior.
+
+        The state dict describes the messages which need to sent, which
+        session data to initialize, and what data should be asserted
+        when the state handler completes execution.
+
+        Messages are represented by a tuple (content, {field=value, ...})
+
+        This could be made into a generic test helper one day.
+        """
+
+        session_manager = yield self.router_worker.session_manager(
+            self.router_worker.CONFIG_CLASS(self.router_worker.config)
+        )
+
+        # Initialize session data
+        for user_id, data in state['session'].items():
+            yield session_manager.save_session(user_id, data)
+
+        # Send inbound message via ri
+        content, fields = state['ri_inbound']
+        msg = yield self.router_helper.ri.make_dispatch_inbound(
+            content,
+            router=router,
+            **fields)
+
+        # If required, send outbound message via ro
+        if 'ro_inbound' in state:
+            content, fields = state['ro_inbound']
+            yield self.router_helper.ro.make_dispatch_reply(
+                msg, content, **fields)
+
+        # If required, assert that an outbound message was dispatched to ro
+        if 'ro_outbound' in state['expect']:
+            content, fields = state['expect']['ro_outbound']
+            [msg] = self.router_helper.ro.get_dispatched_inbound()
+            self.assertEqual(msg['content'], content,
+                             msg="RO Inbound Message: Unexpected content")
+            for field, value in fields.items():
+                self.assertEqual(
+                    msg[field], value,
+                    msg=("RO Inbound Message: Unexpected value For field '%s'"
+                         % field)
+                )
+
+        # Assert that an expected message was dispatched via ri
+        [msg] = self.router_helper.ri.get_dispatched_outbound()
+        content, fields = state['expect']['ri_outbound']
+        self.assertEqual(msg['content'], content,
+                         msg="RI Outbound Message: Unexpected content")
+        for field, value in fields.items():
+            self.assertEqual(
+                msg[field], value,
+                msg=("RI Outbound Message: Unexpected value For field '%s'"
+                     % field)
+            )
+
+        # Assert that user session was updated correctly
+        for user_id, data in state['expect']['session'].iteritems():
+            session = yield session_manager.load_session(user_id)
+            if 'created_at' in session:
+                del session['created_at']
+            self.assertEqual(session, data,
+                             msg="Unexpected session data")
+
 
     def dynamic_config(self, fields):
         config = self.router_worker.config.copy()
@@ -83,22 +156,240 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(nack['event_type'], 'nack')
 
     @inlineCallbacks
-    def test_state_start(self):
-        router = yield self.router_helper.create_router(started=True, config={
-            'entries': [
-                {
-                    'label': 'Flappy Bird',
-                    'endpoint': 'flappy-bird',
-                },
-            ]
+    def test_state_start_to_select(self):
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=self.ROUTER_CONFIG
+        )
+        yield self.check_state(router, {
+            'ri_inbound': (None, dict(from_addr='2323', session_event='new')),
+            'session': {},
+            'expect': {
+                'ri_outbound': ('Please select a choice.\n1) Flappy Bird', {}),
+                'session': {
+                    '2323': {'state': ApplicationMultiplexer.STATE_SELECT},
+                }
+            }
         })
-        yield self.router_helper.ri.make_dispatch_inbound(
-            None,
-            session_event=TransportUserMessage.SESSION_NEW,
-            router=router)
 
-        [msg] = self.router_helper.ri.get_dispatched_outbound()
-        print msg['content']
+    @inlineCallbacks
+    def test_state_select_to_selected(self):
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=self.ROUTER_CONFIG
+        )
+        yield self.check_state(router, {
+            'ri_inbound': ('1', dict(from_addr='2323',
+                                     session_event='resume')),
+            'ro_inbound': ('Flappy Flappy!', dict(session_event='resume')),
+            'session': {
+                '2323': {'state': ApplicationMultiplexer.STATE_SELECT},
+            },
+            'expect': {
+                'ri_outbound': ('Flappy Flappy!', {}),
+                'session': {
+                    '2323': {
+                        'state': ApplicationMultiplexer.STATE_SELECTED,
+                        'active_endpoint': 'flappy-bird'
+                    },
+                }
+            }
+        })
+
+    @inlineCallbacks
+    def test_state_selected_to_selected(self):
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=self.ROUTER_CONFIG
+        )
+        yield self.check_state(router, {
+            'ri_inbound': ('Up!', dict(from_addr='2323',
+                                       session_event='resume')),
+            'ro_inbound': ('Game Over!', dict(session_event='resume')),
+            'session': {
+                '2323': {
+                    'state': ApplicationMultiplexer.STATE_SELECTED,
+                    'active_endpoint': 'flappy-bird'
+                },
+            },
+            'expect': {
+                'ri_outbound': ('Game Over!', {}),
+                'session': {
+                    '2323': {
+                        'state': ApplicationMultiplexer.STATE_SELECTED,
+                        'active_endpoint': 'flappy-bird'
+                    },
+                }
+            }
+        })
+
+    @inlineCallbacks
+    def test_state_selected_to_select(self):
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=self.ROUTER_CONFIG
+        )
+        yield self.check_state(router, {
+            'ri_inbound': (':menu', dict(from_addr='2323',
+                                         session_event='resume')),
+            'session': {
+                '2323': {
+                    'state': ApplicationMultiplexer.STATE_SELECTED,
+                    'active_endpoint': 'flappy-bird'
+                },
+            },
+            'expect': {
+                'ri_outbound': ('Please select a choice.\n1) Flappy Bird', {}),
+                'ro_outbound': (None, dict(session_event='close')),
+                'session': {
+                    '2323': {
+                        'state': ApplicationMultiplexer.STATE_SELECT,
+                        # TODO: I should clear session keys which are no longer
+                        # relevant in the SELECT state
+                        'active_endpoint': 'None'
+                    },
+                }
+            }
+        })
+
+    @inlineCallbacks
+    def test_state_select_to_bad_input(self):
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=self.ROUTER_CONFIG
+        )
+        yield self.check_state(router, {
+            'ri_inbound': ('j8', dict(from_addr='2323',
+                                      session_event='resume')),
+            'session': {
+                '2323': {
+                    'state': ApplicationMultiplexer.STATE_SELECT,
+                },
+            },
+            'expect': {
+                'ri_outbound': ('Bad choice.\n1) Try Again', {}),
+                'session': {
+                    '2323': {
+                        'state': ApplicationMultiplexer.STATE_BAD_INPUT,
+                    },
+                }
+            }
+        })
+
+    @inlineCallbacks
+    def test_state_bad_input_to_bad_input(self):
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=self.ROUTER_CONFIG
+        )
+        yield self.check_state(router, {
+            'ri_inbound': ('2', dict(from_addr='2323',
+                                     session_event='resume')),
+            'session': {
+                '2323': {
+                    'state': ApplicationMultiplexer.STATE_BAD_INPUT,
+                },
+            },
+            'expect': {
+                'ri_outbound': ('Bad choice.\n1) Try Again', {}),
+                'session': {
+                    '2323': {
+                        'state': ApplicationMultiplexer.STATE_BAD_INPUT,
+                    },
+                }
+            }
+        })
+
+    @inlineCallbacks
+    def test_state_bad_input_to_select(self):
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=self.ROUTER_CONFIG
+        )
+        yield self.check_state(router, {
+            'ri_inbound': ('1', dict(from_addr='2323',
+                                     session_event='resume')),
+            'session': {
+                '2323': {
+                    'state': ApplicationMultiplexer.STATE_BAD_INPUT,
+                },
+            },
+            'expect': {
+                'ri_outbound': ('Please select a choice.\n1) Flappy Bird', {}),
+                'session': {
+                    '2323': {
+                        'state': ApplicationMultiplexer.STATE_SELECT,
+                    },
+                }
+            }
+        })
+
+    @inlineCallbacks
+    def test_runtime_exception(self):
+        """
+        Verifies that the worker handles an arbitrary runtime error gracefully,
+        and sends an appropriate error message back to the user
+        """
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=self.ROUTER_CONFIG
+        )
+
+        # Make worker.target_endpoints raise an exception
+        self.patch(self.router_worker,
+                   'target_endpoints',
+                   raise_error)
+
+        yield self.check_state(router, {
+            'ri_inbound': (':menu', dict(from_addr='2323',
+                                         session_event='resume')),
+            'session': {
+                '2323': {
+                    'state': ApplicationMultiplexer.STATE_SELECTED,
+                    'active_endpoint': 'flappy-bird'
+                },
+            },
+            'expect': {
+                'ri_outbound': ('Oops! Sorry!', {}),
+                'session': {
+                    '2323': {},
+                }
+            }
+        })
+        errors = self.flushLoggedErrors(RuntimeError)
+        self.assertEqual(len(errors), 1)
+
+    @inlineCallbacks
+    def test_session_invalidation(self):
+        """
+        Verify that the router gracefully handles a configuration
+        update while there is an active user session.
+
+        A session is invalidated if there is no longer an attached endpoint
+        to which it refers.
+        """
+        config = copy.deepcopy(self.ROUTER_CONFIG)
+        config['entries'][0]['endpoint'] = 'mama'
+        router = yield self.router_helper.create_router(
+            started=True,
+            config=config
+        )
+        yield self.check_state(router, {
+            'ri_inbound': ('Up!', dict(from_addr='2323',
+                                       session_event='resume')),
+            'session': {
+                '2323': {
+                    'state': ApplicationMultiplexer.STATE_SELECTED,
+                    'active_endpoint': 'flappy-bird'
+                },
+            },
+            'expect': {
+                'ri_outbound': ('Oops! Sorry!', dict(session_event='close')),
+                'session': {
+                    '2323': {},
+                }
+            }
+        })
 
     def test_get_menu_choice(self):
         # good
