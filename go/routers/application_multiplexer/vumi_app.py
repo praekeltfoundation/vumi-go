@@ -56,12 +56,17 @@ class ApplicationMultiplexer(GoRouterWorker):
     STATE_SELECTED = "selected"
     STATE_BAD_INPUT = "bad_input"
 
-    HANDLERS = {
-        STATE_START: 'handle_state_start',
-        STATE_SELECT: 'handle_state_select',
-        STATE_SELECTED: 'handle_state_selected',
-        STATE_BAD_INPUT: 'handle_state_bad_input'
-    }
+    OUTBOUND_ENDPOINT = "default"
+
+    def setup_router(self):
+        d = super(ApplicationMultiplexer, self).setup_router()
+        self.handlers = {
+            self.STATE_START: self.handle_state_start,
+            self.STATE_SELECT: self.handle_state_select,
+            self.STATE_SELECTED: self.handle_state_selected,
+            self.STATE_BAD_INPUT: self.handle_state_bad_input
+        }
+        return d
 
     def session_manager(self, config):
         """
@@ -99,8 +104,8 @@ class ApplicationMultiplexer(GoRouterWorker):
             state = session['state']
 
         try:
-            handler = getattr(self, self.HANDLERS[state])
-            result = yield handler(config, session, msg)
+            result = yield self.handlers[state](config, session, msg)
+            # update session with next state and updated session fields
             if type(result) is tuple:
                 next_state = session['state'] = result[0]
                 session.update(result[1])
@@ -116,15 +121,15 @@ class ApplicationMultiplexer(GoRouterWorker):
                 config.error_message,
                 continue_session=False
             )
-            self.publish_outbound(reply_msg, 'default')
+            self.publish_outbound(reply_msg)
         else:
             yield session_manager.save_session(user_id, **session)
 
     @inlineCallbacks
     def handle_state_start(self, config, session, msg):
         reply_msg = msg.reply(self.create_menu(config))
-        yield self.publish_outbound(reply_msg, 'default')
-        returnValue(self.STATE_CHOOSE)
+        yield self.publish_outbound(reply_msg)
+        returnValue(self.STATE_SELECT)
 
     @inlineCallbacks
     def handle_state_select(self, config, session, msg):
@@ -140,17 +145,20 @@ class ApplicationMultiplexer(GoRouterWorker):
         choice = self.get_menu_choice(msg, (1, len(config.entries)))
         if choice is None:
             reply_msg = msg.reply(config.invalid_input_message)
-            yield self.publish_outbound(reply_msg, 'default')
-            returnValue(self.STATE_BAD_CHOICE)
+            yield self.publish_outbound(reply_msg)
+            returnValue(self.STATE_BAD_INPUT)
         else:
             endpoint = config.entries[choice - 1]['endpoint']
-            forwarded_msg = TransportUserMessage(**msg.payload)
-            forwarded_msg['content'] = None
-            forwarded_msg['session_event'] = TransportUserMessage.SESSION_START
+            forwarded_msg = self.forwarded_message(
+                msg,
+                content=None,
+                session_event=TransportUserMessage.SESSION_START
+            )
             yield self.publish_inbound(forwarded_msg, endpoint)
             log.msg("Switched to endpoint '%s' for user %s" %
                     (endpoint, msg['from_addr']))
-            returnValue((self.STATE_SELECTED, dict(active_endpoint=endpoint)))
+            returnValue((self.STATE_SELECTED,
+                         dict(active_endpoint=endpoint)))
 
     @inlineCallbacks
     def handle_state_selected(self, config, session, msg):
@@ -160,32 +168,35 @@ class ApplicationMultiplexer(GoRouterWorker):
                 config.error_message,
                 continue_session=False
             )
-            yield self.publish_outbound(reply_msg, 'default')
+            yield self.publish_outbound(reply_msg)
             returnValue(None)
         elif self.scan_for_keywords(config, msg, (config.keyword,)):
             reply_msg = msg.reply(self.create_menu(config))
-            yield self.publish_outbound(reply_msg, 'default')
+            yield self.publish_outbound(reply_msg)
 
             # Be polite and pass a SESSION_CLOSE to the active endpoint
-            close_msg = TransportUserMessage(**msg.payload)
-            close_msg['content'] = None
-            close_msg['session_event'] = TransportUserMessage.SESSION_CLOSE
-            yield self.publish_inbound(close_msg, active_endpoint)
-            returnValue((self.STATE_SELECT, dict(active_endpoint=None)))
+            forwarded_msg = self.forwarded_message(
+                msg,
+                content=None,
+                session_event=TransportUserMessage.SESSION_CLOSE
+            )
+            yield self.publish_inbound(forwarded_msg, active_endpoint)
+            returnValue((self.STATE_SELECT,
+                         dict(active_endpoint=None)))
         else:
             yield self.publish_inbound(msg, active_endpoint)
             returnValue(self.STATE_SELECTED)
 
     @inlineCallbacks
-    def handle_state_bad_choice(self, config, session, msg):
+    def handle_state_bad_input(self, config, session, msg):
         choice = self.get_menu_choice(msg, (1, 1))
         if choice is None:
             reply_msg = msg.reply(config.invalid_input_message)
-            yield self.publish_outbound(reply_msg, 'default')
-            returnValue(self.STATE_BAD_CHOICE)
+            yield self.publish_outbound(reply_msg)
+            returnValue(self.STATE_BAD_INPUT)
         else:
             reply_msg = msg.reply(self.create_menu(config))
-            yield self.publish_outbound(reply_msg, 'default')
+            yield self.publish_outbound(reply_msg)
             returnValue(self.STATE_SELECT)
 
     def handle_outbound(self, config, msg, conn_name):
@@ -193,7 +204,19 @@ class ApplicationMultiplexer(GoRouterWorker):
         TODO: Go to SELECT state when session_event=close
         """
         log.msg("Processing outbound message: %s" % (msg,))
-        return self.publish_outbound(msg, 'default')
+        return self.publish_outbound(msg)
+
+    def publish_outbound(self, msg):
+        return super(ApplicationMultiplexer, self).publish_outbound(
+            msg,
+            self.OUTBOUND_ENDPOINT
+        )
+
+    def forwarded_message(self, msg, **kwargs):
+        copy = TransportUserMessage(**msg.payload)
+        for k, v in kwargs.items():
+            copy[k] = v
+        return copy
 
     def scan_for_keywords(self, config, msg, keywords):
         first_word = (clean(msg['content']).split() + [''])[0]
