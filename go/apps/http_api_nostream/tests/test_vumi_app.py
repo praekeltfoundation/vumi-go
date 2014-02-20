@@ -1,7 +1,8 @@
 import base64
 import json
+from urlparse import urlparse, urlunparse
 
-from twisted.internet.defer import inlineCallbacks, DeferredQueue
+from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
 from twisted.web import http
@@ -17,7 +18,7 @@ from go.apps.http_api_nostream.resource import ConversationResource
 from go.apps.tests.helpers import AppWorkerHelper
 
 
-class TestNoStreamingHTTPWorker(VumiTestCase):
+class TestNoStreamingHTTPWorkerBase(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
@@ -41,31 +42,38 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
         self.add_cleanup(self.mock_push_server.stop)
         self.push_calls = DeferredQueue()
 
-        conv_config = {
-            'http_api_nostream': {
-                'api_tokens': [
-                    'token-1',
-                    'token-2',
-                    'token-3',
-                ],
-                'push_message_url': self.mock_push_server.url,
-                'push_event_url': self.mock_push_server.url,
-                'metrics_store': 'metrics_store',
-            }
-        }
-        conversation = yield self.app_helper.create_conversation(
-            config=conv_config)
-        yield self.app_helper.start_conversation(conversation)
-        self.conversation = yield self.app_helper.get_conversation(
-            conversation.key)
+        self.conversation = yield self.create_conversation(
+            self.get_message_url(), self.get_event_url(),
+            ['token-1', 'token-2', 'token-3'])
 
         self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
-                conversation.user_account.key, 'token-1'))],
+                self.conversation.user_account.key, 'token-1'))],
         }
 
         self._setup_wait_for_request()
         self.add_cleanup(self._wait_for_requests)
+
+    def get_message_url(self):
+        return self.mock_push_server.url
+
+    def get_event_url(self):
+        return self.mock_push_server.url
+
+    @inlineCallbacks
+    def create_conversation(self, message_url, event_url, tokens):
+        config = {
+            'http_api_nostream': {
+                'api_tokens': tokens,
+                'push_message_url': message_url,
+                'push_event_url': event_url,
+                'metrics_store': 'metrics_store',
+            }
+        }
+        conv = yield self.app_helper.create_conversation(config=config)
+        yield self.app_helper.start_conversation(conv)
+        conversation = yield self.app_helper.get_conversation(conv.key)
+        returnValue(conversation)
 
     def _setup_wait_for_request(self):
         # Hackery to wait for the request to finish
@@ -104,6 +112,9 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
             "success": False,
             "reason": reason,
         })
+
+
+class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_missing_auth(self):
@@ -571,3 +582,27 @@ class TestNoStreamingHTTPWorker(VumiTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
+
+
+class TestNoStreamingHTTPWorkerWithAuth(TestNoStreamingHTTPWorkerBase):
+
+    def get_message_url(self):
+        parse_result = urlparse(self.mock_push_server.url)
+        return urlunparse((
+            parse_result.scheme,
+            'username:password@%s:%s' % (
+                parse_result.hostname, parse_result.port),
+            parse_result.path,
+            parse_result.params,
+            parse_result.query,
+            parse_result.fragment))
+
+    @inlineCallbacks
+    def test_push_with_basic_auth(self):
+        self.app_helper.make_dispatch_inbound(
+            'in', message_id='1', conv=self.conversation)
+        req = yield self.push_calls.get()
+        req.finish()
+        [header] = req.requestHeaders.getRawHeaders('Authorization')
+        self.assertEqual(
+            header, 'Basic %s' % (base64.b64encode('username:password')))
