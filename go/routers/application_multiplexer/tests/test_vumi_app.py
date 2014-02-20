@@ -5,6 +5,7 @@ from vumi.tests.helpers import VumiTestCase
 from go.routers.application_multiplexer.vumi_app import ApplicationMultiplexer
 from go.routers.tests.helpers import RouterWorkerHelper
 from vumi.tests.helpers import PersistenceHelper
+from vumi.message import TransportUserMessage
 
 
 class TestApplicationMultiplexerRouter(VumiTestCase):
@@ -16,15 +17,18 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.router_helper = self.add_helper(
             RouterWorkerHelper(ApplicationMultiplexer))
 
-        self.persistence_helper = yield self.add_helper(PersistenceHelper())
-        self.parent_redis = yield self.persistence_helper.get_redis_manager()
-        self.router_worker = yield self.router_helper.get_router_worker({
-            'worker_name': 'application_multiplexer',
-            'redis_manager': {
-                'FAKE_REDIS': self.parent_redis,
-                'key_prefix': self.parent_redis.get_key_prefix(),
-            }
-        })
+#        self.persistence_helper = yield self.add_helper(PersistenceHelper())
+#        self.parent_redis = yield self.persistence_helper.get_redis_manager()
+#        self.router_worker = yield self.router_helper.get_router_worker({
+#            'worker_name': 'application_multiplexer',
+#            'redis_manager': {
+#                'FAKE_REDIS': self.parent_redis,
+#                'key_prefix': self.parent_redis.get_key_prefix(),
+#            }
+
+        self.router_worker = yield self.router_helper.get_router_worker({})
+
+#        })
 
     def dynamic_config(self, fields):
         config = self.router_worker.config.copy()
@@ -77,6 +81,24 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual([], self.router_helper.ri.get_dispatched_outbound())
         [nack] = self.router_helper.ro.get_dispatched_events()
         self.assertEqual(nack['event_type'], 'nack')
+
+    @inlineCallbacks
+    def test_state_start(self):
+        router = yield self.router_helper.create_router(started=True, config={
+            'entries': [
+                {
+                    'label': 'Flappy Bird',
+                    'endpoint': 'flappy-bird',
+                },
+            ]
+        })
+        yield self.router_helper.ri.make_dispatch_inbound(
+            None,
+            session_event=TransportUserMessage.SESSION_NEW,
+            router=router)
+
+        [msg] = self.router_helper.ri.get_dispatched_outbound()
+        print msg['content']
 
     def test_get_menu_choice(self):
         # good

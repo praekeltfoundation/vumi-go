@@ -85,16 +85,17 @@ class ApplicationMultiplexer(GoRouterWorker):
         log.msg("Processing inbound message: %s" % (msg,))
 
         user_id = msg['from_addr']
-        session_manager = self.session_manager(config)
+        session_manager = yield self.session_manager(config)
+        session_event = msg['session_event']
 
         session = yield session_manager.load_session(user_id)
-        if session is None:
+        if not session or session_event == TransportUserMessage.SESSION_NEW:
             log.msg("Creating session for user %s" % user_id)
             session = {}
             state = self.STATE_START
             yield session_manager.create_session(user_id)
         else:
-            log.msg("Loading session for user %s: %s" % (session,))
+            log.msg("Loading session for user %s: %s" % (user_id, session,))
             state = session['state']
 
         try:
@@ -106,7 +107,7 @@ class ApplicationMultiplexer(GoRouterWorker):
             else:
                 next_state = session['state'] = result
             if state != next_state:
-                log.msg("State transition for user %s: %s => %s"
+                log.msg("State transition for user %s: %s => %s" %
                         (user_id, state, next_state))
         except:
             log.err()
@@ -117,7 +118,7 @@ class ApplicationMultiplexer(GoRouterWorker):
             )
             self.publish_outbound(reply_msg)
         else:
-            yield session_manager.save_session(user_id, **session)
+            yield session_manager.save_session(user_id, session)
 
     @inlineCallbacks
     def handle_state_start(self, config, session, msg):
@@ -146,7 +147,7 @@ class ApplicationMultiplexer(GoRouterWorker):
             forwarded_msg = self.forwarded_message(
                 msg,
                 content=None,
-                session_event=TransportUserMessage.SESSION_START
+                session_event=TransportUserMessage.SESSION_NEW
             )
             yield self.publish_inbound(forwarded_msg, endpoint)
             log.msg("Switched to endpoint '%s' for user %s" %
