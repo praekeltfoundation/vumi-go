@@ -172,7 +172,7 @@ class MessagesSentMetric(ConversationMetric):
 
     def get_value(self, user_api):
         batch_id = self.conv.batch.key
-        return user_api.api.mdb.batch_outbound_count(batch_id)
+        return user_api.api.mdb.cache.count_outbound_message_keys(batch_id)
 
 
 class MessagesReceivedMetric(ConversationMetric):
@@ -180,4 +180,4 @@ class MessagesReceivedMetric(ConversationMetric):
 
     def get_value(self, user_api):
         batch_id = self.conv.batch.key
-        return user_api.api.mdb.batch_inbound_count(batch_id)
+        return user_api.api.mdb.cache.count_inbound_message_keys(batch_id)

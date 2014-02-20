@@ -1,13 +1,9 @@
-import logging
-
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 
 from go.dashboard import client
-
-logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -29,7 +25,6 @@ def diamondash_api_proxy(request):
     try:
         response = api.raw_request(request.method, url, content=request.body)
     except client.DiamondashApiError as err:
-        logger.exception("Diamondash responded with an error.")
         response = {
             'content': err.content,
             'code': err.code,

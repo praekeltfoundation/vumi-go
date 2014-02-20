@@ -173,9 +173,14 @@ class TestConversationsDashboardView(BaseConversationViewTestCase):
         response = self.client.get(reverse('conversations:index'))
         self.assertNotContains(response, u'myconv')
 
-        self.user_helper.create_conversation(u'dummy', name=u'myconv')
+        myconv = self.user_helper.create_conversation(u'dummy', name=u'myconv')
         response = self.client.get(reverse('conversations:index'))
         self.assertContains(response, u'myconv')
+
+        self.assertContains(response, self.get_view_url(myconv, 'show'))
+        self.assertContains(response, self.get_view_url(
+            myconv, 'message_list'))
+        self.assertContains(response, self.get_view_url(myconv, 'reports'))
 
     def test_index_search(self):
         """Filter conversations based on query string"""
@@ -828,7 +833,7 @@ class TestConversationReportsView(BaseConversationViewTestCase):
         self.assertEqual(
             self.error_log,
             ['Dashboard sync failed: '
-             '(400) {"message": ":(", "success": false}'])
+             '400: {"message": ":(", "success": false}'])
 
         self.assertEqual(response.context['dashboard_config'], None)
 
