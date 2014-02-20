@@ -1,4 +1,5 @@
 # -*- test-case-name: go.apps.http_api_nostream.tests.test_vumi_app -*-
+import base64
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
@@ -12,6 +13,7 @@ from vumi import log
 
 from go.apps.http_api_nostream.auth import AuthorizedResource
 from go.apps.http_api_nostream.resource import ConversationResource
+from go.base.utils import extract_auth_from_url
 from go.vumitools.app_worker import GoApplicationWorker
 
 
@@ -123,10 +125,17 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         config = self.get_static_config()
         data = vumi_message.to_json().encode('utf-8')
         try:
+            auth, url = extract_auth_from_url(url.encode('utf-8'))
+            headers = {
+                'Content-Type': 'application/json; charset=utf-8',
+            }
+            if auth is not None:
+                headers.update({
+                    'Authorization': 'Basic %s' % (
+                        base64.b64encode('%s:%s' % auth))
+                })
             resp = yield http_request_full(
-                url.encode('utf-8'), data=data, headers={
-                    'Content-Type': 'application/json; charset=utf-8',
-                }, timeout=config.timeout)
+                url, data=data, headers=headers, timeout=config.timeout)
             if resp.code != http.OK:
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, url))
