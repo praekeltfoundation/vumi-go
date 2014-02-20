@@ -466,7 +466,12 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             src_conn = str(GoConnector.for_opt_out())
 
         elif connector_type == self.BILLING:
-            src_conn = str(GoConnector.for_billing(direction))
+            # when the source is a billing router, outbound messages
+            # are always received from the inbound billing connector
+            # and inbound messages are always received from the outbound
+            # billing connector.
+            src_conn = str(
+                GoConnector.for_billing(self.router_direction(direction)))
 
         else:
             raise UnroutableMessageError(
