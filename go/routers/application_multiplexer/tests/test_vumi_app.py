@@ -4,7 +4,7 @@ from vumi.tests.helpers import VumiTestCase
 
 from go.routers.application_multiplexer.vumi_app import ApplicationMultiplexer
 from go.routers.tests.helpers import RouterWorkerHelper
-from vumi.tests.helpers import PersistenceHelper, MessageHelper
+from vumi.tests.helpers import PersistenceHelper
 
 
 class TestApplicationMultiplexerRouter(VumiTestCase):
@@ -16,7 +16,6 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.router_helper = self.add_helper(
             RouterWorkerHelper(ApplicationMultiplexer))
 
-        self.msg_helper = yield self.add_helper(MessageHelper())
         self.persistence_helper = yield self.add_helper(PersistenceHelper())
         self.parent_redis = yield self.persistence_helper.get_redis_manager()
         self.router_worker = yield self.router_helper.get_router_worker({
@@ -26,6 +25,11 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                 'key_prefix': self.parent_redis.get_key_prefix(),
             }
         })
+
+    def dynamic_config(self, fields):
+        config = self.router_worker.config.copy()
+        config.update(fields)
+        return config
 
     @inlineCallbacks
     def assert_routed_inbound(self, content, router, expected_endpoint):
@@ -76,7 +80,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
     def test_get_menu_choice(self):
         # good
-        msg = self.msg_helper.make_inbound(content='3 ')
+        msg = self.router_helper.make_inbound(content='3 ')
         choice = self.router_worker.get_menu_choice(msg, (1, 4))
         self.assertEqual(choice, 3)
 
@@ -85,24 +89,25 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(choice, None)
 
         # bad - non-numeric input
-        msg = self.msg_helper.make_inbound(content='Foo ')
+        msg = self.router_helper.make_inbound(content='Foo ')
         choice = self.router_worker.get_menu_choice(msg, (1, 2))
         self.assertEqual(choice, None)
 
     def test_scan_for_keywords(self):
-        config = self.router_worker.config
-        msg = self.msg_helper.make_inbound(content=':menu')
+        config = self.dynamic_config({
+            'keyword': ':menu'
+        })
+        msg = self.router_helper.make_inbound(content=':menu')
         self.assertTrue(self.router_worker.scan_for_keywords(
             config,
             msg, (':menu',)))
-        msg = self.msg_helper.make_inbound(content='Foo bar baz')
+        msg = self.router_helper.make_inbound(content='Foo bar baz')
         self.assertFalse(self.router_worker.scan_for_keywords(
             config,
             msg, (':menu',)))
 
     def test_create_menu(self):
-        config = self.router_worker.config.copy()
-        config.update({
+        config = self.dynamic_config({
             'menu_title': {'content': 'Please select a choice'},
             'entries': [
                 {
@@ -116,7 +121,8 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             ]
         })
         config = self.router_worker.CONFIG_CLASS(config)
-
         text = self.router_worker.create_menu(config)
-        self.assertEqual(text,
-                         'Please select a choice\n1) Flappy Bird\n2) Mama')
+        self.assertEqual(
+            text,
+            'Please select a choice\n1) Flappy Bird\n2) Mama'
+        )

@@ -77,7 +77,6 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
                     {
                         'label': 'Flappy Bird',
                         'endpoint': 'flappy-bird',
-
                     },
                 ]})
         response = self.client.get(rtr_helper.get_view_url('edit'))
