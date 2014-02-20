@@ -131,13 +131,16 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             }
             if auth is not None:
                 username, password = auth
-                if password is not None:
-                    auth_hash = base64.b64encode('%s:%s' % auth)
-                else:
-                    auth_hash = base64.b64encode(username)
+
+                if username is None:
+                    username = ''
+
+                if password is None:
+                    password = ''
 
                 headers.update({
-                    'Authorization': 'Basic %s' % (auth_hash,)
+                    'Authorization': 'Basic %s' % (
+                        base64.b64encode('%s:%s' % (username, password)),)
                 })
             resp = yield http_request_full(
                 url, data=data, headers=headers, timeout=config.timeout)
