@@ -599,9 +599,8 @@ class TestNoStreamingHTTPWorkerWithAuth(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_push_with_basic_auth(self):
-        msg_d = self.app_helper.make_dispatch_inbound(
+        self.app_helper.make_dispatch_inbound(
             'in', message_id='1', conv=self.conversation)
-
         req = yield self.push_calls.get()
         req.finish()
         [header] = req.requestHeaders.getRawHeaders('Authorization')
