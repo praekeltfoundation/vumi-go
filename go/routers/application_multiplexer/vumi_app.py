@@ -41,8 +41,32 @@ class ApplicationMultiplexerConfig(GoRouterWorker.CONFIG_CLASS):
 
 class ApplicationMultiplexer(GoRouterWorker):
     """
-    Router that splits inbound messages based on keywords.
-    """
+    Router that multiplexes between different endpoints
+    on the outbound path.
+
+    State Diagram (for fun):
+
+    +----------------+
+    |                |
+    |  start         |
+    |                |
+    +----+-----------+
+         |
+         |
+    +----*-----------+    +----------------+
+    |                *----+                |
+    |  select        |    |  bad_input     |
+    |                +----*                |
+    +----+----*------+    +----------------+
+         |    |
+         |    |
+    +----*----+------+
+    |                |
+    |  selected      |
+    |                |
+    +----------------+
+"""
+
     CONFIG_CLASS = ApplicationMultiplexerConfig
 
     worker_name = 'application_multiplexer'
@@ -100,15 +124,26 @@ class ApplicationMultiplexer(GoRouterWorker):
 
         try:
             result = yield self.handlers[state](config, session, msg)
-            # update session with next state and updated session fields
-            if type(result) is tuple:
-                next_state = session['state'] = result[0]
-                session.update(result[1])
+            if result is None:
+                # Halt session immediately
+                # The 'close' message should have already been sent back to
+                # the user at this point.
+                log.msg(("Router configuration change forced session abort "
+                         "for user %s" % user_id))
+                yield session_manager.clear_session(user_id)
+                return
             else:
-                next_state = session['state'] = result
-            if state != next_state:
-                log.msg("State transition for user %s: %s => %s" %
-                        (user_id, state, next_state))
+                if type(result) is tuple:
+                    # Transition to next state AND mutate session data
+                    next_state = session['state'] = result[0]
+                    session.update(result[1])
+                else:
+                    # Transition to next state
+                    next_state = session['state'] = result
+                if state != next_state:
+                    log.msg("State transition for user %s: %s => %s" %
+                            (user_id, state, next_state))
+                yield session_manager.save_session(user_id, session)
         except:
             log.err()
             yield session_manager.clear_session(user_id)
@@ -117,8 +152,6 @@ class ApplicationMultiplexer(GoRouterWorker):
                 continue_session=False
             )
             self.publish_outbound(reply_msg)
-        else:
-            yield session_manager.save_session(user_id, session)
 
     @inlineCallbacks
     def handle_state_start(self, config, session, msg):
@@ -132,10 +165,6 @@ class ApplicationMultiplexer(GoRouterWorker):
         NOTE: There is an edge case in which the user input no longer
         matches an entry in the current config. The impact depends
         on the number of users and how often the router config is modified.
-
-        One solution would be to compare hashes of the menu configs as
-        they existed at the START and SELECT states. If there is a mismatch,
-        invalidate the current session.
         """
         choice = self.get_menu_choice(msg, (1, len(config.entries)))
         if choice is None:
@@ -143,6 +172,8 @@ class ApplicationMultiplexer(GoRouterWorker):
             yield self.publish_outbound(reply_msg)
             returnValue(self.STATE_BAD_INPUT)
         else:
+            # TODO: Not urgent, but need to put in place a guard
+            # here for the reasons outlined in the docstring.
             endpoint = config.entries[choice - 1]['endpoint']
             forwarded_msg = self.forwarded_message(
                 msg,
