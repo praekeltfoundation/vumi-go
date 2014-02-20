@@ -18,10 +18,6 @@ class ApplicationMultiplexerConfig(GoRouterWorker.CONFIG_CLASS):
         "Maximum amount of time in seconds to keep session data around",
         default=1800, static=True)
 
-    session_data_version = ConfigInt(
-        "Just in case we need to modify the schema of session storage",
-        default=1, static=True)
-
     # Dynamic, per-message configuration
     menu_title = ConfigDict(
         "Content for the menu title",
@@ -31,16 +27,16 @@ class ApplicationMultiplexerConfig(GoRouterWorker.CONFIG_CLASS):
         default=[])
     keyword = ConfigText(
         "Keyword to signal a request to return to the application menu",
-        default=':menu')
+        default=None)
     invalid_input_message = ConfigText(
         "Prompt to display when warning about an invalid choice",
         default=("That is an incorrect choice. Please enter the number "
-                 "next to the menu item you wish to choose.\n\n 1) Try Again"))
+                 "of the menu item you wish to choose.\n\n 1) Try Again"))
     error_message = ConfigText(
         ("Prompt to display when a configuration change invalidates "
          "an active session."),
         default=("Oops! We experienced a temporary error. "
-                 "Please dial the line again."))
+                 "Please try and dial the line again."))
 
 
 class ApplicationMultiplexer(GoRouterWorker):
@@ -94,11 +90,9 @@ class ApplicationMultiplexer(GoRouterWorker):
         session = yield session_manager.load_session(user_id)
         if session is None:
             log.msg("Creating session for user %s" % user_id)
+            session = {}
             state = self.STATE_START
-            session = {
-                'version': config.session_data_version,
-            }
-            yield session_manager.create_session(user_id, **session)
+            yield session_manager.create_session(user_id)
         else:
             log.msg("Loading session for user %s: %s" % (session,))
             state = session['state']
