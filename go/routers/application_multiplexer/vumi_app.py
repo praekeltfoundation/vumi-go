@@ -1,4 +1,5 @@
 # -*- test-case-name: go.routers.application_multiplexer.tests.test_vumi_app -*-
+import json
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -76,8 +77,6 @@ class ApplicationMultiplexer(GoRouterWorker):
     STATE_SELECTED = "selected"
     STATE_BAD_INPUT = "bad_input"
 
-    OUTBOUND_ENDPOINT = "default"
-
     def setup_router(self):
         d = super(ApplicationMultiplexer, self).setup_router()
         self.handlers = {
@@ -110,10 +109,9 @@ class ApplicationMultiplexer(GoRouterWorker):
 
         user_id = msg['from_addr']
         session_manager = yield self.session_manager(config)
-        session_event = msg['session_event']
 
         session = yield session_manager.load_session(user_id)
-        if not session or session_event == TransportUserMessage.SESSION_NEW:
+        if not session:
             log.msg("Creating session for user %s" % user_id)
             session = {}
             state = self.STATE_START
@@ -126,12 +124,12 @@ class ApplicationMultiplexer(GoRouterWorker):
             result = yield self.handlers[state](config, session, msg)
             if result is None:
                 # Halt session immediately
-                # The 'close' message should have already been sent back to
+                # The 'close' message has already been sent back to
                 # the user at this point.
                 log.msg(("Router configuration change forced session abort "
                          "for user %s" % user_id))
                 yield session_manager.clear_session(user_id)
-                return
+                yield self.publish_error_reply(msg, config)
             else:
                 if type(result) is tuple:
                     # Transition to next state AND mutate session data
@@ -147,54 +145,49 @@ class ApplicationMultiplexer(GoRouterWorker):
         except:
             log.err()
             yield session_manager.clear_session(user_id)
-            reply_msg = msg.reply(
-                config.error_message,
-                continue_session=False
-            )
-            self.publish_outbound(reply_msg)
+            yield self.publish_error_reply(msg, config)
 
     @inlineCallbacks
     def handle_state_start(self, config, session, msg):
+        """
+        When presenting the menu, we also store the list of endpoints
+        in the session data. Later, in the SELECT state, we load
+        these endpoints and retrieve the candidate endpoint based
+        on the user's menu choice.
+        """
         reply_msg = msg.reply(self.create_menu(config))
         yield self.publish_outbound(reply_msg)
-        returnValue(self.STATE_SELECT)
+        endpoints = json.dumps(
+            [entry['endpoint'] for entry in config.entries]
+        )
+        returnValue((self.STATE_SELECT, dict(endpoints=endpoints)))
 
     @inlineCallbacks
     def handle_state_select(self, config, session, msg):
-        """
-        NOTE: There is an edge case in which the user input no longer
-        matches an entry in the current config. The impact depends
-        on the number of users and how often the router config is modified.
-        """
-        choice = self.get_menu_choice(msg, (1, len(config.entries)))
-        if choice is None:
+        endpoint = self.get_endpoint_for_choice(msg, session)
+        if endpoint is None:
             reply_msg = msg.reply(config.invalid_input_message)
             yield self.publish_outbound(reply_msg)
             returnValue(self.STATE_BAD_INPUT)
         else:
-            # TODO: Not urgent, but need to put in place a guard
-            # here for the reasons outlined in the docstring.
-            endpoint = config.entries[choice - 1]['endpoint']
-            forwarded_msg = self.forwarded_message(
-                msg,
-                content=None,
-                session_event=TransportUserMessage.SESSION_NEW
-            )
-            yield self.publish_inbound(forwarded_msg, endpoint)
-            log.msg("Switched to endpoint '%s' for user %s" %
-                    (endpoint, msg['from_addr']))
-            returnValue((self.STATE_SELECTED,
-                         dict(active_endpoint=endpoint)))
+            if endpoint not in self.target_endpoints(config):
+                returnValue(None)
+            else:
+                forwarded_msg = self.forwarded_message(
+                    msg,
+                    content=None,
+                    session_event=TransportUserMessage.SESSION_NEW
+                )
+                yield self.publish_inbound(forwarded_msg, endpoint)
+                log.msg("Switched to endpoint '%s' for user %s" %
+                        (endpoint, msg['from_addr']))
+                returnValue((self.STATE_SELECTED,
+                             dict(active_endpoint=endpoint)))
 
     @inlineCallbacks
     def handle_state_selected(self, config, session, msg):
         active_endpoint = session['active_endpoint']
         if active_endpoint not in self.target_endpoints(config):
-            reply_msg = msg.reply(
-                config.error_message,
-                continue_session=False
-            )
-            yield self.publish_outbound(reply_msg)
             returnValue(None)
         elif self.scan_for_keywords(config, msg, (config.keyword,)):
             reply_msg = msg.reply(self.create_menu(config))
@@ -221,9 +214,8 @@ class ApplicationMultiplexer(GoRouterWorker):
             yield self.publish_outbound(reply_msg)
             returnValue(self.STATE_BAD_INPUT)
         else:
-            reply_msg = msg.reply(self.create_menu(config))
-            yield self.publish_outbound(reply_msg)
-            returnValue(self.STATE_SELECT)
+            result = yield self.handle_state_start(config, session, msg)
+            returnValue(result)
 
     def handle_outbound(self, config, msg, conn_name):
         """
@@ -235,8 +227,15 @@ class ApplicationMultiplexer(GoRouterWorker):
     def publish_outbound(self, msg):
         return super(ApplicationMultiplexer, self).publish_outbound(
             msg,
-            self.OUTBOUND_ENDPOINT
+            "default"
         )
+
+    def publish_error_reply(self, msg, config):
+        reply_msg = msg.reply(
+            config.error_message,
+            continue_session=False
+        )
+        return self.publish_outbound(reply_msg)
 
     def forwarded_message(self, msg, **kwargs):
         copy = TransportUserMessage(**msg.payload)
@@ -249,6 +248,16 @@ class ApplicationMultiplexer(GoRouterWorker):
         if first_word in keywords:
             return True
         return False
+
+    def get_endpoint_for_choice(self, msg, session):
+        """
+        Retrieves the candidate endpoint based on the user's numeric choice
+        """
+        endpoints = json.loads(session['endpoints'])
+        index = self.get_menu_choice(msg, (1, len(endpoints)))
+        if index is None:
+            return None
+        return endpoints[index - 1]
 
     def get_menu_choice(self, msg, valid_range):
         """

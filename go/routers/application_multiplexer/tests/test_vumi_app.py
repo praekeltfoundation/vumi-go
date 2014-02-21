@@ -1,4 +1,5 @@
 import copy
+import json
 
 from twisted.internet.defer import inlineCallbacks
 
@@ -39,7 +40,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         """
         A helper to validate routing behavior.
 
-        The state dict describes the messages which need to sent, which
+        The state dict describes the messages which need to be sent, what
         session data to initialize, and what data should be asserted
         when the state handler completes execution.
 
@@ -167,7 +168,10 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             'expect': {
                 'ri_outbound': ('Please select a choice.\n1) Flappy Bird', {}),
                 'session': {
-                    '2323': {'state': ApplicationMultiplexer.STATE_SELECT},
+                    '2323': {
+                        'state': ApplicationMultiplexer.STATE_SELECT,
+                        'endpoints': '["flappy-bird"]',
+                    },
                 }
             }
         })
@@ -183,14 +187,18 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                                      session_event='resume')),
             'ro_inbound': ('Flappy Flappy!', dict(session_event='resume')),
             'session': {
-                '2323': {'state': ApplicationMultiplexer.STATE_SELECT},
+                '2323': {
+                    'state': ApplicationMultiplexer.STATE_SELECT,
+                    'endpoints': '["flappy-bird"]',
+                },
             },
             'expect': {
                 'ri_outbound': ('Flappy Flappy!', {}),
                 'session': {
                     '2323': {
                         'state': ApplicationMultiplexer.STATE_SELECTED,
-                        'active_endpoint': 'flappy-bird'
+                        'active_endpoint': 'flappy-bird',
+                        'endpoints': '["flappy-bird"]',
                     },
                 }
             }
@@ -209,7 +217,8 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             'session': {
                 '2323': {
                     'state': ApplicationMultiplexer.STATE_SELECTED,
-                    'active_endpoint': 'flappy-bird'
+                    'active_endpoint': 'flappy-bird',
+                    'endpoints': '["flappy-bird"]',
                 },
             },
             'expect': {
@@ -217,7 +226,8 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                 'session': {
                     '2323': {
                         'state': ApplicationMultiplexer.STATE_SELECTED,
-                        'active_endpoint': 'flappy-bird'
+                        'active_endpoint': 'flappy-bird',
+                        'endpoints': '["flappy-bird"]',
                     },
                 }
             }
@@ -235,7 +245,8 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             'session': {
                 '2323': {
                     'state': ApplicationMultiplexer.STATE_SELECTED,
-                    'active_endpoint': 'flappy-bird'
+                    'active_endpoint': 'flappy-bird',
+                    'endpoints': '["flappy-bird"]',
                 },
             },
             'expect': {
@@ -244,9 +255,10 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                 'session': {
                     '2323': {
                         'state': ApplicationMultiplexer.STATE_SELECT,
+                        'active_endpoint': 'None',
                         # TODO: I should clear session keys which are no longer
-                        # relevant in the SELECT state
-                        'active_endpoint': 'None'
+                        # relevant in this state
+                        'endpoints': '["flappy-bird"]',
                     },
                 }
             }
@@ -264,6 +276,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             'session': {
                 '2323': {
                     'state': ApplicationMultiplexer.STATE_SELECT,
+                    'endpoints': '["flappy-bird"]',
                 },
             },
             'expect': {
@@ -271,6 +284,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                 'session': {
                     '2323': {
                         'state': ApplicationMultiplexer.STATE_BAD_INPUT,
+                        'endpoints': '["flappy-bird"]',
                     },
                 }
             }
@@ -319,6 +333,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                 'session': {
                     '2323': {
                         'state': ApplicationMultiplexer.STATE_SELECT,
+                        'endpoints': '["flappy-bird"]',
                     },
                 }
             }
@@ -365,7 +380,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         Verify that the router gracefully handles a configuration
         update while there is an active user session.
 
-        A session is invalidated if there is no longer an attached endpoint
+        A session is aborted if there is no longer an attached endpoint
         to which it refers.
         """
         config = copy.deepcopy(self.ROUTER_CONFIG)
