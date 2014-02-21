@@ -28,7 +28,6 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         ]
     }
 
-
     @inlineCallbacks
     def setUp(self):
         self.router_helper = self.add_helper(
@@ -103,6 +102,24 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             self.assertEqual(session, data,
                              msg="Unexpected session data")
 
+    @inlineCallbacks
+    def setup_session(self, user_id, data):
+        session_manager = yield self.router_worker.session_manager(
+            self.router_worker.CONFIG_CLASS(self.router_worker.config)
+        )
+        # Initialize session data
+        yield session_manager.save_session(user_id, data)
+
+    @inlineCallbacks
+    def assert_session_state(self, user_id, expected_session):
+        session_manager = yield self.router_worker.session_manager(
+            self.router_worker.CONFIG_CLASS(self.router_worker.config)
+        )
+        session = yield session_manager.load_session(user_id)
+        if 'created_at' in session:
+            del session['created_at']
+        self.assertEqual(session, expected_session,
+                         msg="Unexpected session data")
 
     def dynamic_config(self, fields):
         config = self.router_worker.config.copy()
@@ -162,18 +179,20 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             started=True,
             config=self.ROUTER_CONFIG
         )
-        yield self.check_state(router, {
-            'ri_inbound': (None, dict(from_addr='2323', session_event='new')),
-            'session': {},
-            'expect': {
-                'ri_outbound': ('Please select a choice.\n1) Flappy Bird', {}),
-                'session': {
-                    '2323': {
-                        'state': ApplicationMultiplexer.STATE_SELECT,
-                        'endpoints': '["flappy-bird"]',
-                    },
-                }
-            }
+        # msg sent from user
+        yield self.router_helper.ri.make_dispatch_inbound(
+            None,
+            router=router,
+            from_addr='123')
+
+        # assert that the user received a response
+        [msg] = self.router_helper.ri.get_dispatched_outbound()
+        self.assertEqual(msg['content'],
+                         'Please select a choice.\n1) Flappy Bird')
+        # assert that session data updated correctly
+        yield self.assert_session_state('123', {
+            'state': ApplicationMultiplexer.STATE_SELECT,
+            'endpoints': '["flappy-bird"]',
         })
 
     @inlineCallbacks
@@ -182,26 +201,37 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             started=True,
             config=self.ROUTER_CONFIG
         )
-        yield self.check_state(router, {
-            'ri_inbound': ('1', dict(from_addr='2323',
-                                     session_event='resume')),
-            'ro_inbound': ('Flappy Flappy!', dict(session_event='resume')),
-            'session': {
-                '2323': {
-                    'state': ApplicationMultiplexer.STATE_SELECT,
-                    'endpoints': '["flappy-bird"]',
-                },
-            },
-            'expect': {
-                'ri_outbound': ('Flappy Flappy!', {}),
-                'session': {
-                    '2323': {
-                        'state': ApplicationMultiplexer.STATE_SELECTED,
-                        'active_endpoint': 'flappy-bird',
-                        'endpoints': '["flappy-bird"]',
-                    },
-                }
-            }
+
+        yield self.setup_session('123', {
+            'state': ApplicationMultiplexer.STATE_SELECT,
+            'endpoints': '["flappy-bird"]',
+        })
+
+        # msg sent from user
+        msg = yield self.router_helper.ri.make_dispatch_inbound(
+            '1',
+            router=router,
+            from_addr='123',
+            session_event='resume'
+        )
+
+        # assert that message is forwarded to application
+        [msg] = self.router_helper.ro.get_dispatched_inbound()
+        self.assertEqual(msg['content'], None)
+        self.assertEqual(msg['session_event'], 'new')
+
+        # application sends reply
+        yield self.router_helper.ro.make_dispatch_reply(msg, 'Flappy Flappy!')
+
+        # assert that the user received a response
+        [msg] = self.router_helper.ri.get_dispatched_outbound()
+        self.assertEqual(msg['content'],
+                         'Flappy Flappy!')
+
+        yield self.assert_session_state('123', {
+            'state': ApplicationMultiplexer.STATE_SELECTED,
+            'active_endpoint': 'flappy-bird',
+            'endpoints': '["flappy-bird"]',
         })
 
     @inlineCallbacks
@@ -210,27 +240,41 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             started=True,
             config=self.ROUTER_CONFIG
         )
-        yield self.check_state(router, {
-            'ri_inbound': ('Up!', dict(from_addr='2323',
-                                       session_event='resume')),
-            'ro_inbound': ('Game Over!', dict(session_event='resume')),
-            'session': {
-                '2323': {
-                    'state': ApplicationMultiplexer.STATE_SELECTED,
-                    'active_endpoint': 'flappy-bird',
-                    'endpoints': '["flappy-bird"]',
-                },
-            },
-            'expect': {
-                'ri_outbound': ('Game Over!', {}),
-                'session': {
-                    '2323': {
-                        'state': ApplicationMultiplexer.STATE_SELECTED,
-                        'active_endpoint': 'flappy-bird',
-                        'endpoints': '["flappy-bird"]',
-                    },
-                }
-            }
+
+        yield self.setup_session('123', {
+            'state': ApplicationMultiplexer.STATE_SELECTED,
+            'active_endpoint': 'flappy-bird',
+            'endpoints': '["flappy-bird"]',
+        })
+
+        # msg sent from user
+        msg = yield self.router_helper.ri.make_dispatch_inbound(
+            'Up!',
+            router=router,
+            from_addr='123',
+            session_event='resume'
+        )
+
+        # assert that message is forwarded to application
+        [msg] = self.router_helper.ro.get_dispatched_inbound()
+        self.assertEqual(msg['content'], 'Up!')
+        self.assertEqual(msg['session_event'], 'resume')
+
+        # application sends reply
+        yield self.router_helper.ro.make_dispatch_reply(
+            msg,
+            'Game Over!\n1) Try Again!'
+        )
+
+        # assert that the user received a response
+        [msg] = self.router_helper.ri.get_dispatched_outbound()
+        self.assertEqual(msg['content'],
+                         'Game Over!\n1) Try Again!')
+
+        yield self.assert_session_state('123', {
+            'state': ApplicationMultiplexer.STATE_SELECTED,
+            'active_endpoint': 'flappy-bird',
+            'endpoints': '["flappy-bird"]',
         })
 
     @inlineCallbacks
