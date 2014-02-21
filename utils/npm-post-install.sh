@@ -10,6 +10,8 @@ function make_links {
             ln -s $PROJECT_ROOT/node_modules/.bin/$bin $VIRTUAL_ENV/bin/$bin
         done
     fi
+
+    return 0;
 }
 
-make_links || :
+make_links
