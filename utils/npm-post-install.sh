@@ -3,15 +3,16 @@
 BINS='grunt bower yuglify'
 PROJECT_ROOT=$(cd "`dirname $0`/.."; pwd)
 
-function make_links {
-    if [ -n $VIRTUAL_ENV ]; then
-        for bin in $BINS
-        do
-            ln -s $PROJECT_ROOT/node_modules/.bin/$bin $VIRTUAL_ENV/bin/$bin
-        done
-    fi
-
-    return 0;
+function link {
+    src="$PROJECT_ROOT/node_modules/.bin/$bin"
+    dest="$VIRTUAL_ENV/bin/$1"
+    ln -s $src $dest  2> /dev/null || echo "Skipping $1, symlink already exists."
 }
 
-make_links
+
+if [ -n $VIRTUAL_ENV ]; then
+    for bin in $BINS
+    do
+        link $bin
+    done
+fi
