@@ -340,6 +340,31 @@ class TestGoSetupEnv(GoDjangoTestCase):
         self.assertEqual(config['worker_names'],
             ['app1_application', 'app2_application', 'router1_router'])
 
+    def test_create_go_api_worker_config(self):
+        fake_file = FakeFile()
+        self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.go_api_endpoint = 'tcp:interface=127.0.0.1:port=8001'
+        self.command.create_go_api_worker_config()
+        fake_file.seek(0)
+        config = yaml.safe_load(fake_file)
+        self.assertEqual(config['worker_name'],
+            'go_api_worker')
+        self.assertEqual(config['web_path'],
+            '/api/v1/go/api')
+
+    def test_create_message_store_api_worker_config(self):
+        fake_file = FakeFile()
+        self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.message_store_api_port = 8002
+        self.command.create_message_store_api_worker_config()
+        fake_file.seek(0)
+        config = yaml.safe_load(fake_file)
+        self.assertEqual(config['worker_name'],
+            'message_store_api_worker')
+        self.assertEqual(config['web_path'],
+            '/api/v1')
+        self.assertEqual(config['web_port'], 8002)
+
     def test_create_webui_supervisord_conf(self):
         fake_file = FakeFile()
         self.command.open_file = Mock(side_effect=[fake_file])
