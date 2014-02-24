@@ -58,14 +58,14 @@ class ApplicationMultiplexer(GoRouterWorker):
     |                *----+                |
     |  select        |    |  bad_input     |
     |                +----*                |
-    +----+----*------+    +----------------+
-         |    |
-         |    |
-    +----*----+------+
-    |                |
-    |  selected      |
-    |                |
-    +----------------+
+    +----+----*--+---+    +----------------+
+         |    |   \ - - +
+         |    |          \
+    +----*----+------+    *----------------+
+    |                |    |                |
+    |  selected      +----*  abort_session |
+    |                |    |                |
+    +----------------+    +----------------+
 """
 
     CONFIG_CLASS = ApplicationMultiplexerConfig
@@ -76,6 +76,7 @@ class ApplicationMultiplexer(GoRouterWorker):
     STATE_SELECT = "select"
     STATE_SELECTED = "selected"
     STATE_BAD_INPUT = "bad_input"
+    STATE_ABORT_SESSION = "abort"
 
     def setup_router(self):
         d = super(ApplicationMultiplexer, self).setup_router()
@@ -121,8 +122,9 @@ class ApplicationMultiplexer(GoRouterWorker):
             state = session['state']
 
         try:
-            result = yield self.handlers[state](config, session, msg)
-            if result is None:
+            next_state, updated_session = yield self.handlers[state](
+                config, session, msg)
+            if next_state == self.STATE_ABORT_SESSION:
                 # Halt session immediately
                 # The 'close' message has already been sent back to
                 # the user at this point.
@@ -131,13 +133,8 @@ class ApplicationMultiplexer(GoRouterWorker):
                 yield session_manager.clear_session(user_id)
                 yield self.publish_error_reply(msg, config)
             else:
-                if type(result) is tuple:
-                    # Transition to next state AND mutate session data
-                    next_state = session['state'] = result[0]
-                    session.update(result[1])
-                else:
-                    # Transition to next state
-                    next_state = session['state'] = result
+                session['state'] = next_state
+                session.update(updated_session)
                 if state != next_state:
                     log.msg("State transition for user %s: %s => %s" %
                             (user_id, state, next_state))
@@ -168,10 +165,10 @@ class ApplicationMultiplexer(GoRouterWorker):
         if endpoint is None:
             reply_msg = msg.reply(config.invalid_input_message)
             yield self.publish_outbound(reply_msg)
-            returnValue(self.STATE_BAD_INPUT)
+            returnValue((self.STATE_BAD_INPUT, {}))
         else:
             if endpoint not in self.target_endpoints(config):
-                returnValue(None)
+                returnValue((self.STATE_ABORT_SESSION, {}))
             else:
                 forwarded_msg = self.forwarded_message(
                     msg,
@@ -188,7 +185,7 @@ class ApplicationMultiplexer(GoRouterWorker):
     def handle_state_selected(self, config, session, msg):
         active_endpoint = session['active_endpoint']
         if active_endpoint not in self.target_endpoints(config):
-            returnValue(None)
+            returnValue((self.STATE_ABORT_SESSION, {}))
         elif self.scan_for_keywords(config, msg, (config.keyword,)):
             reply_msg = msg.reply(self.create_menu(config))
             yield self.publish_outbound(reply_msg)
@@ -204,7 +201,7 @@ class ApplicationMultiplexer(GoRouterWorker):
                          dict(active_endpoint=None)))
         else:
             yield self.publish_inbound(msg, active_endpoint)
-            returnValue(self.STATE_SELECTED)
+            returnValue((self.STATE_SELECTED, {}))
 
     @inlineCallbacks
     def handle_state_bad_input(self, config, session, msg):
@@ -212,7 +209,7 @@ class ApplicationMultiplexer(GoRouterWorker):
         if choice is None:
             reply_msg = msg.reply(config.invalid_input_message)
             yield self.publish_outbound(reply_msg)
-            returnValue(self.STATE_BAD_INPUT)
+            returnValue((self.STATE_BAD_INPUT, {}))
         else:
             result = yield self.handle_state_start(config, session, msg)
             returnValue(result)
