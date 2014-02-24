@@ -60,7 +60,7 @@ class ApplicationMultiplexer(GoRouterWorker):
          |    |          \
     +----*----+------+    *----------------+
     |                |    |                |
-    |  selected      +----*  abort_session |
+    |  selected      +----*  abort         |
     |                |    |                |
     +----------------+    +----------------+
 """
@@ -73,7 +73,7 @@ class ApplicationMultiplexer(GoRouterWorker):
     STATE_SELECT = "select"
     STATE_SELECTED = "selected"
     STATE_BAD_INPUT = "bad_input"
-    STATE_ABORT_SESSION = "abort"
+    STATE_ABORT = "abort"
 
     @inlineCallbacks
     def setup_router(self):
@@ -88,7 +88,7 @@ class ApplicationMultiplexer(GoRouterWorker):
             self.STATE_START: self.handle_state_start,
             self.STATE_SELECT: self.handle_state_select,
             self.STATE_SELECTED: self.handle_state_selected,
-            self.STATE_BAD_INPUT: self.handle_state_bad_input
+            self.STATE_BAD_INPUT: self.handle_state_bad_input,
         }
 
     def target_endpoints(self, config):
@@ -102,13 +102,16 @@ class ApplicationMultiplexer(GoRouterWorker):
         log.msg("Processing inbound message: %s" % (msg,))
 
         user_id = msg['from_addr']
-
         session = yield self.session_manager.load_session(user_id)
-        if not session:
+        session_event = msg['session_event']
+        if not session or session_event == TransportUserMessage.SESSION_NEW:
             log.msg("Creating session for user %s" % user_id)
             session = {}
             state = self.STATE_START
             yield self.session_manager.create_session(user_id)
+        elif session_event == TransportUserMessage.SESSION_CLOSE:
+            self.handle_session_close(self, config, session, msg)
+            return
         else:
             log.msg("Loading session for user %s: %s" % (user_id, session,))
             state = session['state']
@@ -116,10 +119,8 @@ class ApplicationMultiplexer(GoRouterWorker):
         try:
             next_state, updated_session = yield self.handlers[state](
                 config, session, msg)
-            if next_state == self.STATE_ABORT_SESSION:
+            if next_state == self.STATE_ABORT:
                 # Halt session immediately
-                # The 'close' message has already been sent back to
-                # the user at this point.
                 log.msg(("Router configuration change forced session abort "
                          "for user %s" % user_id))
                 yield self.session_manager.clear_session(user_id)
@@ -160,7 +161,7 @@ class ApplicationMultiplexer(GoRouterWorker):
             returnValue((self.STATE_BAD_INPUT, {}))
         else:
             if endpoint not in self.target_endpoints(config):
-                returnValue((self.STATE_ABORT_SESSION, {}))
+                returnValue((self.STATE_ABORT, {}))
             else:
                 forwarded_msg = self.forwarded_message(
                     msg,
@@ -177,7 +178,7 @@ class ApplicationMultiplexer(GoRouterWorker):
     def handle_state_selected(self, config, session, msg):
         active_endpoint = session['active_endpoint']
         if active_endpoint not in self.target_endpoints(config):
-            returnValue((self.STATE_ABORT_SESSION, {}))
+            returnValue((self.STATE_ABORT, {}))
         else:
             yield self.publish_inbound(msg, active_endpoint)
             returnValue((self.STATE_SELECTED, {}))
@@ -193,18 +194,33 @@ class ApplicationMultiplexer(GoRouterWorker):
             result = yield self.handle_state_start(config, session, msg)
             returnValue(result)
 
+    @inlineCallbacks
     def handle_outbound(self, config, msg, conn_name):
-        """
-        TODO: Go to SELECT state when session_event=close
-        """
         log.msg("Processing outbound message: %s" % (msg,))
-        return self.publish_outbound(msg)
+        user_id = msg['to_addr']
+        session_event = msg['session_event']
+        session = yield self.session_manager.load_session(user_id)
+        if session and (session_event == TransportUserMessage.SESSION_CLOSE):
+            yield self.session_manager.clear_session(user_id)
+        yield self.publish_outbound(msg)
+
+    @inlineCallbacks
+    def handle_session_close(self, config, session, msg):
+        user_id = msg['to_addr']
+        session_event = msg['session_event']
+        if session_event == self.STATE_SELECTED and \
+           session['active_endpoint'] in self.target_endpoints(config):
+            yield self.publish_inbound(
+                self.forwarded_message(
+                    msg, content=None,
+                    session_event=TransportUserMessage.SESSION_CLOSE),
+                session['active_endpoint']
+            )
+        yield self.session_manager.clear_session(user_id)
 
     def publish_outbound(self, msg):
         return super(ApplicationMultiplexer, self).publish_outbound(
-            msg,
-            "default"
-        )
+            msg, "default")
 
     def publish_error_reply(self, msg, config):
         reply_msg = msg.reply(
