@@ -65,8 +65,14 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
                 'wikipedia_extract_call']])
 
     @inlineCallbacks
-    def test_api_url_config(self):
-        yield self.setup_conv({'api_url': 'http://wikipedia/api.php'})
+    def test_conversation_config(self):
+        yield self.setup_conv({
+            'api_url': 'http://wikipedia/api.php',
+            'include_url_in_sms': True,
+            'mobi_url_host': 'http://mobi/',
+        })
         msg = self.app_helper.make_inbound(None, conv=self.conv)
         config = yield self.app.get_config(msg)
         self.assertEqual(config.api_url.geturl(), 'http://wikipedia/api.php')
+        self.assertEqual(config.include_url_in_sms, True)
+        self.assertEqual(config.mobi_url_host, 'http://mobi/')

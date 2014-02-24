@@ -46,26 +46,33 @@ class TestWikipediaViews(GoDjangoTestCase):
         response = self.client.get(conv_helper.get_view_url('show'))
         self.assertContains(response, u"<h1>myconv</h1>")
 
-    def test_edit_set_api_url(self):
+    def test_edit_set_all_fields(self):
         conv_helper = self.app_helper.create_conversation_helper()
         conversation = conv_helper.get_conversation()
         self.assertEqual(conversation.config, {})
         response = self.client.post(conv_helper.get_view_url('edit'), {
             'api_url': 'http://wikipedia/api.php',
+            'include_url_in_sms': True,
+            'mobi_url_host': 'http://mobi/',
         }, follow=True)
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         reloaded_conv = conv_helper.get_conversation()
         self.assertEqual(reloaded_conv.config, {
             'api_url': 'http://wikipedia/api.php',
+            'include_url_in_sms': True,
+            'mobi_url_host': 'http://mobi/',
         })
 
-    def test_edit_no_api_url(self):
+    def test_edit_set_no_fields(self):
         conv_helper = self.app_helper.create_conversation_helper()
         conversation = conv_helper.get_conversation()
         self.assertEqual(conversation.config, {})
         response = self.client.post(conv_helper.get_view_url('edit'), {
-            'wikipedia-api_url': '',
+            'api_url': '',
+            'mobi_url_host': '',
         }, follow=True)
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         reloaded_conv = conv_helper.get_conversation()
-        self.assertEqual(reloaded_conv.config, {})
+        self.assertEqual(reloaded_conv.config, {
+            'include_url_in_sms': False,
+        })
