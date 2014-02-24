@@ -7,7 +7,7 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
 
     def setUp(self):
         self.router_helper = self.add_helper(
-            RouterViewsHelper(u'application_multiplexer')
+            RouterViewsHelper(u'app_multiplexer')
         )
         self.user_helper = self.router_helper.vumi_helper.get_or_create_user()
         self.client = self.router_helper.get_client()
@@ -18,7 +18,7 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
 
         response = self.client.post(self.router_helper.get_new_view_url(), {
             'name': u"myrouter",
-            'router_type': u'application_multiplexer',
+            'router_type': u'app_multiplexer',
         })
         [router_key] = router_store.list_routers()
         rtr_helper = self.router_helper.get_router_helper_by_key(router_key)
