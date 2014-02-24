@@ -238,7 +238,8 @@ class TestCost(VumiTestCase):
         self.assertEqual(response.responseCode, 200)
         base_cost = json.loads(response.value(), cls=JSONDecoder)
         credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal(0.9), decimal.Decimal(20.0))
+            decimal.Decimal('0.9'), decimal.Decimal('20.0'),
+            decimal.Decimal('0.7'), session_created=False)
         self.assertEqual(base_cost, {
             u'account_number': None,
             u'credit_amount': credit_amount,
@@ -259,7 +260,8 @@ class TestCost(VumiTestCase):
         self.assertEqual(response.responseCode, 200)
         [message_cost] = json.loads(response.value(), cls=JSONDecoder)
         credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal(0.9), decimal.Decimal(20.0))
+            decimal.Decimal('0.9'), decimal.Decimal('20.0'),
+            decimal.Decimal('0.7'), session_created=False)
         self.assertEqual(message_cost, {
             u'account_number': None,
             u'credit_amount': credit_amount,
@@ -286,7 +288,8 @@ class TestCost(VumiTestCase):
         self.assertEqual(response.responseCode, 200)
         cost_override = json.loads(response.value(), cls=JSONDecoder)
         credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal(0.5), decimal.Decimal(10.0))
+            decimal.Decimal('0.5'), decimal.Decimal('10.0'),
+            decimal.Decimal('0.3'), session_created=False)
         self.assertEqual(cost_override, {
             u'account_number': account['account_number'],
             u'credit_amount': credit_amount,
@@ -380,12 +383,10 @@ class TestTransaction(VumiTestCase):
 
         self.assertEqual(response.responseCode, 200)
         cost = json.loads(response.value(), cls=JSONDecoder)
-        message_cost = decimal.Decimal('0.6')
-        markup_percent = decimal.Decimal('10.0')
-        credit_amount = MessageCost.calculate_credit_cost(message_cost,
-                                                          markup_percent)
-
-        self.assertEqual(cost.get('credit_amount'), credit_amount)
+        credit_amount = MessageCost.calculate_credit_cost(
+            decimal.Decimal('0.6'), decimal.Decimal('10.0'),
+            decimal.Decimal('0.3'), session_created=False)
+        self.assertEqual(cost['credit_amount'], credit_amount)
 
         # Create a transaction
         content = {

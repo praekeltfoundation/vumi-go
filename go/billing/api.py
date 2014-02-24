@@ -452,7 +452,9 @@ class CostResource(BaseResource):
             message_cost['credit_amount'] = (
                 MessageCost.calculate_credit_cost(
                     message_cost.get('message_cost'),
-                    message_cost.get('markup_percent'))
+                    message_cost.get('markup_percent'),
+                    message_cost.get('session_cost'),
+                    session_created=False)
             )
 
         defer.returnValue(result)
@@ -541,7 +543,8 @@ class CostResource(BaseResource):
         result = yield cursor.fetchone()
         # TODO: credit_amount is no longer sensible
         result['credit_amount'] = MessageCost.calculate_credit_cost(
-            result.get('message_cost'), result.get('markup_percent'))
+            result.get('message_cost'), result.get('markup_percent'),
+            result.get('session_cost'), session_created=False)
 
         defer.returnValue(result)
 
@@ -644,10 +647,11 @@ class TransactionResource(BaseResource):
         result = yield self._connection_pool.runQuery(query, params)
         if len(result) > 0:
             message_cost = result[0]
-            # TODO: use session_created in call to calculate_credit_cost
             message_cost['credit_amount'] = MessageCost.calculate_credit_cost(
-                message_cost.get('message_cost'),
-                message_cost.get('markup_percent'))
+                message_cost['message_cost'],
+                message_cost['markup_percent'],
+                message_cost['session_cost'],
+                session_created=session_created)
 
             defer.returnValue(message_cost)
         else:
