@@ -447,15 +447,6 @@ class CostResource(BaseResource):
         query += conditions
         query += " ORDER BY a.account_number"
         result = yield self._connection_pool.runQuery(query, params)
-        # TODO: credit_amount is no longer sensible
-        for message_cost in result:
-            message_cost['credit_amount'] = (
-                MessageCost.calculate_credit_cost(
-                    message_cost.get('message_cost'),
-                    message_cost.get('markup_percent'),
-                    message_cost.get('session_cost'),
-                    session_created=False)
-            )
 
         defer.returnValue(result)
 
@@ -541,10 +532,6 @@ class CostResource(BaseResource):
 
         cursor = yield cursor.execute(query, params)
         result = yield cursor.fetchone()
-        # TODO: credit_amount is no longer sensible
-        result['credit_amount'] = MessageCost.calculate_credit_cost(
-            result.get('message_cost'), result.get('markup_percent'),
-            result.get('session_cost'), session_created=False)
 
         defer.returnValue(result)
 

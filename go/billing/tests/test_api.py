@@ -237,12 +237,8 @@ class TestCost(VumiTestCase):
 
         self.assertEqual(response.responseCode, 200)
         base_cost = json.loads(response.value(), cls=JSONDecoder)
-        credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal('0.9'), decimal.Decimal('20.0'),
-            decimal.Decimal('0.7'), session_created=False)
         self.assertEqual(base_cost, {
             u'account_number': None,
-            u'credit_amount': credit_amount,
             u'markup_percent': decimal.Decimal('20.000000'),
             u'message_cost': decimal.Decimal('0.900000'),
             u'message_direction': u'Outbound',
@@ -259,12 +255,8 @@ class TestCost(VumiTestCase):
         response = yield self.web.get('costs', args=args)
         self.assertEqual(response.responseCode, 200)
         [message_cost] = json.loads(response.value(), cls=JSONDecoder)
-        credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal('0.9'), decimal.Decimal('20.0'),
-            decimal.Decimal('0.7'), session_created=False)
         self.assertEqual(message_cost, {
             u'account_number': None,
-            u'credit_amount': credit_amount,
             u'markup_percent': decimal.Decimal('20.000000'),
             u'message_cost': decimal.Decimal('0.900000'),
             u'message_direction': u'Outbound',
@@ -287,12 +279,8 @@ class TestCost(VumiTestCase):
             'costs', args=None, content=content, headers=headers)
         self.assertEqual(response.responseCode, 200)
         cost_override = json.loads(response.value(), cls=JSONDecoder)
-        credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal('0.5'), decimal.Decimal('10.0'),
-            decimal.Decimal('0.3'), session_created=False)
         self.assertEqual(cost_override, {
             u'account_number': account['account_number'],
-            u'credit_amount': credit_amount,
             u'markup_percent': decimal.Decimal('10.000000'),
             u'message_cost': decimal.Decimal('0.500000'),
             u'message_direction': u'Outbound',
@@ -312,7 +300,6 @@ class TestCost(VumiTestCase):
         [message_cost] = json.loads(response.value(), cls=JSONDecoder)
         self.assertEqual(message_cost, {
             u'account_number': account['account_number'],
-            u'credit_amount': credit_amount,
             u'markup_percent': decimal.Decimal('10.000000'),
             u'message_cost': decimal.Decimal('0.500000'),
             u'message_direction': u'Outbound',
@@ -382,11 +369,9 @@ class TestTransaction(VumiTestCase):
             'costs', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        cost = json.loads(response.value(), cls=JSONDecoder)
         credit_amount = MessageCost.calculate_credit_cost(
             decimal.Decimal('0.6'), decimal.Decimal('10.0'),
             decimal.Decimal('0.3'), session_created=False)
-        self.assertEqual(cost['credit_amount'], credit_amount)
 
         # Create a transaction
         content = {
