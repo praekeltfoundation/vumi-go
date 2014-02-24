@@ -414,3 +414,5 @@ class TestTransaction(VumiTestCase):
         self.assertEqual(response.responseCode, 200)
         account = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue(account['credit_balance'] == -credit_amount)
+
+        # TODO: add test for session_created = True
