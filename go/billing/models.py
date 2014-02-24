@@ -54,16 +54,17 @@ class MessageCost(models.Model):
     )
 
     @classmethod
-    def calculate_credit_cost(cls, message_cost, markup_percent):
-        """Return the credit cost for the given `message_cost` and
-        `markup_percent`.
+    def calculate_credit_cost(cls, message_cost, markup_percent,
+                              session_cost, session_created):
         """
-        markup_amount = (message_cost * markup_percent / Decimal('100.0'))
-        resulting_price = message_cost + markup_amount
-        credit_cost = (resulting_price
-                       * Decimal(app_settings.CREDIT_CONVERSION_FACTOR))
-
-        return credit_cost.quantize(app_settings.QUANTIZATION_EXPONENT)
+        Return the credit cost for a message.
+        """
+        base_cost = message_cost
+        if session_created:
+            base_cost += session_cost
+        cost = base_cost + (base_cost * markup_percent / Decimal('100.0'))
+        credits = cost * Decimal(app_settings.CREDIT_CONVERSION_FACTOR)
+        return credits.quantize(app_settings.QUANTIZATION_EXPONENT)
 
     account = models.ForeignKey(Account, blank=True, null=True)
     tag_pool = models.ForeignKey(TagPool)
