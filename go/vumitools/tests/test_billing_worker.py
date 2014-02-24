@@ -22,7 +22,7 @@ class BillingApiMock(object):
         self.base_url = base_url
 
     def create_transaction(self, account_number, tag_pool_name,
-                           tag_name, message_direction):
+                           tag_name, message_direction, session_created):
         return {
             "id": 1,
             "account_number": account_number,
@@ -30,6 +30,8 @@ class BillingApiMock(object):
             "tag_name": tag_name,
             "message_direction": message_direction,
             "message_cost": 80,
+            "session_created": session_created,
+            "session_cost": 30,
             "markup_percent": decimal.Decimal('10.0'),
             "credit_amount": -35,
             "credit_factor": decimal.Decimal('0.4'),
@@ -83,7 +85,8 @@ class TestBillingApi(VumiTestCase):
             'account_number': "test-account",
             'tag_pool_name': "pool1",
             'tag_name': "1234",
-            'message_direction': "Inbound"
+            'message_direction': "Inbound",
+            'session_created': False,
         }
         yield self.billing_api.create_transaction(**kwargs)
         self.assertEqual(hrm.request.uri, "%stransactions" % (self.api_url,))
@@ -99,6 +102,8 @@ class TestBillingApi(VumiTestCase):
             "tag_name": "1234",
             "message_direction": "Inbound",
             "message_cost": 80,
+            "session_created": False,
+            "session_cost": 30,
             "markup_percent": decimal.Decimal('10.0'),
             "credit_amount": -35,
             "credit_factor": decimal.Decimal('0.4'),
@@ -117,7 +122,8 @@ class TestBillingApi(VumiTestCase):
             'account_number': "test-account",
             'tag_pool_name': "pool1",
             'tag_name': "1234",
-            'message_direction': "Inbound"
+            'message_direction': "Inbound",
+            'session_created': False,
         }
         result = yield self.billing_api.create_transaction(**kwargs)
         self.assertEqual(result, delivered_body)
@@ -135,7 +141,8 @@ class TestBillingApi(VumiTestCase):
             'account_number': "test-account",
             'tag_pool_name': "pool1",
             'tag_name': "1234",
-            'message_direction': "Inbound"
+            'message_direction': "Inbound",
+            'session_created': False,
         }
         d = self.billing_api.create_transaction(**kwargs)
         yield self.assertFailure(d, BillingError)
@@ -187,6 +194,8 @@ class TestBillingDispatcher(VumiTestCase):
         msg = self.msg_helper.make_outbound(content, **kw)
         self.add_md(msg, user_account=user_account, tag=tag, is_paid=is_paid)
         return self.ro_helper.dispatch_outbound(msg).addCallback(lambda _: msg)
+
+    # TODO: add test that session_created is set correctly.
 
     @inlineCallbacks
     def test_inbound_message(self):
