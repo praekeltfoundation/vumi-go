@@ -1,4 +1,4 @@
-# -*- test-case-name: go.routers.application_multiplexer.tests.test_vumi_app -*-
+# -*- test-case-name: go.routers.app_multiplexer.tests.test_vumi_app -*-
 import json
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -9,7 +9,7 @@ from vumi.components.session import SessionManager
 from vumi.message import TransportUserMessage
 
 from go.vumitools.app_worker import GoRouterWorker
-from go.routers.application_multiplexer.common import mkmenu, clean
+from go.routers.app_multiplexer.common import mkmenu, clean
 
 
 class ApplicationMultiplexerConfig(GoRouterWorker.CONFIG_CLASS):
