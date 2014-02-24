@@ -55,14 +55,14 @@ class ApplicationMultiplexer(GoRouterWorker):
     |                *----+                |
     |  select        |    |  bad_input     |
     |                +----*                |
-    +----+----*--+---+    +----------------+
-         |    |   \ - - +
-         |    |          \
-    +----*----+------+    *----------------+
-    |                |    |                |
-    |  selected      +----*  abort         |
-    |                |    |                |
-    +----------------+    +----------------+
+    +----+----*------+    +----------------+
+         |    |
+         |    |
+    +----*----+------+
+    |                |
+    |  selected      +
+    |                |
+    +----------------+
 """
 
     CONFIG_CLASS = ApplicationMultiplexerConfig
@@ -73,7 +73,6 @@ class ApplicationMultiplexer(GoRouterWorker):
     STATE_SELECT = "select"
     STATE_SELECTED = "selected"
     STATE_BAD_INPUT = "bad_input"
-    STATE_ABORT = "abort"
 
     @inlineCallbacks
     def setup_router(self):
@@ -119,7 +118,7 @@ class ApplicationMultiplexer(GoRouterWorker):
         try:
             next_state, updated_session = yield self.handlers[state](
                 config, session, msg)
-            if next_state == self.STATE_ABORT:
+            if next_state is None:
                 # Halt session immediately
                 log.msg(("Router configuration change forced session abort "
                          "for user %s" % user_id))
@@ -161,7 +160,7 @@ class ApplicationMultiplexer(GoRouterWorker):
             returnValue((self.STATE_BAD_INPUT, {}))
         else:
             if endpoint not in self.target_endpoints(config):
-                returnValue((self.STATE_ABORT, {}))
+                returnValue((None, {}))
             else:
                 forwarded_msg = self.forwarded_message(
                     msg,
@@ -178,7 +177,7 @@ class ApplicationMultiplexer(GoRouterWorker):
     def handle_state_selected(self, config, session, msg):
         active_endpoint = session['active_endpoint']
         if active_endpoint not in self.target_endpoints(config):
-            returnValue((self.STATE_ABORT, {}))
+            returnValue((None, {}))
         else:
             yield self.publish_inbound(msg, active_endpoint)
             returnValue((self.STATE_SELECTED, {}))
