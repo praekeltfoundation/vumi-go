@@ -36,9 +36,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
     def setup_session(self, user_id, data):
         return self.router_worker.session_manager.create_session(
-            user_id,
-            **data
-        )
+            user_id, **data)
 
     @inlineCallbacks
     def assert_session_state(self, user_id, expected_session):
@@ -104,14 +102,10 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def test_state_start_to_select(self):
         router = yield self.router_helper.create_router(
-            started=True,
-            config=self.ROUTER_CONFIG
-        )
+            started=True, config=self.ROUTER_CONFIG)
         # msg sent from user
         yield self.router_helper.ri.make_dispatch_inbound(
-            None,
-            router=router,
-            from_addr='123')
+            None, router=router, from_addr='123')
 
         # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
@@ -126,9 +120,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def test_state_select_to_selected(self):
         router = yield self.router_helper.create_router(
-            started=True,
-            config=self.ROUTER_CONFIG
-        )
+            started=True, config=self.ROUTER_CONFIG)
 
         yield self.setup_session('123', {
             'state': ApplicationMultiplexer.STATE_SELECT,
@@ -137,11 +129,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # msg sent from user
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            '1',
-            router=router,
-            from_addr='123',
-            session_event='resume'
-        )
+            '1', router=router, from_addr='123', session_event='resume')
 
         # assert that message is forwarded to application
         [msg] = self.router_helper.ro.get_dispatched_inbound()
@@ -153,8 +141,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
-        self.assertEqual(msg['content'],
-                         'Flappy Flappy!')
+        self.assertEqual(msg['content'], 'Flappy Flappy!')
 
         yield self.assert_session_state('123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
@@ -165,9 +152,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def test_state_selected_to_selected(self):
         router = yield self.router_helper.create_router(
-            started=True,
-            config=self.ROUTER_CONFIG
-        )
+            started=True, config=self.ROUTER_CONFIG)
 
         yield self.setup_session('123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
@@ -177,11 +162,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # msg sent from user
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            'Up!',
-            router=router,
-            from_addr='123',
-            session_event='resume'
-        )
+            'Up!', router=router, from_addr='123', session_event='resume')
 
         # assert that message is forwarded to application
         [msg] = self.router_helper.ro.get_dispatched_inbound()
@@ -190,9 +171,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # application sends reply
         yield self.router_helper.ro.make_dispatch_reply(
-            msg,
-            'Game Over!\n1) Try Again!'
-        )
+            msg, 'Game Over!\n1) Try Again!')
 
         # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
@@ -208,9 +187,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def test_state_selected_to_select(self):
         router = yield self.router_helper.create_router(
-            started=True,
-            config=self.ROUTER_CONFIG
-        )
+            started=True, config=self.ROUTER_CONFIG)
 
         yield self.setup_session('123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
@@ -220,11 +197,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # msg sent from user
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            ':menu',
-            router=router,
-            from_addr='123',
-            session_event='resume'
-        )
+            ':menu', router=router, from_addr='123', session_event='resume')
 
         # assert that a close message is forwarded to application
         [msg] = self.router_helper.ro.get_dispatched_inbound()
@@ -256,11 +229,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # msg sent from user
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            'foo',
-            router=router,
-            from_addr='123',
-            session_event='resume'
-        )
+            'foo', router=router, from_addr='123', session_event='resume')
 
          # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
@@ -286,11 +255,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # msg sent from user
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            'foo',
-            router=router,
-            from_addr='123',
-            session_event='resume'
-        )
+            'foo', router=router, from_addr='123', session_event='resume')
 
          # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
@@ -316,11 +281,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # msg sent from user
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            '1',
-            router=router,
-            from_addr='123',
-            session_event='resume'
-        )
+            '1', router=router, from_addr='123', session_event='resume')
 
          # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
@@ -356,11 +317,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # msg sent from user
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            'Up!',
-            router=router,
-            from_addr='123',
-            session_event='resume'
-        )
+            'Up!', router=router, from_addr='123', session_event='resume')
         # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
         self.assertEqual(msg['content'],
@@ -383,9 +340,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         config = copy.deepcopy(self.ROUTER_CONFIG)
         config['entries'][0]['endpoint'] = 'mama'
         router = yield self.router_helper.create_router(
-            started=True,
-            config=config
-        )
+            started=True, config=config)
         yield self.setup_session('123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
             'active_endpoint': 'flappy-bird',
@@ -394,11 +349,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
         # msg sent from user
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            'Up!',
-            router=router,
-            from_addr='123',
-            session_event='resume'
-        )
+            'Up!', router=router, from_addr='123', session_event='resume')
         # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
         self.assertEqual(msg['content'],
@@ -426,12 +377,10 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         })
         msg = self.router_helper.make_inbound(content=':menu')
         self.assertTrue(self.router_worker.scan_for_keywords(
-            config,
-            msg, (':menu',)))
+            config, msg, (':menu',)))
         msg = self.router_helper.make_inbound(content='Foo bar baz')
         self.assertFalse(self.router_worker.scan_for_keywords(
-            config,
-            msg, (':menu',)))
+            config, msg, (':menu',)))
 
     def test_create_menu(self):
         config = self.dynamic_config({
