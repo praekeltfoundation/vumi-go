@@ -350,6 +350,63 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         # assert that session cleared
         yield self.assert_session_state('123', {})
 
+    @inlineCallbacks
+    def test_receive_close_inbound(self):
+        """
+        Same as the above test, but when in any state other than
+        STATE_SELECTED.
+        """
+        router = yield self.router_helper.create_router(
+            started=True, config=self.ROUTER_CONFIG)
+
+        yield self.setup_session('123', {
+            'state': ApplicationMultiplexer.STATE_SELECT,
+            'endpoints': '["flappy-bird"]'
+        })
+
+        # msg sent from user
+        msg = yield self.router_helper.ri.make_dispatch_inbound(
+            None, router=router, from_addr='123', session_event='close')
+
+        # assert that no app received a forwarded 'close' message
+        msgs = self.router_helper.ro.get_dispatched_inbound()
+        self.assertEqual(msgs, [])
+        self.assertEqual(msg['session_event'], 'close')
+
+        # assert that no response sent to user
+        msgs = self.router_helper.ri.get_dispatched_outbound()
+        self.assertEqual(msgs, [])
+
+        # assert that session cleared
+        yield self.assert_session_state('123', {})
+
+    @inlineCallbacks
+    def test_receive_close_outbound(self):
+        router = yield self.router_helper.create_router(
+            started=True, config=self.ROUTER_CONFIG)
+
+        yield self.setup_session('123', {
+            'state': ApplicationMultiplexer.STATE_SELECTED,
+            'active_endpoint': 'flappy-bird',
+            'endpoints': '["flappy-bird"]',
+        })
+
+        # msg sent from user
+        msg = yield self.router_helper.ri.make_dispatch_inbound(
+            "3", router=router, from_addr='123', session_event='resume')
+
+        # application quits session
+        yield self.router_helper.ro.make_dispatch_reply(
+            msg, 'Game Over!', session_event='close')
+
+        # assert that user receives the forwarded 'close' message
+        [msg] = self.router_helper.ri.get_dispatched_outbound()
+        self.assertEqual(msg['content'], 'Game Over!')
+        self.assertEqual(msg['session_event'], 'close')
+
+        # assert that session cleared
+        yield self.assert_session_state('123', {})
+
     def test_get_menu_choice(self):
         # good
         msg = self.router_helper.make_inbound(content='3 ')
