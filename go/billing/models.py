@@ -74,6 +74,10 @@ class MessageCost(models.Model):
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The base message cost in cents."))
 
+    session_cost = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The base cost per session in cents."))
+
     markup_percent = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("The markup percentage. e.g. 20.0 for twenty percent"))
@@ -115,6 +119,7 @@ class Transaction(models.Model):
     tag_name = models.CharField(max_length=100, blank=True)
     message_direction = models.CharField(max_length=20, blank=True)
     message_cost = models.IntegerField(blank=True, null=True)
+    session_cost = models.IntegerField(blank=True, null=True)
     markup_percent = models.DecimalField(max_digits=10, decimal_places=2,
                                          blank=True, null=True)
 
