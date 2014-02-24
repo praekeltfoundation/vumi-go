@@ -63,3 +63,10 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
             ConversationMetric.make_name(self.conv, name) for name in [
                 'wikipedia_search_call', 'wikipedia_extract_call',
                 'wikipedia_extract_call']])
+
+    @inlineCallbacks
+    def test_api_url_config(self):
+        yield self.setup_conv({'api_url': 'http://wikipedia/api.php'})
+        msg = self.app_helper.make_inbound(None, conv=self.conv)
+        config = yield self.app.get_config(msg)
+        self.assertEqual(config.api_url.geturl(), 'http://wikipedia/api.php')
