@@ -185,9 +185,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def test_state_select_to_bad_input(self):
         router = yield self.router_helper.create_router(
-            started=True,
-            config=self.ROUTER_CONFIG
-        )
+            started=True, config=self.ROUTER_CONFIG)
 
         yield self.setup_session('123', {
             'state': ApplicationMultiplexer.STATE_SELECT,
@@ -211,9 +209,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def test_state_bad_input_to_bad_input(self):
         router = yield self.router_helper.create_router(
-            started=True,
-            config=self.ROUTER_CONFIG
-        )
+            started=True, config=self.ROUTER_CONFIG)
 
         yield self.setup_session('123', {
             'state': ApplicationMultiplexer.STATE_BAD_INPUT,
@@ -237,9 +233,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def test_state_bad_input_to_select(self):
         router = yield self.router_helper.create_router(
-            started=True,
-            config=self.ROUTER_CONFIG
-        )
+            started=True, config=self.ROUTER_CONFIG)
 
         yield self.setup_session('123', {
             'state': ApplicationMultiplexer.STATE_BAD_INPUT,
@@ -267,9 +261,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         and sends an appropriate error message back to the user
         """
         router = yield self.router_helper.create_router(
-            started=True,
-            config=self.ROUTER_CONFIG
-        )
+            started=True, config=self.ROUTER_CONFIG)
 
         # Make worker.target_endpoints raise an exception
         self.patch(self.router_worker,
