@@ -323,6 +323,33 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                          'Oops! Sorry!')
         yield self.assert_session_state('123', {})
 
+    @inlineCallbacks
+    def test_state_selected_receive_close_inbound(self):
+        router = yield self.router_helper.create_router(
+            started=True, config=self.ROUTER_CONFIG)
+
+        yield self.setup_session('123', {
+            'state': ApplicationMultiplexer.STATE_SELECTED,
+            'active_endpoint': 'flappy-bird',
+            'endpoints': '["flappy-bird"]',
+        })
+
+        # msg sent from user
+        msg = yield self.router_helper.ri.make_dispatch_inbound(
+            None, router=router, from_addr='123', session_event='close')
+
+        # assert app received forwarded 'close' message
+        [msg] = self.router_helper.ro.get_dispatched_inbound()
+        self.assertEqual(msg['content'], None)
+        self.assertEqual(msg['session_event'], 'close')
+
+        # assert that no response sent to user
+        msgs = self.router_helper.ri.get_dispatched_outbound()
+        self.assertEqual(msgs, [])
+
+        # assert that session cleared
+        yield self.assert_session_state('123', {})
+
     def test_get_menu_choice(self):
         # good
         msg = self.router_helper.make_inbound(content='3 ')

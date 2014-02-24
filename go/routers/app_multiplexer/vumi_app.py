@@ -110,7 +110,7 @@ class ApplicationMultiplexer(GoRouterWorker):
             state = self.STATE_START
             yield self.session_manager.create_session(user_id)
         elif session_event == TransportUserMessage.SESSION_CLOSE:
-            self.handle_session_close(self, config, session, msg)
+            yield self.handle_session_close(config, session, msg)
             return
         else:
             log.msg("Loading session for user %s: %s" % (user_id, session,))
@@ -206,9 +206,8 @@ class ApplicationMultiplexer(GoRouterWorker):
 
     @inlineCallbacks
     def handle_session_close(self, config, session, msg):
-        user_id = msg['to_addr']
-        session_event = msg['session_event']
-        if session_event == self.STATE_SELECTED and \
+        user_id = msg['from_addr']
+        if session.get('state', None) == self.STATE_SELECTED and \
            session['active_endpoint'] in self.target_endpoints(config):
             yield self.publish_inbound(
                 self.forwarded_message(
