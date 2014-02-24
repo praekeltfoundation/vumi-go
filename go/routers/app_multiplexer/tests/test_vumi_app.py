@@ -1,5 +1,4 @@
 import copy
-import json
 
 from twisted.internet.defer import inlineCallbacks
 
@@ -19,7 +18,6 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     ROUTER_CONFIG = {
         'invalid_input_message': 'Bad choice.\n1) Try Again',
         'error_message': 'Oops! Sorry!',
-        'keyword': ':menu',
         'entries': [
             {
                 'label': 'Flappy Bird',
@@ -185,37 +183,6 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_state_selected_to_select(self):
-        router = yield self.router_helper.create_router(
-            started=True, config=self.ROUTER_CONFIG)
-
-        yield self.setup_session('123', {
-            'state': ApplicationMultiplexer.STATE_SELECTED,
-            'active_endpoint': 'flappy-bird',
-            'endpoints': '["flappy-bird"]',
-        })
-
-        # msg sent from user
-        msg = yield self.router_helper.ri.make_dispatch_inbound(
-            ':menu', router=router, from_addr='123', session_event='resume')
-
-        # assert that a close message is forwarded to application
-        [msg] = self.router_helper.ro.get_dispatched_inbound()
-        self.assertEqual(msg['content'], None)
-        self.assertEqual(msg['session_event'], 'close')
-
-         # assert that the user received a response
-        [msg] = self.router_helper.ri.get_dispatched_outbound()
-        self.assertEqual(msg['content'],
-                         'Please select a choice.\n1) Flappy Bird')
-
-        yield self.assert_session_state('123', {
-            'state': ApplicationMultiplexer.STATE_SELECT,
-            'active_endpoint': 'None',
-            'endpoints': '["flappy-bird"]',
-        })
-
-    @inlineCallbacks
     def test_state_select_to_bad_input(self):
         router = yield self.router_helper.create_router(
             started=True,
@@ -370,17 +337,6 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         msg = self.router_helper.make_inbound(content='Foo ')
         choice = self.router_worker.get_menu_choice(msg, (1, 2))
         self.assertEqual(choice, None)
-
-    def test_scan_for_keywords(self):
-        config = self.dynamic_config({
-            'keyword': ':menu'
-        })
-        msg = self.router_helper.make_inbound(content=':menu')
-        self.assertTrue(self.router_worker.scan_for_keywords(
-            config, msg, (':menu',)))
-        msg = self.router_helper.make_inbound(content='Foo bar baz')
-        self.assertFalse(self.router_worker.scan_for_keywords(
-            config, msg, (':menu',)))
 
     def test_create_menu(self):
         config = self.dynamic_config({

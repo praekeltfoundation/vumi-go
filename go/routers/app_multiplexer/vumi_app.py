@@ -26,9 +26,6 @@ class ApplicationMultiplexerConfig(GoRouterWorker.CONFIG_CLASS):
     entries = ConfigList(
         "A list of application endpoints and associated labels",
         default=[])
-    keyword = ConfigText(
-        "Keyword to signal a request to return to the application menu",
-        default=None)
     invalid_input_message = ConfigText(
         "Prompt to display when warning about an invalid choice",
         default=("That is an incorrect choice. Please enter the number "
@@ -181,19 +178,6 @@ class ApplicationMultiplexer(GoRouterWorker):
         active_endpoint = session['active_endpoint']
         if active_endpoint not in self.target_endpoints(config):
             returnValue((self.STATE_ABORT_SESSION, {}))
-        elif self.scan_for_keywords(config, msg, (config.keyword,)):
-            reply_msg = msg.reply(self.create_menu(config))
-            yield self.publish_outbound(reply_msg)
-
-            # Be polite and pass a SESSION_CLOSE to the active endpoint
-            forwarded_msg = self.forwarded_message(
-                msg,
-                content=None,
-                session_event=TransportUserMessage.SESSION_CLOSE
-            )
-            yield self.publish_inbound(forwarded_msg, active_endpoint)
-            returnValue((self.STATE_SELECT,
-                         dict(active_endpoint=None)))
         else:
             yield self.publish_inbound(msg, active_endpoint)
             returnValue((self.STATE_SELECTED, {}))
@@ -234,12 +218,6 @@ class ApplicationMultiplexer(GoRouterWorker):
         for k, v in kwargs.items():
             copy[k] = v
         return copy
-
-    def scan_for_keywords(self, config, msg, keywords):
-        first_word = (clean(msg['content']).split() + [''])[0]
-        if first_word in keywords:
-            return True
-        return False
 
     def get_endpoint_for_choice(self, msg, session):
         """
