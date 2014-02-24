@@ -34,20 +34,16 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             RouterWorkerHelper(ApplicationMultiplexer))
         self.router_worker = yield self.router_helper.get_router_worker({})
 
-    @inlineCallbacks
     def setup_session(self, user_id, data):
-        session_manager = yield self.router_worker.session_manager(
-            self.router_worker.CONFIG_CLASS(self.router_worker.config)
+        return self.router_worker.session_manager.create_session(
+            user_id,
+            **data
         )
-        # Initialize session data
-        yield session_manager.save_session(user_id, data)
 
     @inlineCallbacks
     def assert_session_state(self, user_id, expected_session):
-        session_manager = yield self.router_worker.session_manager(
-            self.router_worker.CONFIG_CLASS(self.router_worker.config)
-        )
-        session = yield session_manager.load_session(user_id)
+        session = yield self.router_worker.session_manager.load_session(
+            user_id)
         if 'created_at' in session:
             del session['created_at']
         self.assertEqual(session, expected_session,

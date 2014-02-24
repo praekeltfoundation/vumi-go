@@ -78,25 +78,21 @@ class ApplicationMultiplexer(GoRouterWorker):
     STATE_BAD_INPUT = "bad_input"
     STATE_ABORT_SESSION = "abort"
 
+    @inlineCallbacks
     def setup_router(self):
-        d = super(ApplicationMultiplexer, self).setup_router()
+        yield super(ApplicationMultiplexer, self).setup_router()
+        config = self.get_static_config()
+        self.session_manager = yield SessionManager.from_redis_config(
+            config.redis_manager,
+            key_prefix="application_multiplexer",
+            max_session_length=config.session_expiry
+        )
         self.handlers = {
             self.STATE_START: self.handle_state_start,
             self.STATE_SELECT: self.handle_state_select,
             self.STATE_SELECTED: self.handle_state_selected,
             self.STATE_BAD_INPUT: self.handle_state_bad_input
         }
-        return d
-
-    def session_manager(self, config):
-        """
-        The implementation of SessionManager does the job of
-        appending ':session' to key names.
-        """
-        return SessionManager.from_redis_config(
-            config.redis_manager,
-            max_session_length=config.session_expiry
-        )
 
     def target_endpoints(self, config):
         """
@@ -109,14 +105,13 @@ class ApplicationMultiplexer(GoRouterWorker):
         log.msg("Processing inbound message: %s" % (msg,))
 
         user_id = msg['from_addr']
-        session_manager = yield self.session_manager(config)
 
-        session = yield session_manager.load_session(user_id)
+        session = yield self.session_manager.load_session(user_id)
         if not session:
             log.msg("Creating session for user %s" % user_id)
             session = {}
             state = self.STATE_START
-            yield session_manager.create_session(user_id)
+            yield self.session_manager.create_session(user_id)
         else:
             log.msg("Loading session for user %s: %s" % (user_id, session,))
             state = session['state']
@@ -130,7 +125,7 @@ class ApplicationMultiplexer(GoRouterWorker):
                 # the user at this point.
                 log.msg(("Router configuration change forced session abort "
                          "for user %s" % user_id))
-                yield session_manager.clear_session(user_id)
+                yield self.session_manager.clear_session(user_id)
                 yield self.publish_error_reply(msg, config)
             else:
                 session['state'] = next_state
@@ -138,10 +133,10 @@ class ApplicationMultiplexer(GoRouterWorker):
                 if state != next_state:
                     log.msg("State transition for user %s: %s => %s" %
                             (user_id, state, next_state))
-                yield session_manager.save_session(user_id, session)
+                yield self.session_manager.save_session(user_id, session)
         except:
             log.err()
-            yield session_manager.clear_session(user_id)
+            yield self.session_manager.clear_session(user_id)
             yield self.publish_error_reply(msg, config)
 
     @inlineCallbacks
