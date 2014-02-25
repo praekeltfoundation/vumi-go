@@ -88,15 +88,14 @@ class MessageCost(models.Model):
         """Return the calculated cost per message (in credits)."""
         return self.calculate_credit_cost(
             self.message_cost, self.markup_percent,
-            self.session_cost, session_created=False)
+            Decimal('0.0'), session_created=False)
 
     @property
     def session_credit_cost(self):
         """Return the calculated cost per session (in credits)."""
         return (self.calculate_credit_cost(
-            self.message_cost, self.markup_percent,
+            Decimal('0.0'), self.markup_percent,
             self.session_cost, session_created=True)
-            - self.credit_cost)
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
