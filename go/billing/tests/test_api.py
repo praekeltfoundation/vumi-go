@@ -372,6 +372,9 @@ class TestTransaction(VumiTestCase):
         credit_amount = MessageCost.calculate_credit_cost(
             decimal.Decimal('0.6'), decimal.Decimal('10.0'),
             decimal.Decimal('0.3'), session_created=False)
+        credit_amount_for_session = MessageCost.calculate_credit_cost(
+            decimal.Decimal('0.6'), decimal.Decimal('10.0'),
+            decimal.Decimal('0.3'), session_created=True)
 
         # Create a transaction
         content = {
@@ -415,4 +418,46 @@ class TestTransaction(VumiTestCase):
         account = json.loads(response.value(), cls=JSONDecoder)
         self.assertTrue(account['credit_balance'] == -credit_amount)
 
-        # TODO: add test for session_created = True
+        # Create a transaction (with session_created=True)
+        content = {
+            'account_number': account['account_number'],
+            'tag_pool_name': "test_pool2",
+            'tag_name': "12345",
+            'message_direction': "Inbound",
+            'session_created': True,
+        }
+
+        headers = {'content-type': 'application/json'}
+        response = yield self.web.post(
+            'transactions', args=None, content=content, headers=headers)
+
+        self.assertEqual(response.responseCode, 200)
+
+        # Make sure there was a transaction created (with session_created=True)
+        args = {'account_number': account['account_number']}
+        response = yield self.web.get('transactions', args=args)
+        self.assertEqual(response.responseCode, 200)
+        [transaction, _] = json.loads(response.value(), cls=JSONDecoder)
+        del (transaction['id'], transaction['created'],
+             transaction['last_modified'])
+        self.assertEqual(transaction, {
+            u'account_number': account['account_number'],
+            u'credit_amount': -credit_amount_for_session,
+            u'credit_factor': decimal.Decimal('10.000000'),
+            u'markup_percent': decimal.Decimal('10.000000'),
+            u'message_cost': 1,
+            u'message_direction': u'Inbound',
+            u'session_cost': 0,
+            u'session_created': True,
+            u'status': u'Completed',
+            u'tag_name': u'12345',
+            u'tag_pool_name': u'test_pool2'
+        })
+
+        # Get the account and make sure the credit balance was updated
+        url = 'accounts/%s' % (account['account_number'],)
+        response = yield self.web.get(url)
+        self.assertEqual(response.responseCode, 200)
+        account = json.loads(response.value(), cls=JSONDecoder)
+        self.assertEqual(account['credit_balance'],
+                        -(credit_amount + credit_amount_for_session))
