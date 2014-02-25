@@ -119,9 +119,21 @@ class Transaction(models.Model):
     tag_pool_name = models.CharField(max_length=100, blank=True)
     tag_name = models.CharField(max_length=100, blank=True)
     message_direction = models.CharField(max_length=20, blank=True)
-    message_cost = models.IntegerField(blank=True, null=True)
+
+    message_cost = models.DecimalField(
+        null=True,
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The message cost (in cents) used to calculate"
+                    " credit_amount."))
+
     session_created = models.NullBooleanField(blank=True, null=True)
-    session_cost = models.IntegerField(blank=True, null=True)
+
+    session_cost = models.DecimalField(
+        null=True,
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The session cost (in cents) used to calculate"
+                    " credit_amount."))
+
     markup_percent = models.DecimalField(max_digits=10, decimal_places=2,
                                          blank=True, null=True)
 
