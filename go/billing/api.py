@@ -705,20 +705,6 @@ class TransactionResource(BaseResource):
         markup_percent = result.get('markup_percent', 0)
         credit_amount = result.get('credit_amount', 0)
 
-        # Update the account's credit balance
-        query = """
-            UPDATE billing_account
-            SET credit_balance = credit_balance - %(credit_amount)s
-            WHERE account_number = %(account_number)s
-        """
-
-        params = {
-            'credit_amount': credit_amount,
-            'account_number': account_number
-        }
-
-        cursor = yield cursor.execute(query, params)
-
         # Create a new transaction
         query = """
             INSERT INTO billing_transaction
@@ -755,6 +741,20 @@ class TransactionResource(BaseResource):
 
         cursor = yield cursor.execute(query, params)
         transaction = yield cursor.fetchone()
+
+        # Update the account's credit balance
+        query = """
+            UPDATE billing_account
+            SET credit_balance = credit_balance - %(credit_amount)s
+            WHERE account_number = %(account_number)s
+        """
+
+        params = {
+            'credit_amount': credit_amount,
+            'account_number': account_number
+        }
+
+        cursor = yield cursor.execute(query, params)
 
         # Check the account's credit balance and raise an
         # alert if it has gone below the credit balance threshold
