@@ -7,17 +7,14 @@ from django.forms.models import BaseModelFormSet
 
 from go.vumitools.api import VumiApi
 
-from go.billing import settings as app_settings
 from go.billing.models import Account, TagPool, MessageCost, Transaction
 
 
-def decimal_rounded_to_zero(a):
+def cost_rounded_to_zero(a, context):
     """
     Return ``True`` if ``a`` was rouned to zero (and ``False`` otherwise).
     """
-    context = Context()
-    a = a.quantize(app_settings.QUANTIZATION_EXPONENT, context=context)
-    return context.flags[Inexact] and a == Decimal('0.0')
+    return bool(context.flags[Inexact] and a == Decimal('0.0'))
 
 
 class MessageCostForm(ModelForm):
@@ -32,18 +29,20 @@ class MessageCostForm(ModelForm):
         session_cost = cleaned_data.get('session_cost')
         markup_percent = cleaned_data.get('markup_percent')
         if message_cost and markup_percent:
+            context = Context()
             credit_cost = MessageCost.calculate_credit_cost(
                 message_cost, markup_percent,
-                Decimal('0.0'), session_created=False)
-            if decimal_rounded_to_zero(credit_cost):
+                Decimal('0.0'), session_created=False, context=context)
+            if cost_rounded_to_zero(credit_cost, context):
                 raise forms.ValidationError(
                     "The resulting cost per message (in credits) was rounded"
                     " to 0.")
         if session_cost and markup_percent:
+            context = Context()
             session_credit_cost = MessageCost.calculate_credit_cost(
                 Decimal('0.0'), markup_percent,
-                session_cost, session_created=False)
-            if decimal_rounded_to_zero(session_credit_cost):
+                session_cost, session_created=True, context=context)
+            if cost_rounded_to_zero(session_credit_cost, context):
                 raise forms.ValidationError(
                     "The resulting cost per session (in credits) was rounded"
                     " to 0.")
