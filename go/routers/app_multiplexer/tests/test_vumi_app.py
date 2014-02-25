@@ -50,15 +50,6 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                          msg="Unexpected session data")
 
     @inlineCallbacks
-    def assert_routed_inbound(self, content, router, expected_endpoint):
-        msg = yield self.router_helper.ri.make_dispatch_inbound(
-            content, router=router)
-        emsg = msg.copy()
-        emsg.set_routing_endpoint(expected_endpoint)
-        rmsg = self.router_helper.ro.get_dispatched_inbound()[-1]
-        self.assertEqual(emsg, rmsg)
-
-    @inlineCallbacks
     def test_start(self):
         router = yield self.router_helper.create_router()
         self.assertTrue(router.stopped())
@@ -97,7 +88,10 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(nack['event_type'], 'nack')
 
     @inlineCallbacks
-    def test_state_start_to_select(self):
+    def test_new_session_display_menu(self):
+        """
+        Prompt user to choice an application endpoint.
+        """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
         # msg sent from user
@@ -115,7 +109,11 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_state_select_to_selected(self):
+    def test_select_application_endpoint(self):
+        """
+        Retrieve endpoint choice from user and set currently active
+        endpoint.
+        """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
@@ -147,7 +145,10 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_state_selected_to_selected(self):
+    def test_session_with_selected_endpoint(self):
+        """
+        Tests an ongoing USSD session with a previously selected endpoint
+        """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
@@ -182,7 +183,10 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_state_select_to_bad_input(self):
+    def test_bad_input_for_endpoint_choice(self):
+        """
+        User entered bad input for the endpoint selection menu.
+        """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
@@ -206,7 +210,11 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_state_bad_input_to_bad_input(self):
+    def test_state_bad_input_for_bad_input_prompt(self):
+        """
+        User entered bad input for the prompt telling the user
+        that they entered bad input (ha! recursive).
+        """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
@@ -230,7 +238,11 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_state_bad_input_to_select(self):
+    def test_state_good_input_for_bad_input_prompt(self):
+        """
+        User entered good input for the prompt telling the user
+        that they entered bad input.
+        """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
@@ -254,7 +266,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_runtime_exception(self):
+    def test_runtime_exception_in_selected_handler(self):
         """
         Verifies that the worker handles an arbitrary runtime error gracefully,
         and sends an appropriate error message back to the user
@@ -287,7 +299,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(len(errors), 1)
 
     @inlineCallbacks
-    def test_session_invalidation(self):
+    def test_session_invalidation_in_state_handler(self):
         """
         Verify that the router gracefully handles a configuration
         update while there is an active user session.
@@ -316,6 +328,11 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_state_selected_receive_close_inbound(self):
+        """
+        User sends 'close' msg to the active endpoint via the router.
+        Verify that the message is forwarded and that the session for
+        the user is cleared.
+        """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
@@ -344,8 +361,8 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
     @inlineCallbacks
     def test_receive_close_inbound(self):
         """
-        Same as the above test, but when in any state other than
-        STATE_SELECTED.
+        Same as the above test, but only for the case when
+        an active endpoint has not yet been selected.
         """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
@@ -373,6 +390,11 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
 
     @inlineCallbacks
     def test_receive_close_outbound(self):
+        """
+        Application sends a 'close' message to the user via
+        the router. Verify that the message is forwarded correctly,
+        and that the session is terminated.
+        """
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
@@ -399,6 +421,9 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         yield self.assert_session_state('123', {})
 
     def test_get_menu_choice(self):
+        """
+        Verify that we parse user input correctly for menu prompts.
+        """
         # good
         msg = self.router_helper.make_inbound(content='3 ')
         choice = self.router_worker.get_menu_choice(msg, (1, 4))
@@ -414,6 +439,9 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(choice, None)
 
     def test_create_menu(self):
+        """
+        Create a menu prompt to choose between linked endpoints
+        """
         router_worker = yield self.router_helper.get_router_worker({
             'menu_title': {'content': 'Please select a choice'},
             'entries': [
