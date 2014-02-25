@@ -84,7 +84,7 @@ class MessageCost(models.Model):
         help_text=_("The markup percentage. e.g. 20.0 for twenty percent"))
 
     @property
-    def credit_cost(self):
+    def message_credit_cost(self):
         """Return the calculated cost per message (in credits)."""
         return self.calculate_credit_cost(
             self.message_cost, self.markup_percent,

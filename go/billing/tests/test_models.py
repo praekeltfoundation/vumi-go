@@ -65,12 +65,12 @@ class TestMessageCost(GoDjangoTestCase):
                 decimal.Decimal('2.0'), session_created=True),
             decimal.Decimal('84.0'))
 
-    def test_credit_cost(self):
+    def test_message_credit_cost(self):
         mc = self.mk_msg_cost(
             message_cost=decimal.Decimal('5.0'),
             markup_percent=decimal.Decimal('50.0'),
             session_cost=decimal.Decimal('100.0'))
-        self.assertEqual(mc.credit_cost, decimal.Decimal('75.0'))
+        self.assertEqual(mc.message_credit_cost, decimal.Decimal('75.0'))
 
     def test_session_credit_cost(self):
         mc = self.mk_msg_cost(
