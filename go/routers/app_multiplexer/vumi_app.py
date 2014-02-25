@@ -87,7 +87,7 @@ class ApplicationMultiplexer(GoRouterWorker):
     def session_manager(self, config):
         return SessionManager.from_redis_config(
             config.redis_manager,
-            key_prefix=self.worker_name,
+            key_prefix=':'.join((self.worker_name, config.router.key)),
             max_session_length=config.session_expiry
         )
 

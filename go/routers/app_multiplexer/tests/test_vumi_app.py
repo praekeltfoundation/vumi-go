@@ -30,19 +30,21 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             RouterWorkerHelper(ApplicationMultiplexer))
         self.router_worker = yield self.router_helper.get_router_worker({})
 
+    def dynamic_config_with_router(self, router):
+        msg = self.router_helper.make_inbound(None, router=router)
+        return self.router_worker.get_config(msg)
+
     @inlineCallbacks
-    def setup_session(self, user_id, data):
-        session_manager = yield self.router_worker.session_manager(
-            self.router_worker.CONFIG_CLASS(self.router_worker.config)
-        )
+    def setup_session(self, router, user_id, data):
+        config = yield self.dynamic_config_with_router(router)
+        session_manager = yield self.router_worker.session_manager(config)
         # Initialize session data
         yield session_manager.save_session(user_id, data)
 
     @inlineCallbacks
-    def assert_session_state(self, user_id, expected_session):
-        session_manager = yield self.router_worker.session_manager(
-            self.router_worker.CONFIG_CLASS(self.router_worker.config)
-        )
+    def assert_session(self, router, user_id, expected_session):
+        config = yield self.dynamic_config_with_router(router)
+        session_manager = yield self.router_worker.session_manager(config)
         session = yield session_manager.load_session(user_id)
         if 'created_at' in session:
             del session['created_at']
@@ -103,7 +105,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msg['content'],
                          'Please select a choice.\n1) Flappy Bird')
         # assert that session data updated correctly
-        yield self.assert_session_state('123', {
+        yield self.assert_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECT,
             'endpoints': '["flappy-bird"]',
         })
@@ -117,7 +119,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECT,
             'endpoints': '["flappy-bird"]',
         })
@@ -138,7 +140,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         [msg] = self.router_helper.ri.get_dispatched_outbound()
         self.assertEqual(msg['content'], 'Flappy Flappy!')
 
-        yield self.assert_session_state('123', {
+        yield self.assert_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
             'active_endpoint': 'flappy-bird',
             'endpoints': '["flappy-bird"]',
@@ -152,7 +154,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
             'active_endpoint': 'flappy-bird',
             'endpoints': '["flappy-bird"]',
@@ -176,7 +178,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msg['content'],
                          'Game Over!\n1) Try Again!')
 
-        yield self.assert_session_state('123', {
+        yield self.assert_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
             'active_endpoint': 'flappy-bird',
             'endpoints': '["flappy-bird"]',
@@ -190,7 +192,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECT,
             'endpoints': '["flappy-bird"]',
         })
@@ -204,7 +206,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msg['content'],
                          'Bad choice.\n1) Try Again')
 
-        yield self.assert_session_state('123', {
+        yield self.assert_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_BAD_INPUT,
             'endpoints': '["flappy-bird"]',
         })
@@ -218,7 +220,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_BAD_INPUT,
             'endpoints': '["flappy-bird"]',
         })
@@ -232,7 +234,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msg['content'],
                          'Bad choice.\n1) Try Again')
 
-        yield self.assert_session_state('123', {
+        yield self.assert_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_BAD_INPUT,
             'endpoints': '["flappy-bird"]',
         })
@@ -246,7 +248,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_BAD_INPUT,
             'endpoints': '["flappy-bird"]',
         })
@@ -260,7 +262,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msg['content'],
                          'Please select a choice.\n1) Flappy Bird')
 
-        yield self.assert_session_state('123', {
+        yield self.assert_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECT,
             'endpoints': '["flappy-bird"]',
         })
@@ -279,7 +281,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                    'target_endpoints',
                    raise_error)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
             'active_endpoint': 'flappy-bird',
             'endpoints': '["flappy-bird"]',
@@ -293,7 +295,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msg['content'],
                          'Oops! Sorry!')
 
-        yield self.assert_session_state('123', {})
+        yield self.assert_session(router, '123', {})
 
         errors = self.flushLoggedErrors(RuntimeError)
         self.assertEqual(len(errors), 1)
@@ -311,7 +313,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         config['entries'][0]['endpoint'] = 'mama'
         router = yield self.router_helper.create_router(
             started=True, config=config)
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
             'active_endpoint': 'flappy-bird',
             'endpoints': '["flappy-bird"]',
@@ -324,7 +326,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         [msg] = self.router_helper.ri.get_dispatched_outbound()
         self.assertEqual(msg['content'],
                          'Oops! Sorry!')
-        yield self.assert_session_state('123', {})
+        yield self.assert_session(router, '123', {})
 
     @inlineCallbacks
     def test_state_selected_receive_close_inbound(self):
@@ -336,7 +338,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
             'active_endpoint': 'flappy-bird',
             'endpoints': '["flappy-bird"]',
@@ -356,7 +358,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msgs, [])
 
         # assert that session cleared
-        yield self.assert_session_state('123', {})
+        yield self.assert_session(router, '123', {})
 
     @inlineCallbacks
     def test_receive_close_inbound(self):
@@ -367,7 +369,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECT,
             'endpoints': '["flappy-bird"]'
         })
@@ -386,7 +388,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msgs, [])
 
         # assert that session cleared
-        yield self.assert_session_state('123', {})
+        yield self.assert_session(router, '123', {})
 
     @inlineCallbacks
     def test_receive_close_outbound(self):
@@ -398,7 +400,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         router = yield self.router_helper.create_router(
             started=True, config=self.ROUTER_CONFIG)
 
-        yield self.setup_session('123', {
+        yield self.setup_session(router, '123', {
             'state': ApplicationMultiplexer.STATE_SELECTED,
             'active_endpoint': 'flappy-bird',
             'endpoints': '["flappy-bird"]',
@@ -418,7 +420,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(msg['session_event'], 'close')
 
         # assert that session cleared
-        yield self.assert_session_state('123', {})
+        yield self.assert_session(router, '123', {})
 
     def test_get_menu_choice(self):
         """
