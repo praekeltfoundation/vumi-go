@@ -11,6 +11,15 @@ from go.billing import settings as app_settings
 from go.billing.models import Account, TagPool, MessageCost, Transaction
 
 
+def decimal_rounded_to_zero(a):
+    """
+    Return ``True`` if ``a`` was rouned to zero (and ``False`` otherwise).
+    """
+    context = Context()
+    a = a.quantize(app_settings.QUANTIZATION_EXPONENT, context=context)
+    return context.flags[Inexact] and a == Decimal('0.0')
+
+
 class MessageCostForm(ModelForm):
 
     class Meta:
@@ -20,21 +29,24 @@ class MessageCostForm(ModelForm):
         """Make sure the resulting credit cost does not underflow to zero"""
         cleaned_data = super(MessageCostForm, self).clean()
         message_cost = cleaned_data.get('message_cost')
+        session_cost = cleaned_data.get('session_cost')
         markup_percent = cleaned_data.get('markup_percent')
         if message_cost and markup_percent:
-            markup_amount = (message_cost
-                             * markup_percent / Decimal('100.0'))
-
-            resulting_price = message_cost + markup_amount
-            credit_cost = resulting_price * Decimal(
-                app_settings.CREDIT_CONVERSION_FACTOR)
-
-            context = Context()
-            credit_cost = credit_cost.quantize(
-                app_settings.QUANTIZATION_EXPONENT, context=context)
-
-            if context.flags[Inexact] and credit_cost == Decimal('0.0'):
-                raise forms.ValidationError("The resulting credit cost is 0.")
+            credit_cost = MessageCost.calculate_credit_cost(
+                message_cost, markup_percent,
+                Decimal('0.0'), session_created=False)
+            if decimal_rounded_to_zero(credit_cost):
+                raise forms.ValidationError(
+                    "The resulting cost per message (in credits) was rounded"
+                    " to 0.")
+        if session_cost and markup_percent:
+            session_credit_cost = MessageCost.calculate_credit_cost(
+                Decimal('0.0'), markup_percent,
+                session_cost, session_created=False)
+            if decimal_rounded_to_zero(session_credit_cost):
+                raise forms.ValidationError(
+                    "The resulting cost per session (in credits) was rounded"
+                    " to 0.")
 
         return cleaned_data
 
