@@ -1,3 +1,5 @@
+import decimal
+
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import TagPool, Account, MessageCost, Transaction
 
@@ -38,6 +40,44 @@ class TestMessageCost(GoDjangoTestCase):
             tag_pool = TagPool(name=u"pool", description=u"description")
             tag_pool.save()
         return MessageCost(account=account, tag_pool=tag_pool, **kw)
+
+    def test_calculate_credit_cost(self):
+        self.assertEqual(
+            MessageCost.calculate_credit_cost(
+                decimal.Decimal('1.0'), decimal.Decimal('10.0'),
+                decimal.Decimal('2.0'), session_created=False),
+            decimal.Decimal('11.0'))
+        self.assertEqual(
+            MessageCost.calculate_credit_cost(
+                decimal.Decimal('5.0'), decimal.Decimal('20.0'),
+                decimal.Decimal('2.0'), session_created=False),
+            decimal.Decimal('60.0'))
+
+    def test_calculate_credit_cost_for_new_session(self):
+        self.assertEqual(
+            MessageCost.calculate_credit_cost(
+                decimal.Decimal('1.0'), decimal.Decimal('10.0'),
+                decimal.Decimal('2.0'), session_created=True),
+            decimal.Decimal('33.0'))
+        self.assertEqual(
+            MessageCost.calculate_credit_cost(
+                decimal.Decimal('5.0'), decimal.Decimal('20.0'),
+                decimal.Decimal('2.0'), session_created=True),
+            decimal.Decimal('84.0'))
+
+    def test_credit_cost(self):
+        mc = self.mk_msg_cost(
+            message_cost=decimal.Decimal('5.0'),
+            markup_percent=decimal.Decimal('50.0'),
+            session_cost=decimal.Decimal('100.0'))
+        self.assertEqual(mc.credit_cost, decimal.Decimal('75.0'))
+
+    def test_session_credit_cost(self):
+        mc = self.mk_msg_cost(
+            message_cost=decimal.Decimal('100.0'),
+            markup_percent=decimal.Decimal('50.0'),
+            session_cost=decimal.Decimal('6.0'))
+        self.assertEqual(mc.session_credit_cost, decimal.Decimal('90.0'))
 
     def test_unicode(self):
         mc = self.mk_msg_cost(message_direction='inbound')

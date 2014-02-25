@@ -84,18 +84,19 @@ class MessageCost(models.Model):
         help_text=_("The markup percentage. e.g. 20.0 for twenty percent"))
 
     @property
-    def resulting_price(self):
-        """Return the resulting price in cents"""
-        markup_amount = (self.message_cost
-                         * self.markup_percent / Decimal('100.0'))
-
-        return self.message_cost + markup_amount
+    def credit_cost(self):
+        """Return the calculated cost per message (in credits)."""
+        return self.calculate_credit_cost(
+            self.message_cost, self.markup_percent,
+            self.session_cost, session_created=False)
 
     @property
-    def credit_cost(self):
-        """Return the calculated cost in credits"""
-        return self.calculate_credit_cost(self.message_cost,
-                                          self.markup_percent)
+    def session_credit_cost(self):
+        """Return the calculated cost per session (in credits)."""
+        return (self.calculate_credit_cost(
+            self.message_cost, self.markup_percent,
+            self.session_cost, session_created=True)
+            - self.credit_cost)
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)

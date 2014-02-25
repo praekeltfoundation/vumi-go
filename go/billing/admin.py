@@ -88,14 +88,11 @@ class AccountAdmin(admin.ModelAdmin):
 class MessageCostAdmin(admin.ModelAdmin):
     list_display = ('id', 'account', 'tag_pool', 'message_direction',
                     'message_cost', 'session_cost', 'markup_percent',
-                    'credit_cost')
+                    'credit_cost', 'session_credit_cost')
 
     search_fields = ('tag_pool__name', 'account__account_number')
     list_filter = ('tag_pool', 'message_direction')
     form = MessageCostForm
-
-    def credit_amount(self, obj):
-        return obj.credit_cost
 
 
 class TransactionAdmin(admin.ModelAdmin):
