@@ -93,7 +93,7 @@ class MessageCost(models.Model):
     @property
     def session_credit_cost(self):
         """Return the calculated cost per session (in credits)."""
-        return (self.calculate_credit_cost(
+        return self.calculate_credit_cost(
             Decimal('0.0'), self.markup_percent,
             self.session_cost, session_created=True)
 
