@@ -17,7 +17,7 @@ class ApplicationMultiplexerConfig(GoRouterWorker.CONFIG_CLASS):
     # Static configuration
     session_expiry = ConfigInt(
         "Maximum amount of time in seconds to keep session data around",
-        default=1800, static=True)
+        default=300, static=True)
 
     # Dynamic, per-message configuration
     menu_title = ConfigDict(
