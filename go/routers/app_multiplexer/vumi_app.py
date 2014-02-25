@@ -211,12 +211,7 @@ class ApplicationMultiplexer(GoRouterWorker):
         user_id = msg['from_addr']
         if (session.get('state', None) == self.STATE_SELECTED and
                 session['active_endpoint'] in self.target_endpoints(config)):
-            yield self.publish_inbound(
-                self.forwarded_message(
-                    msg, content=None,
-                    session_event=TransportUserMessage.SESSION_CLOSE),
-                session['active_endpoint']
-            )
+            yield self.publish_inbound(msg, session['active_endpoint'])
         session_manager = yield self.session_manager(config)
         yield session_manager.clear_session(user_id)
 
