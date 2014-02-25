@@ -151,7 +151,7 @@ class ApplicationMultiplexer(GoRouterWorker):
         endpoints = json.dumps(
             [entry['endpoint'] for entry in config.entries]
         )
-        returnValue((self.STATE_SELECT, dict(endpoints=endpoints)))
+        returnValue((self.STATE_SELECT, {'endpoints': endpoints}))
 
     @inlineCallbacks
     def handle_state_select(self, config, session, msg):
@@ -173,7 +173,7 @@ class ApplicationMultiplexer(GoRouterWorker):
                 log.msg("Switched to endpoint '%s' for user %s" %
                         (endpoint, msg['from_addr']))
                 returnValue((self.STATE_SELECTED,
-                             dict(active_endpoint=endpoint)))
+                             {'active_endpoint': endpoint}))
 
     @inlineCallbacks
     def handle_state_selected(self, config, session, msg):
