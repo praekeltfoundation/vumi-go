@@ -99,6 +99,11 @@ class ApplicationMultiplexer(GoRouterWorker):
 
     @inlineCallbacks
     def handle_inbound(self, config, msg, conn_name):
+        """
+        Main delegation point for handling inbound messages and
+        managing the state machine.
+        """
+
         log.msg("Processing inbound message: %s" % (msg,))
 
         user_id = msg['from_addr']
@@ -121,11 +126,9 @@ class ApplicationMultiplexer(GoRouterWorker):
             next_state, updated_session = yield self.handlers[state](
                 config, session, msg)
             if next_state is None:
-                # Halt session immediately
-                log.msg(("Router configuration change forced session abort "
-                         "for user %s" % user_id))
+                # Session terminated (right now, just in the case of a
+                # administrator-initiated configuration change
                 yield session_manager.clear_session(user_id)
-                yield self.publish_error_reply(msg, config)
             else:
                 session['state'] = next_state
                 session.update(updated_session)
@@ -162,6 +165,9 @@ class ApplicationMultiplexer(GoRouterWorker):
             returnValue((self.STATE_BAD_INPUT, {}))
         else:
             if endpoint not in self.target_endpoints(config):
+                log.msg(("Router configuration change forced session "
+                         "termination for user %s" % msg['from_addr']))
+                yield self.publish_error_reply(msg, config)
                 returnValue((None, {}))
             else:
                 forwarded_msg = self.forwarded_message(
@@ -179,6 +185,9 @@ class ApplicationMultiplexer(GoRouterWorker):
     def handle_state_selected(self, config, session, msg):
         active_endpoint = session['active_endpoint']
         if active_endpoint not in self.target_endpoints(config):
+            log.msg(("Router configuration change forced session "
+                     "termination for user %s" % msg['from_addr']))
+            yield self.publish_error_reply(msg, config)
             returnValue((None, {}))
         else:
             yield self.publish_inbound(msg, active_endpoint)
