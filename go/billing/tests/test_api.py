@@ -381,7 +381,8 @@ class TestTransaction(VumiTestCase):
             'account_number': account['account_number'],
             'tag_pool_name': "test_pool2",
             'tag_name': "12345",
-            'message_direction': "Inbound"
+            'message_direction': "Inbound",
+            'session_created': False,
         }
 
         headers = {'content-type': 'application/json'}
@@ -405,7 +406,7 @@ class TestTransaction(VumiTestCase):
             u'message_cost': decimal.Decimal('0.6'),
             u'message_direction': u'Inbound',
             u'session_cost': decimal.Decimal('0.3'),
-            u'session_created': None,
+            u'session_created': False,
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2'
