@@ -74,21 +74,22 @@ class ApplicationMultiplexer(GoRouterWorker):
     STATE_SELECTED = "selected"
     STATE_BAD_INPUT = "bad_input"
 
-    @inlineCallbacks
     def setup_router(self):
-        yield super(ApplicationMultiplexer, self).setup_router()
-        config = self.get_static_config()
-        self.session_manager = yield SessionManager.from_redis_config(
-            config.redis_manager,
-            key_prefix="application_multiplexer",
-            max_session_length=config.session_expiry
-        )
+        d = super(ApplicationMultiplexer, self).setup_router()
         self.handlers = {
             self.STATE_START: self.handle_state_start,
             self.STATE_SELECT: self.handle_state_select,
             self.STATE_SELECTED: self.handle_state_selected,
             self.STATE_BAD_INPUT: self.handle_state_bad_input,
         }
+        return d
+
+    def session_manager(self, config):
+        return SessionManager.from_redis_config(
+            config.redis_manager,
+            key_prefix=self.worker_name,
+            max_session_length=config.session_expiry
+        )
 
     def target_endpoints(self, config):
         """
@@ -101,13 +102,14 @@ class ApplicationMultiplexer(GoRouterWorker):
         log.msg("Processing inbound message: %s" % (msg,))
 
         user_id = msg['from_addr']
-        session = yield self.session_manager.load_session(user_id)
+        session_manager = yield self.session_manager(config)
+        session = yield session_manager.load_session(user_id)
         session_event = msg['session_event']
         if not session or session_event == TransportUserMessage.SESSION_NEW:
             log.msg("Creating session for user %s" % user_id)
             session = {}
             state = self.STATE_START
-            yield self.session_manager.create_session(user_id)
+            yield session_manager.create_session(user_id)
         elif session_event == TransportUserMessage.SESSION_CLOSE:
             yield self.handle_session_close(config, session, msg)
             return
@@ -122,7 +124,7 @@ class ApplicationMultiplexer(GoRouterWorker):
                 # Halt session immediately
                 log.msg(("Router configuration change forced session abort "
                          "for user %s" % user_id))
-                yield self.session_manager.clear_session(user_id)
+                yield session_manager.clear_session(user_id)
                 yield self.publish_error_reply(msg, config)
             else:
                 session['state'] = next_state
@@ -130,10 +132,10 @@ class ApplicationMultiplexer(GoRouterWorker):
                 if state != next_state:
                     log.msg("State transition for user %s: %s => %s" %
                             (user_id, state, next_state))
-                yield self.session_manager.save_session(user_id, session)
+                yield session_manager.save_session(user_id, session)
         except:
             log.err()
-            yield self.session_manager.clear_session(user_id)
+            yield session_manager.clear_session(user_id)
             yield self.publish_error_reply(msg, config)
 
     @inlineCallbacks
@@ -198,9 +200,10 @@ class ApplicationMultiplexer(GoRouterWorker):
         log.msg("Processing outbound message: %s" % (msg,))
         user_id = msg['to_addr']
         session_event = msg['session_event']
-        session = yield self.session_manager.load_session(user_id)
+        session_manager = yield self.session_manager(config)
+        session = yield session_manager.load_session(user_id)
         if session and (session_event == TransportUserMessage.SESSION_CLOSE):
-            yield self.session_manager.clear_session(user_id)
+            yield session_manager.clear_session(user_id)
         yield self.publish_outbound(msg)
 
     @inlineCallbacks
@@ -214,7 +217,8 @@ class ApplicationMultiplexer(GoRouterWorker):
                     session_event=TransportUserMessage.SESSION_CLOSE),
                 session['active_endpoint']
             )
-        yield self.session_manager.clear_session(user_id)
+        session_manager = yield self.session_manager(config)
+        yield session_manager.clear_session(user_id)
 
     def publish_outbound(self, msg):
         return super(ApplicationMultiplexer, self).publish_outbound(
