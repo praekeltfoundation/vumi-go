@@ -13,8 +13,6 @@ def raise_error(*args, **kw):
 
 class TestApplicationMultiplexerRouter(VumiTestCase):
 
-    router_class = ApplicationMultiplexer
-
     ROUTER_CONFIG = {
         'invalid_input_message': 'Bad choice.\n1) Try Again',
         'error_message': 'Oops! Sorry!',
@@ -50,11 +48,6 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
             del session['created_at']
         self.assertEqual(session, expected_session,
                          msg="Unexpected session data")
-
-    def dynamic_config(self, fields):
-        config = self.router_worker.config.copy()
-        config.update(fields)
-        return config
 
     @inlineCallbacks
     def assert_routed_inbound(self, content, router, expected_endpoint):
@@ -421,7 +414,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         self.assertEqual(choice, None)
 
     def test_create_menu(self):
-        config = self.dynamic_config({
+        router_worker = yield self.router_helper.get_router_worker({
             'menu_title': {'content': 'Please select a choice'},
             'entries': [
                 {
@@ -434,8 +427,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
                 }
             ]
         })
-        config = self.router_worker.CONFIG_CLASS(config)
-        text = self.router_worker.create_menu(config)
+        text = router_worker.create_menu(self.router_worker.config)
         self.assertEqual(
             text,
             'Please select a choice\n1) Flappy Bird\n2) Mama'

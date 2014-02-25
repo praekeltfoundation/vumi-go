@@ -1,7 +1,7 @@
 from go.router.view_definition import RouterViewDefinitionBase, EditRouterView
 
-from go.routers.app_multiplexer.forms import \
-    (ApplicationMultiplexerTitleForm, ApplicationMultiplexerFormSet)
+from go.routers.app_multiplexer.forms import (ApplicationMultiplexerTitleForm,
+                                              ApplicationMultiplexerFormSet)
 
 
 class EditApplicationMultiplexerView(EditRouterView):

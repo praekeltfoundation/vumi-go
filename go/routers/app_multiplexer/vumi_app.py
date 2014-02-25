@@ -209,8 +209,8 @@ class ApplicationMultiplexer(GoRouterWorker):
     @inlineCallbacks
     def handle_session_close(self, config, session, msg):
         user_id = msg['from_addr']
-        if session.get('state', None) == self.STATE_SELECTED and \
-           session['active_endpoint'] in self.target_endpoints(config):
+        if (session.get('state', None) == self.STATE_SELECTED and
+                session['active_endpoint'] in self.target_endpoints(config)):
             yield self.publish_inbound(
                 self.forwarded_message(
                     msg, content=None,
