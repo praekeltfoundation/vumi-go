@@ -583,9 +583,8 @@ class TransactionResource(BaseResource):
             tag_name = data.get('tag_name', None)
             message_direction = data.get('message_direction', None)
             session_created = data.get('session_created', None)
-            if (account_number and message_id
-                    and tag_pool_name and tag_name
-                    and message_direction and session_created is not None):
+            if all((account_number, message_id, tag_pool_name, tag_name,
+                    message_direction, session_created is not None)):
                 d = self.create_transaction(
                     account_number, message_id, tag_pool_name, tag_name,
                     message_direction, session_created)
