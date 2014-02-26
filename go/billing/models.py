@@ -151,7 +151,7 @@ class Transaction(models.Model):
     message_id = models.CharField(
         max_length=64, null=True, blank=True,
         help_text=_("Vumi message identifier for the message being"
-                    " billed (or null if there is no assocated message)"))
+                    " billed (or null if there is no associated message)"))
 
     message_cost = models.DecimalField(
         null=True,
