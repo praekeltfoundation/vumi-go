@@ -3,7 +3,7 @@ import decimal
 
 import pytest
 
-from twisted.internet import defer
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.tests.helpers import VumiTestCase
 
@@ -29,12 +29,11 @@ skipif_unsupported_db = pytest.mark.skipif(
 @pytest.mark.django_db
 class BillingApiTestCase(VumiTestCase):
 
-    @defer.inlineCallbacks
+    @inlineCallbacks
     def setUp(self):
         connection_string = app_settings.get_connection_string()
         connection_pool = DictRowConnectionPool(
             None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
-
         self.connection_pool = yield connection_pool.start()
         root = api.Root(connection_pool)
         self.web = DummySite(root)
@@ -42,81 +41,97 @@ class BillingApiTestCase(VumiTestCase):
     def tearDown(self):
         self.connection_pool.close()
 
+    @inlineCallbacks
+    def call_api(self, method, path, **kw):
+        headers = {'content-type': 'application/json'}
+        http_method = getattr(self.web, method)
+        response = yield http_method(
+            path, args=None, headers=headers, **kw)
+        self.assertEqual(response.responseCode, 200)
+        result = json.loads(response.value(), cls=JSONDecoder)
+        returnValue(result)
 
-# TODO: factor out account setup method
+    def create_api_user(self, email="test@example.com", first_name="Test",
+                        last_name="User", password="password"):
+        """
+        Create a user by calling the billing API.
+        """
+        content = {
+            'email': email, 'first_name': first_name,
+            'last_name': last_name, 'password': password,
+        }
+        return self.call_api('post', 'users', content=content)
+
+    def get_api_user(self, user_id):
+        """
+        Retrieve a user by id.
+        """
+        return self.call_api('get', 'users/%s' % (user_id,))
+
+    def get_api_user_list(self):
+        """
+        Retrieve a list of all users.
+        """
+        return self.call_api('get', 'users')
+
+    def create_api_account(self, email="test@example.com",
+                           account_number="12345", description="Test account"):
+        """
+        Create an account by calling the billing API.
+        """
+        content = {
+            'email': email, 'account_number': account_number,
+            'description': description,
+        }
+        return self.call_api('post', 'accounts', content=content)
+
+    def get_api_account(self, account_number):
+        """
+        Retrieve an account by account number.
+        """
+        return self.call_api('get', 'accounts/%s' % (account_number,))
+
 # TODO: factor out cost setup method
 
 
 class TestUser(BillingApiTestCase):
 
-    @defer.inlineCallbacks
+    @inlineCallbacks
     def test_user(self):
-        # Create a new user
-        content = {
-            'email': "test@example.com",
-            'first_name': "Test",
-            'last_name': "User",
-            'password': "password"
-        }
+        # test creating the user
+        new_user = yield self.create_api_user()
+        user_id = new_user['id']
+        self.assertTrue(user_id)
+        self.assertEqual(new_user, {
+            u'id': user_id,
+            u'email': u'test@example.com',
+            u'first_name': u'Test',
+            u'last_name': u'User'
+        })
 
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'users', args=None, content=content, headers=headers)
+        # test retrieving the user
+        user = yield self.get_api_user(new_user['id'])
+        self.assertEqual(user, new_user)
 
-        self.assertEqual(response.responseCode, 200)
-        new_user = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue('id' in new_user)
-
-        # Fetch the new user
-        url = 'users/%s' % (new_user.get('id'))
-        response = yield self.web.get(url)
-        self.assertEqual(response.responseCode, 200)
-        user = json.loads(response.value(), cls=JSONDecoder)
-        self.assertEqual(user.get('email'), new_user.get('email'))
-
-        # Fetch a list of all users and make sure the new user is there
-        response = yield self.web.get('users')
-        self.assertEqual(response.responseCode, 200)
-        user_list = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue(len(user_list) > 0)
-        email_list = [u.get('email', None) for u in user_list]
-        self.assertTrue("test@example.com" in email_list)
+        # test retrieving all users
+        user_list = yield self.get_api_user_list()
+        self.assertEqual(user_list, [new_user])
 
 
 class TestAccount(BillingApiTestCase):
 
-    @defer.inlineCallbacks
+    @inlineCallbacks
     def test_account(self):
-        # Create a new user
-        content = {
-            'email': "test2@example.com",
-            'first_name': "Test",
-            'last_name': "User",
-            'password': "password"
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'users', args=None, content=content, headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
-        user = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue('id' in user)
-
-        # Create a new account
-        content = {
-            'email': "test2@example.com",
-            'account_number': "12345",
-            'description': "Test account"
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'accounts', args=None, content=content, headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
-        new_account = json.loads(response.value(), cls=JSONDecoder)
-        self.assertEqual(new_account.get('account_number', None), "12345")
+        yield self.create_api_user(email="test2@example.com")
+        new_account = yield self.create_api_account(email="test2@example.com")
+        self.assertEqual(new_account, {
+            "account_number": "12345",
+            "alert_credit_balance": decimal.Decimal('0.0'),
+            "alert_threshold": decimal.Decimal('0.0'),
+            "credit_balance": decimal.Decimal('0.0'),
+            "description": "Test account",
+            "email": "test2@example.com",
+        })
 
         # Load credits into the new account
         content = {
@@ -131,13 +146,15 @@ class TestAccount(BillingApiTestCase):
         self.assertEqual(response.responseCode, 200)
 
         # Fetch the new account and make sure the credit balance is correct
-        url = 'accounts/%s' % (new_account.get('account_number'))
-        response = yield self.web.get(url)
-        self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), cls=JSONDecoder)
-        self.assertEqual(account.get('account_number'),
-                         new_account.get('account_number'))
-        self.assertTrue(account.get('credit_balance', 0) == 100)
+        account = yield self.get_api_account(new_account["account_number"])
+        self.assertEqual(account, {
+            "account_number": "12345",
+            "alert_credit_balance": decimal.Decimal('0.0'),
+            "alert_threshold": decimal.Decimal('0.0'),
+            "credit_balance": decimal.Decimal('100.0'),
+            "description": "Test account",
+            "email": "test2@example.com",
+        })
 
         # Make sure there was a transaction created for the credit load
         args = {'account_number': account.get('account_number')}
@@ -157,37 +174,11 @@ class TestAccount(BillingApiTestCase):
 
 class TestCost(BillingApiTestCase):
 
-    @defer.inlineCallbacks
+    @inlineCallbacks
     def test_cost(self):
-        # Create a test user
-        content = {
-            'email': "test3@example.com",
-            'first_name': "Test",
-            'last_name': "User",
-            'password': "password"
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'users', args=None, content=content, headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
-        user = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue('id' in user)
-
-        # Create a test account
-        content = {
-            'email': "test3@example.com",
-            'account_number': "67890",
-            'description': "Test account"
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'accounts', args=None, content=content, headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), cls=JSONDecoder)
+        yield self.create_api_user(email="test3@example.com")
+        account = yield self.create_api_account(email="test3@example.com",
+                                                account_number="67890")
 
         # Create the message base cost
         content = {
@@ -277,33 +268,11 @@ class TestCost(BillingApiTestCase):
 
 class TestTransaction(BillingApiTestCase):
 
-    @defer.inlineCallbacks
+    @inlineCallbacks
     def test_transaction(self):
-        # Create a test user
-        content = {
-            'email': "test4@example.com",
-            'first_name': "Test",
-            'last_name': "User",
-            'password': "password"
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'users', args=None, content=content, headers=headers)
-        self.assertEqual(response.responseCode, 200)
-
-        # Create a test account
-        content = {
-            'email': "test4@example.com",
-            'account_number': "11111",
-            'description': "Test account"
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'accounts', args=None, content=content, headers=headers)
-        self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), cls=JSONDecoder)
+        yield self.create_api_user(email="test4@example.com")
+        account = yield self.create_api_account(email="test4@example.com",
+                                                account_number="11111")
 
         # Set the message cost
         content = {
@@ -365,11 +334,8 @@ class TestTransaction(BillingApiTestCase):
         })
 
         # Get the account and make sure the credit balance was updated
-        url = 'accounts/%s' % (account['account_number'],)
-        response = yield self.web.get(url)
-        self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue(account['credit_balance'] == -credit_amount)
+        account = yield self.get_api_account(account["account_number"])
+        self.assertEqual(account['credit_balance'], -credit_amount)
 
         # Create a transaction (with session_created=True)
         content = {
@@ -410,9 +376,6 @@ class TestTransaction(BillingApiTestCase):
         })
 
         # Get the account and make sure the credit balance was updated
-        url = 'accounts/%s' % (account['account_number'],)
-        response = yield self.web.get(url)
-        self.assertEqual(response.responseCode, 200)
-        account = json.loads(response.value(), cls=JSONDecoder)
+        account = yield self.get_api_account(account["account_number"])
         self.assertEqual(account['credit_balance'],
-                        -(credit_amount + credit_amount_for_session))
+                         -(credit_amount + credit_amount_for_session))
