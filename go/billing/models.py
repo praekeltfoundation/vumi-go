@@ -54,16 +54,47 @@ class MessageCost(models.Model):
     )
 
     @classmethod
-    def calculate_credit_cost(cls, message_cost, markup_percent):
-        """Return the credit cost for the given `message_cost` and
-        `markup_percent`.
+    def apply_markup_and_convert_to_credits(cls, cost, markup_percent,
+                                            context=None):
         """
-        markup_amount = (message_cost * markup_percent / Decimal('100.0'))
-        resulting_price = message_cost + markup_amount
-        credit_cost = (resulting_price
-                       * Decimal(app_settings.CREDIT_CONVERSION_FACTOR))
+        Takes a cost (in cents), applies markup and converts the resulting
+        amount to credits.
+        """
+        cost = cost + (cost * markup_percent / Decimal('100.0'))
+        credits = cost * Decimal(app_settings.CREDIT_CONVERSION_FACTOR)
+        return credits.quantize(app_settings.QUANTIZATION_EXPONENT,
+                                context=context)
 
-        return credit_cost.quantize(app_settings.QUANTIZATION_EXPONENT)
+    @classmethod
+    def calculate_message_credit_cost(cls, message_cost, markup_percent,
+                                      context=None):
+        """
+        Return the cost per message (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            message_cost, markup_percent, context=context)
+
+    @classmethod
+    def calculate_session_credit_cost(cls, session_cost, markup_percent,
+                                      context=None):
+        """
+        Return the cost per session (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            session_cost, markup_percent, context=context)
+
+    @classmethod
+    def calculate_credit_cost(cls, message_cost, markup_percent,
+                              session_cost, session_created, context=None):
+        """
+        Return the total cost for both the message and the session, if any,
+        in credits.
+        """
+        base_cost = message_cost
+        if session_created:
+            base_cost += session_cost
+        return cls.apply_markup_and_convert_to_credits(
+            base_cost, markup_percent, context=context)
 
     account = models.ForeignKey(Account, blank=True, null=True)
     tag_pool = models.ForeignKey(TagPool)
@@ -74,23 +105,25 @@ class MessageCost(models.Model):
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The base message cost in cents."))
 
+    session_cost = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The base cost per session in cents."))
+
     markup_percent = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("The markup percentage. e.g. 20.0 for twenty percent"))
 
     @property
-    def resulting_price(self):
-        """Return the resulting price in cents"""
-        markup_amount = (self.message_cost
-                         * self.markup_percent / Decimal('100.0'))
-
-        return self.message_cost + markup_amount
+    def message_credit_cost(self):
+        """Return the calculated cost per message (in credits)."""
+        return self.calculate_message_credit_cost(
+            self.message_cost, self.markup_percent)
 
     @property
-    def credit_cost(self):
-        """Return the calculated cost in credits"""
-        return self.calculate_credit_cost(self.message_cost,
-                                          self.markup_percent)
+    def session_credit_cost(self):
+        """Return the calculated cost per session (in credits)."""
+        return self.calculate_session_credit_cost(
+            self.session_cost, self.markup_percent)
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
@@ -114,7 +147,21 @@ class Transaction(models.Model):
     tag_pool_name = models.CharField(max_length=100, blank=True)
     tag_name = models.CharField(max_length=100, blank=True)
     message_direction = models.CharField(max_length=20, blank=True)
-    message_cost = models.IntegerField(blank=True, null=True)
+
+    message_cost = models.DecimalField(
+        null=True,
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The message cost (in cents) used to calculate"
+                    " credit_amount."))
+
+    session_created = models.NullBooleanField(blank=True, null=True)
+
+    session_cost = models.DecimalField(
+        null=True,
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The session cost (in cents) used to calculate"
+                    " credit_amount."))
+
     markup_percent = models.DecimalField(max_digits=10, decimal_places=2,
                                          blank=True, null=True)
 

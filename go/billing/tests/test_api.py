@@ -25,6 +25,10 @@ skipif_unsupported_db = pytest.mark.skipif(
     reason="Billing API requires PostGreSQL")
 
 
+# TODO: factor out common setup
+# TODO: factor out account setup method
+# TODO: factor out cost setup method
+
 class TestUser(VumiTestCase):
 
     @pytest.mark.django_db
@@ -223,6 +227,7 @@ class TestCost(VumiTestCase):
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound",
             'message_cost': 0.9,
+            'session_cost': 0.7,
             'markup_percent': 20.0,
         }
 
@@ -232,13 +237,14 @@ class TestCost(VumiTestCase):
 
         self.assertEqual(response.responseCode, 200)
         base_cost = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue('credit_amount' in base_cost)
-        message_cost = decimal.Decimal('0.9')
-        markup_percent = decimal.Decimal('20.0')
-        credit_amount = MessageCost.calculate_credit_cost(message_cost,
-                                                          markup_percent)
-
-        self.assertEqual(base_cost.get('credit_amount'), credit_amount)
+        self.assertEqual(base_cost, {
+            u'account_number': None,
+            u'markup_percent': decimal.Decimal('20.000000'),
+            u'message_cost': decimal.Decimal('0.900000'),
+            u'message_direction': u'Outbound',
+            u'session_cost': decimal.Decimal('0.700000'),
+            u'tag_pool_name': u'test_pool',
+        })
 
         # Get the message cost
         args = {
@@ -248,32 +254,39 @@ class TestCost(VumiTestCase):
 
         response = yield self.web.get('costs', args=args)
         self.assertEqual(response.responseCode, 200)
-        message_cost = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue(len(message_cost) > 0)
-        self.assertEqual(message_cost[0].get('credit_amount'), credit_amount)
+        [message_cost] = json.loads(response.value(), cls=JSONDecoder)
+        self.assertEqual(message_cost, {
+            u'account_number': None,
+            u'markup_percent': decimal.Decimal('20.000000'),
+            u'message_cost': decimal.Decimal('0.900000'),
+            u'message_direction': u'Outbound',
+            u'session_cost': decimal.Decimal('0.700000'),
+            u'tag_pool_name': u'test_pool'
+        })
 
         # Override the message cost for the account
         content = {
-            'account_number': account.get('account_number'),
+            'account_number': account['account_number'],
             'tag_pool_name': "test_pool",
             'message_direction': "Outbound",
             'message_cost': 0.5,
+            'session_cost': 0.3,
             'markup_percent': 10.0,
         }
 
         headers = {'content-type': 'application/json'}
         response = yield self.web.post(
             'costs', args=None, content=content, headers=headers)
-
         self.assertEqual(response.responseCode, 200)
         cost_override = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue('credit_amount' in base_cost)
-        message_cost = decimal.Decimal('0.5')
-        markup_percent = decimal.Decimal('10.0')
-        credit_amount = MessageCost.calculate_credit_cost(message_cost,
-                                                          markup_percent)
-
-        self.assertEqual(cost_override.get('credit_amount'), credit_amount)
+        self.assertEqual(cost_override, {
+            u'account_number': account['account_number'],
+            u'markup_percent': decimal.Decimal('10.000000'),
+            u'message_cost': decimal.Decimal('0.500000'),
+            u'message_direction': u'Outbound',
+            u'session_cost': decimal.Decimal('0.300000'),
+            u'tag_pool_name': u'test_pool',
+        })
 
         # Get the message cost again
         args = {
@@ -284,9 +297,15 @@ class TestCost(VumiTestCase):
 
         response = yield self.web.get('costs', args=args)
         self.assertEqual(response.responseCode, 200)
-        message_cost = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue(len(message_cost) > 0)
-        self.assertEqual(message_cost[0].get('credit_amount'), credit_amount)
+        [message_cost] = json.loads(response.value(), cls=JSONDecoder)
+        self.assertEqual(message_cost, {
+            u'account_number': account['account_number'],
+            u'markup_percent': decimal.Decimal('10.000000'),
+            u'message_cost': decimal.Decimal('0.500000'),
+            u'message_direction': u'Outbound',
+            u'session_cost': decimal.Decimal('0.300000'),
+            u'tag_pool_name': u'test_pool'
+        })
 
 
 class TestTransaction(VumiTestCase):
@@ -321,10 +340,7 @@ class TestTransaction(VumiTestCase):
         headers = {'content-type': 'application/json'}
         response = yield self.web.post(
             'users', args=None, content=content, headers=headers)
-
         self.assertEqual(response.responseCode, 200)
-        user = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue('id' in user)
 
         # Create a test account
         content = {
@@ -336,7 +352,6 @@ class TestTransaction(VumiTestCase):
         headers = {'content-type': 'application/json'}
         response = yield self.web.post(
             'accounts', args=None, content=content, headers=headers)
-
         self.assertEqual(response.responseCode, 200)
         account = json.loads(response.value(), cls=JSONDecoder)
 
@@ -345,6 +360,7 @@ class TestTransaction(VumiTestCase):
             'tag_pool_name': "test_pool2",
             'message_direction': "Inbound",
             'message_cost': 0.6,
+            'session_cost': 0.3,
             'markup_percent': 10.0,
         }
 
@@ -353,20 +369,20 @@ class TestTransaction(VumiTestCase):
             'costs', args=None, content=content, headers=headers)
 
         self.assertEqual(response.responseCode, 200)
-        cost = json.loads(response.value(), cls=JSONDecoder)
-        message_cost = decimal.Decimal('0.6')
-        markup_percent = decimal.Decimal('10.0')
-        credit_amount = MessageCost.calculate_credit_cost(message_cost,
-                                                          markup_percent)
-
-        self.assertEqual(cost.get('credit_amount'), credit_amount)
+        credit_amount = MessageCost.calculate_credit_cost(
+            decimal.Decimal('0.6'), decimal.Decimal('10.0'),
+            decimal.Decimal('0.3'), session_created=False)
+        credit_amount_for_session = MessageCost.calculate_credit_cost(
+            decimal.Decimal('0.6'), decimal.Decimal('10.0'),
+            decimal.Decimal('0.3'), session_created=True)
 
         # Create a transaction
         content = {
-            'account_number': "11111",
+            'account_number': account['account_number'],
             'tag_pool_name': "test_pool2",
             'tag_name': "12345",
-            'message_direction': "Inbound"
+            'message_direction': "Inbound",
+            'session_created': False,
         }
 
         headers = {'content-type': 'application/json'}
@@ -376,24 +392,73 @@ class TestTransaction(VumiTestCase):
         self.assertEqual(response.responseCode, 200)
 
         # Make sure there was a transaction created
-        args = {'account_number': account.get('account_number')}
+        args = {'account_number': account['account_number']}
         response = yield self.web.get('transactions', args=args)
         self.assertEqual(response.responseCode, 200)
-        transaction_list = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue(len(transaction_list) > 0)
-        found = False
-        for transaction in transaction_list:
-            if transaction.get('account_number', None) == '11111' \
-                    and transaction.get('credit_amount', None) == \
-                    -credit_amount \
-                    and transaction.get('status', None) == 'Completed':
-                found = True
-                break
-        self.assertTrue(found)
+        [transaction] = json.loads(response.value(), cls=JSONDecoder)
+        del (transaction['id'], transaction['created'],
+             transaction['last_modified'])
+        self.assertEqual(transaction, {
+            u'account_number': account['account_number'],
+            u'credit_amount': -credit_amount,
+            u'credit_factor': decimal.Decimal('10.000000'),
+            u'markup_percent': decimal.Decimal('10.000000'),
+            u'message_cost': decimal.Decimal('0.6'),
+            u'message_direction': u'Inbound',
+            u'session_cost': decimal.Decimal('0.3'),
+            u'session_created': False,
+            u'status': u'Completed',
+            u'tag_name': u'12345',
+            u'tag_pool_name': u'test_pool2'
+        })
 
         # Get the account and make sure the credit balance was updated
-        url = 'accounts/%s' % ("11111",)
+        url = 'accounts/%s' % (account['account_number'],)
         response = yield self.web.get(url)
         self.assertEqual(response.responseCode, 200)
         account = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue(account.get('credit_balance', 0) == -credit_amount)
+        self.assertTrue(account['credit_balance'] == -credit_amount)
+
+        # Create a transaction (with session_created=True)
+        content = {
+            'account_number': account['account_number'],
+            'tag_pool_name': "test_pool2",
+            'tag_name': "12345",
+            'message_direction': "Inbound",
+            'session_created': True,
+        }
+
+        headers = {'content-type': 'application/json'}
+        response = yield self.web.post(
+            'transactions', args=None, content=content, headers=headers)
+
+        self.assertEqual(response.responseCode, 200)
+
+        # Make sure there was a transaction created (with session_created=True)
+        args = {'account_number': account['account_number']}
+        response = yield self.web.get('transactions', args=args)
+        self.assertEqual(response.responseCode, 200)
+        [transaction, _] = json.loads(response.value(), cls=JSONDecoder)
+        del (transaction['id'], transaction['created'],
+             transaction['last_modified'])
+        self.assertEqual(transaction, {
+            u'account_number': account['account_number'],
+            u'credit_amount': -credit_amount_for_session,
+            u'credit_factor': decimal.Decimal('10.000000'),
+            u'markup_percent': decimal.Decimal('10.000000'),
+            u'message_cost': decimal.Decimal('0.6'),
+            u'message_direction': u'Inbound',
+            u'session_cost': decimal.Decimal('0.3'),
+            u'session_created': True,
+            u'status': u'Completed',
+            u'tag_name': u'12345',
+            u'tag_pool_name': u'test_pool2'
+        })
+
+        # Get the account and make sure the credit balance was updated
+        url = 'accounts/%s' % (account['account_number'],)
+        response = yield self.web.get(url)
+        self.assertEqual(response.responseCode, 200)
+        account = json.loads(response.value(), cls=JSONDecoder)
+        self.assertEqual(account['credit_balance'],
+                        -(credit_amount + credit_amount_for_session))
