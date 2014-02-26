@@ -621,7 +621,14 @@ class TransactionResource(BaseResource):
                   INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
                   WHERE c.account_id IS NULL
                   AND t.name = %(tag_pool_name)s
-                  AND c.message_direction = %(message_direction)s) t
+                  AND c.message_direction = %(message_direction)s
+                  UNION
+                  SELECT NULL AS account_number, NULL AS tag_pool_name,
+                         c.message_direction, c.message_cost,
+                         c.session_cost, c.markup_percent
+                  FROM billing_messagecost c
+                  WHERE c.account_id IS NULL
+                  AND   c.tag_pool_id IS NULL) as t
             ORDER BY t.account_number
             LIMIT 1
             """
