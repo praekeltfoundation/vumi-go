@@ -25,13 +25,10 @@ skipif_unsupported_db = pytest.mark.skipif(
     reason="Billing API requires PostGreSQL")
 
 
-# TODO: factor out common setup
-# TODO: factor out account setup method
-# TODO: factor out cost setup method
+@skipif_unsupported_db
+@pytest.mark.django_db
+class BillingApiTestCase(VumiTestCase):
 
-class TestUser(VumiTestCase):
-
-    @pytest.mark.django_db
     @defer.inlineCallbacks
     def setUp(self):
         connection_string = app_settings.get_connection_string()
@@ -42,14 +39,18 @@ class TestUser(VumiTestCase):
         root = api.Root(connection_pool)
         self.web = DummySite(root)
 
-    @pytest.mark.django_db
     def tearDown(self):
         self.connection_pool.close()
 
-    @skipif_unsupported_db
-    @pytest.mark.django_db
+
+# TODO: factor out account setup method
+# TODO: factor out cost setup method
+
+
+class TestUser(BillingApiTestCase):
+
     @defer.inlineCallbacks
-    def runTest(self):
+    def test_user(self):
         # Create a new user
         content = {
             'email': "test@example.com",
@@ -82,27 +83,10 @@ class TestUser(VumiTestCase):
         self.assertTrue("test@example.com" in email_list)
 
 
-class TestAccount(VumiTestCase):
+class TestAccount(BillingApiTestCase):
 
-    @pytest.mark.django_db
     @defer.inlineCallbacks
-    def setUp(self):
-        connection_string = app_settings.get_connection_string()
-        connection_pool = DictRowConnectionPool(
-            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
-
-        self.connection_pool = yield connection_pool.start()
-        root = api.Root(connection_pool)
-        self.web = DummySite(root)
-
-    @pytest.mark.django_db
-    def tearDown(self):
-        self.connection_pool.close()
-
-    @skipif_unsupported_db
-    @pytest.mark.django_db
-    @defer.inlineCallbacks
-    def runTest(self):
+    def test_account(self):
         # Create a new user
         content = {
             'email': "test2@example.com",
@@ -171,27 +155,10 @@ class TestAccount(VumiTestCase):
         self.assertTrue(found)
 
 
-class TestCost(VumiTestCase):
+class TestCost(BillingApiTestCase):
 
-    @pytest.mark.django_db
     @defer.inlineCallbacks
-    def setUp(self):
-        connection_string = app_settings.get_connection_string()
-        connection_pool = DictRowConnectionPool(
-            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
-
-        self.connection_pool = yield connection_pool.start()
-        root = api.Root(connection_pool)
-        self.web = DummySite(root)
-
-    @pytest.mark.django_db
-    def tearDown(self):
-        self.connection_pool.close()
-
-    @skipif_unsupported_db
-    @pytest.mark.django_db
-    @defer.inlineCallbacks
-    def runTest(self):
+    def test_cost(self):
         # Create a test user
         content = {
             'email': "test3@example.com",
@@ -308,27 +275,10 @@ class TestCost(VumiTestCase):
         })
 
 
-class TestTransaction(VumiTestCase):
+class TestTransaction(BillingApiTestCase):
 
-    @pytest.mark.django_db
     @defer.inlineCallbacks
-    def setUp(self):
-        connection_string = app_settings.get_connection_string()
-        connection_pool = DictRowConnectionPool(
-            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
-
-        self.connection_pool = yield connection_pool.start()
-        root = api.Root(connection_pool)
-        self.web = DummySite(root)
-
-    @pytest.mark.django_db
-    def tearDown(self):
-        self.connection_pool.close()
-
-    @skipif_unsupported_db
-    @pytest.mark.django_db
-    @defer.inlineCallbacks
-    def runTest(self):
+    def test_transaction(self):
         # Create a test user
         content = {
             'email': "test4@example.com",
