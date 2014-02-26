@@ -379,6 +379,7 @@ class TestTransaction(VumiTestCase):
         # Create a transaction
         content = {
             'account_number': account['account_number'],
+            'message_id': 'msg-id-1',
             'tag_pool_name': "test_pool2",
             'tag_name': "12345",
             'message_direction': "Inbound",
@@ -400,6 +401,7 @@ class TestTransaction(VumiTestCase):
              transaction['last_modified'])
         self.assertEqual(transaction, {
             u'account_number': account['account_number'],
+            u'message_id': 'msg-id-1',
             u'credit_amount': -credit_amount,
             u'credit_factor': decimal.Decimal('10.000000'),
             u'markup_percent': decimal.Decimal('10.000000'),
@@ -422,6 +424,7 @@ class TestTransaction(VumiTestCase):
         # Create a transaction (with session_created=True)
         content = {
             'account_number': account['account_number'],
+            'message_id': 'msg-id-2',
             'tag_pool_name': "test_pool2",
             'tag_name': "12345",
             'message_direction': "Inbound",
@@ -443,6 +446,7 @@ class TestTransaction(VumiTestCase):
              transaction['last_modified'])
         self.assertEqual(transaction, {
             u'account_number': account['account_number'],
+            u'message_id': 'msg-id-2',
             u'credit_amount': -credit_amount_for_session,
             u'credit_factor': decimal.Decimal('10.000000'),
             u'markup_percent': decimal.Decimal('10.000000'),

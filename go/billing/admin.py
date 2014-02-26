@@ -97,7 +97,7 @@ class MessageCostAdmin(admin.ModelAdmin):
 
 class TransactionAdmin(admin.ModelAdmin):
     list_display = ('id', 'account_number', 'tag_pool_name', 'tag_name',
-                    'message_direction', 'message_cost',
+                    'message_id', 'message_direction', 'message_cost',
                     'session_created', 'session_cost',
                     'markup_percent', 'credit_factor', 'credit_amount',
                     'status', 'created', 'last_modified')
@@ -105,7 +105,7 @@ class TransactionAdmin(admin.ModelAdmin):
     search_fields = ('account__account_number', 'tag_pool_name', 'tag_name')
     list_filter = ('message_direction', 'status', 'created', 'last_modified')
     readonly_fields = ('account_number', 'tag_pool_name', 'tag_name',
-                       'message_direction', 'message_cost',
+                       'message_id', 'message_direction', 'message_cost',
                        'session_created', 'session_cost',
                        'markup_percent', 'credit_factor', 'credit_amount',
                        'status', 'created', 'last_modified')
