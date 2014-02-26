@@ -30,20 +30,16 @@ class MessageCostForm(ModelForm):
         markup_percent = cleaned_data.get('markup_percent')
         if message_cost and markup_percent:
             context = Context()
-            credit_cost = MessageCost.calculate_credit_cost(
-                message_cost=message_cost, markup_percent=markup_percent,
-                session_cost=Decimal('0.0'), session_created=False,
-                context=context)
+            credit_cost = MessageCost.calculate_message_credit_cost(
+                message_cost, markup_percent, context=context)
             if cost_rounded_to_zero(credit_cost, context):
                 raise forms.ValidationError(
                     "The resulting cost per message (in credits) was rounded"
                     " to 0.")
         if session_cost and markup_percent:
             context = Context()
-            session_credit_cost = MessageCost.calculate_credit_cost(
-                message_cost=Decimal('0.0'), markup_percent=markup_percent,
-                session_cost=session_cost, session_created=True,
-                context=context)
+            session_credit_cost = MessageCost.calculate_session_credit_cost(
+                session_cost, markup_percent, context=context)
             if cost_rounded_to_zero(session_credit_cost, context):
                 raise forms.ValidationError(
                     "The resulting cost per session (in credits) was rounded"

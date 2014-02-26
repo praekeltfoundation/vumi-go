@@ -54,18 +54,47 @@ class MessageCost(models.Model):
     )
 
     @classmethod
+    def apply_markup_and_convert_to_credits(cls, cost, markup_percent,
+                                            context=None):
+        """
+        Takes a cost (in cents), applies markup and converts the resulting
+        amount to credits.
+        """
+        cost = cost + (cost * markup_percent / Decimal('100.0'))
+        credits = cost * Decimal(app_settings.CREDIT_CONVERSION_FACTOR)
+        return credits.quantize(app_settings.QUANTIZATION_EXPONENT,
+                                context=context)
+
+    @classmethod
+    def calculate_message_credit_cost(cls, message_cost, markup_percent,
+                                      context=None):
+        """
+        Return the cost per message (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            message_cost, markup_percent, context=context)
+
+    @classmethod
+    def calculate_session_credit_cost(cls, session_cost, markup_percent,
+                                      context=None):
+        """
+        Return the cost per session (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            session_cost, markup_percent, context=context)
+
+    @classmethod
     def calculate_credit_cost(cls, message_cost, markup_percent,
                               session_cost, session_created, context=None):
         """
-        Return the credit cost for a message.
+        Return the total cost for both the message and the session, if any,
+        in credits.
         """
         base_cost = message_cost
         if session_created:
             base_cost += session_cost
-        cost = base_cost + (base_cost * markup_percent / Decimal('100.0'))
-        credits = cost * Decimal(app_settings.CREDIT_CONVERSION_FACTOR)
-        return credits.quantize(app_settings.QUANTIZATION_EXPONENT,
-                                context=context)
+        return cls.apply_markup_and_convert_to_credits(
+            base_cost, markup_percent, context=context)
 
     account = models.ForeignKey(Account, blank=True, null=True)
     tag_pool = models.ForeignKey(TagPool)
@@ -87,16 +116,14 @@ class MessageCost(models.Model):
     @property
     def message_credit_cost(self):
         """Return the calculated cost per message (in credits)."""
-        return self.calculate_credit_cost(
-            self.message_cost, self.markup_percent,
-            Decimal('0.0'), session_created=False)
+        return self.calculate_message_credit_cost(
+            self.message_cost, self.markup_percent)
 
     @property
     def session_credit_cost(self):
         """Return the calculated cost per session (in credits)."""
-        return self.calculate_credit_cost(
-            Decimal('0.0'), self.markup_percent,
-            self.session_cost, session_created=True)
+        return self.calculate_session_credit_cost(
+            self.session_cost, self.markup_percent)
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
