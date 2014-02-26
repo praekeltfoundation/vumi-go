@@ -578,14 +578,15 @@ class TransactionResource(BaseResource):
         data = self._parse_json(request)
         if data:
             account_number = data.get('account_number', None)
+            message_id = data.get('message_id', None)
             tag_pool_name = data.get('tag_pool_name', None)
             tag_name = data.get('tag_name', None)
             message_direction = data.get('message_direction', None)
             session_created = data.get('session_created', None)
-            if (account_number and tag_pool_name and tag_name
-                    and message_direction and session_created is not None):
+            if all((account_number, message_id, tag_pool_name, tag_name,
+                    message_direction, session_created is not None)):
                 d = self.create_transaction(
-                    account_number, tag_pool_name, tag_name,
+                    account_number, message_id, tag_pool_name, tag_name,
                     message_direction, session_created)
 
                 d.addCallbacks(self._render_to_json, self._handle_error,
@@ -649,7 +650,8 @@ class TransactionResource(BaseResource):
                              items_per_page):
         """Return a paginated list of transactions"""
         query = """
-            SELECT id, account_number, tag_pool_name, tag_name,
+            SELECT id, account_number, message_id,
+                   tag_pool_name, tag_name,
                    message_direction, message_cost,
                    session_created, session_cost,
                    markup_percent, credit_factor, credit_amount,
@@ -687,7 +689,7 @@ class TransactionResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_transaction_interaction(self, cursor, account_number,
-                                       tag_pool_name, tag_name,
+                                       message_id, tag_pool_name, tag_name,
                                        message_direction, session_created):
         """Create a new transaction for the given ``account_number``"""
         # Get the message cost
@@ -708,19 +710,22 @@ class TransactionResource(BaseResource):
         # Create a new transaction
         query = """
             INSERT INTO billing_transaction
-                (account_number, tag_pool_name, tag_name,
+                (account_number, message_id,
+                 tag_pool_name, tag_name,
                  message_direction, message_cost,
                  session_created, session_cost,
                  markup_percent, credit_factor,
                  credit_amount, status, created, last_modified)
             VALUES
-                (%(account_number)s, %(tag_pool_name)s, %(tag_name)s,
+                (%(account_number)s, %(message_id)s,
+                 %(tag_pool_name)s, %(tag_name)s,
                  %(message_direction)s, %(message_cost)s,
                  %(session_created)s, %(session_cost)s,
                  %(markup_percent)s, %(credit_factor)s,
                  %(credit_amount)s, 'Completed', now(),
                  now())
-            RETURNING id, account_number, tag_pool_name, tag_name,
+            RETURNING id, account_number, message_id,
+                      tag_pool_name, tag_name,
                       message_direction, message_cost, session_cost,
                       markup_percent, credit_factor, credit_amount, status,
                       created, last_modified
@@ -728,6 +733,7 @@ class TransactionResource(BaseResource):
 
         params = {
             'account_number': account_number,
+            'message_id': message_id,
             'tag_pool_name': tag_pool_name,
             'tag_name': tag_name,
             'message_direction': message_direction,
@@ -774,11 +780,11 @@ class TransactionResource(BaseResource):
         defer.returnValue(transaction)
 
     @defer.inlineCallbacks
-    def create_transaction(self, account_number, tag_pool_name,
+    def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, message_direction, session_created):
         """Create a new transaction for the given ``account_number``"""
         result = yield self._connection_pool.runInteraction(
-            self.create_transaction_interaction, account_number,
+            self.create_transaction_interaction, account_number, message_id,
             tag_pool_name, tag_name, message_direction, session_created)
 
         defer.returnValue(result)

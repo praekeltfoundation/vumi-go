@@ -25,12 +25,13 @@ class BillingApiMock(object):
         del vars["self"]
         items.append(vars)
 
-    def create_transaction(self, account_number, tag_pool_name,
+    def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, message_direction, session_created):
         self._record(self.transactions, locals())
         return {
             "id": 1,
             "account_number": account_number,
+            "message_id": message_id,
             "tag_pool_name": tag_pool_name,
             "tag_name": tag_name,
             "message_direction": message_direction,
@@ -88,6 +89,7 @@ class TestBillingApi(VumiTestCase):
 
         kwargs = {
             'account_number': "test-account",
+            'message_id': 'msg-id-1',
             'tag_pool_name': "pool1",
             'tag_name': "1234",
             'message_direction': "Inbound",
@@ -125,6 +127,7 @@ class TestBillingApi(VumiTestCase):
 
         kwargs = {
             'account_number': "test-account",
+            'message_id': 'msg-id-1',
             'tag_pool_name': "pool1",
             'tag_name': "1234",
             'message_direction': "Inbound",
@@ -144,6 +147,7 @@ class TestBillingApi(VumiTestCase):
 
         kwargs = {
             'account_number': "test-account",
+            'message_id': 'msg-id-1',
             'tag_pool_name': "pool1",
             'tag_name': "1234",
             'message_direction': "Inbound",
@@ -211,6 +215,7 @@ class TestBillingDispatcher(VumiTestCase):
         }[direction]
         self.assertEqual(self.billing_api.transactions, [{
             "account_number": md.get_account_key(),
+            "message_id": msg["message_id"],
             "tag_pool_name": md.tag[0],
             "tag_name": md.tag[1],
             "message_direction": direction,
