@@ -148,6 +148,11 @@ class Transaction(models.Model):
     tag_name = models.CharField(max_length=100, blank=True)
     message_direction = models.CharField(max_length=20, blank=True)
 
+    message_id = models.CharField(
+        max_length=64, null=True, blank=True,
+        help_text=_("Vumi message identifier for the message being"
+                    " billed (or null if there is no assocated message)"))
+
     message_cost = models.DecimalField(
         null=True,
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
