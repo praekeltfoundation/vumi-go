@@ -21,6 +21,7 @@
     <div class="row">
         <div class="col-md-4">
             <form id="form-router" class="indent" method="post" action="">
+                {% csrf_token %}
                 {% for edit_form in edit_forms %}
                     <fieldset>
                         {% if edit_form.non_field_errors %}
