@@ -173,7 +173,7 @@ class TestWizardViews(GoDjangoTestCase):
         self.assertEqual(1, len(self.user_helper.user_api.active_channels()))
         self.assertRedirects(
             response, reverse('conversations:conversation', kwargs={
-                'conversation_key': conv.key, 'path_suffix': '',
+                'conversation_key': conv.key, 'path_suffix': 'edit/',
             }))
 
     def test_post_create_view_invalid_conversation_type(self):
