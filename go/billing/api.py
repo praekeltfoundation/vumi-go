@@ -386,8 +386,8 @@ class CostResource(BaseResource):
             message_cost = data.get('message_cost', None)
             session_cost = data.get('session_cost', None)
             markup_percent = data.get('markup_percent', None)
-            if tag_pool_name and message_direction and message_cost \
-                    and session_cost and markup_percent:
+            if all((message_direction, message_cost, session_cost,
+                    markup_percent, tag_pool_name or not account_number)):
                 d = self.create_cost(account_number, tag_pool_name,
                                      message_direction, message_cost,
                                      session_cost, markup_percent)
@@ -475,9 +475,12 @@ class CostResource(BaseResource):
             WHERE name = %(tag_pool_name)s
         """
 
-        params = {'tag_pool_name': tag_pool_name}
-        cursor = yield cursor.execute(query, params)
-        tag_pool = yield cursor.fetchone()
+        if tag_pool_name is not None:
+            params = {'tag_pool_name': tag_pool_name}
+            cursor = yield cursor.execute(query, params)
+            tag_pool = yield cursor.fetchone()
+        else:
+            tag_pool = {'id': None}
 
         if account_number:
             query = """
@@ -621,7 +624,16 @@ class TransactionResource(BaseResource):
                   INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
                   WHERE c.account_id IS NULL
                   AND t.name = %(tag_pool_name)s
-                  AND c.message_direction = %(message_direction)s) t
+                  AND c.message_direction = %(message_direction)s
+                  UNION
+                  SELECT NULL AS account_number, NULL AS tag_pool_name,
+                         c.message_direction, c.message_cost,
+                         c.session_cost, c.markup_percent
+                  FROM billing_messagecost c
+                  WHERE c.account_id IS NULL
+                  AND c.tag_pool_id IS NULL
+                  AND c.message_direction = %(message_direction)s
+            ) as t
             ORDER BY t.account_number
             LIMIT 1
             """
@@ -726,7 +738,8 @@ class TransactionResource(BaseResource):
                  now())
             RETURNING id, account_number, message_id,
                       tag_pool_name, tag_name,
-                      message_direction, message_cost, session_cost,
+                      message_direction, message_cost,
+                      session_cost, session_created,
                       markup_percent, credit_factor, credit_amount, status,
                       created, last_modified
         """
