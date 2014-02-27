@@ -46,7 +46,12 @@ class BillingApiTestCase(VumiTestCase):
         root = api.Root(connection_pool)
         self.web = DummySite(root)
 
+    @inlineCallbacks
     def tearDown(self):
+        for table in ('billing_transaction', 'billing_messagecost',
+                      'billing_tagpool', 'billing_account'):
+            yield self.connection_pool.runOperation(
+                'DELETE FROM %s' % (table,))
         self.connection_pool.close()
 
     @inlineCallbacks
@@ -315,6 +320,25 @@ class TestCost(BillingApiTestCase):
             self.assertEqual(e.message, "")
         else:
             self.fail("Expected cost creation to fail.")
+
+        # create a message cost with no account or tag pool
+        yield self.create_api_cost(
+            account_number=None,
+            tag_pool_name=None,
+            message_direction="Outbound",
+            message_cost=0.1, session_cost=0.1,
+            markup_percent=10.0)
+
+        # Get the message cost again
+        [_, _, fallback_cost] = yield self.get_api_costs()
+        self.assertEqual(fallback_cost, {
+            u'account_number': None,
+            u'markup_percent': decimal.Decimal('10.0'),
+            u'message_cost': decimal.Decimal('0.1'),
+            u'message_direction': u'Outbound',
+            u'session_cost': decimal.Decimal('0.1'),
+            u'tag_pool_name': None,
+        })
 
 
 class TestTransaction(BillingApiTestCase):
