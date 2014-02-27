@@ -96,10 +96,21 @@ class MessageCost(models.Model):
         return cls.apply_markup_and_convert_to_credits(
             base_cost, markup_percent, context=context)
 
-    account = models.ForeignKey(Account, blank=True, null=True)
-    tag_pool = models.ForeignKey(TagPool, blank=True, null=True)
-    message_direction = models.CharField(max_length=20,
-                                         choices=DIRECTION_CHOICES)
+    account = models.ForeignKey(
+        Account, blank=True, null=True,
+        help_text=_("The account this cost entry is for. If null, this entry"
+                    " is a fallback for all accounts."))
+
+    tag_pool = models.ForeignKey(
+        TagPool, blank=True, null=True,
+        help_text=_("The tag pool this cost entry is for. If null, this entry"
+                    " is a fallback for all tag pools."))
+
+    message_direction = models.CharField(
+        max_length=20, choices=DIRECTION_CHOICES,
+        help_text=_("This cost entry applies only to messages being sent or"
+                    " received in the given direction. 'Inbound' is for"
+                    " MO messages. 'Outbound' is for MT messages."))
 
     message_cost = models.DecimalField(
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
