@@ -45,8 +45,7 @@ class BillingApiTestCase(VumiTestCase):
     def call_api(self, method, path, **kw):
         headers = {'content-type': 'application/json'}
         http_method = getattr(self.web, method)
-        response = yield http_method(
-            path, args=None, headers=headers, **kw)
+        response = yield http_method(path, headers=headers, **kw)
         self.assertEqual(response.responseCode, 200)
         result = json.loads(response.value(), cls=JSONDecoder)
         returnValue(result)
@@ -91,7 +90,68 @@ class BillingApiTestCase(VumiTestCase):
         """
         return self.call_api('get', 'accounts/%s' % (account_number,))
 
-# TODO: factor out cost setup method
+    def load_api_account_credits(self, account_number, credit_amount):
+        """
+        Load credits to an account via the API.
+        """
+        content = {
+            'credit_amount': credit_amount,
+        }
+        return self.call_api('post', 'accounts/%s/credits' % (account_number,),
+                             content=content)
+
+    def create_api_cost(self, account_number=None, tag_pool_name=None,
+                        message_direction='', message_cost=0.0,
+                        session_cost=0.0, markup_percent=0.0):
+        """
+        Create a message cost record via the billing API.
+        """
+        content = {
+            'account_number': account_number,
+            'tag_pool_name': tag_pool_name,
+            'message_direction': message_direction,
+            'message_cost': message_cost,
+            'session_cost': session_cost,
+            'markup_percent': markup_percent,
+        }
+        return self.call_api('post', 'costs', content=content)
+
+    def get_api_costs(self, account_number=None, tag_pool_name=None,
+                     message_direction=''):
+        """
+        Retrieve message costs by some combination of account number,
+        tag pool name and message direction.
+        """
+        args = {
+            'account_number': account_number,
+            'tag_pool_name': tag_pool_name,
+            'message_direction': message_direction,
+        }
+        return self.call_api('get', 'costs', args=args)
+
+    def create_api_transaction(self, account_number, message_id, tag_pool_name,
+                               tag_name, message_direction, session_created):
+        """
+        Create a transaction record via the billing API.
+        """
+        content = {
+            'account_number': account_number,
+            'message_id': message_id,
+            'tag_pool_name': tag_pool_name,
+            'tag_name': tag_name,
+            'message_direction': message_direction,
+            'session_created': session_created,
+        }
+        return self.call_api('post', 'transactions', content=content)
+
+    def get_api_transaction_list(self, account_number):
+        """
+        Retrieve the list of transactions for a given account number.
+        """
+        args = {
+            'account_number': account_number,
+        }
+        return self.call_api('get', 'transactions', args=args)
 
 
 class TestUser(BillingApiTestCase):
@@ -134,16 +194,8 @@ class TestAccount(BillingApiTestCase):
         })
 
         # Load credits into the new account
-        content = {
-            'credit_amount': 100
-        }
-
-        headers = {'content-type': 'application/json'}
-        url = 'accounts/%s/credits' % (new_account.get('account_number'),)
-        response = yield self.web.post(url, args=None, content=content,
-                                       headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
+        yield self.load_api_account_credits(
+            new_account['account_number'], 100)
 
         # Fetch the new account and make sure the credit balance is correct
         account = yield self.get_api_account(new_account["account_number"])
@@ -157,19 +209,11 @@ class TestAccount(BillingApiTestCase):
         })
 
         # Make sure there was a transaction created for the credit load
-        args = {'account_number': account.get('account_number')}
-        response = yield self.web.get('transactions', args=args)
-        self.assertEqual(response.responseCode, 200)
-        transaction_list = json.loads(response.value(), cls=JSONDecoder)
-        self.assertTrue(len(transaction_list) > 0)
-        found = False
-        for transaction in transaction_list:
-            if transaction.get('account_number', None) == '12345' \
-                    and transaction.get('credit_amount', None) == 100 \
-                    and transaction.get('status', None) == 'Completed':
-                found = True
-                break
-        self.assertTrue(found)
+        [transaction] = yield self.get_api_transaction_list(
+            account['account_number'])
+        self.assertEqual(transaction['account_number'], '12345')
+        self.assertEqual(transaction['credit_amount'], 100)
+        self.assertEqual(transaction['status'], 'Completed')
 
 
 class TestCost(BillingApiTestCase):
@@ -181,20 +225,11 @@ class TestCost(BillingApiTestCase):
                                                 account_number="67890")
 
         # Create the message base cost
-        content = {
-            'tag_pool_name': "test_pool",
-            'message_direction': "Outbound",
-            'message_cost': 0.9,
-            'session_cost': 0.7,
-            'markup_percent': 20.0,
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'costs', args=None, content=content, headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
-        base_cost = json.loads(response.value(), cls=JSONDecoder)
+        base_cost = yield self.create_api_cost(
+            tag_pool_name="test_pool",
+            message_direction="Outbound",
+            message_cost=0.9, session_cost=0.7,
+            markup_percent=20.0)
         self.assertEqual(base_cost, {
             u'account_number': None,
             u'markup_percent': decimal.Decimal('20.000000'),
@@ -205,14 +240,9 @@ class TestCost(BillingApiTestCase):
         })
 
         # Get the message cost
-        args = {
-            'tag_pool_name': "test_pool",
-            'message_direction': "Outbound"
-        }
-
-        response = yield self.web.get('costs', args=args)
-        self.assertEqual(response.responseCode, 200)
-        [message_cost] = json.loads(response.value(), cls=JSONDecoder)
+        [message_cost] = yield self.get_api_costs(
+            tag_pool_name="test_pool",
+            message_direction="Outbound")
         self.assertEqual(message_cost, {
             u'account_number': None,
             u'markup_percent': decimal.Decimal('20.000000'),
@@ -223,20 +253,12 @@ class TestCost(BillingApiTestCase):
         })
 
         # Override the message cost for the account
-        content = {
-            'account_number': account['account_number'],
-            'tag_pool_name': "test_pool",
-            'message_direction': "Outbound",
-            'message_cost': 0.5,
-            'session_cost': 0.3,
-            'markup_percent': 10.0,
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'costs', args=None, content=content, headers=headers)
-        self.assertEqual(response.responseCode, 200)
-        cost_override = json.loads(response.value(), cls=JSONDecoder)
+        cost_override = yield self.create_api_cost(
+            account_number=account['account_number'],
+            tag_pool_name="test_pool",
+            message_direction="Outbound",
+            message_cost=0.5, session_cost=0.3,
+            markup_percent=10.0)
         self.assertEqual(cost_override, {
             u'account_number': account['account_number'],
             u'markup_percent': decimal.Decimal('10.000000'),
@@ -247,15 +269,10 @@ class TestCost(BillingApiTestCase):
         })
 
         # Get the message cost again
-        args = {
-            'account_number': account.get('account_number'),
-            'tag_pool_name': "test_pool",
-            'message_direction': "Outbound"
-        }
-
-        response = yield self.web.get('costs', args=args)
-        self.assertEqual(response.responseCode, 200)
-        [message_cost] = json.loads(response.value(), cls=JSONDecoder)
+        [message_cost] = yield self.get_api_costs(
+            account_number=account.get('account_number'),
+            tag_pool_name="test_pool",
+            message_direction="Outbound")
         self.assertEqual(message_cost, {
             u'account_number': account['account_number'],
             u'markup_percent': decimal.Decimal('10.000000'),
@@ -275,47 +292,32 @@ class TestTransaction(BillingApiTestCase):
                                                 account_number="11111")
 
         # Set the message cost
-        content = {
-            'tag_pool_name': "test_pool2",
-            'message_direction': "Inbound",
-            'message_cost': 0.6,
-            'session_cost': 0.3,
-            'markup_percent': 10.0,
-        }
+        yield self.create_api_cost(
+            tag_pool_name="test_pool2",
+            message_direction="Inbound",
+            message_cost=0.6, session_cost=0.3,
+            markup_percent=10.0)
 
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'costs', args=None, content=content, headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
         credit_amount = MessageCost.calculate_credit_cost(
             decimal.Decimal('0.6'), decimal.Decimal('10.0'),
             decimal.Decimal('0.3'), session_created=False)
+
         credit_amount_for_session = MessageCost.calculate_credit_cost(
             decimal.Decimal('0.6'), decimal.Decimal('10.0'),
             decimal.Decimal('0.3'), session_created=True)
 
         # Create a transaction
-        content = {
-            'account_number': account['account_number'],
-            'message_id': 'msg-id-1',
-            'tag_pool_name': "test_pool2",
-            'tag_name': "12345",
-            'message_direction': "Inbound",
-            'session_created': False,
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'transactions', args=None, content=content, headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-1',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
 
         # Make sure there was a transaction created
-        args = {'account_number': account['account_number']}
-        response = yield self.web.get('transactions', args=args)
-        self.assertEqual(response.responseCode, 200)
-        [transaction] = json.loads(response.value(), cls=JSONDecoder)
+        [transaction] = yield self.get_api_transaction_list(
+            account["account_number"])
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
         self.assertEqual(transaction, {
@@ -338,26 +340,17 @@ class TestTransaction(BillingApiTestCase):
         self.assertEqual(account['credit_balance'], -credit_amount)
 
         # Create a transaction (with session_created=True)
-        content = {
-            'account_number': account['account_number'],
-            'message_id': 'msg-id-2',
-            'tag_pool_name': "test_pool2",
-            'tag_name': "12345",
-            'message_direction': "Inbound",
-            'session_created': True,
-        }
-
-        headers = {'content-type': 'application/json'}
-        response = yield self.web.post(
-            'transactions', args=None, content=content, headers=headers)
-
-        self.assertEqual(response.responseCode, 200)
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-2',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=True)
 
         # Make sure there was a transaction created (with session_created=True)
-        args = {'account_number': account['account_number']}
-        response = yield self.web.get('transactions', args=args)
-        self.assertEqual(response.responseCode, 200)
-        [transaction, _] = json.loads(response.value(), cls=JSONDecoder)
+        [transaction, _] = yield self.get_api_transaction_list(
+            account["account_number"])
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
         self.assertEqual(transaction, {
