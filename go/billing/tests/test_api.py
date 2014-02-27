@@ -25,6 +25,14 @@ skipif_unsupported_db = pytest.mark.skipif(
     reason="Billing API requires PostGreSQL")
 
 
+class ApiCallError(Exception):
+    """Raised if a billing API call fails."""
+
+    def __init__(self, response):
+        super(ApiCallError, self).__init__(response.value())
+        self.response = response
+
+
 @skipif_unsupported_db
 @pytest.mark.django_db
 class BillingApiTestCase(VumiTestCase):
@@ -46,7 +54,8 @@ class BillingApiTestCase(VumiTestCase):
         headers = {'content-type': 'application/json'}
         http_method = getattr(self.web, method)
         response = yield http_method(path, headers=headers, **kw)
-        self.assertEqual(response.responseCode, 200)
+        if response.responseCode != 200:
+            raise ApiCallError(response)
         result = json.loads(response.value(), cls=JSONDecoder)
         returnValue(result)
 
@@ -292,6 +301,21 @@ class TestCost(BillingApiTestCase):
             u'tag_pool_name': u'test_pool'
         })
 
+        # Test that setting a message cost with an account number
+        # but no tag pool fails.
+        try:
+            yield self.create_api_cost(
+                account_number=account['account_number'],
+                tag_pool_name=None,
+                message_direction="Outbound",
+                message_cost=0.5, session_cost=0.3,
+                markup_percent=10.0)
+        except ApiCallError, e:
+            self.assertEqual(e.response.responseCode, 400)
+            self.assertEqual(e.message, "")
+        else:
+            self.fail("Expected cost creation to fail.")
+
 
 class TestTransaction(BillingApiTestCase):
 
@@ -469,8 +493,12 @@ class TestTransaction(BillingApiTestCase):
                 tag_name="erk",
                 message_direction="Inbound",
                 session_created=False)
-        except:
-            pass
+        except ApiCallError, e:
+            self.assertEqual(e.response.responseCode, 500)
+            self.assertEqual(
+                e.message,
+                "Unable to determine Inbound message cost for account"
+                " arbitrary-user and tag pool some-random-pool")
         else:
             self.fail("Expected transaction creation to fail.")
 
