@@ -322,15 +322,12 @@ class TestCost(BillingApiTestCase):
             self.fail("Expected cost creation to fail.")
 
         # create a message cost with no account or tag pool
-        yield self.create_api_cost(
+        fallback_cost = yield self.create_api_cost(
             account_number=None,
             tag_pool_name=None,
             message_direction="Outbound",
             message_cost=0.1, session_cost=0.1,
             markup_percent=10.0)
-
-        # Get the message cost again
-        [_, _, fallback_cost] = yield self.get_api_costs()
         self.assertEqual(fallback_cost, {
             u'account_number': None,
             u'markup_percent': decimal.Decimal('10.0'),
@@ -339,6 +336,11 @@ class TestCost(BillingApiTestCase):
             u'session_cost': decimal.Decimal('0.1'),
             u'tag_pool_name': None,
         })
+
+        # Test that we retrieve all the message costs
+        all_costs = yield self.get_api_costs()
+        self.assertEqual(
+            all_costs, [cost_override, base_cost, fallback_cost])
 
 
 class TestTransaction(BillingApiTestCase):
