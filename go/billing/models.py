@@ -97,7 +97,7 @@ class MessageCost(models.Model):
             base_cost, markup_percent, context=context)
 
     account = models.ForeignKey(Account, blank=True, null=True)
-    tag_pool = models.ForeignKey(TagPool)
+    tag_pool = models.ForeignKey(TagPool, blank=True, null=True)
     message_direction = models.CharField(max_length=20,
                                          choices=DIRECTION_CHOICES)
 
