@@ -386,7 +386,7 @@ class CostResource(BaseResource):
             message_cost = data.get('message_cost', None)
             session_cost = data.get('session_cost', None)
             markup_percent = data.get('markup_percent', None)
-            if tag_pool_name and message_direction and message_cost \
+            if message_direction and message_cost \
                     and session_cost and markup_percent:
                 d = self.create_cost(account_number, tag_pool_name,
                                      message_direction, message_cost,
@@ -475,9 +475,12 @@ class CostResource(BaseResource):
             WHERE name = %(tag_pool_name)s
         """
 
-        params = {'tag_pool_name': tag_pool_name}
-        cursor = yield cursor.execute(query, params)
-        tag_pool = yield cursor.fetchone()
+        if tag_pool_name is not None:
+            params = {'tag_pool_name': tag_pool_name}
+            cursor = yield cursor.execute(query, params)
+            tag_pool = yield cursor.fetchone()
+        else:
+            tag_pool = {'id': None}
 
         if account_number:
             query = """
@@ -733,7 +736,8 @@ class TransactionResource(BaseResource):
                  now())
             RETURNING id, account_number, message_id,
                       tag_pool_name, tag_name,
-                      message_direction, message_cost, session_cost,
+                      message_direction, message_cost,
+                      session_cost, session_created,
                       markup_percent, credit_factor, credit_amount, status,
                       created, last_modified
         """
