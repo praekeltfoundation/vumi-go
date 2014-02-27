@@ -23,11 +23,20 @@ class MessageCostForm(ModelForm):
         model = MessageCost
 
     def clean(self):
-        """Make sure the resulting credit cost does not underflow to zero"""
+        """
+        Check that:
+
+        * the resulting message credit cost does not underflow to zero.
+        * the resulting session credit cost does not underflow to zero.
+        * that if the tag pool is not set, neither is the account (
+          this is because our message cost lookup currently ignore
+          such message costs)
+        """
         cleaned_data = super(MessageCostForm, self).clean()
         message_cost = cleaned_data.get('message_cost')
         session_cost = cleaned_data.get('session_cost')
         markup_percent = cleaned_data.get('markup_percent')
+
         if message_cost and markup_percent:
             context = Context()
             credit_cost = MessageCost.calculate_message_credit_cost(
@@ -36,6 +45,7 @@ class MessageCostForm(ModelForm):
                 raise forms.ValidationError(
                     "The resulting cost per message (in credits) was rounded"
                     " to 0.")
+
         if session_cost and markup_percent:
             context = Context()
             session_credit_cost = MessageCost.calculate_session_credit_cost(
@@ -44,6 +54,12 @@ class MessageCostForm(ModelForm):
                 raise forms.ValidationError(
                     "The resulting cost per session (in credits) was rounded"
                     " to 0.")
+
+        if not cleaned_data.get("tag_pool") and cleaned_data.get("account"):
+            raise forms.ValidationError(
+                "Message costs with an empty tag pool value and a non-empty"
+                " account value are not currently supported by the billing"
+                " API's message cost look up.")
 
         return cleaned_data
 

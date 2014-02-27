@@ -25,6 +25,14 @@ skipif_unsupported_db = pytest.mark.skipif(
     reason="Billing API requires PostGreSQL")
 
 
+class ApiCallError(Exception):
+    """Raised if a billing API call fails."""
+
+    def __init__(self, response):
+        super(ApiCallError, self).__init__(response.value())
+        self.response = response
+
+
 @skipif_unsupported_db
 @pytest.mark.django_db
 class BillingApiTestCase(VumiTestCase):
@@ -46,7 +54,8 @@ class BillingApiTestCase(VumiTestCase):
         headers = {'content-type': 'application/json'}
         http_method = getattr(self.web, method)
         response = yield http_method(path, headers=headers, **kw)
-        self.assertEqual(response.responseCode, 200)
+        if response.responseCode != 200:
+            raise ApiCallError(response)
         result = json.loads(response.value(), cls=JSONDecoder)
         returnValue(result)
 
@@ -292,6 +301,21 @@ class TestCost(BillingApiTestCase):
             u'tag_pool_name': u'test_pool'
         })
 
+        # Test that setting a message cost with an account number
+        # but no tag pool fails.
+        try:
+            yield self.create_api_cost(
+                account_number=account['account_number'],
+                tag_pool_name=None,
+                message_direction="Outbound",
+                message_cost=0.5, session_cost=0.3,
+                markup_percent=10.0)
+        except ApiCallError, e:
+            self.assertEqual(e.response.responseCode, 400)
+            self.assertEqual(e.message, "")
+        else:
+            self.fail("Expected cost creation to fail.")
+
 
 class TestTransaction(BillingApiTestCase):
 
@@ -382,3 +406,104 @@ class TestTransaction(BillingApiTestCase):
         account = yield self.get_api_account(account["account_number"])
         self.assertEqual(account['credit_balance'],
                          -(credit_amount + credit_amount_for_session))
+
+        # Test override of cost by cost for specific account
+        yield self.create_api_cost(
+            account_number=account["account_number"],
+            tag_pool_name="test_pool2",
+            message_direction="Inbound",
+            message_cost=9.0, session_cost=7.0,
+            markup_percent=11.0)
+
+        transaction = yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-3',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        credit_amount = MessageCost.calculate_credit_cost(
+            decimal.Decimal('9.0'), decimal.Decimal('11.0'),
+            decimal.Decimal('7.0'), session_created=False)
+
+        del (transaction['id'], transaction['created'],
+             transaction['last_modified'])
+        self.assertEqual(transaction, {
+            u'account_number': account['account_number'],
+            u'message_id': 'msg-id-3',
+            u'credit_amount': -credit_amount,
+            u'credit_factor': decimal.Decimal('10.0'),
+            u'markup_percent': decimal.Decimal('11.0'),
+            u'message_cost': decimal.Decimal('9.0'),
+            u'message_direction': u'Inbound',
+            u'session_cost': decimal.Decimal('7.0'),
+            u'session_created': False,
+            u'status': u'Completed',
+            u'tag_name': u'12345',
+            u'tag_pool_name': u'test_pool2',
+        })
+
+        # Test fallback to default cost
+        yield self.create_api_cost(
+            message_direction="Outbound",
+            message_cost=0.1, session_cost=0.2,
+            markup_percent=12.0)
+
+        yield self.create_api_user(email="test5@example.com")
+        account = yield self.create_api_account(
+            email="test5@example.com", account_number="arbitrary-user")
+
+        transaction = yield self.create_api_transaction(
+            account_number="arbitrary-user",
+            message_id='msg-id-4',
+            tag_pool_name="some-random-pool",
+            tag_name="erk",
+            message_direction="Outbound",
+            session_created=False)
+
+        credit_amount = MessageCost.calculate_credit_cost(
+            decimal.Decimal('0.1'), decimal.Decimal('12.0'),
+            decimal.Decimal('0.2'), session_created=False)
+
+        del (transaction['id'], transaction['created'],
+             transaction['last_modified'])
+        self.assertEqual(transaction, {
+            u'account_number': 'arbitrary-user',
+            u'message_id': 'msg-id-4',
+            u'credit_amount': -credit_amount,
+            u'credit_factor': decimal.Decimal('10.0'),
+            u'markup_percent': decimal.Decimal('12.0'),
+            u'message_cost': decimal.Decimal('0.1'),
+            u'message_direction': u'Outbound',
+            u'session_cost': decimal.Decimal('0.2'),
+            u'session_created': False,
+            u'status': u'Completed',
+            u'tag_name': u'erk',
+            u'tag_pool_name': u'some-random-pool',
+        })
+
+        # Test that message direction is correctly checked for
+        # in the fallback case.
+        try:
+            yield self.create_api_transaction(
+                account_number="arbitrary-user",
+                message_id='msg-id-4',
+                tag_pool_name="some-random-pool",
+                tag_name="erk",
+                message_direction="Inbound",
+                session_created=False)
+        except ApiCallError, e:
+            self.assertEqual(e.response.responseCode, 500)
+            self.assertEqual(
+                e.message,
+                "Unable to determine Inbound message cost for account"
+                " arbitrary-user and tag pool some-random-pool")
+        else:
+            self.fail("Expected transaction creation to fail.")
+
+        [failure] = self.flushLoggedErrors('go.billing.utils.BillingError')
+        self.assertEqual(
+            failure.value.args,
+            ("Unable to determine Inbound message cost for account"
+             " arbitrary-user and tag pool some-random-pool",))
