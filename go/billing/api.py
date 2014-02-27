@@ -386,8 +386,8 @@ class CostResource(BaseResource):
             message_cost = data.get('message_cost', None)
             session_cost = data.get('session_cost', None)
             markup_percent = data.get('markup_percent', None)
-            if (message_direction and message_cost
-                    and session_cost and markup_percent):
+            if all((message_direction, message_cost, session_cost,
+                    markup_percent, tag_pool_name or not account_number)):
                 d = self.create_cost(account_number, tag_pool_name,
                                      message_direction, message_cost,
                                      session_cost, markup_percent)

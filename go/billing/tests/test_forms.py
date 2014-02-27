@@ -1,10 +1,10 @@
 from decimal import Decimal, Context
 
-from go.base.tests.helpers import GoDjangoTestCase
+from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing import settings as app_settings
 from go.billing.forms import (
     MessageCostForm, cost_rounded_to_zero)
-from go.billing.models import TagPool
+from go.billing.models import TagPool, Account
 
 
 class TestBillingFormsModule(GoDjangoTestCase):
@@ -25,8 +25,15 @@ class TestBillingFormsModule(GoDjangoTestCase):
 
 class TestMessageCostForm(GoDjangoTestCase):
     def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.user = self.user_helper.get_django_user()
+
         self.tag_pool = TagPool(name=u"pool", description=u"description")
         self.tag_pool.save()
+
+        self.account = Account(user=self.user, account_number="1234")
+        self.account.save()
 
     def patch_quantization(self, quantization):
         self.monkey_patch(
@@ -76,5 +83,20 @@ class TestMessageCostForm(GoDjangoTestCase):
             '__all__': [
                 'The resulting cost per session (in credits) was rounded'
                 ' to 0.',
+            ],
+        })
+
+    def test_validate_no_account_and_no_tag_pool(self):
+        mc = self.mk_form(account=None, tag_pool=None)
+        self.assertTrue(mc.is_valid())
+
+    def test_validate_account_and_no_tag_pool(self):
+        mc = self.mk_form(account=self.account.pk, tag_pool=None)
+        self.assertFalse(mc.is_valid())
+        self.assertEqual(mc.errors, {
+            '__all__': [
+                "Message costs with an empty tag pool value and a non-empty"
+                " account value are not currently supported by the billing"
+                " API's message cost look up.",
             ],
         })
