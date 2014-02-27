@@ -90,6 +90,12 @@ class BillingApiTestCase(VumiTestCase):
         """
         return self.call_api('get', 'accounts/%s' % (account_number,))
 
+    def get_api_account_list(self):
+        """
+        Retrieve a list of all accounts.
+        """
+        return self.call_api('get', 'accounts')
+
     def load_api_account_credits(self, account_number, credit_amount):
         """
         Load credits to an account via the API.
@@ -214,6 +220,10 @@ class TestAccount(BillingApiTestCase):
         self.assertEqual(transaction['account_number'], '12345')
         self.assertEqual(transaction['credit_amount'], 100)
         self.assertEqual(transaction['status'], 'Completed')
+
+        # Test listing all accounts
+        [my_account] = yield self.get_api_account_list()
+        self.assertEqual(my_account, account)
 
 
 class TestCost(BillingApiTestCase):
