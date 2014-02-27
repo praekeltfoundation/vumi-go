@@ -631,7 +631,9 @@ class TransactionResource(BaseResource):
                          c.session_cost, c.markup_percent
                   FROM billing_messagecost c
                   WHERE c.account_id IS NULL
-                  AND   c.tag_pool_id IS NULL) as t
+                  AND c.tag_pool_id IS NULL
+                  AND c.message_direction = %(message_direction)s
+            ) as t
             ORDER BY t.account_number
             LIMIT 1
             """

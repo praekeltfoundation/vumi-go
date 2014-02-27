@@ -458,3 +458,24 @@ class TestTransaction(BillingApiTestCase):
             u'tag_name': u'erk',
             u'tag_pool_name': u'some-random-pool',
         })
+
+        # Test that message direction is correctly checked for
+        # in the fallback case.
+        try:
+            yield self.create_api_transaction(
+                account_number="arbitrary-user",
+                message_id='msg-id-4',
+                tag_pool_name="some-random-pool",
+                tag_name="erk",
+                message_direction="Inbound",
+                session_created=False)
+        except:
+            pass
+        else:
+            self.fail("Expected transaction creation to fail.")
+
+        [failure] = self.flushLoggedErrors('go.billing.utils.BillingError')
+        self.assertEqual(
+            failure.value.args,
+            ("Unable to determine Inbound message cost for account"
+             " arbitrary-user and tag pool some-random-pool",))
