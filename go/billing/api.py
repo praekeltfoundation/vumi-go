@@ -415,7 +415,7 @@ class CostResource(BaseResource):
                    c.message_direction, c.message_cost,
                    c.session_cost, c.markup_percent
             FROM billing_messagecost c
-                 INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
+                 LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
                  LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
         """
 
@@ -445,7 +445,7 @@ class CostResource(BaseResource):
             conditions += "c.message_direction = %(message_direction)s"
             params['message_direction'] = message_direction
         query += conditions
-        query += " ORDER BY a.account_number"
+        query += " ORDER BY a.account_number, t.name, c.message_direction"
         result = yield self._connection_pool.runQuery(query, params)
 
         defer.returnValue(result)
