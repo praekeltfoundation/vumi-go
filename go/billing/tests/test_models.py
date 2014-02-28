@@ -18,8 +18,7 @@ class TestAccount(GoDjangoTestCase):
 
     def test_unicode(self):
         django_user = self.user_helper.get_django_user()
-        acc = Account(
-            user=django_user, account_number=self.user_helper.account_key)
+        acc = Account.objects.get(user=django_user)
         self.assertEqual(
             unicode(acc),
             u"%s (%s)" % (self.user_helper.account_key, django_user)
@@ -33,10 +32,8 @@ class TestMessageCost(GoDjangoTestCase):
 
     def mk_msg_cost(self, account=None, tag_pool=None, **kw):
         if account is None:
-            account = Account(
-                user=self.user_helper.get_django_user(),
-                account_number=self.user_helper.account_key)
-            account.save()
+            account = Account.objects.get(
+                user=self.user_helper.get_django_user())
         if tag_pool is None:
             tag_pool = TagPool(name=u"pool", description=u"description")
             tag_pool.save()

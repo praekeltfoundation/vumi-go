@@ -1,10 +1,13 @@
 from decimal import Decimal
 
 from django.db import models
+from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
+
 import go.billing.settings as app_settings
+from go.base.models import UserProfile
 
 
 class TagPool(models.Model):
@@ -36,6 +39,16 @@ class Account(models.Model):
 
     def __unicode__(self):
         return u"{0} ({1})".format(self.account_number, self.user.email)
+
+
+def create_billing_account(sender, instance, created, **kwargs):
+    if created:
+        Account.objects.create(user=instance.user,
+                               account_number=instance.user_account)
+
+
+post_save.connect(create_billing_account, sender=UserProfile,
+    dispatch_uid='go.billing.models.create_billing_account')
 
 
 class MessageCost(models.Model):
