@@ -25,7 +25,19 @@ class ConversationDefinition(ConversationDefinitionBase):
         raw_js_config = app_config.get("config", {}).get("value", {})
         try:
             js_config = json.loads(raw_js_config)
-            pool, tag = js_config.get("sms_tag")
         except Exception:
             return []
-        return ["%s:%s" % (pool, tag)]
+
+        endpoints = set()
+        # vumi-jssandbox-toolkit v2 endpoints
+        try:
+            endpoints.update(js_config["endpoints"].keys())
+        except Exception:
+            pass
+        # vumi-jssandbox-toolkit v1 endpoints
+        try:
+            pool, tag = js_config["sms_tag"]
+            endpoints.add("%s:%s" % (pool, tag))
+        except Exception:
+            pass
+        return sorted(endpoints)
