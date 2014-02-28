@@ -70,7 +70,8 @@ class TestGoManageAccount(GoCommandTestCase):
             'dummy')
 
     def test_billing_account_created(self):
-        self.assertEqual(self.get_billing_account(), None)
+        account = self.get_billing_account()
+        account.delete()
         expected_output = "\n".join([
             u'Performing create_billing_account on account'
             u' Test User <user@domain.com> [test-0-user] ...',
@@ -86,7 +87,7 @@ class TestGoManageAccount(GoCommandTestCase):
         self.assertEqual(account.account_number, self.user_helper.account_key)
 
     def test_billing_account_already_exists(self):
-        initial_account = self.mk_billing_account()
+        initial_account = self.get_billing_account()
         expected_output = "\n".join([
             u'Performing create_billing_account on account'
             u' Test User <user@domain.com> [test-0-user] ...',
