@@ -17,15 +17,25 @@ class ConversationDefinition(ConversationDefinitionBase):
     actions = (ViewLogsAction,)
 
     def configured_endpoints(self, config):
-        # TODO: make jsbox apps define these explicitly and
-        #       update the outbound resource to check and
-        #       complain if a jsbox app sends on an endpoint
-        #       it hasn't defined.
         app_config = config.get("jsbox_app_config", {})
         raw_js_config = app_config.get("config", {}).get("value", {})
         try:
             js_config = json.loads(raw_js_config)
-            pool, tag = js_config.get("sms_tag")
         except Exception:
             return []
-        return ["%s:%s" % (pool, tag)]
+
+        # vumi-jssandbox-toolkit v2 endpoints
+        try:
+            v2_endpoints = list(js_config["endpoints"].keys())
+        except Exception:
+            v2_endpoints = []
+        # vumi-jssandbox-toolkit v1 endpoints
+        try:
+            pool, tag = js_config["sms_tag"]
+            v1_endpoints = [u"%s:%s" % (pool, tag)]
+        except Exception:
+            v1_endpoints = []
+
+        endpoints = v1_endpoints + v2_endpoints
+        endpoints = [ep for ep in endpoints if isinstance(ep, unicode)]
+        return sorted(set(endpoints))
