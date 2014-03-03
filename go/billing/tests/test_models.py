@@ -24,6 +24,18 @@ class TestAccount(GoDjangoTestCase):
             u"%s (%s)" % (self.user_helper.account_key, django_user)
         )
 
+    def test_post_save_hook(self):
+        user_helper = self.vumi_helper.make_django_user(
+            email="newuser@example.com")
+        django_user = user_helper.get_django_user()
+        profile = django_user.get_profile()
+        acc = Account.objects.get(user=django_user)
+        self.assertEqual(acc.user, django_user)
+        self.assertEqual(acc.account_number, profile.user_account)
+        self.assertEqual(acc.credit_balance, 0.0)
+        self.assertEqual(acc.alert_threshold, 0.0)
+        self.assertEqual(acc.alert_credit_balance, 0.0)
+
 
 class TestMessageCost(GoDjangoTestCase):
     def setUp(self):
