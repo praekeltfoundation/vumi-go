@@ -24,16 +24,18 @@ class ConversationDefinition(ConversationDefinitionBase):
         except Exception:
             return []
 
-        endpoints = set()
         # vumi-jssandbox-toolkit v2 endpoints
         try:
-            endpoints.update(js_config["endpoints"].keys())
+            v2_endpoints = list(js_config["endpoints"].keys())
         except Exception:
-            pass
+            v2_endpoints = []
         # vumi-jssandbox-toolkit v1 endpoints
         try:
             pool, tag = js_config["sms_tag"]
-            endpoints.add("%s:%s" % (pool, tag))
+            v1_endpoints = [u"%s:%s" % (pool, tag)]
         except Exception:
-            pass
-        return sorted(endpoints)
+            v1_endpoints = []
+
+        endpoints = v1_endpoints + v2_endpoints
+        endpoints = [ep for ep in endpoints if isinstance(ep, unicode)]
+        return sorted(set(endpoints))
