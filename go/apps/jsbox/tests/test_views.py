@@ -65,7 +65,30 @@ class TestJsBoxViews(GoDjangoTestCase):
         })
         self.assertEqual(list(conversation.extra_endpoints), [])
 
-    def test_edit_conversation_with_extra_endpoints(self):
+    def test_edit_conversation_with_v2_extra_endpoints(self):
+        app_config = {
+            "config": {
+                "value": json.dumps({
+                    "endpoints": {
+                        "endpoint1": {},
+                        "endpoint2": {},
+                    },
+                }),
+                "source_url": u"",
+            }
+        }
+        conversation = self.setup_and_save_conversation(app_config)
+        self.assertEqual(conversation.config, {
+            'jsbox': {
+                    'javascript': 'x = 1;',
+                    'source_url': '',
+            },
+            'jsbox_app_config': app_config,
+        })
+        self.assertEqual(list(conversation.extra_endpoints),
+                         ['endpoint1', 'endpoint2'])
+
+    def test_edit_conversation_with_v1_extra_endpoints(self):
         app_config = {
             "config": {
                 "value": json.dumps({
