@@ -204,15 +204,10 @@ class GoOutboundResource(SandboxResource):
         content = command['content']
         to_addr = command['to_addr']
 
-        if any(not isinstance(u, unicode)
-               for u in (endpoint, content, to_addr)):
-            returnValue(self._mkfail(
-                command, reason="Endpoint, content or to_addr not specified"))
-
         conv = self.app_worker.conversation_for_api(api)
         if endpoint not in conv.extra_endpoints:
-            returnValue(self._mkfail(
-                command, reason="Endpoint %r not configured" % (endpoint,)))
+            return self._mkfaild(
+                command, reason="Endpoint %r not configured" % (endpoint,))
 
         msg_options = {}
         self.app_worker.add_conv_to_msg_options(conv, msg_options)

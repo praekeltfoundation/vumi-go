@@ -26,7 +26,8 @@ class StubbedAppWorker(DummyAppWorker):
     def __init__(self):
         super(StubbedAppWorker, self).__init__()
         self.conversation = Mock(
-            extra_endpoints=set(["pool1:1234", "pool2:1234"]))
+            extra_endpoints=set([
+                "pool1:1234", "pool2:1234", "extra_endpoint"]))
         self.send_to = Mock(return_value=succeed(None))
         self.reply_to = Mock(return_value=succeed(None))
         self.reply_to_group = Mock(return_value=succeed(None))
@@ -166,8 +167,11 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         self.app_worker.send_to.assert_called_once_with(
             to_addr, content, **msg_options)
 
-    def assert_send_fails(self, reason, **cmd_args):
+    def assert_send_to_tag_fails(self, reason, **cmd_args):
         return self.assert_cmd_fails(reason, 'send_to_tag', **cmd_args)
+
+    def assert_send_to_endpoint_fails(self, reason, **cmd_args):
+        return self.assert_cmd_fails(reason, 'send_to_endpoint', **cmd_args)
 
     @inlineCallbacks
     def test_send_to_tag(self):
@@ -182,27 +186,87 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         self.assert_sent('6789', 'bar', {'endpoint': 'pool1:1234'})
 
     def test_send_to_tag_unacquired(self):
-        return self.assert_send_fails(
+        return self.assert_send_to_tag_fails(
             "Tag (u'foo', u'12345') not held by account",
             tagpool='foo', tag='12345', to_addr='6789',
             content='bar')
 
     def test_send_to_tag_missing_tagpool(self):
-        return self.assert_send_fails(
+        return self.assert_send_to_tag_fails(
             "Tag, content or to_addr not specified",
             tag='12345', to_addr='6789', content='bar')
 
     def test_send_to_tag_missing_tag(self):
-        return self.assert_send_fails(
+        return self.assert_send_to_tag_fails(
             "Tag, content or to_addr not specified",
             tagpool='foo', to_addr='6789', content='bar')
 
     def test_send_to_tag_missing_to_addr(self):
-        return self.assert_send_fails(
+        return self.assert_send_to_tag_fails(
             "Tag, content or to_addr not specified",
             tagpool='foo', tag='12345', content='bar')
 
     def test_send_to_tag_missing_content(self):
-        return self.assert_send_fails(
+        return self.assert_send_to_tag_fails(
             "Tag, content or to_addr not specified",
             tagpool='foo', tag='12345', to_addr='6789')
+
+    @inlineCallbacks
+    def test_send_to_endpoint(self):
+        with LogCatcher() as lc:
+            reply = yield self.dispatch_command(
+                'send_to_endpoint', endpoint='extra_endpoint', to_addr='6789',
+                content='bar')
+            self.assertEqual(lc.messages(), [
+                "Sending outbound message to u'6789' via endpoint "
+                "u'extra_endpoint', content: u'bar'"])
+        self.check_reply(reply)
+        self.assert_sent('6789', 'bar', {'endpoint': 'extra_endpoint'})
+
+    @inlineCallbacks
+    def test_send_to_endpoint_null_content(self):
+        with LogCatcher() as lc:
+            reply = yield self.dispatch_command(
+                'send_to_endpoint', endpoint='extra_endpoint', to_addr='6789',
+                content=None)
+            self.assertEqual(lc.messages(), [
+                "Sending outbound message to u'6789' via endpoint "
+                "u'extra_endpoint', content: None"])
+        self.check_reply(reply)
+        self.assert_sent('6789', None, {'endpoint': 'extra_endpoint'})
+
+    def test_send_to_endpoint_not_configured(self):
+        return self.assert_send_to_endpoint_fails(
+            "Endpoint u'bad_endpoint' not configured",
+            endpoint='bad_endpoint', to_addr='6789',
+            content='bar')
+
+    def test_send_to_endpoint_missing_content(self):
+        return self.assert_send_to_endpoint_fails(
+            "'content' must be given in sends.",
+            endpoint='extra_endpoint', to_addr='6789')
+
+    def test_send_to_endpoint_bad_content(self):
+        return self.assert_send_to_endpoint_fails(
+            "'content' must be unicode or null.",
+            content=3, endpoint='extra_endpoint', to_addr='6789')
+
+    def test_send_to_endpoint_missing_endpoint(self):
+        return self.assert_send_to_endpoint_fails(
+            "'endpoint' must be given in sends.",
+            to_addr='6789', content='bar')
+
+    def test_send_to_endpoint_bad_endpoint(self):
+        return self.assert_send_to_endpoint_fails(
+            "'endpoint' must be given in sends.",
+            endpoint=None, to_addr='6789', content='bar')
+
+    def test_send_to_endpoint_missing_to_addr(self):
+        return self.assert_send_to_endpoint_fails(
+            "'to_addr' must be given in sends.",
+            endpoint='extra_endpoint', content='bar')
+
+    def test_send_to_endpoint_bad_to_addr(self):
+        return self.assert_send_to_endpoint_fails(
+            "'to_addr' must be given in sends.",
+            to_addr=None, endpoint='extra_endpoint', content='bar')
