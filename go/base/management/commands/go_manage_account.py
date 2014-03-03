@@ -58,5 +58,8 @@ class Command(BaseGoCommand):
             if created:
                 self.stdout.write(
                     "  Created billing account.\n")
+            else:
+                self.stdout.write(
+                    "  Billing account already exists.\n")
 
         self._apply_to_accounts(create_billing_account)

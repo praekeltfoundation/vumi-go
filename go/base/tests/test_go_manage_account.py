@@ -91,6 +91,7 @@ class TestGoManageAccount(GoCommandTestCase):
         expected_output = "\n".join([
             u'Performing create_billing_account on account'
             u' Test User <user@domain.com> [test-0-user] ...',
+            u'  Billing account already exists.',
             u'done.',
             u''
         ])
