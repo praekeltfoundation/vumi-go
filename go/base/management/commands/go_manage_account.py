@@ -21,6 +21,7 @@ class Command(BaseGoCommand):
         make_option(
             '--all',
             dest='all_accounts',
+            action='store_true', default=False,
             help='Act on all accounts.'),
         make_option('--dry-run',
             dest='dry_run',
