@@ -162,3 +162,63 @@ class GoOutboundResource(SandboxResource):
             to_addr, content, endpoint=endpoint, **msg_options)
 
         returnValue(self.reply(command, success=True))
+
+    def handle_send_to_endpoint(self, api, command):
+        """
+        Sends a message to a specified endpoint.
+
+        Command fields:
+            - ``content``: The body of the reply message.
+            - ``to_addr``: The address of the recipient (e.g. an MSISDN).
+            - ``endpoint``: The name of the endpoint to send the message via.
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+              ``false``.
+
+        Example:
+
+        .. code-block:: javascript
+
+            api.request(
+                'outbound.send_to_endpoint',
+                {content: 'Welcome!', to_addr: '+27831234567',
+                 endpoint: 'sms'},
+                function(reply) { api.log_info('Message sent: ' +
+                                               reply.success); });
+        """
+        if not 'content' in command:
+            return self._mkfaild(
+                command, reason=u"'content' must be given in sends.")
+        if not isinstance(command['content'], (unicode, type(None))):
+            return self._mkfaild(
+                command, reason=u"'content' must be unicode or null.")
+        if not isinstance(command.get('endpoint'), unicode):
+            return self._mkfaild(
+                command, reason=u"'endpoint' must be given in sends.")
+        if not isinstance(command.get('to_addr'), unicode):
+            return self._mkfaild(
+                command, reason=u"'to_addr' must be given in sends.")
+
+        endpoint = command['endpoint']
+        content = command['content']
+        to_addr = command['to_addr']
+
+        conv = self.app_worker.conversation_for_api(api)
+        if endpoint not in conv.extra_endpoints:
+            return self._mkfaild(
+                command, reason="Endpoint %r not configured" % (endpoint,))
+
+        msg_options = {}
+        self.app_worker.add_conv_to_msg_options(conv, msg_options)
+
+        log.info("Sending outbound message to %r via endpoint %r, content: %r"
+                 % (to_addr, endpoint, content))
+
+        d = self.app_worker.send_to(
+            to_addr, content, endpoint=endpoint, **msg_options)
+
+        d.addCallback(lambda r: self.reply(command, success=True))
+        d.addErrback(lambda f: self._mkfail(command,
+                                            unicode(f.getErrorMessage())))
+        return d
