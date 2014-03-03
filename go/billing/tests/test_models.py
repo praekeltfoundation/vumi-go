@@ -33,9 +33,9 @@ class TestAccount(GoDjangoTestCase):
         acc = Account.objects.get(user=django_user)
         self.assertEqual(acc.user, django_user)
         self.assertEqual(acc.account_number, profile.user_account)
-        self.assertEqual(acc.credit_balance, 0.0)
-        self.assertEqual(acc.alert_threshold, 0.0)
-        self.assertEqual(acc.alert_credit_balance, 0.0)
+        self.assertEqual(acc.credit_balance, decimal.Decimal('0.0'))
+        self.assertEqual(acc.alert_threshold, decimal.Decimal('0.0'))
+        self.assertEqual(acc.alert_credit_balance, decimal.Decimal('0.0'))
 
     def test_post_save_hook_not_created(self):
         django_user = self.user_helper.get_django_user()
