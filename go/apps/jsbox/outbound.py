@@ -163,7 +163,6 @@ class GoOutboundResource(SandboxResource):
 
         returnValue(self.reply(command, success=True))
 
-    @inlineCallbacks
     def handle_send_to_endpoint(self, api, command):
         """
         Sends a message to a specified endpoint.
@@ -188,15 +187,27 @@ class GoOutboundResource(SandboxResource):
                 function(reply) { api.log_info('Message sent: ' +
                                                reply.success); });
         """
-        endpoint = command.get('endpoint')
-        content = command.get('content')
-        to_addr = command.get('to_addr')
+        if not 'content' in command:
+            return self._mkfaild(
+                command, reason=u"'content' must be given in sends.")
+        if not isinstance(command['content'], (unicode, type(None))):
+            return self._mkfaild(
+                command, reason=u"'content' must be unicode or null.")
+        if not isinstance(command.get('endpoint'), unicode):
+            return self._mkfaild(
+                command, reason=u"'endpoint' must be given in sends.")
+        if not isinstance(command.get('to_addr'), unicode):
+            return self._mkfaild(
+                command, reason=u"'to_addr' must be given in sends.")
+
+        endpoint = command['endpoint']
+        content = command['content']
+        to_addr = command['to_addr']
+
         if any(not isinstance(u, unicode)
                for u in (endpoint, content, to_addr)):
             returnValue(self._mkfail(
                 command, reason="Endpoint, content or to_addr not specified"))
-        log.info("Sending outbound message to %r via endpoint %r, content: %r"
-                 % (to_addr, endpoint, content))
 
         conv = self.app_worker.conversation_for_api(api)
         if endpoint not in conv.extra_endpoints:
@@ -205,7 +216,14 @@ class GoOutboundResource(SandboxResource):
 
         msg_options = {}
         self.app_worker.add_conv_to_msg_options(conv, msg_options)
-        yield self.app_worker.send_to(
+
+        log.info("Sending outbound message to %r via endpoint %r, content: %r"
+                 % (to_addr, endpoint, content))
+
+        d = self.app_worker.send_to(
             to_addr, content, endpoint=endpoint, **msg_options)
 
-        returnValue(self.reply(command, success=True))
+        d.addCallback(lambda r: self.reply(command, success=True))
+        d.addErrback(lambda f: self._mkfail(command,
+                                            unicode(f.getErrorMessage())))
+        return d
