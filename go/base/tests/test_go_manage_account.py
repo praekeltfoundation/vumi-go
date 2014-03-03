@@ -25,7 +25,7 @@ class TestGoManageAccount(GoCommandTestCase):
     def setup_dummy_command(self):
         def handle_command_dummy(*args, **options):
             def dummy(user_api):
-                pass
+                self.command.stdout.write("  pom-pom-pom ...\n")
 
             self.command._apply_to_accounts(dummy)
 
@@ -38,6 +38,7 @@ class TestGoManageAccount(GoCommandTestCase):
         expected_output = "\n".join([
             u'Performing dummy on account'
             u' Test User <user@domain.com> [test-0-user] ...',
+            u'  pom-pom-pom ...',
             u'done.',
             u''
         ])
@@ -53,9 +54,11 @@ class TestGoManageAccount(GoCommandTestCase):
         expected_output = "\n".join([
             u'Performing dummy on account'
             u' Second User <user-two@domain.com> [test-1-user] ...',
+            u'  pom-pom-pom ...',
             u'done.',
             u'Performing dummy on account'
             u' Test User <user@domain.com> [test-0-user] ...',
+            u'  pom-pom-pom ...',
             u'done.',
             u''
         ])
@@ -68,6 +71,17 @@ class TestGoManageAccount(GoCommandTestCase):
         self.assert_command_error(
             "^Please specify either --email-address or --all-users$",
             'dummy')
+
+    def test_dry_run(self):
+        self.setup_dummy_command()
+        expected_output = "\n".join([
+            u'Performing dummy on account'
+            u' Test User <user@domain.com> [test-0-user] ...',
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'dummy', all_accounts=True, dry_run=True)
 
     def test_billing_account_created(self):
         account = self.get_billing_account()
