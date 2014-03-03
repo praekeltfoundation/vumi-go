@@ -1,7 +1,8 @@
 import decimal
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import TagPool, Account, MessageCost, Transaction
+from go.billing.models import (
+    TagPool, Account, MessageCost, Transaction, create_billing_account)
 from go.billing.settings import QUANTIZATION_EXPONENT
 
 
@@ -24,7 +25,7 @@ class TestAccount(GoDjangoTestCase):
             u"%s (%s)" % (self.user_helper.account_key, django_user)
         )
 
-    def test_post_save_hook(self):
+    def test_post_save_hook_created(self):
         user_helper = self.vumi_helper.make_django_user(
             email="newuser@example.com")
         django_user = user_helper.get_django_user()
@@ -35,6 +36,15 @@ class TestAccount(GoDjangoTestCase):
         self.assertEqual(acc.credit_balance, 0.0)
         self.assertEqual(acc.alert_threshold, 0.0)
         self.assertEqual(acc.alert_credit_balance, 0.0)
+
+    def test_post_save_hook_not_created(self):
+        django_user = self.user_helper.get_django_user()
+        account = Account.objects.get(user=django_user)
+        account.delete()
+        profile = django_user.get_profile()
+        create_billing_account(profile.__class__, profile, created=False)
+        self.assertEqual(
+            list(Account.objects.filter(user=django_user).all()), [])
 
 
 class TestMessageCost(GoDjangoTestCase):
