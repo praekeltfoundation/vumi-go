@@ -711,8 +711,8 @@ class TransactionResource(BaseResource):
         if result is None:
             raise BillingError(
                 "Unable to determine %s message cost for account %s"
-                " and tag pool %s" % (message_direction, account_number,
-                                      tag_pool_name))
+                " and tag pool %s" % (
+                    message_direction, account_number, tag_pool_name))
 
         message_cost = result.get('message_cost', 0)
         session_cost = result.get('session_cost', 0)
@@ -784,10 +784,17 @@ class TransactionResource(BaseResource):
         params = {'account_number': account_number}
         cursor = yield cursor.execute(query, params)
         result = yield cursor.fetchone()
+
+        if result is None:
+            raise BillingError(
+                "Unable to find billing account %s while checking"
+                " credit balance. Message was %s to/from tag pool %s." % (
+                    account_number, message_direction, tag_pool_name))
+
         credit_balance = result.get('credit_balance')
         alert_credit_balance = result.get('alert_credit_balance')
-        if credit_balance < alert_credit_balance and \
-                credit_balance + credit_amount > alert_credit_balance:
+        if (credit_balance < alert_credit_balance and
+                credit_balance + credit_amount > alert_credit_balance):
             pass  # TODO: Raise a Low Credits alert; somehow
 
         defer.returnValue(transaction)
