@@ -17,6 +17,9 @@
         <div class="col-md-4">
             <form id="form-channels" class="indent" method="post" action="">
                 {% csrf_token %}
+                {% if new_channel_form.errors %}
+                    {{ new_channel_form.errors }}
+                {% endif %}
 
                 <div class="form-group">
                     <label class="control-label" for="id_{{ new_channel_form.country.name }}">
