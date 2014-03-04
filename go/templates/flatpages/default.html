@@ -1,7 +1,8 @@
 {% extends "app.html" %}
 {% load markup %}
 
-{% block page_title %}{{flatpage.title}}{% endblock %}
+{% block page_title %}Vumi Go: {{flatpage.title}}{% endblock %}
+{% block content_title %}{{flatpage.title}}{% endblock %}
 
 {% block content_main %}
 {{flatpage.content|markdown}}
