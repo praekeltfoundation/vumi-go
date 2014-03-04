@@ -533,3 +533,29 @@ class TestTransaction(BillingApiTestCase):
             failure.value.args,
             ("Unable to determine Inbound message cost for account"
              " arbitrary-user and tag pool some-random-pool",))
+
+        # Test that transactions for unknown accounts raised a BillingError
+        try:
+            yield self.create_api_transaction(
+                account_number="unknown-account",
+                message_id='msg-id-5',
+                tag_pool_name="some-random-pool",
+                tag_name="erk",
+                message_direction="Outbound",
+                session_created=False)
+        except ApiCallError, e:
+            self.assertEqual(e.response.responseCode, 500)
+            self.assertEqual(
+                e.message,
+                "Unable to find billing account unknown-account while"
+                " checking credit balance. Message was Outbound to/from"
+                " tag pool some-random-pool.")
+        else:
+            self.fail("Expected transaction creation to fail.")
+
+        [failure] = self.flushLoggedErrors('go.billing.utils.BillingError')
+        self.assertEqual(
+            failure.value.args,
+            ("Unable to find billing account unknown-account while"
+             " checking credit balance. Message was Outbound to/from"
+             " tag pool some-random-pool.",))

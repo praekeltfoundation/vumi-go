@@ -16,14 +16,8 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
-
-    def _mk_account(self):
-        account = Account(
-            user=self.user_helper.get_django_user(),
-            account_number=self.user_helper.account_key)
-
-        account.save()
-        return account
+        self.account = Account.objects.get(
+            user=self.user_helper.get_django_user())
 
     def _mk_transaction(self, account_number, tag_pool_name='pool1',
                         tag_name="tag1",
@@ -48,14 +42,13 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     @mock.patch('go.billing.tasks.generate_monthly_statement.s',
                 new_callable=mock.MagicMock)
     def test_generate_monthly_statements(self, s):
-        account = self._mk_account()
         today = date.today()
         last_month = today - relativedelta(months=1)
-        self._mk_transaction(account.account_number, created=last_month,
+        self._mk_transaction(self.account.account_number, created=last_month,
                              last_modified=last_month)
 
         self._mk_transaction(
-            account.account_number,
+            self.account.account_number,
             message_direction=MessageCost.DIRECTION_OUTBOUND,
             created=last_month, last_modified=last_month)
 
@@ -63,13 +56,12 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         from_date = date(last_month.year, last_month.month, 1)
         to_date = date(today.year, today.month, 1) - relativedelta(days=1)
-        s.assert_called_with(account.id, from_date, to_date)
+        s.assert_called_with(self.account.id, from_date, to_date)
 
     def test_generate_monthly_statement(self):
-        account = self._mk_account()
-        self._mk_transaction(account.account_number)
+        self._mk_transaction(self.account.account_number)
         self._mk_transaction(
-            account.account_number,
+            self.account.account_number,
             message_direction=MessageCost.DIRECTION_OUTBOUND)
 
         today = date.today()
@@ -78,11 +70,11 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         to_date = (date(next_month.year, next_month.month, 1)
                    - relativedelta(days=1))
 
-        result = tasks.generate_monthly_statement(account.id, from_date,
-                                                  to_date)
+        result = tasks.generate_monthly_statement(
+            self.account.id, from_date, to_date)
 
-        statement = Statement.objects.get(account=account,
-                                          type=Statement.TYPE_MONTHLY)
+        statement = Statement.objects.get(
+            account=self.account, type=Statement.TYPE_MONTHLY)
 
         self.assertEqual(result, statement)
         self.assertEqual(statement.lineitem_set.count(), 2)

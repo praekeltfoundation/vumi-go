@@ -32,8 +32,7 @@ class TestMessageCostForm(GoDjangoTestCase):
         self.tag_pool = TagPool(name=u"pool", description=u"description")
         self.tag_pool.save()
 
-        self.account = Account(user=self.user, account_number="1234")
-        self.account.save()
+        self.account = Account.objects.get(user=self.user)
 
     def patch_quantization(self, quantization):
         self.monkey_patch(

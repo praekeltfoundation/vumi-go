@@ -1,7 +1,8 @@
 import decimal
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import TagPool, Account, MessageCost, Transaction
+from go.billing.models import (
+    TagPool, Account, MessageCost, Transaction, create_billing_account)
 from go.billing.settings import QUANTIZATION_EXPONENT
 
 
@@ -18,12 +19,32 @@ class TestAccount(GoDjangoTestCase):
 
     def test_unicode(self):
         django_user = self.user_helper.get_django_user()
-        acc = Account(
-            user=django_user, account_number=self.user_helper.account_key)
+        acc = Account.objects.get(user=django_user)
         self.assertEqual(
             unicode(acc),
             u"%s (%s)" % (self.user_helper.account_key, django_user)
         )
+
+    def test_post_save_hook_created(self):
+        user_helper = self.vumi_helper.make_django_user(
+            email="newuser@example.com")
+        django_user = user_helper.get_django_user()
+        profile = django_user.get_profile()
+        acc = Account.objects.get(user=django_user)
+        self.assertEqual(acc.user, django_user)
+        self.assertEqual(acc.account_number, profile.user_account)
+        self.assertEqual(acc.credit_balance, decimal.Decimal('0.0'))
+        self.assertEqual(acc.alert_threshold, decimal.Decimal('0.0'))
+        self.assertEqual(acc.alert_credit_balance, decimal.Decimal('0.0'))
+
+    def test_post_save_hook_not_created(self):
+        django_user = self.user_helper.get_django_user()
+        account = Account.objects.get(user=django_user)
+        account.delete()
+        profile = django_user.get_profile()
+        create_billing_account(profile.__class__, profile, created=False)
+        self.assertEqual(
+            list(Account.objects.filter(user=django_user).all()), [])
 
 
 class TestMessageCost(GoDjangoTestCase):
@@ -33,10 +54,8 @@ class TestMessageCost(GoDjangoTestCase):
 
     def mk_msg_cost(self, account=None, tag_pool=None, **kw):
         if account is None:
-            account = Account(
-                user=self.user_helper.get_django_user(),
-                account_number=self.user_helper.account_key)
-            account.save()
+            account = Account.objects.get(
+                user=self.user_helper.get_django_user())
         if tag_pool is None:
             tag_pool = TagPool(name=u"pool", description=u"description")
             tag_pool.save()
