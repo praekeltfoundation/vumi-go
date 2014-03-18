@@ -301,14 +301,12 @@ class MessageStoreClientHelper(object):
     def setup(self):
         self._patch_helper.monkey_patch(
             self._client_module, self._client_attribute,
-            self._mk_fake_client)
+            self._make_fake_client)
 
     def cleanup(self):
         self._patch_helper.cleanup()
 
-    def _mk_fake_client(self, *args, **kw):
-        assert self._client is None, (
-            "MessageStoreClientHelper only supports creating a single client")
+    def _make_fake_client(self, *args, **kw):
         self._client = FakeMessageStoreClient(self.mdb, *args, **kw)
         return self._client
 

@@ -704,13 +704,14 @@ class TestConversationViews(BaseConversationViewTestCase):
         ms_client = self.message_store_helper.get_ms_client()
         [token] = ms_client.get_tokens()
 
-        for param, value in {
+        params = {
             "q": "inbound 3",
             "token": token,
             "batch_id": conv.batch.key,
             "direction": "inbound",
             "delay": 100,
-        }.items():
+        }
+        for param, value in params.items():
             self.assertContains(response,
                                 '"%s": %s' % (param, json.dumps(value)))
 
