@@ -212,6 +212,10 @@ LOGGING = {
         },
     },
     'handlers': {
+        'sentry': {
+            'level': 'ERROR',
+            'class': 'raven.contrib.django.handlers.SentryHandler',
+        },
         'mail_admins': {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
@@ -230,7 +234,7 @@ LOGGING = {
         },
     },
     'root': {
-        'handlers': ['mail_admins'],
+        'handlers': ['sentry'],
         'level': 'ERROR',
     },
 }
@@ -280,7 +284,7 @@ VXPOLLS_PREFIX = 'vxpolls'
 # Set this to enable Google Analytics
 GOOGLE_ANALYTICS_UA = None
 
-MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
+MESSAGE_STORE_API_URL = 'http://localhost:8002/api/v1/'
 GO_API_URL = 'http://localhost:8001/api/v1/go/api'
 GO_BILLING_API_URL = 'http://localhost:9090/'
 

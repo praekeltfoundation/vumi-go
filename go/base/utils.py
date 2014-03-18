@@ -3,6 +3,7 @@
 import csv
 import codecs
 from StringIO import StringIO
+from urlparse import urlparse, urlunparse
 
 from django import forms
 from django.http import Http404
@@ -205,3 +206,20 @@ def get_router_view_definition(router_type, router=None):
     if not hasattr(router_pkg, 'view_definition'):
         return RouterViewDefinitionBase(router_def)
     return router_pkg.view_definition.RouterViewDefinition(router_def)
+
+
+def extract_auth_from_url(url):
+    parse_result = urlparse(url)
+    if parse_result.username:
+        auth = (parse_result.username, parse_result.password)
+        url = urlunparse(
+            (parse_result.scheme,
+             ('%s:%s' % (parse_result.hostname, parse_result.port)
+              if parse_result.port
+              else parse_result.hostname),
+             parse_result.path,
+             parse_result.params,
+             parse_result.query,
+             parse_result.fragment))
+        return auth, url
+    return None, url

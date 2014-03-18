@@ -680,7 +680,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             'billing_dispatcher_ro.inbound', 'app1.inbound')
 
         self.with_md(msg, conv=('app1', 'conv1'), hops=[
-            ['BILLING:INBOUND', 'default'],
+            ['BILLING:OUTBOUND', 'default'],
             ['CONVERSATION:app1:conv1', 'default'],
         ])
         self.assertEqual(
@@ -714,7 +714,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             'billing_dispatcher_ro.inbound', 'optout.inbound')
 
         hops = [
-            ['BILLING:INBOUND', 'default'],
+            ['BILLING:OUTBOUND', 'default'],
             ['OPT_OUT', 'default'],
         ]
         self.with_md(msg, user_account=self.user_account_key, hops=hops)
@@ -784,7 +784,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             'billing_dispatcher_ri.outbound', 'sphex.outbound')
 
         hops = [
-            ['BILLING:OUTBOUND', 'default'],
+            ['BILLING:INBOUND', 'default'],
             ['TRANSPORT_TAG:pool1:1234', 'default']
         ]
         self.with_md(msg, hops=hops)
@@ -819,7 +819,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             'billing_dispatcher_ri.outbound', 'sphex.outbound')
 
         hops = [
-            ['BILLING:OUTBOUND', 'default'],
+            ['BILLING:INBOUND', 'default'],
             ['TRANSPORT_TAG:pool1:1234', 'default'],
         ]
         self.with_md(msg, hops=hops)

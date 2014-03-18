@@ -60,6 +60,11 @@ class BaseGoCommand(BaseCommand):
         return [opt.const for opt in self.option_list
                 if opt.action == 'append_const' and opt.dest == 'command']
 
+    def mk_all_user_apis(self):
+        apis = [(user, vumi_api_for_user(user)) for user in get_users()]
+        apis.sort(key=lambda u: u[0].email)
+        return apis
+
     def mk_user_api(self, email_address=None, options=None):
         if email_address is None and options is None:
             raise ValueError("email_address or options is required")
@@ -75,6 +80,7 @@ class BaseGoCommand(BaseCommand):
         return vumi_api()
 
     def handle(self, *args, **options):
+        self.options = options
         self.vumi_api = self.mk_vumi_api()
         return self.dispatch_command(*args, **options)
 
