@@ -718,6 +718,7 @@ class TestGroupsResource(ResourceTestCaseBase):
         self.assertEqual(gr_data['name'], 'new name')
         self.assertEqual(gr_data['query'], 'some query')
 
+    @inlineCallbacks
     def test_handle_count_members(self):
         group = yield self.new_group(u'foo group')
         contact = yield self.new_contact(

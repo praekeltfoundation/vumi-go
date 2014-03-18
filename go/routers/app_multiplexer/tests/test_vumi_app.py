@@ -440,25 +440,26 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         choice = self.router_worker.get_menu_choice(msg, (1, 2))
         self.assertEqual(choice, None)
 
+    @inlineCallbacks
     def test_create_menu(self):
         """
         Create a menu prompt to choose between linked endpoints
         """
-        router_worker = yield self.router_helper.get_router_worker({
-            'menu_title': {'content': 'Please select a choice'},
-            'entries': [
-                {
-                    'label': 'Flappy Bird',
-                    'endpoint': 'flappy-bird',
-                },
-                {
-                    'label': 'Mama',
-                    'endpoint': 'mama',
-                }
-            ]
-        })
-        text = router_worker.create_menu(self.router_worker.config)
+        router = yield self.router_helper.create_router(
+            started=True, config={
+                'menu_title': {'content': 'Please select a choice'},
+                'entries': [
+                    {
+                        'label': 'Flappy Bird',
+                        'endpoint': 'flappy-bird',
+                    },
+                    {
+                        'label': 'Mama',
+                        'endpoint': 'mama',
+                    }
+                ]
+            })
+        config = yield self.dynamic_config_with_router(router)
+        text = self.router_worker.create_menu(config)
         self.assertEqual(
-            text,
-            'Please select a choice\n1) Flappy Bird\n2) Mama'
-        )
+            text, 'Please select a choice\n1) Flappy Bird\n2) Mama')
