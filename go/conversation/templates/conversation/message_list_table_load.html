@@ -20,7 +20,7 @@
 <script>
     function load_results() {
         $.ajax({
-            url: "{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='message_search_result/' %}",
+            url: "{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='message_list/' %}",
             data: {
                 "q": "{{query}}",
                 "token": "{{token}}",

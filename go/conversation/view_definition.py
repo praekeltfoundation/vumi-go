@@ -215,6 +215,7 @@ class MessageListView(ConversationTemplateView):
         direction = request.GET.get('direction', 'inbound')
         page = request.GET.get('p', 1)
         query = request.GET.get('q', None)
+        delay = float(request.GET.get('delay', 1000))
         token = None
 
         batch_id = conversation.batch.key
@@ -252,12 +253,17 @@ class MessageListView(ConversationTemplateView):
             tag_context.update({
                 'query': query,
                 'token': token,
+                'delay': delay,
             })
             return self.render_to_response(tag_context)
         elif query and token:
             match_result = ms_client.MatchResult(client, batch_id, direction,
-                                                    token, page=int(page),
-                                                    page_size=20)
+                                                 token, page=int(page),
+                                                 page_size=20)
+            if match_result.is_in_progress():
+                tag_context.update({'delay': delay * 1.1})
+                return self.render_to_response(tag_context)
+
             message_paginator = match_result.paginator
             tag_context.update({
                 'token': token,
