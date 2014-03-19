@@ -3,8 +3,7 @@ from django import forms
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
 
-
-DEFAULT_METRIC_STORE = 'default'
+from go.apps.http_api_nostream.definition import DEFAULT_METRIC_STORE
 
 
 class TokenForm(forms.Form):
