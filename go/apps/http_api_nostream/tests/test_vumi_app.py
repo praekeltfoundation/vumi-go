@@ -67,7 +67,7 @@ class TestNoStreamingHTTPWorkerBase(VumiTestCase):
                 'api_tokens': tokens,
                 'push_message_url': message_url,
                 'push_event_url': event_url,
-                'metrics_store': 'metrics_store',
+                'metric_store': 'metric_store',
             }
         }
         conv = yield self.app_helper.create_conversation(config=config)
@@ -345,7 +345,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
         self.assertEqual(response.code, http.OK)
 
-        prefix = "campaigns.test-0-user.stores.metrics_store"
+        prefix = "campaigns.test-0-user.stores.metric_store"
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
