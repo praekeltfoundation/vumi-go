@@ -260,7 +260,7 @@ class MetricResource(BaseResource):
 
         conversation = yield self.get_conversation(user_account)
         store = self.worker.get_api_config(
-            conversation, 'metrics_store', self.DEFAULT_STORE_NAME)
+            conversation, 'metric_store', self.DEFAULT_STORE_NAME)
         for name, value, agg_class in metrics:
             self.worker.publish_account_metric(user_account, store, name,
                                                value, agg_class)
