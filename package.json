@@ -13,7 +13,8 @@
     "libxmljs": "~0.8.1",
     "vumigo_v01": "~0.1.22",
     "vumigo_v02": "~0.2.0-beta.10",
-    "lodash": "~2.4.1"
+    "lodash": "~2.4.1",
+    "moment": "~2.5.1"
   },
   "devDependencies": {
     "js-yaml": "~2.1.0",
