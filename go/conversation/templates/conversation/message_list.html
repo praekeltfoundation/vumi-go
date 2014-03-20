@@ -146,3 +146,27 @@
     </div>
 </div><!--/expContactFrm-->
 {% endblock %}
+
+{% block ondomready %}
+    {{ block.super }}
+    function load_results() {
+        $.ajax({
+            url: "{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='message_list/' %}",
+            data: {
+                "q": "{{query}}",
+                "token": "{{token}}",
+                "batch_id": "{{batch_id}}",
+                "direction": "{{message_direction}}",
+                "delay": {{delay|default:100}},
+            },
+            success: function(data) {
+                $('#message-page').html(data);
+            }
+        });
+    };
+    {% if not message_page.paginator.num_pages %}
+      $(function () {
+        setTimeout(load_results, {{delay|default:100}});
+      });
+    {% endif %}
+{% endblock %}
