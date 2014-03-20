@@ -216,7 +216,7 @@ class MessageListView(ConversationTemplateView):
         page = request.GET.get('p', 1)
         query = request.GET.get('q', None)
         delay = float(request.GET.get('delay', 1000))
-        token = None
+        token = request.GET.get('token', None)
 
         batch_id = conversation.batch.key
 
@@ -263,17 +263,17 @@ class MessageListView(ConversationTemplateView):
             if match_result.is_in_progress():
                 tag_context.update({'delay': delay * 1.1})
                 return render(request,
-                              "message_list_table_load.html",
+                              "conversation/message_list_table_load.html",
                               tag_context)
-
-            message_paginator = match_result.paginator
-            tag_context.update({
-                'token': token,
-                'query': query,
-            })
-            return render(request,
-                          "message_list_table.html",
-                          tag_context)
+            else:
+                message_paginator = match_result.paginator
+                tag_context.update({
+                    'token': token,
+                    'query': query,
+                })
+                return render(request,
+                              "conversation/message_list_table.html",
+                              tag_context)
 
         elif direction == 'inbound':
             message_paginator = inbound_message_paginator
