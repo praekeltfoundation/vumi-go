@@ -9,7 +9,7 @@ from StringIO import StringIO
 from django.conf import settings
 from django.views.generic import View, TemplateView
 from django import forms
-from django.shortcuts import redirect, Http404
+from django.shortcuts import render, redirect, Http404
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.http import HttpResponse
@@ -262,14 +262,18 @@ class MessageListView(ConversationTemplateView):
                                                  page_size=20)
             if match_result.is_in_progress():
                 tag_context.update({'delay': delay * 1.1})
-                return self.render_to_response(tag_context)
+                return render(request,
+                              "message_list_table_load.html",
+                              tag_context)
 
             message_paginator = match_result.paginator
             tag_context.update({
                 'token': token,
                 'query': query,
             })
-            return self.render_to_response(tag_context)
+            return render(request,
+                          "message_list_table.html",
+                          tag_context)
 
         elif direction == 'inbound':
             message_paginator = inbound_message_paginator
