@@ -6,7 +6,7 @@ from django.contrib.sites.models import Site
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-class TestChannelViews(GoDjangoTestCase):
+class TestHelpViews(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
@@ -20,6 +20,7 @@ class TestChannelViews(GoDjangoTestCase):
             page.sites.add(site)
 
     def test_help_authenticated(self):
+        """The help view should be accessible when logged in."""
         self.mk_help()
         response = self.client.get(reverse('help'))
         self.assertEqual(response.status_code, 200)
@@ -30,6 +31,7 @@ class TestChannelViews(GoDjangoTestCase):
         self.assertContains(response, 'credits')
 
     def test_help_not_authenticated(self):
+        """The help view should be accessible when not logged in."""
         self.mk_help()
         self.client.logout()
         response = self.client.get(reverse('help'))
