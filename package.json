@@ -11,9 +11,10 @@
     "q": "~0.9.7",
     "jed": "~0.5.4",
     "libxmljs": "~0.8.1",
-    "underscore": "~1.5.2",
     "vumigo_v01": "~0.1.22",
-    "vumigo_v02": "~0.2.0-beta.2"
+    "vumigo_v02": "~0.2.0-beta.10",
+    "lodash": "~2.4.1",
+    "moment": "~2.5.1"
   },
   "devDependencies": {
     "js-yaml": "~2.1.0",
@@ -30,8 +31,8 @@
     "grunt-bower-task": "~0.3.2",
     "grunt-exec": "~0.4.2",
     "karma-coverage": "~0.1.0",
-    "grunt-mocha-cov": "0.0.7",
-    "less": "~1.5.1"
+    "less": "~1.5.1",
+    "grunt-mocha-cov": "~0.2.1"
   },
   "repository": {
     "type": "git",

@@ -28,12 +28,12 @@ module.exports = function (grunt) {
     },
     mochacov: {
       jsbox_apps: {
-        files: ['<%= paths.tests.jsbox_apps.spec %>'],
         options: {
+          files: ['<%= paths.tests.jsbox_apps.spec %>'],
           reporter: 'mocha-lcov-reporter',
           output: 'mochacov.lcov',
           coverage: true
-        },
+        }
       },
     },
     jst: {

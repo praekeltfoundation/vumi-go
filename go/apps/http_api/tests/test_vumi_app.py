@@ -43,7 +43,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
                     'token-2',
                     'token-3',
                 ],
-                'metrics_store': 'metrics_store',
+                'metric_store': 'metric_store',
             }
         }
         conversation = yield self.app_helper.create_conversation(
@@ -436,7 +436,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
 
         self.assertEqual(response.code, http.OK)
 
-        prefix = "campaigns.test-0-user.stores.metrics_store"
+        prefix = "campaigns.test-0-user.stores.metric_store"
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
