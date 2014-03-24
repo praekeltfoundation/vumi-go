@@ -16,6 +16,7 @@ from vumi import log
 
 from go.vumitools.utils import MessageMetadataHelper
 
+from go.apps.http_api_nostream.definition import DEFAULT_METRIC_STORE
 
 # NOTE: Things in this module are subclassed and used by go.apps.http_api.
 
@@ -225,8 +226,6 @@ class MessageResource(BaseResource):
 
 class MetricResource(BaseResource):
 
-    DEFAULT_STORE_NAME = 'default'
-
     def render_PUT(self, request):
         d = Deferred()
         d.addCallback(self.handle_PUT)
@@ -260,7 +259,7 @@ class MetricResource(BaseResource):
 
         conversation = yield self.get_conversation(user_account)
         store = self.worker.get_api_config(
-            conversation, 'metrics_store', self.DEFAULT_STORE_NAME)
+            conversation, 'metric_store', DEFAULT_METRIC_STORE)
         for name, value, agg_class in metrics:
             self.worker.publish_account_metric(user_account, store, name,
                                                value, agg_class)
