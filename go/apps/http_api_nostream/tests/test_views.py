@@ -34,7 +34,8 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
             'http_api_nostream-api_tokens': 'token',
             'http_api_nostream-push_message_url': 'http://messages/',
             'http_api_nostream-push_event_url': 'http://events/',
-            })
+            'http_api_nostream-metric_store': 'foo_metric_store',
+        })
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         reloaded_conv = conv_helper.get_conversation()
         self.assertEqual(reloaded_conv.config, {
@@ -42,12 +43,14 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
                 'push_event_url': 'http://events/',
                 'push_message_url': 'http://messages/',
                 'api_tokens': ['token'],
+                'metric_store': 'foo_metric_store'
             }
         })
         self.assertEqual(conversation.config, {})
         response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertContains(response, 'http://events/')
         self.assertContains(response, 'http://messages/')
+        self.assertContains(response, 'foo_metric_store')
         self.assertEqual(response.status_code, 200)
 
     def test_get_edit_view_no_config(self):
