@@ -176,7 +176,8 @@ class TestContacts(BaseContactsTestCase):
             header,
             ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
                       'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'created_at', 'extras-bar', 'extras-foo']))
+                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
+                      'extras-foo']))
 
         self.assertTrue(c1_data.endswith('baz,bar'))
         self.assertTrue(c2_data.endswith('ipsum,lorem'))
@@ -691,7 +692,8 @@ class TestGroups(BaseContactsTestCase):
             header,
             ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
                       'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'created_at', 'extras-bar', 'extras-foo']))
+                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
+                      'extras-foo']))
 
         self.assertTrue(contact.endswith('baz,bar'))
         self.assertTrue(contents)
@@ -738,7 +740,8 @@ class TestGroups(BaseContactsTestCase):
             header,
             ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
                       'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'created_at', 'extras-bar', 'extras-foo']))
+                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
+                      'extras-foo']))
 
         self.assertTrue(c1_data.endswith('baz,bar'))
         self.assertTrue(c2_data.endswith('ipsum,lorem'))
