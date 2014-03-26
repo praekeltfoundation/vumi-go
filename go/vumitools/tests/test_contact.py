@@ -267,8 +267,8 @@ class TestContactStore(VumiTestCase):
             msisdn=u'+27831234567',
             gtalk_id=u'random@gmail.com',
             twitter_handle=u'random',
-            mxit_id='mxit',
-            wechat_id='wechat')
+            mxit_id=u'mxit',
+            wechat_id=u'wechat')
 
         yield check_contact_for_addr('sms', u'+27831234567', contact)
         yield check_contact_for_addr('ussd', u'+27831234567', contact)
