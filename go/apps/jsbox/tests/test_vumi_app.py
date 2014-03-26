@@ -110,6 +110,8 @@ class TestJsBoxApplication(VumiTestCase):
         check_inference_for('ussd', 'ussd')
         check_inference_for('twitter', 'twitter')
         check_inference_for('xmpp', 'gtalk')
+        check_inference_for('wechat', 'wechat')
+        check_inference_for('mxit', 'mxit')
 
     @inlineCallbacks
     def test_event(self):
