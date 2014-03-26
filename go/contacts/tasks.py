@@ -71,6 +71,8 @@ _contact_fields = [
     'bbm_pin',
     'gtalk_id',
     'created_at',
+    'mxit_id',
+    'wechat_id',
 ]
 
 
