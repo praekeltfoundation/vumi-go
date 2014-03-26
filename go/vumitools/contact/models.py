@@ -55,6 +55,8 @@ class Contact(Model):
     facebook_id = Unicode(max_length=100, null=True)
     bbm_pin = Unicode(max_length=100, null=True)
     gtalk_id = Unicode(null=True)
+    mxit_id = Unicode(null=True)
+    wechat_id = Unicode(null=True)
     created_at = Timestamp(default=datetime.utcnow)
     groups = ManyToMany(ContactGroup)
     extra = Dynamic(prefix='extras-')
@@ -78,6 +80,10 @@ class Contact(Model):
             return self.gtalk_id
         elif delivery_class == 'twitter':
             return self.twitter_handle
+        elif delivery_class == 'mxit':
+            return self.mxit_id
+        elif delivery_class == 'wechat':
+            return self.wechat_id
         else:
             return None
 
@@ -86,8 +92,9 @@ class Contact(Model):
             return u' '.join([self.name, self.surname])
         else:
             return (self.surname or self.name or
-                self.gtalk_id or self.twitter_handle or self.msisdn
-                or 'Unknown User')
+                    self.gtalk_id or self.twitter_handle or self.msisdn or
+                    self.mxit_id or self.wechat_id or
+                    'Unknown User')
 
 
 class ContactStore(PerAccountStore):
@@ -282,7 +289,7 @@ class ContactStore(PerAccountStore):
         returnValue(opt_out)
 
     _SUPPORTED_DELIVERY_CLASSES = set([
-        'sms', 'ussd', 'gtalk', 'twitter',
+        'sms', 'ussd', 'gtalk', 'twitter', 'mxit', 'wechat',
     ])
 
     def delivery_class_supported(self, delivery_class):
@@ -297,6 +304,10 @@ class ContactStore(PerAccountStore):
             return {'gtalk_id': addr.partition('/')[0]}
         elif delivery_class == 'twitter':
             return {'twitter_handle': addr}
+        elif delivery_class == 'mxit':
+            return {'mxit_id': addr}
+        elif delivery_class == 'wechat':
+            return {'wechat_id': addr}
         else:
             raise ContactError(
                 "Unsupported transport_type %r" % delivery_class)

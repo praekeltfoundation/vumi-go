@@ -93,6 +93,8 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
             'ussd': 'ussd',
             'twitter': 'twitter',
             'xmpp': 'gtalk',
+            'mxit': 'mxit',
+            'wechat': 'wechat',
         }.get(msg['transport_type'], 'sms')
 
     @inlineCallbacks
