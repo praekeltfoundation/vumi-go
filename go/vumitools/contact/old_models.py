@@ -1,5 +1,3 @@
-# -*- test-case-name: go.vumitools.tests.test_contact -*-
-
 from uuid import uuid4
 from datetime import datetime
 
@@ -9,25 +7,19 @@ from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
                                  Dynamic)
 
-from go.vumitools.account import UserAccount, PerAccountStore
-from go.vumitools.contact.migrations import ContactMigrator
-from go.vumitools.opt_out import OptOutStore
+from go.vumitools.account.old_models import UserAccountV4
+from go.vumitools.account import PerAccountStore
 
 
-class ContactError(Exception):
-    """Raised when an error occurs accessing or manipulating a Contact"""
+class ContactGroupVNone(Model):
 
+    bucket = "contactgroup"
 
-class ContactNotFoundError(ContactError):
-    """Raised when a contact is not found"""
-
-
-class ContactGroup(Model):
     """A group of contacts"""
     # key is UUID
     name = Unicode()
     query = Unicode(null=True)
-    user_account = ForeignKey(UserAccount)
+    user_account = ForeignKey(UserAccountV4)
     created_at = Timestamp(default=datetime.utcnow)
 
     @Manager.calls_manager
@@ -43,14 +35,13 @@ class ContactGroup(Model):
         return self.name
 
 
-class Contact(Model):
+class ContactVNone(Model):
 
-    VERSION = 1
-    MIGRATOR = ContactMigrator
+    bucket = "contact"
 
     """A contact"""
     # key is UUID
-    user_account = ForeignKey(UserAccount)
+    user_account = ForeignKey(UserAccountV4)
     name = Unicode(max_length=255, null=True)
     surname = Unicode(max_length=255, null=True)
     email_address = Unicode(null=True)  # EmailField?
@@ -60,15 +51,13 @@ class Contact(Model):
     facebook_id = Unicode(max_length=100, null=True)
     bbm_pin = Unicode(max_length=100, null=True)
     gtalk_id = Unicode(null=True)
-    mxit_id = Unicode(null=True)
-    wechat_id = Unicode(null=True)
     created_at = Timestamp(default=datetime.utcnow)
-    groups = ManyToMany(ContactGroup)
+    groups = ManyToMany(ContactGroupVNone)
     extra = Dynamic(prefix='extras-')
     subscription = Dynamic(prefix='subscription-')
 
     def add_to_group(self, group):
-        if isinstance(group, ContactGroup):
+        if isinstance(group, ContactGroupVNone):
             self.groups.add(group)
         else:
             self.groups.add_key(group)
@@ -85,10 +74,6 @@ class Contact(Model):
             return self.gtalk_id
         elif delivery_class == 'twitter':
             return self.twitter_handle
-        elif delivery_class == 'mxit':
-            return self.mxit_id
-        elif delivery_class == 'wechat':
-            return self.wechat_id
         else:
             return None
 
@@ -98,16 +83,19 @@ class Contact(Model):
         else:
             return (self.surname or self.name or
                     self.gtalk_id or self.twitter_handle or self.msisdn or
-                    self.mxit_id or self.wechat_id or
                     'Unknown User')
 
 
-class ContactStore(PerAccountStore):
+class ContactStoreVNone(PerAccountStore):
+
+    contact_model = ContactVNone
+    contact_group_model = ContactGroupVNone
+
     NONSETTABLE_CONTACT_FIELDS = ['$VERSION', 'user_account']
 
     def setup_proxies(self):
-        self.contacts = self.manager.proxy(Contact)
-        self.groups = self.manager.proxy(ContactGroup)
+        self.contacts = self.manager.proxy(self.contact_model)
+        self.groups = self.manager.proxy(self.contact_group_model)
 
     @classmethod
     def settable_contact_fields(cls, **fields):
@@ -228,7 +216,7 @@ class ContactStore(PerAccountStore):
         #       around getting bucket names and indexes that I'm doing
         #       manually that could be automated.
         mr = self.manager.riak_map_reduce()
-        bucket = self.manager.bucket_name(Contact)
+        bucket = self.manager.bucket_name(self.contact_model)
         mr.add_bucket(bucket)
         if group is not None:
             mr.index(bucket, 'groups_bin', group.key)
@@ -351,3 +339,34 @@ class ContactStore(PerAccountStore):
         raise ContactNotFoundError(
             "Contact with address '%s' for delivery class '%s' not found."
             % (addr, delivery_class))
+
+
+class ContactV1(ContactVNone):
+
+    bucket = "contact"
+
+    """A contact"""
+    # key is UUID
+    user_account = ForeignKey(UserAccountV4)
+    name = Unicode(max_length=255, null=True)
+    surname = Unicode(max_length=255, null=True)
+    email_address = Unicode(null=True)  # EmailField?
+    msisdn = Unicode(max_length=255)
+    dob = Timestamp(null=True)
+    twitter_handle = Unicode(max_length=100, null=True)
+    facebook_id = Unicode(max_length=100, null=True)
+    bbm_pin = Unicode(max_length=100, null=True)
+    gtalk_id = Unicode(null=True)
+    mxit_id = Unicode(null=True)
+    wechat_id = Unicode(null=True)
+    created_at = Timestamp(default=datetime.utcnow)
+    groups = ManyToMany(ContactGroupVNone)
+    extra = Dynamic(prefix='extras-')
+    subscription = Dynamic(prefix='subscription-')
+
+
+class ContactStoreV1(ContactStoreVNone):
+    NONSETTABLE_CONTACT_FIELDS = ['$VERSION', 'user_account']
+
+    contact_model = ContactV1
+    contact_group_model = ContactGroupVNone
