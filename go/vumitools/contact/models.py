@@ -10,6 +10,7 @@ from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
                                  Dynamic)
 
 from go.vumitools.account import UserAccount, PerAccountStore
+from go.vumitools.contact.migrations import ContactMigrator
 from go.vumitools.opt_out import OptOutStore
 
 
@@ -43,6 +44,10 @@ class ContactGroup(Model):
 
 
 class Contact(Model):
+
+    VERSION = 1
+    MIGRATOR = ContactMigrator
+
     """A contact"""
     # key is UUID
     user_account = ForeignKey(UserAccount)
