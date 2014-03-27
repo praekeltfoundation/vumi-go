@@ -1,3 +1,4 @@
+# -*- test-case-name: go.vumitools.contact.tests.test_migrations -*-
 from vumi.persist.model import ModelMigrator
 
 
