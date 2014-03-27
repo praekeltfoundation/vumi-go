@@ -9,6 +9,7 @@ from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
 
 from go.vumitools.account.old_models import UserAccountV4
 from go.vumitools.account import PerAccountStore
+from go.vumitools.contact.migrations import ContactMigrator
 
 
 class ContactGroupVNone(Model):
@@ -342,6 +343,9 @@ class ContactStoreVNone(PerAccountStore):
 
 
 class ContactV1(ContactVNone):
+
+    VERSION = 1
+    MIGRATOR = ContactMigrator
 
     bucket = "contact"
 
