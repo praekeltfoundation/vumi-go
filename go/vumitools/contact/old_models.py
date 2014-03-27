@@ -4,7 +4,7 @@ from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
                                  Dynamic)
 
-from go.vumitools.account.old_models import UserAccountVNone
+from go.vumitools.account.old_models import UserAccountV4
 
 
 class ContactGroupVNone(Model):
@@ -12,7 +12,7 @@ class ContactGroupVNone(Model):
     # key is UUID
     name = Unicode()
     query = Unicode(null=True)
-    user_account = ForeignKey(UserAccountVNone)
+    user_account = ForeignKey(UserAccountV4)
     created_at = Timestamp(default=datetime.utcnow)
 
     @Manager.calls_manager
@@ -32,7 +32,7 @@ class ContactVNone(Model):
 
     """A contact"""
     # key is UUID
-    user_account = ForeignKey(UserAccountVNone)
+    user_account = ForeignKey(UserAccountV4)
     name = Unicode(max_length=255, null=True)
     surname = Unicode(max_length=255, null=True)
     email_address = Unicode(null=True)  # EmailField?

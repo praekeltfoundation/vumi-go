@@ -150,6 +150,64 @@ class UserAccountV2(Model):
         returnValue(False)
 
 
+class UserAccountV3(Model):
+    """A user account."""
+
+    VERSION = 3
+    MIGRATOR = UserAccountMigrator
+
+    # key is uuid
+    username = Unicode(max_length=255)
+    # TODO: tagpools can be made OneToMany once vumi.persist.fields
+    #       gains a OneToMany field
+    tagpools = ManyToMany(UserTagPermissionVNone)
+    applications = ManyToMany(UserAppPermissionVNone)
+    created_at = Timestamp(default=datetime.utcnow)
+    event_handler_config = Json(default=list)
+    msisdn = Unicode(max_length=255, null=True)
+    confirm_start_conversation = Boolean(default=False)
+    email_summary = Unicode(max_length=255, null=True)
+    tags = Json(default=[])
+    routing_table = RoutingTableField(default=RoutingTable({}))
+
+    @Manager.calls_manager
+    def has_tagpool_permission(self, tagpool):
+        for tp_bunch in self.tagpools.load_all_bunches():
+            for tp in (yield tp_bunch):
+                if tp.tagpool == tagpool:
+                    returnValue(True)
+        returnValue(False)
+
+
+class UserAccountV4(Model):
+    """A user account."""
+
+    VERSION = 4
+
+    # key is uuid
+    username = Unicode(max_length=255)
+    # TODO: tagpools can be made OneToMany once vumi.persist.fields
+    #       gains a OneToMany field
+    tagpools = ManyToMany(UserTagPermissionVNone)
+    applications = ManyToMany(UserAppPermissionVNone)
+    created_at = Timestamp(default=datetime.utcnow)
+    event_handler_config = Json(default=list)
+    msisdn = Unicode(max_length=255, null=True)
+    confirm_start_conversation = Boolean(default=False)
+    can_manage_optouts = Boolean(default=False)
+    email_summary = Unicode(max_length=255, null=True)
+    tags = Json(default=[])
+    routing_table = RoutingTableField(default=RoutingTable({}))
+
+    @Manager.calls_manager
+    def has_tagpool_permission(self, tagpool):
+        for tp_bunch in self.tagpools.load_all_bunches():
+            for tp in (yield tp_bunch):
+                if tp.tagpool == tagpool:
+                    returnValue(True)
+        returnValue(False)
+
+
 class AccountStoreV2(object):
     def __init__(self, manager):
         self.manager = manager
