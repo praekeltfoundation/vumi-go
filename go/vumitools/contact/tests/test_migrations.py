@@ -32,6 +32,17 @@ class TestContact(VumiTestCase):
         self.assertEqual(contact.msisdn, 'msisdn')
 
     @inlineCallbacks
+    def test_contact_vnone_to_v1(self):
+        contact_vnone = yield self.contacts_store_vnone.new_contact(
+            name=u'name', msisdn=u'msisdn')
+        contact_v1 = yield self.contacts_store_v1.get_contact_by_key(
+            contact_vnone.key)
+        self.assertEqual(contact_v1.name, 'name')
+        self.assertEqual(contact_v1.msisdn, 'msisdn')
+        self.assertEqual(contact_v1.mxit_id, None)
+        self.assertEqual(contact_v1.wechat_id, None)
+
+    @inlineCallbacks
     def test_contact_v1(self):
         contact = yield self.contacts_store_v1.new_contact(
             msisdn=u'msisdn', mxit_id=u'mxit', wechat_id=u'wechat')
