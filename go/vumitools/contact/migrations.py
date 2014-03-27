@@ -9,7 +9,9 @@ class ContactMigrator(ModelMigrator):
         mdata.copy_values(
             'name', 'surname', 'email_address', 'msisdn',
             'dob', 'twitter_handle', 'facebook_id', 'bbm_pin',
-            'gtalk_id', 'created_at', 'extra', 'subscription')
+            'gtalk_id', 'created_at')
+        mdata.copy_dynamic_values(
+            'extras-', 'subscription-')
         mdata.copy_indexes('user_account_bin', 'groups_bin')
 
         # Add stuff that's new in this version
