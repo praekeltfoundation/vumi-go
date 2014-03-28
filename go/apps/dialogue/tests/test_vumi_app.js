@@ -1,204 +1,38 @@
-var assert = require("assert");
-var vumigo = require("vumigo_v01");
-var app = require("../vumi_app");
-var dummy_polls = require("./dummy_polls");
+require('mocha-as-promised')();
+var vumigo = require('vumigo_v02');
+var app = require('../vumi_app');
+var DialogueApp = app.DialogueApp;
+var AppTester = vumigo.AppTester;
 
-function poll_tester(poll) {
-    return new vumigo.test_utils.ImTester(app.api, {
-        async: true,
-        custom_setup: function (api) {
-            api.config_store.poll = poll;
-        }
-    });
-}
+describe.only("app", function() {
+    describe("DialogueApp", function() {
+        var tester;
+        
+        beforeEach(function() {
+            tester = new AppTester(new DialogueApp());
 
-function clone(obj) {
-  var dup = {};
-  for (var k in obj) { dup[k] = obj[k]; }
-  return dup;
-}
-
-describe("choice states", function() {
-    var tester;
-
-    beforeEach(function () {
-        tester = poll_tester(dummy_polls.simple_poll);
-    });
-
-    it("should display", function(done) {
-        var p = tester.check_state({
-            user: {current_state: "choice-1"},
-            helper_metadata: {delivery_class: 'ussd'},
-            content: null,
-            next_state: "choice-1",
-            response: (
-                "^What is your favourite colour\\?[^]" +
-                "1. Red[^]" +
-                "2. Blue"
-            )
+            tester.setup.config.app({
+                name: 'dialogue_app'
+            });
         });
-        p.then(done, done);
-    });
 
-    it("should respond to valid input", function(done) {
-        var p = tester.check_state({
-            user: {current_state: "choice-1"},
-            helper_metadata: {delivery_class: 'ussd'},
-            content: "2",
-            next_state: "end-1",
-            response: (
-                "^Thank you for taking our survey$"
-            ),
-            continue_session: false
+        describe("when the user enters a choice state", function() {
+            it("should display the state's question");
+            it("should respond to valid input");
+            it("should respond to invalid input");
+            it("should store the user's answer");
+            it("should support accepting label and number based answers");
         });
-        p.then(done, done);
-    });
 
-    it("should respond to invalid input", function(done) {
-        var p = tester.check_state({
-            user: {current_state: "choice-1"},
-            helper_metadata: {delivery_class: 'ussd'},
-            content: "3",
-            next_state: "choice-1",
-            response: (
-                "^What is your favourite colour\\?[^]" +
-                "1. Red[^]" +
-                "2. Blue"
-            )
+        describe("when the user enters a freetext state", function() {
+            it("should display the state's question");
+            it("should respond to input");
+            it("should store the user's answer");
         });
-        p.then(done, done);
-    });
 
-    it("should store the user's answer", function(done) {
-        tester.check_state({
-            from_addr: '+2731234567',
-            user: {current_state: "choice-1"},
-            helper_metadata: {delivery_class: 'ussd'},
-            content: "2",
-            next_state: "end-1",
-            response: (
-                "^Thank you for taking our survey$"
-            ),
-            continue_session: false
-        }).then(function() {
-            var contact = app.api.find_contact('ussd', '+2731234567');
-            assert.equal(contact['extras-message-1'], 'value-2');
-        }).done(done, done);
-    });
-
-    describe("if 'accept_labels' is enabled", function() {
-      beforeEach(function() {
-          var poll = clone(dummy_polls.simple_poll);
-          poll.accept_labels = true;
-          tester = poll_tester(poll);
-      });
-
-      it("should accept both label and number based answers", function(done) {
-        var p = tester.check_state({
-            user: {current_state: "choice-1"},
-            helper_metadata: {delivery_class: 'ussd'},
-            content: "Blue",
-            next_state: "end-1",
-            response: (
-                "^Thank you for taking our survey$"
-            ),
-            continue_session: false
+        describe("when the user enters an end state", function() {
+            it("should display the state's text");
+            it("should put the user on the start state next session");
         });
-        p.then(done, done);
-      });
-    });
-});
-
-describe("freetext states", function() {
-    var tester;
-
-    beforeEach(function () {
-        tester = poll_tester(dummy_polls.simple_poll);
-    });
-
-    it("should display", function(done) {
-        var p = tester.check_state({
-            user: {current_state: "freetext-1"},
-            helper_metadata: {delivery_class: 'ussd'},
-            content: null,
-            next_state: "freetext-1",
-            response: (
-                "^What is your name\\?$"
-            )
-        });
-        p.then(done, done);
-    });
-
-    it("should respond to input", function(done) {
-        var p = tester.check_state({
-            user: {current_state: "freetext-1"},
-            helper_metadata: {delivery_class: 'ussd'},
-            content: "Foo",
-            next_state: "end-1",
-            response: (
-                "^Thank you for taking our survey$"
-            ),
-            continue_session: false
-        });
-        p.then(done, done);
-    });
-
-    it("should store the user's answer", function(done) {
-        tester.check_state({
-            from_addr: '+2731234567',
-            user: {current_state: "freetext-1"},
-            helper_metadata: {delivery_class: 'ussd'},
-            content: "Foo",
-            next_state: "end-1",
-            response: (
-                "^Thank you for taking our survey$"
-            ),
-            continue_session: false
-        }).then(function() {
-            var contact = app.api.find_contact('ussd', '+2731234567');
-            assert.equal(contact['extras-message-2'], 'Foo');
-        }).done(done, done);
-    });
-});
-
-describe("end states", function() {
-    var tester;
-
-    beforeEach(function () {
-        tester = poll_tester(dummy_polls.simple_poll);
-    });
-
-    it("should display", function(done) {
-        var p = tester.check_state({
-            user: {current_state: "end-1"},
-            content: null,
-            next_state: "end-1",
-            response: (
-                "^Thank you for taking our survey$"
-            ),
-            continue_session: false
-        });
-        p.then(done, done);
-    });
-});
-
-describe("states of unknown type", function() {
-    var tester;
-
-    beforeEach(function () {
-        tester = poll_tester(dummy_polls.simple_poll);
-    });
-
-    it("should display", function(done) {
-        var p = tester.check_state({
-            user: {current_state: "unknown-1"},
-            content: null,
-            next_state: "unknown-1",
-            response: (
-                "^An error occurred. Please try dial in again later\\.$"
-            ),
-            continue_session: false
-        });
-        p.then(done, done);
     });
 });
