@@ -11,6 +11,8 @@ class ContactForm(forms.Form):
     facebook_id = forms.CharField(required=False)
     bbm_pin = forms.CharField(required=False)
     gtalk_id = forms.CharField(required=False)
+    mxit_id = forms.CharField(required=False)
+    wechat_id = forms.CharField(required=False)
     dob = forms.DateTimeField(required=False)
 
     # groups is a special magic field that we add in __init__

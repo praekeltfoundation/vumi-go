@@ -428,6 +428,8 @@ class VumiUserApi(object):
             TransportUserMessage.TT_USSD: 'ussd',
             TransportUserMessage.TT_XMPP: 'gtalk',
             TransportUserMessage.TT_TWITTER: 'twitter',
+            TransportUserMessage.TT_MXIT: 'mxit',
+            TransportUserMessage.TT_WECHAT: 'wechat',
         }.get(msg['transport_type'],
               msg['transport_type'])
 

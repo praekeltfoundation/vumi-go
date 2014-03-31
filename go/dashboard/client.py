@@ -9,6 +9,10 @@ class DiamondashApiError(Exception):
     Raised when we something goes wrong while trying to interact with
     diamondash api.
     """
+    def __init__(self, code, content):
+        super(DiamondashApiError, self).__init__("%s: %s" % (code, content))
+        self.code = code
+        self.content = content
 
 
 class DiamondashApiClient(object):
@@ -37,9 +41,9 @@ class DiamondashApiClient(object):
 
         try:
             resp.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except requests.exceptions.HTTPError:
             raise DiamondashApiError(
-                "%s: %s" % (e, resp.content))
+                resp.status_code, resp.content)
 
         return {
             'code': resp.status_code,

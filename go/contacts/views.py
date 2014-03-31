@@ -454,6 +454,8 @@ def person(request, person_key):
             'facebook_id': contact.facebook_id,
             'bbm_pin': contact.bbm_pin,
             'gtalk_id': contact.gtalk_id,
+            'mxit_id': contact.mxit_id,
+            'wechat_id': contact.wechat_id,
             'dob': contact.dob,
             'groups': contact.groups.keys(),
         })

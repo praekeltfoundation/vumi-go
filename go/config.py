@@ -136,7 +136,18 @@ _VUMI_INSTALLED_ROUTERS = {
         'namespace': 'keyword',
         'display_name': 'Keyword',
     },
+    'go.routers.app_multiplexer': {
+        'namespace': 'app_multiplexer',
+        'display_name': 'Application Multiplexer',
+    },
 }
 
 _VUMI_OBSOLETE_ROUTERS = [
 ]
+
+
+def billing_quantization_exponent():
+    # This is currently hardcoded in here to avoid pulling a pile of Django
+    # stuff into `go.vumitools.billing_worker` through `go.billing.settings`.
+    from decimal import Decimal
+    return Decimal('.000001')

@@ -17,7 +17,8 @@ class FakeResponse(object):
 
 
 class FakeErrorResponse(object):
-    def __init__(self, content):
+    def __init__(self, content, status_code=500):
+        self.status_code = status_code
         self.content = content
 
     def raise_for_status(self):

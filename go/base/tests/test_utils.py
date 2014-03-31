@@ -1,9 +1,16 @@
+# -*- coding: utf-8 -*-
 """Test for go.base.utils."""
+
+import csv
+from StringIO import StringIO
+from unittest import TestCase
+
 
 from go.base.tests.helpers import GoDjangoTestCase
 import go.base.utils
 from go.base.utils import (
-    get_conversation_view_definition, get_router_view_definition)
+    get_conversation_view_definition, get_router_view_definition,
+    UnicodeDictWriter, extract_auth_from_url)
 from go.errors import UnknownConversationType, UnknownRouterType
 
 
@@ -57,3 +64,72 @@ class TestRouterDefinitionHelpers(GoDjangoTestCase):
             lambda: set(['old_router']))
         view_def = get_router_view_definition('old_router')
         self.assertEqual(view_def._router_def.router_type, 'old_router')
+
+
+class TestUnicodeDictWriter(TestCase):
+
+    col1 = u'foo'
+    col2 = u'bar'
+    headers = [col1, col2]
+
+    def test_writeheader(self):
+        io = StringIO()
+        writer = UnicodeDictWriter(io, self.headers)
+        writer.writeheader()
+        reader = csv.reader(StringIO(io.getvalue()))
+        row = reader.next()
+        self.assertEqual(
+            [h.encode('utf-8') for h in self.headers],
+            row)
+
+    def test_writerow(self):
+        io = StringIO()
+        writer = UnicodeDictWriter(io, self.headers)
+        writer.writeheader()
+        writer.writerow({
+            self.col1: u'føø',
+            self.col2: u'bär',
+        })
+        reader = csv.reader(StringIO(io.getvalue()))
+        reader.next()   # header
+        row = reader.next()
+        self.assertEqual(
+            [u'føø'.encode('utf-8'), u'bär'.encode('utf-8')],
+            row)
+
+    def test_writerows(self):
+        io = StringIO()
+        writer = UnicodeDictWriter(io, self.headers)
+        writer.writeheader()
+        for i in range(2):
+            writer.writerows([{
+                self.col1: u'føø',
+                self.col2: u'bär',
+            }])
+        reader = csv.reader(StringIO(io.getvalue()))
+        reader.next()   # header
+        rows = [row for row in reader]
+        self.assertEqual(
+            [
+                [u'føø'.encode('utf-8'), u'bär'.encode('utf-8')],
+                [u'føø'.encode('utf-8'), u'bär'.encode('utf-8')],
+            ],
+            rows)
+
+
+class TestRandomUtils(TestCase):
+
+    def test_extract_auth_from_url_no_auth(self):
+        auth, url = extract_auth_from_url('http://go.vumi.org')
+        self.assertEqual(auth, None)
+        self.assertEqual(url, 'http://go.vumi.org')
+
+    def test_extract_auth_from_url_with_auth(self):
+        auth, url = extract_auth_from_url('http://u:p@go.vumi.org')
+        self.assertEqual(auth, ('u', 'p'))
+        self.assertEqual(url, 'http://go.vumi.org')
+
+    def test_extract_auth_from_url_with_username(self):
+        auth, url = extract_auth_from_url('http://u@go.vumi.org')
+        self.assertEqual(auth, ('u', None))
+        self.assertEqual(url, 'http://go.vumi.org')

@@ -20,13 +20,11 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
         self.app = yield self.app_helper.get_app_worker({
             "secret_key": "s3cr3t",
         })
-
-        yield self.start_webserver(WIKIPEDIA_RESPONSES)
-        self.add_cleanup(self.stop_webserver)
+        self.fake_api = self.start_webserver(WIKIPEDIA_RESPONSES)
 
     @inlineCallbacks
     def setup_conv(self, config={}):
-        config.setdefault('api_url', self.url)
+        config.setdefault('api_url', self.fake_api.url)
         self.conv = yield self.app_helper.create_conversation(config=config)
         yield self.app_helper.start_conversation(self.conv)
 
@@ -63,3 +61,18 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
             ConversationMetric.make_name(self.conv, name) for name in [
                 'wikipedia_search_call', 'wikipedia_extract_call',
                 'wikipedia_extract_call']])
+
+    @inlineCallbacks
+    def test_conversation_config(self):
+        yield self.setup_conv({
+            'api_url': 'http://wikipedia/api.php',
+            'include_url_in_sms': True,
+            'mobi_url_host': 'http://mobi/',
+            'shortening_api_url': 'http://wtxt.io/',
+        })
+        msg = self.app_helper.make_inbound(None, conv=self.conv)
+        config = yield self.app.get_config(msg)
+        self.assertEqual(config.api_url.geturl(), 'http://wikipedia/api.php')
+        self.assertEqual(config.include_url_in_sms, True)
+        self.assertEqual(config.mobi_url_host, 'http://mobi/')
+        self.assertEqual(config.shortening_api_url.geturl(), 'http://wtxt.io/')

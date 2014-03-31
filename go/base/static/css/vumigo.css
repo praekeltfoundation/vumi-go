@@ -59,9 +59,6 @@ button {
   background: transparent;
   color: #fff !important;
 }
-.main-nav .navbar-nav li {
-  border-right: 1px #212527 solid;
-}
 .main-nav .navbar-nav .navbar-brand {
   border: none;
   padding: 0;

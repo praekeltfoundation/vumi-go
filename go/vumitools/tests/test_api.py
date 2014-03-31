@@ -382,6 +382,7 @@ class TestTxVumiRouterApi(VumiTestCase):
         returnValue(
             self.user_api.get_router_api(router.router_type, router.key))
 
+    @inlineCallbacks
     def test_get_router(self):
         router = yield self.create_router()
         router_api = yield self.get_router_api(router)

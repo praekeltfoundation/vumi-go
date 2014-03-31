@@ -46,7 +46,7 @@ class ContactsResource(SandboxResource):
         Command fields:
             - ``delivery_class``: the type of channel used for the passed in
               address. Can be one of the following types: ``sms``, ``ussd``,
-              ``twitter``, ``gtalk``
+              ``twitter``, ``gtalk``, ``mxit``, ``wechat``.
             - ``addr``: The address to use to lookup of the contact. For
               example, if ``sms`` was the delivery class, the address would
               look something like ``+27731112233``
@@ -71,6 +71,8 @@ class ContactsResource(SandboxResource):
                     'facebook_id': null,
                     '$VERSION': null,
                     'twitter_handle': null,
+                    'mxit_id': null,
+                    'wechat_id': null,
                     'email_address': null,
                     'name': 'A Random'
                 }

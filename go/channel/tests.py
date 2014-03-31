@@ -59,6 +59,22 @@ class TestChannelViews(GoDjangoTestCase):
         self.assertRedirects(response, self.get_view_url('show', channel_key))
         self.assert_active_channel_tags([tag])
 
+    def test_post_new_channel_no_country(self):
+        self.assert_active_channel_tags([])
+        response = self.client.post(reverse('channels:new_channel'), {
+            'channel': 'longcode:'})
+        self.assertContains(response, '<li>country<ul class="errorlist">'
+                            '<li>This field is required.</li></ul></li>')
+        self.assert_active_channel_tags([])
+
+    def test_post_new_channel_no_channel(self):
+        self.assert_active_channel_tags([])
+        response = self.client.post(reverse('channels:new_channel'), {
+            'country': 'International'})
+        self.assertContains(response, '<li>channel<ul class="errorlist">'
+                            '<li>This field is required.</li></ul></li>')
+        self.assert_active_channel_tags([])
+
     def test_show_channel_missing(self):
         response = self.client.get(self.get_view_url('show', u'foo:bar'))
         self.assertEqual(response.status_code, 404)

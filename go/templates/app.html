@@ -4,21 +4,19 @@
 
 {% block navigation %}
 <nav class="main-nav navbar navbar-default">
-    <div class="pull-left">
-        <ul class="nav navbar-nav">
-            <li class="navbar-brand">
-                <a class="navbar-brand" href="/">
-                    <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo" width="63">
-                </a>
-            </li>
+    <ul class="nav navbar-nav pull-left">
+        <li class="navbar-brand">
+            <a class="navbar-brand" href="/">
+                <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo" width="63">
+            </a>
+        </li>
+        {% if request.user.is_authenticated %}
+        <li><a href="{% url 'conversations:index' %}">Dashboard</a></li>
+        <li><a href="{% url 'contacts:people' %}">Contacts</a></li>
+        {% endif %}
+    </ul>
 
-            <li><a href="{% url 'conversations:index' %}">Dashboard</a></li>
-            <li><a href="{% url 'contacts:people' %}">Contacts</a></li>
-            {# TODO <li><a href="#">Help</a></li> #}
-        </ul>
-    </div>
-
-    <ul class="nav pull-right">
+    <ul class="nav navbar-nav pull-right">
         {% comment %}
         TODO
         <li class="dropdown">
@@ -32,6 +30,8 @@
         </li>
         {% endcomment %}
 
+        <li><a href="{% url 'help' %}">Help</a></li>
+        {% if request.user.is_authenticated %}
         <li class="dropdown">
             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                 Account
@@ -44,6 +44,7 @@
                 <li><span class="status">{% credit_balance request.user %}</span></li>
             </ul>
         </li>
+        {% endif %}
     </ul>
 </nav>
 {% endblock %}
