@@ -70,6 +70,8 @@ _contact_fields = [
     'facebook_id',
     'bbm_pin',
     'gtalk_id',
+    'mxit_id',
+    'wechat_id',
     'created_at',
 ]
 
