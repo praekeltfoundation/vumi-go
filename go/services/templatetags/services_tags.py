@@ -1,10 +1,12 @@
 from django import template
 
-from go.services import settings
+from go.config import _VUMI_INSTALLED_SERVICES
 
 register = template.Library()
 
-for module, data in settings.INSTALLED_SERVICES.iteritems():
+# TODO: Get rid of the template tags.
+
+for module, data in _VUMI_INSTALLED_SERVICES.iteritems():
     service_pkg = __import__(module, fromlist=['templatetags'])
     if hasattr(service_pkg, 'templatetags'):
         simple_tags = getattr(service_pkg.templatetags, 'simple_tags', [])
