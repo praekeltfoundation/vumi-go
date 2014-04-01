@@ -17,7 +17,7 @@
     "jsPlumb": "git@github.com:praekelt/jsPlumb.git#~1.5.2",
     "lodash": "~2.0.0",
     "backbone-relational": "0.8.6",
-    "bootstrap": "~3.0.0",
+    "bootstrap": "3.0.0",
     "bootbox": "~4.0.0",
     "diamondash": "~0.3.1"
   },
