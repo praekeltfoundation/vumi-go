@@ -143,6 +143,8 @@ class ContactFileParser(object):
         'facebook_id': 'Facebook ID',
         'twitter_handle': 'Twitter handle',
         'email_address': 'Email address',
+        'mxit_id': 'Mxit ID',
+        'wechat_id': 'WeChat ID',
     }
 
     ENCODING = 'utf-8'
