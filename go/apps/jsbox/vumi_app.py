@@ -117,9 +117,9 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         return super(JsBoxApplication, self).process_command_start(
             user_account_key, conversation_key)
 
-    def send_inbound_push_trigger(self, to_addr, contact, conversation):
+    def send_inbound_push_trigger(self, to_addr, conversation):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
-        msg = mk_inbound_push_trigger(to_addr, contact, conversation)
+        msg = mk_inbound_push_trigger(to_addr, conversation)
         return self.consume_user_message(msg)
 
     @inlineCallbacks
@@ -136,4 +136,4 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
             for contact in (yield contacts):
                 to_addr = contact.addr_for(delivery_class)
                 yield self.send_inbound_push_trigger(
-                    to_addr, contact, conv)
+                    to_addr, conv)

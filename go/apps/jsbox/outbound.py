@@ -13,7 +13,7 @@ from vumi import log
 INBOUND_PUSH_TRIGGER = "inbound_push_trigger"
 
 
-def mk_inbound_push_trigger(to_addr, contact, conversation):
+def mk_inbound_push_trigger(to_addr, conversation):
     """
     Construct a dummy inbound message used to trigger a push of
     a new message from a sandbox application.
