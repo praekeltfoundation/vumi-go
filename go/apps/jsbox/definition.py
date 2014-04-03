@@ -6,7 +6,7 @@ from go.vumitools.conversation.definition import (
 
 class SendJsboxAction(ConversationAction):
     action_name = 'send_jsbox'
-    action_display_name = 'Push next message'
+    action_display_name = 'Trigger push messages'
 
     needs_confirmation = True
 
