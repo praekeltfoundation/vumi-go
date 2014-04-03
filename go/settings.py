@@ -140,6 +140,9 @@ TEMPLATE_DIRS = (
     abspath("channel", "templates"),
     abspath("routing", "templates"),
     abspath("wizard", "templates"),
+    abspath("services", "templates"),
+    abspath("services", "vouchers", "airtime", "templates"),
+    abspath("services", "vouchers", "unique_codes", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -169,6 +172,7 @@ INSTALLED_APPS = (
     'go.contacts',
     'go.account',
     'go.billing',
+    'go.services',
 
 
     'vxpolls.djdashboard',
@@ -261,6 +265,7 @@ CELERY_IMPORTS = (
     "go.account.tasks",
     "go.conversation.tasks",
     "go.apps.surveys.tasks",
+    "go.services.vouchers.airtime.tasks",
 )
 CELERY_RESULT_BACKEND = "amqp"
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
@@ -369,3 +374,5 @@ PIPELINE_JS = {
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 GO_METRICS_PREFIX = 'go.'
+
+GO_VOUCHER_POOL_PREFIX = 'go_'

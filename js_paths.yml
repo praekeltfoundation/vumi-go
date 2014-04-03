@@ -35,6 +35,7 @@ client:
       - 'go/base/static/vendor/d3/js/d3.js'
       - 'go/base/static/vendor/backbone.babysitter/js/backbone.babysitter.js'
       - 'go/base/static/vendor/diamondash/js/diamondash.js'
+      - 'go/base/static/vendor/form/js/jquery.form.js'
     go:
       - 'go/base/static/js/src/go.js'
       - 'go/base/static/js/src/utils.js'
@@ -86,6 +87,9 @@ client:
       - 'go/base/static/js/src/channel/views.js'
       - 'go/base/static/js/src/channel/dashboard.js'
       - 'go/base/static/js/src/channel/show.js'
+      - 'go/base/static/js/src/services/services.js'
+      - 'go/base/static/js/src/services/airtime.js'
+      - 'go/base/static/js/src/services/unique_codes.js'
 
   styles:
     vendor:

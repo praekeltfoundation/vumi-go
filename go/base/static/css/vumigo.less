@@ -275,13 +275,35 @@ a:link, button {
 }
 
 // this is used in forms
-.help-inline .errorlist {
+.errorlist {
   list-style: none;
+  padding: 0;
+  margin: 0;
 
   li {
     padding: 0;
     margin: 0;
+    color: #e32;
+
+    .help-block {
+      color: #e32;
+    }
   }
+}
+
+.form-messages {
+  p {
+    font-weight: bold;
+  }
+
+  .error {
+    color: #e32;
+  }
+}
+
+.help-text {
+  margin-top: 5px;
+  margin-bottom: 10px;
 }
 
 .alert {
