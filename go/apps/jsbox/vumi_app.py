@@ -135,5 +135,5 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
                 delivery_class)):
             for contact in (yield contacts):
                 to_addr = contact.addr_for(delivery_class)
-                yield self.send_first_dialogue_message(
+                yield self.send_inbound_push_trigger(
                     to_addr, contact, conv)
