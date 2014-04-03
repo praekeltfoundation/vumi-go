@@ -22,6 +22,7 @@ from vumi import log
 from go.config import (
     configured_conversations,
     configured_routers)
+
 from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore

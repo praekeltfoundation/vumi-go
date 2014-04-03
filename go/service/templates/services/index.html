@@ -1,0 +1,22 @@
+{% extends "account/base.html" %}
+
+{% load i18n %}
+{% load go_tags %}
+{% load crispy_forms_tags %}
+
+{% block content_extraclass %}services index{% endblock %}
+{% block content_title %}Installed services{% endblock %}
+
+{% block content_main %}
+<div class="row main-content">
+    <div class="col-md-12">
+        {% for package, config in installed_services.items %}
+        <h2>{{ config.display_name }}</h2>
+        <div class="service">
+            <a href="{% url "services:service_index" service_type=config.namespace %}">
+                {% trans "Configure service" %}&nbsp;&raquo;</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

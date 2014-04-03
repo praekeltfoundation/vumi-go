@@ -10,7 +10,8 @@
 
 import copy
 
-from go.errors import UnknownConversationType, UnknownRouterType
+from go.errors import (
+    UnknownConversationType, UnknownRouterType, UnknownServiceType)
 
 
 def configured_conversation_types():
@@ -39,11 +40,23 @@ def obsolete_router_types():
     return set(_VUMI_OBSOLETE_ROUTERS)
 
 
+def configured_service_types():
+    return dict((a['namespace'], a['display_name'])
+                for a in _VUMI_INSTALLED_SERVICES.itervalues())
+
+
+def configured_services():
+    return copy.deepcopy(_VUMI_INSTALLED_SERVICES)
+
+
+def obsolete_service_types():
+    return set(_VUMI_OBSOLETE_SERVICES)
+
+
 def get_conversation_pkg(conversation_type, fromlist):
     for module, data in _VUMI_INSTALLED_APPS.iteritems():
         if data['namespace'] == conversation_type:
-            app_pkg = __import__(module,
-                                 fromlist=fromlist)
+            app_pkg = __import__(module, fromlist=fromlist)
             return app_pkg
     raise UnknownConversationType(
         "Can't find python package for conversation type: %r"
@@ -53,12 +66,21 @@ def get_conversation_pkg(conversation_type, fromlist):
 def get_router_pkg(router_type, fromlist=()):
     for module, data in _VUMI_INSTALLED_ROUTERS.iteritems():
         if data['namespace'] == router_type:
-            router_pkg = __import__(module,
-                                 fromlist=fromlist)
+            router_pkg = __import__(module, fromlist=fromlist)
             return router_pkg
     raise UnknownRouterType(
         "Can't find python package for router type: %r"
         % (router_type,))
+
+
+def get_service_pkg(service_type, fromlist=()):
+    for module, data in _VUMI_INSTALLED_SERVICES.iteritems():
+        if data['namespace'] == service_type:
+            service_pkg = __import__(module, fromlist=fromlist)
+            return service_pkg
+    raise UnknownServiceType(
+        "Can't find python package for service type: %r"
+        % (service_type,))
 
 
 def get_conversation_definition(conversation_type, conv=None):
@@ -143,6 +165,16 @@ _VUMI_INSTALLED_ROUTERS = {
 }
 
 _VUMI_OBSOLETE_ROUTERS = [
+]
+
+_VUMI_INSTALLED_SERVICES = {
+    'go.services.kvstore.redis': {
+        'namespace': 'kvstore.redis',
+        'display_name': 'Key-value store (Redis)',
+    },
+}
+
+_VUMI_OBSOLETE_SERVICES = [
 ]
 
 
