@@ -144,6 +144,10 @@ class VumiUserApi(object):
     def get_router(self, router_key):
         return self.router_store.get_router_by_key(router_key)
 
+    def get_service_component(self, service_key):
+        return self.service_component_store.get_service_component_by_key(
+            service_key)
+
     @Manager.calls_manager
     def get_channel(self, tag):
         tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
@@ -455,6 +459,9 @@ class VumiUserApi(object):
     def get_router_api(self, router_type, router_key):
         return VumiRouterApi(self, router_type, router_key)
 
+    def get_service_component_api(self, service_type, service_key):
+        return VumiServiceComponentApi(self, service_type, service_key)
+
 
 class VumiRouterApi(object):
     def __init__(self, user_api, router_type, router_key):
@@ -519,6 +526,63 @@ class VumiRouterApi(object):
         worker_name = '%s_router' % (self.router_type,)
         kwargs.setdefault('user_account_key', self.user_api.user_account_key)
         kwargs.setdefault('router_key', self.router_key)
+        return self.user_api.api.send_command(
+            worker_name, command, *args, **kwargs)
+
+
+class VumiServiceComponentApi(object):
+    def __init__(self, user_api, service_type, service_key):
+        self.user_api = user_api
+        self.manager = user_api.manager
+        self.service_type = service_type
+        self.service_key = service_key
+
+    def get_service_component(self):
+        return self.user_api.get_service_component(self.service_key)
+
+    @Manager.calls_manager
+    def archive_service_component(self, service=None):
+        if service is None:
+            service = yield self.get_service_component()
+        service.set_status_finished()
+        yield service.save()
+
+    @Manager.calls_manager
+    def start_service(self, service=None):
+        """Send the start command to this service's worker.
+
+        The service is then responsible for processing this message as
+        appropriate and handling the state transition.
+        """
+        if service is None:
+            service = yield self.get_service_component()
+        service.set_status_starting()
+        yield service.save()
+        yield self.dispatch_service_command('start')
+
+    @Manager.calls_manager
+    def stop_service(self, service=None):
+        """Send the stop command to this service's worker.
+
+        The service is then responsible for processing this message as
+        appropriate and handling the state transition.
+        """
+        if service is None:
+            service = yield self.get_service_component()
+        service.set_status_stopping()
+        yield service.save()
+        yield self.dispatch_service_command('stop')
+
+    def dispatch_service_command(self, command, *args, **kwargs):
+        """Send a command to this service's worker.
+
+        :type command: str
+        :params command:
+            The name of the command to call
+        """
+        worker_name = '%s_service' % (self.service_type,)
+        kwargs.setdefault('user_account_key', self.user_api.user_account_key)
+        kwargs.setdefault('service_key', self.service_key)
         return self.user_api.api.send_command(
             worker_name, command, *args, **kwargs)
 

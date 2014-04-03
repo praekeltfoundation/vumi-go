@@ -53,7 +53,7 @@ class StartServiceComponentView(ServiceComponentApiView):
     path_suffix = 'start/'
 
     def post(self, request, service):
-        service_api = request.user_api.get_service_api(
+        service_api = request.user_api.get_service_component_api(
             service.service_component_type, service.key)
         service_api.start_service()
         messages.add_message(
@@ -67,7 +67,7 @@ class StopServiceComponentView(ServiceComponentApiView):
     path_suffix = 'stop/'
 
     def post(self, request, service):
-        service_api = request.user_api.get_service_api(
+        service_api = request.user_api.get_service_component_api(
             service.service_component_type, service.key)
         service_api.stop_service()
         messages.add_message(
@@ -81,7 +81,7 @@ class ArchiveServiceComponentView(ServiceComponentApiView):
     path_suffix = 'archive/'
 
     def post(self, request, service):
-        service_api = request.user_api.get_service_api(
+        service_api = request.user_api.get_service_component_api(
             service.service_component_type, service.key)
         service_api.archive_service()
         messages.add_message(
@@ -156,8 +156,11 @@ class EditServiceComponentView(ServiceComponentTemplateView):
         return self.redirect_to(
             self.get_next_view(service), service_key=service.key)
 
-    def make_form(self, key, form, metadata):
-        data = metadata.get(key, {})
+    def make_form(self, key, form, config):
+        if key is None:
+            data = config
+        else:
+            data = config.get(key, {})
         if hasattr(form, 'initial_from_config'):
             data = form.initial_from_config(data)
         return form(prefix=key, initial=data)
@@ -183,7 +186,10 @@ class EditServiceComponentView(ServiceComponentTemplateView):
             # Is this a good idea?
             if not edit_form.is_valid():
                 return self._render_forms(request, service, edit_forms)
-            config[key] = self.process_form(edit_form)
+            if key is None:
+                config = self.process_form(edit_form)
+            else:
+                config[key] = self.process_form(edit_form)
         service.config = config
         service.save()
 
