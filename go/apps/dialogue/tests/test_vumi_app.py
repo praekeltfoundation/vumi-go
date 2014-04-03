@@ -65,9 +65,9 @@ class TestDialogueApplication(VumiTestCase):
             config=config, groups=[group], delivery_class=u"sms")
         returnValue(conv)
 
-    def send_send_dialogue_command(self, conversation):
+    def send_send_jsbox_command(self, conversation):
         return self.app_helper.dispatch_command(
-            "send_dialogue",
+            "send_jsbox",
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key,
@@ -79,7 +79,7 @@ class TestDialogueApplication(VumiTestCase):
         conv = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conv)
         with LogCatcher(message='Switched to state:') as lc:
-            yield self.send_send_dialogue_command(conv)
+            yield self.send_send_jsbox_command(conv)
             self.assertEqual(lc.messages(),
                              ['Switched to state: choice-1'] * 2)
         msgs = self.app_helper.get_dispatched_outbound()
