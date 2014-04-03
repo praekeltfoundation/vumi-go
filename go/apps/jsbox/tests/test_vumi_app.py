@@ -30,9 +30,9 @@ class TestJsBoxApplication(VumiTestCase):
             'timeout': 10,
         })
 
-    def setup_conversation(self, config=None, groups=None):
+    def setup_conversation(self, config=None, **kw):
         return self.app_helper.create_conversation(
-            config=(config or {}), groups=groups)
+            config=(config or {}), **kw)
 
     def set_conversation_tag(self, msg, conversation):
         # TOOD: Move into AppWorkerTestCase once it's working
