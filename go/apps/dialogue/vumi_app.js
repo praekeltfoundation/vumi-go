@@ -20,12 +20,6 @@ var DialogueApp = App.extend(function(self) {
         start_state: {uuid: null}
     };
 
-    self.events = {
-        'im im:shutdown': function() {
-            return self.im.contacts.save(self.contact);
-        }
-    };
-
     self.init = function() {
         return Q
             .all([self.get_poll(), self.im.contacts.for_user()])
@@ -87,10 +81,13 @@ var DialogueApp = App.extend(function(self) {
 
             next: function(choice) {
                 var endpoint = _.find(endpoints, {value: choice.value});
-                if (!endpoint) { return; }
 
+                if (!endpoint) { return; }
                 self.contact.extra[desc.store_as] = endpoint.value;
-                return self.next(endpoint);
+
+                return self
+                    .im.contacts.save(self.contact)
+                    .thenResolve(self.next(endpoint));
             }
         });
     };
@@ -101,7 +98,10 @@ var DialogueApp = App.extend(function(self) {
 
             next: function(content) {
                 self.contact.extra[desc.store_as] = content;
-                return self.next(desc.exit_endpoint);
+
+                return self
+                    .im.contacts.save(self.contact)
+                    .thenResolve(self.next(desc.exit_endpoint));
             }
         });
     };
