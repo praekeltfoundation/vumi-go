@@ -11,19 +11,23 @@ var dummy_polls = require('./dummy_polls');
 
 describe.only("app", function() {
     describe("DialogueApp", function() {
+        var poll;
         var tester;
         
         beforeEach(function() {
+            poll = _.cloneDeep(dummy_polls.simple_poll);
+
             tester = new AppTester(new DialogueApp())
                 .setup.config.app({name: 'dialogue_app'})
-                .setup.config({poll: dummy_polls.simple_poll});
+                .setup.config({poll: poll})
+                .setup.user.addr('+27123');
         });
 
         it("should throw an error if an unknown state type is encountered",
         function() {
             return tester
                 .setup.config({
-                    poll: _.extend({}, dummy_polls.simple_poll, {
+                    poll: _.extend(poll, {
                         states: [{type: 'unknown'}]
                     })
                 })
@@ -37,12 +41,71 @@ describe.only("app", function() {
         });
 
         describe("when the user enters a choice state", function() {
-            it("should display the state's question");
-            it("should move the user to the next state on valid input");
-            it("should stay on the same state on invalid input");
-            it("should store the user's answer");
-            it("should only accept number based answers if asked");
-            it("should accept label and number based answers if asked");
+            it("should display the state's question", function() {
+                return tester
+                    .start()
+                    .check.user.state('choice-1')
+                    .check.reply([
+                        "What is your favourite colour?",
+                        "1. Red",
+                        "2. Blue"
+                    ].join('\n'))
+                    .run();
+            });
+
+            it("should move the user to the next state on valid input",
+            function() {
+                return tester
+                    .setup.user.state('choice-1')
+                    .input('1')
+                    .check.user.state('freetext-1')
+                    .run();
+            });
+
+            it("should stay on the same state on invalid input", function() {
+                return tester
+                    .setup.user.state('choice-1')
+                    .input('23')
+                    .check.user.state('choice-1')
+                    .run();
+            });
+
+            it("should store the user's answer", function() {
+                return tester
+                    .setup.user.state('choice-1')
+                    .input('1')
+                    .check(function(api) {
+                        var contact = _.find(api.contacts.store, {
+                            msisdn: '+27123'
+                        });
+
+                        assert.equal(contact.extra['message-1'], 'value-1');
+                    })
+                    .run();
+            });
+
+            it("should only accept number based answers if asked", function() {
+                return tester
+                    .setup.config({
+                        poll: _.extend(poll, {accept_labels: false})
+                    })
+                    .setup.user.state('choice-1')
+                    .input('Red')
+                    .check.user.state('choice-1')
+                    .run();
+            });
+
+            it("should accept label and number based answers if asked",
+            function() {
+                return tester
+                    .setup.config({
+                        poll: _.extend(poll, {accept_labels: true})
+                    })
+                    .setup.user.state('choice-1')
+                    .input('Red')
+                    .check.user.state('freetext-1')
+                    .run();
+            });
         });
 
         describe("when the user enters a freetext state", function() {

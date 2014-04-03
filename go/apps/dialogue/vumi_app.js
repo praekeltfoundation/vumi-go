@@ -3,6 +3,8 @@ var _ = require('lodash');
 var vumigo = require('vumigo_v02');
 
 var App = vumigo.App;
+var Choice = vumigo.states.Choice;
+var ChoiceState = vumigo.states.ChoiceState;
 var State = vumigo.states.State;
 var InteractionMachine = vumigo.InteractionMachine;
 
@@ -19,7 +21,7 @@ var DialogueApp = App.extend(function(self) {
 
     self.events = {
         'im im:shutdown': function() {
-            return self.contacts.save(self.contact);
+            return self.im.contacts.save(self.contact);
         }
     };
 
@@ -56,7 +58,38 @@ var DialogueApp = App.extend(function(self) {
     self.types = {};
 
     self.types.choice = function(desc) {
-        return new State(desc.uuid);
+        var endpoints = desc.choice_endpoints;
+
+        return new ChoiceState(desc.uuid, {
+            accept_labels: self.poll.accept_labels,
+
+            question: desc.text,
+
+            choices: endpoints.map(function(endpoint) {
+                return new Choice(endpoint.value, endpoint.label);
+            }),
+
+            next: function(choice) {
+                var endpoint = _.find(endpoints, {value: choice.value});
+                if (!endpoint) { return; }
+
+                self.contact.extra[desc.store_as] = endpoint.value;
+                return self.next(endpoint).uuid;
+            }
+        });
+    };
+
+    self.next = function(endpoint) {
+        var connection = _.find(self.poll.connections, {
+            source: {uuid: endpoint.uuid}
+        });
+
+        return !connection
+            ? null
+            : _.find(self.poll.states, {
+                entry_endpoint: {uuid: connection.target.uuid}
+            })
+            || null;
     };
 
     self.types.freetext = function(desc) {
