@@ -3,10 +3,10 @@ var _ = require('lodash');
 var vumigo = require('vumigo_v02');
 
 var App = vumigo.App;
+var EndState = vumigo.states.EndState;
+var FreeText = vumigo.states.FreeText;
 var Choice = vumigo.states.Choice;
 var ChoiceState = vumigo.states.ChoiceState;
-var State = vumigo.states.State;
-var FreeText = vumigo.states.FreeText;
 var InteractionMachine = vumigo.InteractionMachine;
 
 
@@ -107,7 +107,13 @@ var DialogueApp = App.extend(function(self) {
     };
 
     self.types.end = function(desc) {
-        return new State(desc.uuid);
+        return new EndState(desc.uuid, {
+            text: desc.text,
+
+            next: self.poll.repeatable
+                ? 'states:start'
+                : null
+        });
     };
 
     self.states.add('states:start', function() {

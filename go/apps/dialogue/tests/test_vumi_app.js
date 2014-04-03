@@ -155,9 +155,38 @@ describe.only("app", function() {
         });
 
         describe("when the user enters an end state", function() {
-            it("should display the state's text");
-            it("should move to the start state next session if asked");
-            it("should not move to the start state next session if asked");
+            it("should display the state's text", function() {
+                return tester
+                    .setup.user.state('choice-1')
+                    .input('2')
+                    .check.user.state('end-1')
+                    .check.reply('Thank you for taking our survey')
+                    .run();
+            });
+
+            it("should move to the start state next session if asked",
+            function() {
+                return tester
+                    .setup.config({
+                        poll: _.extend(poll, {repeatable: true})
+                    })
+                    .setup.user.state('end-1')
+                    .start()
+                    .check.user.state('choice-1')
+                    .run();
+            });
+
+            it("should not move to the start state next session if asked",
+            function() {
+                return tester
+                    .setup.config({
+                        poll: _.extend(poll, {repeatable: false})
+                    })
+                    .setup.user.state('end-1')
+                    .start()
+                    .check.user.state('end-1')
+                    .run();
+            });
         });
     });
 });
