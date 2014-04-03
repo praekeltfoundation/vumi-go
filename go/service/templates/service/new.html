@@ -1,0 +1,26 @@
+{% extends "app.html" %}
+{% load crispy_forms_tags %}
+
+{% block content_title %}New Service Component{% endblock %}
+
+{% block content_main %}
+<div class="main-content">
+    <div class="row">
+        <div class="col-md-12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <form id="form-service" class="indent" method="post" action="">
+                {% csrf_token %}
+
+                {{ service_form|crispy }}
+
+                <input type="submit" class="btn btn-primary" value="Save">
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

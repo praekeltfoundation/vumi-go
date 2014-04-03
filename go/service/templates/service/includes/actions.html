@@ -1,0 +1,41 @@
+{% load service_tags %}
+
+{% if not service.archived %}
+    {% if service.stopped %}
+        <button
+         class="btn btn-primary action"
+         data-action='activate'
+         data-url="{% service_screen service 'start' %}">
+            Activate
+        </button>
+
+        <button
+         class="btn btn-primary action"
+         data-action='archive'
+         data-url="{% service_screen service 'archive' %}">
+            Archive
+        </button>
+    {% elif service.running %}
+        <button
+         class="btn btn-primary action"
+         data-action='stop'
+         data-url="{% service_screen service 'stop' %}">
+            Deactivate
+        </button>
+    {% elif service.stopping %}
+      <button
+       class="btn btn-primary action"
+       data-action='stop'
+       data-url="{% service_screen service 'stop' %}">
+          Deactivating: Attempt to stop
+      </button>
+    {% elif service.starting %}
+      <button
+       class="btn btn-primary action"
+       data-action='stop'
+       data-url="{% service_screen service 'stop' %}">
+          Activating: Attempt to stop
+      </button>
+    {% endif %}
+{% endif %}
+

@@ -1,0 +1,43 @@
+{% extends "service/service_base.html" %}
+{% load service_tags %}
+
+{% block content_title %}{{ service.tag }}{% endblock %}
+
+{% block content_actions_right %}
+    {% include "service/includes/actions.html" with service=service %}
+{% endblock %}
+
+{% block content_main %}
+<div class="row indent">
+    <div class="col-md-7">
+
+        <div class="sub-details">
+            <h4>
+                Details
+                {% if is_editable %}
+                <a href="{% service_screen service 'edit' %}" class="btn btn-primary">Edit</a>
+                {% endif %}
+            </h4>
+
+            <p>
+                <h6>NAME</h6>
+                {{ service.name }}<br>
+            </p>
+            <p>
+                <h6>DESCRIPTION</h6>
+                {{ service.description }}<br>
+            </p>
+            <p>
+                <h6>TYPE</h6>
+                {{ service.service_component_type }}<br>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block ondomready %}
+    var actions = new go.service.show.ServiceActionsView({
+        el: '.content .actions .right'
+    });
+{% endblock %}

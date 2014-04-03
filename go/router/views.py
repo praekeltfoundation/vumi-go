@@ -57,7 +57,7 @@ def new_router(request):
                 extra_outbound_endpoints=list(
                     view_def.extra_static_outbound_endpoints),
             )
-            messages.info(request, 'Conversation created successfully.')
+            messages.info(request, 'Router created successfully.')
 
             # Get a new view_def with a conversation object in it.
             view_def = get_router_view_definition(

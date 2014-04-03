@@ -20,8 +20,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
 from go.config import (
-    configured_conversations,
-    configured_routers)
+    configured_conversations, configured_routers, configured_services)
 
 from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
@@ -29,6 +28,7 @@ from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.router import RouterStore
+from go.vumitools.service import ServiceComponentStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.token_manager import TokenManager
 
@@ -90,16 +90,18 @@ class VumiUserApi(object):
         self.api = api
         self.manager = self.api.manager
         self.user_account_key = user_account_key
-        self.conversation_store = ConversationStore(self.api.manager,
-                                                    self.user_account_key)
-        self.contact_store = ContactStore(self.api.manager,
-                                          self.user_account_key)
-        self.router_store = RouterStore(self.api.manager,
-                                        self.user_account_key)
-        self.channel_store = ChannelStore(self.api.manager,
-                                          self.user_account_key)
-        self.optout_store = OptOutStore(self.api.manager,
-                                        self.user_account_key)
+        self.conversation_store = ConversationStore(
+            self.api.manager, self.user_account_key)
+        self.contact_store = ContactStore(
+            self.api.manager, self.user_account_key)
+        self.router_store = RouterStore(
+            self.api.manager, self.user_account_key)
+        self.channel_store = ChannelStore(
+            self.api.manager, self.user_account_key)
+        self.optout_store = OptOutStore(
+            self.api.manager, self.user_account_key)
+        self.service_component_store = ServiceComponentStore(
+            self.api.manager, self.user_account_key)
 
     def exists(self):
         return self.api.user_exists(self.user_account_key)
@@ -196,6 +198,17 @@ class VumiUserApi(object):
         returnValue(routers)
 
     @Manager.calls_manager
+    def active_service_components(self):
+        store = self.service_component_store
+        keys = yield store.list_active_service_components()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       service_components.
+        services = []
+        for bunch in self.service_component_store.load_all_bunches(keys):
+            services.extend((yield bunch))
+        returnValue(services)
+
+    @Manager.calls_manager
     def active_channels(self):
         channels = []
         user_account = yield self.get_user_account()
@@ -250,6 +263,14 @@ class VumiUserApi(object):
                                 for router_type in sorted(router_settings)]))
 
     @Manager.calls_manager
+    def service_component_types(self):
+        # TODO: Permissions.
+        yield None
+        service_settings = configured_services()
+        returnValue(SortedDict([(service_type, service_settings[service_type])
+                                for service_type in sorted(service_settings)]))
+
+    @Manager.calls_manager
     def list_groups(self):
         returnValue(sorted((yield self.contact_store.list_groups()),
             key=lambda group: group.name))
@@ -273,6 +294,13 @@ class VumiUserApi(object):
         router = yield self.router_store.new_router(
             router_type, name, description, config, batch_id, **fields)
         returnValue(router)
+
+    @Manager.calls_manager
+    def new_service_component(self, service_type, name, description, config,
+                              **fields):
+        service = yield self.service_component_store.new_service_component(
+            service_type, name, description, config, **fields)
+        returnValue(service)
 
     @Manager.calls_manager
     def get_routing_table(self, user_account=None):

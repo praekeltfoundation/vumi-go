@@ -11,7 +11,7 @@
 import copy
 
 from go.errors import (
-    UnknownConversationType, UnknownRouterType, UnknownServiceType)
+    UnknownConversationType, UnknownRouterType, UnknownServiceComponentType)
 
 
 def configured_conversation_types():
@@ -78,7 +78,7 @@ def get_service_pkg(service_type, fromlist=()):
         if data['namespace'] == service_type:
             service_pkg = __import__(module, fromlist=fromlist)
             return service_pkg
-    raise UnknownServiceType(
+    raise UnknownServiceComponentType(
         "Can't find python package for service type: %r"
         % (service_type,))
 

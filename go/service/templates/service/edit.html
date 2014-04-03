@@ -1,0 +1,46 @@
+{% extends "app.html" %}
+{% load crispy_forms_tags %}
+
+{% block content_title %}Edit {{ service.name }}{% endblock %}
+
+{% block content_actions_right %}
+    <div class="pull-right">
+        <button class="btn btn-primary" type="submit" value="Save">Save</button>
+    </div>
+{% endblock %}
+
+{% block content_main %}
+    {% if messages %}
+    <div class="row">
+        <div class="col-md-12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-4">
+            <form id="form-service" class="indent" method="post" action="">
+                {% csrf_token %}
+                {% for edit_form in edit_forms %}
+                    <fieldset>
+                        {% if edit_form.non_field_errors %}
+                          {{ edit_form.non_field_errors }}
+                        {% endif %}
+                        {{ edit_form|crispy }}
+                    </fieldset>
+                {% endfor %}
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extramedia %}
+    {{ edit_forms_media }}
+{% endblock %}
+
+{% block ondomready %}
+    $('.content .actions .right button').click(function() {
+        $('#form-service').submit();
+    });
+{% endblock %}

@@ -5,8 +5,7 @@ from go.service import views
 urlpatterns = patterns(
     '',
     url(r'^$', views.index, name='index'),
-    url(r'^(?P<service_type>\w+)$', views.service,
-        {'path_suffix': None}, name='service_index'),
-    url(r'^(?P<service_type>\w+)/(?P<path_suffix>.+)$',
+    url(r'^new/$', views.new_service, name='new_service'),
+    url(r'^(?P<service_key>[^/]+)/(?P<path_suffix>.*)$',
         views.service, name='service'),
 )

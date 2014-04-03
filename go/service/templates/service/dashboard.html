@@ -1,0 +1,57 @@
+{% extends "conversation/dashboard_base.html" %}
+{% load humanize %}
+{% load service_tags %}
+
+
+{% block content_extraclass %}dashboard service components{% endblock %}
+
+{% block content_title %}All service components{% endblock %}
+
+{% block content_dashboard %}
+<form class="table-form-view" method="post" action="">
+    {% csrf_token %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>{# Action markers go here, dashboard does not use them #}</th>
+                <th>Service Components</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if services %}
+                {% for service in page.object_list %}
+                <tr data-url="{% service_screen service %}">
+                    <td>{# Action markers go here, dashboard does not use them #}</td>
+                    <td>
+                        <a href="{% service_screen service %}">
+                            {{ service.name }}
+                        </a>
+                    </td>
+                    <td class="status {{ service.status }}">{{ service.status }}</td>
+                    <td>{{ service.created_at|naturaltime }}</td>
+                    <td>
+                      {% include "service/includes/actions.html" with service=service %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="9">
+                    No service components.
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    {% include "base/includes/pagination.html" %}
+</form>
+{% endblock %}
+
+{% block ondomready %}
+    var dashboard = new go.service.dashboard.ServiceDashboardView({
+        el: '.table-form-view'
+    });
+{% endblock %}

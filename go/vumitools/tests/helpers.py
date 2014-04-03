@@ -462,15 +462,31 @@ class UserApiHelper(object):
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @proxyable
-    def create_router(self, router_type, started=False, **kw):
+    def create_router(self, router_type, started=False, archived=False, **kw):
         name = kw.pop('name', u'My Router')
         description = kw.pop('description', u'')
         config = kw.pop('config', {})
         assert isinstance(config, dict)
         if started:
             kw.setdefault('status', u'running')
+        if archived:
+            kw.setdefault('archive_status', u'archived')
         return self.user_api.new_router(
             router_type, name, description, config, **kw)
+
+    @proxyable
+    def create_service_component(self, service_type, started=False,
+                                 archived=False, **kw):
+        name = kw.pop('name', u'My Service Component')
+        description = kw.pop('description', u'')
+        config = kw.pop('config', {})
+        assert isinstance(config, dict)
+        if started:
+            kw.setdefault('status', u'running')
+        if archived:
+            kw.setdefault('archive_status', u'archived')
+        return self.user_api.new_service_component(
+            service_type, name, description, config, **kw)
 
     @proxyable
     def get_conversation(self, conversation_key):
@@ -479,6 +495,10 @@ class UserApiHelper(object):
     @proxyable
     def get_router(self, router_key):
         return self.user_api.get_router(router_key)
+
+    @proxyable
+    def get_service_component(self, service_key):
+        return self.user_api.get_service_component(service_key)
 
 
 class EventHandlerHelper(object):
