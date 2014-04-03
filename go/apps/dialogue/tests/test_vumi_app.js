@@ -121,9 +121,37 @@ describe.only("app", function() {
         });
 
         describe("when the user enters a freetext state", function() {
-            it("should display the state's question");
-            it("should move the user to the next state on valid input");
-            it("should store the user's answer");
+            it("should display the state's question", function() {
+                return tester
+                    .setup.user.state('choice-1')
+                    .input('1')
+                    .check.user.state('freetext-1')
+                    .check.reply('What is your name?')
+                    .run();
+            });
+
+            it("should move the user to the next state on valid input",
+            function() {
+                return tester
+                    .setup.user.state('freetext-1')
+                    .input('foo')
+                    .check.user.state('end-1')
+                    .run();
+            });
+
+            it("should store the user's answer", function() {
+                return tester
+                    .setup.user.state('freetext-1')
+                    .input('foo')
+                    .check(function(api) {
+                        var contact = _.find(api.contacts.store, {
+                            msisdn: '+27123'
+                        });
+
+                        assert.equal(contact.extra['message-2'], 'foo');
+                    })
+                    .run();
+            });
         });
 
         describe("when the user enters an end state", function() {

@@ -6,6 +6,7 @@ var App = vumigo.App;
 var Choice = vumigo.states.Choice;
 var ChoiceState = vumigo.states.ChoiceState;
 var State = vumigo.states.State;
+var FreeText = vumigo.states.FreeText;
 var InteractionMachine = vumigo.InteractionMachine;
 
 
@@ -31,7 +32,6 @@ var DialogueApp = App.extend(function(self) {
             .spread(function(poll, contact) {
                 self.poll = poll;
                 self.contact = contact;
-
                 self.poll.states.forEach(self.add_state);
             });
     };
@@ -55,6 +55,22 @@ var DialogueApp = App.extend(function(self) {
         return self.states.add(type(desc));
     };
 
+    self.next = function(endpoint) {
+        var connection = _.find(self.poll.connections, {
+            source: {uuid: endpoint.uuid}
+        });
+
+        if (!connection) { return null; }
+
+        var state = _.find(self.poll.states, {
+            entry_endpoint: {uuid: connection.target.uuid}
+        });
+
+        return state
+            ? state.uuid
+            : null;
+    };
+
     self.types = {};
 
     self.types.choice = function(desc) {
@@ -74,29 +90,20 @@ var DialogueApp = App.extend(function(self) {
                 if (!endpoint) { return; }
 
                 self.contact.extra[desc.store_as] = endpoint.value;
-                return self.find_target_state(endpoint);
+                return self.next(endpoint);
             }
         });
     };
 
-    self.find_target_state = function(endpoint) {
-        var connection = _.find(self.poll.connections, {
-            source: {uuid: endpoint.uuid}
-        });
-
-        if (!connection) { return null; }
-
-        var state = _.find(self.poll.states, {
-            entry_endpoint: {uuid: connection.target.uuid}
-        });
-
-        return state
-            ? state.uuid
-            : null;
-    };
-
     self.types.freetext = function(desc) {
-        return new State(desc.uuid);
+        return new FreeText(desc.uuid, {
+            question: desc.text,
+
+            next: function(content) {
+                self.contact.extra[desc.store_as] = content;
+                return self.next(desc.exit_endpoint);
+            }
+        });
     };
 
     self.types.end = function(desc) {
