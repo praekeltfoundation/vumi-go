@@ -74,22 +74,25 @@ var DialogueApp = App.extend(function(self) {
                 if (!endpoint) { return; }
 
                 self.contact.extra[desc.store_as] = endpoint.value;
-                return self.next(endpoint).uuid;
+                return self.find_target_state(endpoint);
             }
         });
     };
 
-    self.next = function(endpoint) {
+    self.find_target_state = function(endpoint) {
         var connection = _.find(self.poll.connections, {
             source: {uuid: endpoint.uuid}
         });
 
-        return !connection
-            ? null
-            : _.find(self.poll.states, {
-                entry_endpoint: {uuid: connection.target.uuid}
-            })
-            || null;
+        if (!connection) { return null; }
+
+        var state = _.find(self.poll.states, {
+            entry_endpoint: {uuid: connection.target.uuid}
+        });
+
+        return state
+            ? state.uuid
+            : null;
     };
 
     self.types.freetext = function(desc) {

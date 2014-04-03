@@ -40,6 +40,18 @@ describe.only("app", function() {
                 });
         });
 
+        it("should stay on the same state if a state has no next state",
+        function() {
+            return tester
+                .setup.config({
+                    poll: _.extend(poll, {connections: []})
+                })
+                .setup.user.state('choice-1')
+                .input('1')
+                .check.user.state('choice-1')
+                .run();
+        });
+
         describe("when the user enters a choice state", function() {
             it("should display the state's question", function() {
                 return tester
