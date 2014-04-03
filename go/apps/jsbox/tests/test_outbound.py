@@ -102,7 +102,12 @@ class TestGoOutboundResource(ResourceTestCaseBase):
     def setUp(self):
         super(TestGoOutboundResource, self).setUp()
         yield self.create_resource({})
-        self.msg_helper = self.add_helper(GoMessageHelper())
+        self.vumi_helper = yield self.add_helper(
+            VumiApiHelper(), setup_vumi_api=True)
+        self.app_helper = self.add_helper(
+            ApplicationHelper(u"dummy", self.vumi_helper))
+        self.msg_helper = self.add_helper(
+            GoMessageHelper())
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)
@@ -119,6 +124,11 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     def make_inbound(self, content, **kw):
         msg = self.msg_helper.make_inbound(content, **kw)
+        self.app_worker.add_inbound_message(msg)
+        return msg
+
+    def make_push_trigger(self, to_addr, conv):
+        msg = mk_inbound_push_trigger(to_addr, conv)
         self.app_worker.add_inbound_message(msg)
         return msg
 
@@ -159,6 +169,30 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         self.app_worker.reply_to.assert_called_once_with(
             msg, None, continue_session=False, helper_metadata={})
 
+    @inlineCallbacks
+    def test_reply_to_push_trigger(self):
+        conv = yield self.app_helper.create_conversation()
+        msg = self.make_push_trigger("to-addr-1", conv)
+
+        self.app_worker.conversation.set_go_helper_metadata = (
+            lambda md: md)
+
+        reply = yield self.dispatch_command(
+            'reply_to', content="Reply!",
+            in_reply_to=msg['message_id'])
+
+        self.check_reply(reply)
+        self.app_worker.reply_to.assert_not_called()
+        self.app_worker.send_to.assert_called_once_with(
+            "to-addr-1", u'Reply!',
+            helper_metadata={
+                "go": {
+                    "conversation_type": u'dummy',
+                    "conversation_key": conv.key,
+                    "user_account": u'test-0-user',
+                }
+            })
+
     def test_reply_to_fails_with_no_content(self):
         return self.assert_cmd_fails(
             "'content' must be given in replies.",
@@ -194,6 +228,30 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         self.app_worker.reply_to_group.assert_called_once_with(
             msg, 'Reply!', continue_session=True,
             helper_metadata={'orig': 'data', 'new': 'foo'})
+
+    @inlineCallbacks
+    def test_reply_to_group_push_trigger(self):
+        conv = yield self.app_helper.create_conversation()
+        msg = self.make_push_trigger("to-addr-1", conv)
+
+        self.app_worker.conversation.set_go_helper_metadata = (
+            lambda md: md)
+
+        reply = yield self.dispatch_command(
+            'reply_to_group', content="Reply!",
+            in_reply_to=msg['message_id'])
+
+        self.check_reply(reply)
+        self.app_worker.reply_to_group.assert_not_called()
+        self.app_worker.send_to.assert_called_once_with(
+            "to-addr-1", u'Reply!',
+            helper_metadata={
+                "go": {
+                    "conversation_type": u'dummy',
+                    "conversation_key": conv.key,
+                    "user_account": u'test-0-user',
+                }
+            })
 
     def test_reply_to_group_fails_with_no_content(self):
         return self.assert_cmd_fails(
