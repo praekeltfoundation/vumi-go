@@ -7,9 +7,9 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi.application.sandbox import JsSandbox, SandboxResource
 from vumi.config import ConfigDict
-from vumi.message import TransportUserMessage
 from vumi import log
 
+from go.apps.jsbox.outbound import mk_inbound_push_trigger
 from go.vumitools.app_worker import (
     GoApplicationMixin, GoApplicationConfigMixin)
 
@@ -117,39 +117,9 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         return super(JsBoxApplication, self).process_command_start(
             user_account_key, conversation_key)
 
-    INBOUND_PUSH_TRIGGER = "inbound_push_trigger"
-
-    def mk_inbound_push_trigger(self, to_addr, contact, conversation):
-        """
-        Construct a dummy inbound message used to trigger a push of
-        a new message from a sandbox application.
-        """
-        msg_options = {
-            'transport_name': None,
-            'transport_type': None,
-            'helper_metadata': {},
-            # mark this message as special so that it can be idenitified
-            # if it accidentally ends up elsewhere.
-            self.INBOUND_PUSH_TRIGGER: True,
-        }
-        conversation.set_go_helper_metadata(msg_options['helper_metadata'])
-
-        # We reverse the to_addr & from_addr since we're faking input
-        # from the client to start the survey.
-
-        # TODO: This generates a fake message id that is then used in
-        #       the reply to field of the outbound message. We need to
-        #       write special version of the GoOutboundResource that
-        #       will set in_reply_to to None on these messages so the
-        #       invalid ids don't escape into the rest of the system.
-
-        msg = TransportUserMessage(from_addr=to_addr, to_addr=None,
-                                   content=None, **msg_options)
-        return msg
-
     def send_inbound_push_trigger(self, to_addr, contact, conversation):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
-        msg = self.mk_inbound_push_message(to_addr, contact, conversation)
+        msg = mk_inbound_push_trigger(to_addr, contact, conversation)
         return self.consume_user_message(msg)
 
     @inlineCallbacks
