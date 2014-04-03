@@ -86,6 +86,7 @@ class TestDialogueApplication(VumiTestCase):
         for msg in msgs:
             self.assertEqual(msg["content"],
                              "What is your favourite colour?\n1. Red\n2. Blue")
+            self.assertEqual(msg["in_reply_to"], None)
             go_metadata = msg["helper_metadata"]["go"]
             self.assertEqual(go_metadata["conversation_type"], "dialogue")
             self.assertEqual(go_metadata["conversation_key"], conv.key)
