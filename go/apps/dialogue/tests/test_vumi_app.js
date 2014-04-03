@@ -9,7 +9,7 @@ var app = require('../vumi_app');
 var DialogueApp = app.DialogueApp;
 var dummy_polls = require('./dummy_polls');
 
-describe.only("app", function() {
+describe("app", function() {
     describe("DialogueApp", function() {
         var poll;
         var tester;
