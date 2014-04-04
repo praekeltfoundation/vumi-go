@@ -172,6 +172,10 @@ _VUMI_INSTALLED_SERVICES = {
         'namespace': 'kvstore.redis',
         'display_name': 'Key-value store (Redis)',
     },
+    'go.services.metrics': {
+        'namespace': 'metrics',
+        'display_name': 'Metrics store',
+    },
 }
 
 _VUMI_OBSOLETE_SERVICES = [
