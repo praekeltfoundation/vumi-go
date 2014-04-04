@@ -68,5 +68,5 @@ class ConversationViewDefinition(ConversationViewDefinitionBase):
     )
 
     action_forms = {
-        'send_dialogue': SendDialogueForm,
+        'send_jsbox': SendDialogueForm,
     }

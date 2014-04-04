@@ -6,7 +6,47 @@
 from twisted.internet.defer import inlineCallbacks, returnValue, succeed
 
 from vumi.application.sandbox import SandboxResource
+from vumi.message import TransportUserMessage
 from vumi import log
+
+
+INBOUND_PUSH_TRIGGER = "inbound_push_trigger"
+
+
+def mk_inbound_push_trigger(to_addr, conversation):
+    """
+    Construct a dummy inbound message used to trigger a push of
+    a new message from a sandbox application.
+    """
+    msg_options = {
+        'transport_name': None,
+        'transport_type': None,
+        'helper_metadata': {},
+        # mark this message as special so that it can be idenitified
+        # if it accidentally ends up elsewhere.
+        INBOUND_PUSH_TRIGGER: True,
+    }
+    conversation.set_go_helper_metadata(msg_options['helper_metadata'])
+
+    # We reverse the to_addr & from_addr since we're faking input
+    # from the client to start the survey.
+
+    # This generates a fake message id that is then used in the
+    # in_reply_to field of the outbound message. We filter these
+    # replies out and convert them into sends in the outbound
+    # resource below
+
+    msg = TransportUserMessage(from_addr=to_addr, to_addr=None,
+                               content=None, **msg_options)
+    return msg
+
+
+def is_inbound_push_trigger(msg):
+    """
+    Returns true if a message is a dummy inbound push trigger
+    created by :func:`mk_inbound_push_trigger`.
+    """
+    return bool(msg.get(INBOUND_PUSH_TRIGGER, False))
 
 
 class GoOutboundResource(SandboxResource):
@@ -48,8 +88,15 @@ class GoOutboundResource(SandboxResource):
         helper_metadata = conv.set_go_helper_metadata(
             orig_msg['helper_metadata'])
 
-        d = reply_func(orig_msg, content, continue_session=continue_session,
-                       helper_metadata=helper_metadata)
+        # convert replies to push triggers into ordinary sends
+        if is_inbound_push_trigger(orig_msg):
+            d = self.app_worker.send_to(orig_msg["from_addr"], content,
+                                        helper_metadata=helper_metadata)
+        else:
+            d = reply_func(orig_msg, content,
+                           continue_session=continue_session,
+                           helper_metadata=helper_metadata)
+
         d.addCallback(lambda r: self.reply(command, success=True))
         d.addErrback(lambda f: self._mkfail(command,
                                             unicode(f.getErrorMessage())))

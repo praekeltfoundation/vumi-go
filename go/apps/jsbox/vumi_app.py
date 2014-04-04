@@ -5,10 +5,11 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.config import ConfigDict
 from vumi.application.sandbox import JsSandbox, SandboxResource
+from vumi.config import ConfigDict
 from vumi import log
 
+from go.apps.jsbox.outbound import mk_inbound_push_trigger
 from go.vumitools.app_worker import (
     GoApplicationMixin, GoApplicationConfigMixin)
 
@@ -115,3 +116,24 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
                  (conversation_key,))
         return super(JsBoxApplication, self).process_command_start(
             user_account_key, conversation_key)
+
+    def send_inbound_push_trigger(self, to_addr, conversation):
+        log.debug('Starting %r -> %s' % (conversation, to_addr))
+        msg = mk_inbound_push_trigger(to_addr, conversation)
+        return self.consume_user_message(msg)
+
+    @inlineCallbacks
+    def process_command_send_jsbox(self, user_account_key, conversation_key,
+                                   batch_id, delivery_class):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning("Cannot find conversation '%s' for user '%s'." % (
+                conversation_key, user_account_key))
+            return
+
+        for contacts in (yield conv.get_opted_in_contact_bunches(
+                delivery_class)):
+            for contact in (yield contacts):
+                to_addr = contact.addr_for(delivery_class)
+                yield self.send_inbound_push_trigger(
+                    to_addr, conv)

@@ -32,20 +32,21 @@
         "Are you sure you want to <%=action%> these <%=numChecked%> items?"),
     },
 
-    initialize: function() {
+    initialize: function(options) {
       // the table is rendered elsewhere, so el is an absolute
       // requirements.
       if (!this.$el.is('form')) {
         throw("TableFormView must get an `el` attribute that's a FORM element");
       }
 
-      _(this.options).defaults(this.defaults);
+      options = _(options || {}).defaults(this.defaults);
+      this.$actions = $(options.actions);
+      this.actionPrefix = options.actionPrefix;
+      this.rowLinkAttribute = options.rowLinkAttribute;
       this._initActions();
     },
 
     _initActions: function() {
-      this.$actions = $(this.options.actions);
-
       var self = this;
       this.$actions.each(function() {
         var $el = $(this),
@@ -93,7 +94,7 @@
       // was invoked.
       var $input = $('<input>')
         .attr('type', 'hidden')
-        .attr('name', this.options.actionPrefix + action)
+        .attr('name', this.actionPrefix + action)
         .appendTo(this.$el);
 
       this.$el.submit();
@@ -150,7 +151,7 @@
 
       'click tbody tr td': function(e) {
         var $el = $(e.target).parents('tr'),
-            url = $el.attr(this.options.rowLinkAttribute);
+            url = $el.attr(this.rowLinkAttribute);
 
         // Follow the link associated with the row
         if (typeof url !== 'undefined') { window.location = url; }

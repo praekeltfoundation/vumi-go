@@ -1,5 +1,7 @@
 import json
 
+from django.forms import Form
+
 from go.dashboard.dashboard import ConversationReportsLayout
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, ConversationReportsView,
@@ -64,6 +66,11 @@ class EditJSBoxView(EditConversationView):
         })
 
 
+class SendJsboxForm(Form):
+    # TODO: Something better than this?
+    pass
+
+
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     edit_view = EditJSBoxView
 
@@ -71,3 +78,7 @@ class ConversationViewDefinition(ConversationViewDefinitionBase):
         JSBoxLogsView,
         JSBoxReportsView,
     )
+
+    action_forms = {
+        'send_jsbox': SendJsboxForm,
+    }

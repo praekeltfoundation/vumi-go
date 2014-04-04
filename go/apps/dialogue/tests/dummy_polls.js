@@ -40,11 +40,7 @@ var simple_poll = {
        entry_endpoint: {uuid: "endpoint-5"},
        // end specific
        text: "Thank you for taking our survey"
-    },
-    {
-       uuid: "unknown-1",
-       type: "unknown-or-garbled",
-    },
+    }
   ],
   connections: [
      {
