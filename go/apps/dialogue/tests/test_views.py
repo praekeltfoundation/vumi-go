@@ -29,20 +29,20 @@ class TestDialogueViews(GoDjangoTestCase):
     def test_action_send_dialogue_get(self):
         conv_helper = self.setup_conversation(started=True)
         response = self.client.get(
-            conv_helper.get_action_view_url('send_dialogue'))
+            conv_helper.get_action_view_url('send_jsbox'))
         self.assertEqual([], self.app_helper.get_api_commands_sent())
         self.assertContains(response, '<h1>Send Dialogue</h1>')
 
     def test_action_send_dialogue_post(self):
         conv_helper = self.setup_conversation(started=True)
         response = self.client.post(
-            conv_helper.get_action_view_url('send_dialogue'), {}, follow=True)
+            conv_helper.get_action_view_url('send_jsbox'), {}, follow=True)
         self.assertRedirects(response, conv_helper.get_view_url('show'))
-        [send_dialogue_cmd] = self.app_helper.get_api_commands_sent()
+        [send_jsbox_cmd] = self.app_helper.get_api_commands_sent()
         conversation = conv_helper.get_conversation()
-        self.assertEqual(send_dialogue_cmd, VumiApiCommand.command(
+        self.assertEqual(send_jsbox_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'send_dialogue',
+            'send_jsbox',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key,
@@ -51,7 +51,7 @@ class TestDialogueViews(GoDjangoTestCase):
     def test_action_send_dialogue_no_group(self):
         conv_helper = self.setup_conversation(started=True, with_group=False)
         response = self.client.post(
-            conv_helper.get_action_view_url('send_dialogue'), {}, follow=True)
+            conv_helper.get_action_view_url('send_jsbox'), {}, follow=True)
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
@@ -61,7 +61,7 @@ class TestDialogueViews(GoDjangoTestCase):
     def test_action_send_dialogue_not_running(self):
         conv_helper = self.setup_conversation(started=False)
         response = self.client.post(
-            conv_helper.get_action_view_url('send_dialogue'), {},
+            conv_helper.get_action_view_url('send_jsbox'), {},
             follow=True)
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
@@ -73,7 +73,7 @@ class TestDialogueViews(GoDjangoTestCase):
     def test_action_send_dialogue_no_channel(self):
         conv_helper = self.setup_conversation(started=True, with_channel=False)
         response = self.client.post(
-            conv_helper.get_action_view_url('send_dialogue'), {}, follow=True)
+            conv_helper.get_action_view_url('send_jsbox'), {}, follow=True)
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
@@ -91,7 +91,7 @@ class TestDialogueViews(GoDjangoTestCase):
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, u"myconv")
         self.assertNotContains(
-            response, conv_helper.get_action_view_url('send_dialogue'))
+            response, conv_helper.get_action_view_url('send_jsbox'))
 
     def test_show_running(self):
         """
@@ -102,7 +102,7 @@ class TestDialogueViews(GoDjangoTestCase):
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, u"myconv")
         self.assertContains(response,
-                            conv_helper.get_action_view_url('send_dialogue'))
+                            conv_helper.get_action_view_url('send_jsbox'))
 
     def test_edit(self):
         conv_helper = self.setup_conversation(started=False, name=u"myconv")
