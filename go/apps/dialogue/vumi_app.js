@@ -1,195 +1,130 @@
-var vumigo = require("vumigo_v01");
-var jed = require("jed");
+var Q = require('q');
+var _ = require('lodash');
+var vumigo = require('vumigo_v02');
 
-if (typeof api === "undefined") {
-    // testing hook (supplies api when it is not passed in by the real sandbox)
-    var api = this.api = new vumigo.dummy_api.DummyApi();
-}
-
-var Promise = vumigo.promise.Promise;
-var success = vumigo.promise.success;
+var App = vumigo.App;
+var EndState = vumigo.states.EndState;
+var FreeText = vumigo.states.FreeText;
 var Choice = vumigo.states.Choice;
 var ChoiceState = vumigo.states.ChoiceState;
-var FreeText = vumigo.states.FreeText;
-var EndState = vumigo.states.EndState;
-var InteractionMachine = vumigo.state_machine.InteractionMachine;
-var StateCreator = vumigo.state_machine.StateCreator;
+var InteractionMachine = vumigo.InteractionMachine;
 
-function DialogueStateCreator() {
-    var self = this;
 
-    StateCreator.call(self, null); // start_state is set in on_config_read
-    self.poll = null;  // poll is set in on_config_read
+var DialogueApp = App.extend(function(self) {
+    App.call(self, 'states:start');
 
-    self.on_config_read = function(event) {
-        var p = new Promise();
-        event.im.fetch_config_value("poll", false,
-            function (poll) {
+    self.poll_defaults = {
+        states: [],
+        repeatable: false,
+        accept_labels: true,
+        start_state: {uuid: null}
+    };
+
+    self.init = function() {
+        return Q
+            .all([self.get_poll(), self.im.contacts.for_user()])
+            .spread(function(poll, contact) {
                 self.poll = poll;
-
-                self.start_state = poll.start_state
-                  ? poll.start_state.uuid
-                  : null;
-
-                self.accept_labels = 'accept_labels' in poll
-                  ? poll.accept_labels
-                  : true;
-
-                var states = poll.states || [];
-                self.state_creators = {};
-                states.forEach(function(state_description) {
-                    self.add_creator(state_description.uuid,
-                                     self.mk_state_creator(state_description));
-                });
-                p.callback();
-            }
-        );
-        return p;
-    };
-
-    self.on_inbound_event = function(event) {
-        var vumi_ev = event.data.event;
-        event.im.log("Saw " + vumi_ev.event_type + " for message "
-                     + vumi_ev.user_message_id + ".");
-    };
-
-    self.get_metadata = function(key) {
-        var metadata = self.poll.poll_metadata || {};
-        return metadata[key];
-    };
-
-    self.get_connection = function(source) {
-        var connections = self.poll.connections.filter(
-            function (c) { return (c.source.uuid === source); });
-        if (connections.length !== 1) {
-            return null;
-        }
-        return connections[0];
-    };
-
-    self.get_state_by_entry_endpoint = function(endpoint) {
-        var states = self.poll.states.filter(
-            function (s) {
-                if (!s.entry_endpoint) return false;
-                return (s.entry_endpoint.uuid == endpoint);
+                self.contact = contact;
+                self.poll.states.forEach(self.add_state);
             });
-        if (states.length !== 1) {
-            return null;
+    };
+
+    self.get_poll = function() {
+        return self
+            .im.sandbox_config.get('poll', {json: true})
+            .then(function(poll) {
+                return _.defaults(poll, self.poll_defaults);
+           });
+    };
+
+    self.add_state = function(desc) {
+        var type = self.types[desc.type];
+
+        if (!type) {
+            throw new Error(
+                "Unknown dialogue state type: '" + desc.type + "'");
         }
-        return states[0].uuid;
+
+        return self.states.add(type(desc));
     };
 
-    self.get_next_state = function(source) {
-        var connection = self.get_connection(source);
-        if (connection === null) {
-            return null;
-        }
-        return self.get_state_by_entry_endpoint(connection.target.uuid);
-    };
-
-    self.mk_state_creator = function(state_description) {
-        return function(state_name, im) {
-            return self.generic_state_creator(state_name, im, state_description);
-        };
-    };
-
-    self.generic_state_creator = function(state_name, im, state_description) {
-        var creator = self[state_description.type + '_state_creator'];
-        if (typeof creator === 'undefined') {
-            creator = self.unknown_state_creator;
-        }
-        return creator(state_name, im, state_description);
-    };
-
-    self.store_answer = function(store_as, answer, im) {
-        var msg = im.get_msg();
-
-        var fields = {};
-        fields[store_as] = answer;
-
-        var p = im.api_request('contacts.get_or_create', {
-            addr: msg.from_addr,
-            delivery_class: msg.helper_metadata.delivery_class
+    self.next = function(endpoint) {
+        var connection = _.find(self.poll.connections, {
+            source: {uuid: endpoint.uuid}
         });
 
-        p.add_callback(function(reply) {
-            if (!reply.success) { return; }
+        if (!connection) { return null; }
 
-            return im.api_request(
-              'contacts.update_extras',
-              {key: reply.contact.key, fields: fields});
+        var state = _.find(self.poll.states, {
+            entry_endpoint: {uuid: connection.target.uuid}
         });
-        return p;
+
+        return state
+            ? state.uuid
+            : null;
     };
 
-    self.choice_state_creator = function(state_name, im, state_description) {
-        var choices = state_description.choice_endpoints.map(
-            function (c) { return new Choice(c.value, c.label); });
-        return new ChoiceState(
-            state_name,
-            function (choice, done) {
-                var endpoint = state_description.choice_endpoints.filter(
-                  function (c) { return (c.value == choice.value); })[0];
+    self.types = {};
 
-                if (!endpoint) { done(state_name); return; }
+    self.types.choice = function(desc) {
+        var endpoints = desc.choice_endpoints;
 
-                var p = self.store_answer(
-                    state_description.store_as,
-                    endpoint.value,
-                    im
-                );
-                p.add_callback(function() {
-                    done(self.get_next_state(endpoint.uuid));
-                });
-            },
-            state_description.text,
-            choices,
-            null,
-            null,
-            {accept_labels: self.accept_labels}
-        );
+        return new ChoiceState(desc.uuid, {
+            accept_labels: self.poll.accept_labels,
+
+            question: desc.text,
+
+            choices: endpoints.map(function(endpoint) {
+                return new Choice(endpoint.value, endpoint.label);
+            }),
+
+            next: function(choice) {
+                var endpoint = _.find(endpoints, {value: choice.value});
+
+                if (!endpoint) { return; }
+                self.contact.extra[desc.store_as] = endpoint.value;
+
+                return self
+                    .im.contacts.save(self.contact)
+                    .thenResolve(self.next(endpoint));
+            }
+        });
     };
 
-    self.freetext_state_creator = function(state_name, im, state_description) {
-        return new FreeText(
-            state_name,
-            function (content, done) {
-                var next = state_description.exit_endpoint.uuid;
-                var p = self.store_answer(
-                    state_description.store_as,
-                    content,
-                    im
-                );
-                p.add_callback(function() {
-                    done(self.get_next_state(next));
-                });
-            },
-            state_description.text
-        );
+    self.types.freetext = function(desc) {
+        return new FreeText(desc.uuid, {
+            question: desc.text,
+
+            next: function(content) {
+                self.contact.extra[desc.store_as] = content;
+
+                return self
+                    .im.contacts.save(self.contact)
+                    .thenResolve(self.next(desc.exit_endpoint));
+            }
+        });
     };
 
-    self.end_state_creator = function(state_name, im, state_description) {
-        var next_state = null;
-        if (self.get_metadata('repeatable')) {
-            next_state = self.start_state;
-        }
-        return new EndState(
-            state_name,
-            state_description.text,
-            next_state
-        );
+    self.types.end = function(desc) {
+        return new EndState(desc.uuid, {
+            text: desc.text,
+
+            next: self.poll.repeatable
+                ? 'states:start'
+                : null
+        });
     };
 
-    self.unknown_state_creator = function(state_name, im, state_description) {
-        return new EndState(
-            state_name,
-            "An error occurred. Please try dial in again later.",
-            self.start_state
-        );
-    };
+    self.states.add('states:start', function() {
+        return self.states.create(self.poll.start_state.uuid);
+    });
+});
+
+
+if (typeof api != 'undefined') {
+    new InteractionMachine(api, new DialogueApp());
 }
 
-// launch app
-var states = new DialogueStateCreator();
-var im = new InteractionMachine(api, states);
-im.attach();
+
+this.DialogueApp = DialogueApp;
