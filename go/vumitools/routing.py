@@ -679,7 +679,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if target is None:
             raise UnroutableMessageError(
                 "No target found for outbound message from '%s': %s" % (
-                    connector_name, msg))
+                    connector_name, msg), msg)
 
         if self.billing_outbound_connector:
             target_conn = GoConnector.parse(target[0])
