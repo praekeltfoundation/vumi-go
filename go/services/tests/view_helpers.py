@@ -6,7 +6,7 @@ from vumi.tests.helpers import generate_proxies, IHelper
 
 from go.base import utils as base_utils
 from go.base.tests.helpers import DjangoVumiApiHelper
-from .helpers import ServiceComponentHelper
+from .helpers import ServiceHelper
 
 
 class ServiceComponentViewsHelper(object):
@@ -16,8 +16,7 @@ class ServiceComponentViewsHelper(object):
         self.service_type = service_type
 
         self.vumi_helper = DjangoVumiApiHelper()
-        self._service_helper = ServiceComponentHelper(
-            service_type, self.vumi_helper)
+        self._service_helper = ServiceHelper(service_type, self.vumi_helper)
 
         # Proxy methods from our helpers.
         generate_proxies(self, self._service_helper)

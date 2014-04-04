@@ -1,11 +1,13 @@
 from twisted.internet.defer import returnValue
-
 from zope.interface import implements
 
-from vumi.tests.helpers import proxyable, maybe_async, IHelper
+from vumi.tests.helpers import (
+    proxyable, generate_proxies, maybe_async, IHelper)
+
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class ServiceComponentHelper(object):
+class ServiceHelper(object):
     implements(IHelper)
 
     def __init__(self, service_type, vumi_helper):
@@ -33,3 +35,31 @@ class ServiceComponentHelper(object):
         user_helper = yield self.vumi_helper.get_or_create_user()
         service = yield user_helper.get_service_component(service_key)
         returnValue(service)
+
+    @proxyable
+    @maybe_async
+    def get_service_component_api(self, service_key):
+        user_helper = yield self.vumi_helper.get_or_create_user()
+        service_api = yield user_helper.user_api.get_service_component_api(
+            self._service_type, service_key)
+        returnValue(service_api)
+
+
+class ServiceComponentHelper(object):
+    implements(IHelper)
+
+    def __init__(self, service_type, is_sync):
+        self.service_type = service_type
+
+        self.vumi_helper = VumiApiHelper(is_sync=is_sync)
+        self._service_helper = ServiceHelper(service_type, self.vumi_helper)
+
+        # Proxy methods from our helpers.
+        generate_proxies(self, self._service_helper)
+        generate_proxies(self, self.vumi_helper)
+
+    def setup(self):
+        return self.vumi_helper.setup()
+
+    def cleanup(self):
+        return self.vumi_helper.cleanup()

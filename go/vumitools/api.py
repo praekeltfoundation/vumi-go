@@ -20,7 +20,8 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
 from go.config import (
-    configured_conversations, configured_routers, configured_services)
+    configured_conversations, configured_routers, configured_services,
+    get_service_definition)
 
 from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
@@ -539,6 +540,14 @@ class VumiServiceComponentApi(object):
 
     def get_service_component(self):
         return self.user_api.get_service_component(self.service_key)
+
+    @Manager.calls_manager
+    def get_service_component_object(self, service=None):
+        if service is None:
+            service = yield self.get_service_component()
+        service_def = get_service_definition(
+            service.service_component_type, service)
+        returnValue(service_def.get_component())
 
     @Manager.calls_manager
     def archive_service_component(self, service=None):

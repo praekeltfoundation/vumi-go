@@ -93,6 +93,11 @@ def get_router_definition(router_type, router=None):
     return router_pkg.definition.RouterDefinition(router)
 
 
+def get_service_definition(service_type, service=None):
+    service_pkg = get_service_pkg(service_type, ['definition'])
+    return service_pkg.definition.ServiceComponentDefinition(service)
+
+
 _VUMI_INSTALLED_APPS = {
     'go.apps.bulk_message': {
         'namespace': 'bulk_message',
