@@ -18,8 +18,7 @@ class PollConfigResource(SandboxResource):
             JSON string containg the configuration dictionary.
         """
         config = {
-            "metric_store": "poll-%s" % conversation.key,
-            "user_store": "poll-%s" % conversation.key,
+            "name": "poll-%s" % conversation.key
         }
         return json.dumps(config)
 
