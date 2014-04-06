@@ -214,10 +214,6 @@ class MessageListView(ConversationTemplateView):
         """
         direction = request.GET.get('direction', 'inbound')
         page = request.GET.get('p', 1)
-        query = request.GET.get('q', None)
-        delay = float(request.GET.get('delay', 1000))
-        token = request.GET.get('token', None)
-
         batch_id = conversation.batch.key
 
         # Paginator starts counting at 1 so 0 would also be invalid
@@ -240,42 +236,7 @@ class MessageListView(ConversationTemplateView):
             'message_direction': direction,
         }
 
-        # If we're doing a query we can shortcut the results as we don't
-        # need all the message paginator stuff since we're loading the results
-        # asynchronously with JavaScript.
-        client = ms_client.Client(settings.MESSAGE_STORE_API_URL)
-        if query and not token:
-            token = client.match(batch_id, direction, [{
-                'key': 'msg.content',
-                'pattern': re.escape(query),
-                'flags': 'i',
-                }])
-            tag_context.update({
-                'query': query,
-                'token': token,
-                'delay': delay,
-            })
-            return self.render_to_response(tag_context)
-        elif query and token:
-            match_result = ms_client.MatchResult(client, batch_id, direction,
-                                                 token, page=int(page),
-                                                 page_size=20)
-            if match_result.is_in_progress():
-                tag_context.update({'delay': delay * 1.1})
-                return render(request,
-                              "conversation/message_list_table_load.html",
-                              tag_context)
-            else:
-                message_paginator = match_result.paginator
-                tag_context.update({
-                    'token': token,
-                    'query': query,
-                })
-                return render(request,
-                              "conversation/message_list_table.html",
-                              tag_context)
-
-        elif direction == 'inbound':
+        if direction == 'inbound':
             message_paginator = inbound_message_paginator
         else:
             message_paginator = outbound_message_paginator
@@ -330,6 +291,73 @@ class MessageListView(ConversationTemplateView):
                     'Something went wrong. Please try again.')
         return self.redirect_to(
             'message_list', conversation_key=conversation.key)
+
+
+class MessageSearchView(ConversationTemplateView):
+    view_name = 'message_search'
+    path_suffix = 'message_search/'
+
+    def get(self, request, conversation):
+        client = ms_client.Client(settings.MESSAGE_STORE_API_URL)
+        page = request.GET.get('p', 1)
+        query = request.GET.get('q', None)
+        delay = float(request.GET.get('delay', 1000))
+        token = request.GET.get('token', None)
+        batch_id = conversation.batch.key
+        tag_context = {
+            'batch_id': batch_id,
+            'conversation': conversation,
+        }
+
+        if query and not token:
+            token = client.match(batch_id, 'inbound', [{
+                'key': 'msg.content',
+                'pattern': re.escape(query),
+                'flags': 'i',
+                }])
+            tag_context.update({
+                'query': query,
+                'token': token,
+                'delay': delay,
+            })
+            return self.render_to_response(tag_context)
+        elif query and token:
+            match_result = ms_client.MatchResult(client, batch_id, 'inbound',
+                                                 token, page=int(page),
+                                                 page_size=20)
+            if match_result.is_in_progress():
+                tag_context.update({'delay': delay * 1.1})
+                return render(request,
+                              "conversation/message_list_table_load.html",
+                              tag_context)
+            else:
+                message_paginator = match_result.paginator
+                try:
+                    message_page = message_paginator.page(page)
+                except PageNotAnInteger:
+                    message_page = message_paginator.page(1)
+                except EmptyPage:
+                    message_page = message_paginator.page(
+                        message_paginator.num_pages)
+                tag_context.update({
+                    'message_page': message_page,
+                    'message_page_range': page_range_window(message_page, 5),
+                    'token': token,
+                    'query': query,
+                })
+                if 'ajax' in request.GET:
+                    return render(request,
+                                  "conversation/message_list_table.html",
+                                  tag_context)
+                else:
+                    return self.render_to_response(tag_context)
+
+        else:
+            return self.render_to_response(tag_context)
+
+    def post(self, request, conversation):
+        return self.redirect_to(
+            'message_search', conversation_key=conversation.key)
 
 
 class EditConversationDetailView(ConversationTemplateView):
@@ -741,6 +769,7 @@ class ConversationViewDefinitionBase(object):
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
         MessageListView,
+        MessageSearchView,
         EditConversationDetailView,
         EditConversationGroupsView,
         StartConversationView,

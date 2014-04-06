@@ -15,7 +15,7 @@
         <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export</a>
     </div>
 
-    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
+    <form id="search-filter" name="search-filter" action="{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='message_search/' %}" method="get" class="form-inline pull-right">
         <input type="hidden" name="direction" value="{{message_direction}}">
 
         <div class="form-group">
@@ -65,11 +65,7 @@
                 <div class="tab-content" id="message-page">
                     <div class="tab-pane active">
                       <form class="table-form-view" method="post" action="">
-                        {% if message_page.paginator.num_pages %}
                           {% include "conversation/message_list_table.html" %}
-                        {% else %}
-                          {% include "conversation/message_list_table_load.html" %}
-                        {% endif %}
                       </form>
                     </div>
                     <div class="tab-pane" id="outbound-msg-stats">
@@ -145,28 +141,4 @@
         </div>
     </div>
 </div><!--/expContactFrm-->
-{% endblock %}
-
-{% block ondomready %}
-    {{ block.super }}
-    function load_results() {
-        $.ajax({
-            url: "{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='message_list/' %}",
-            data: {
-                "q": "{{query}}",
-                "token": "{{token}}",
-                "batch_id": "{{batch_id}}",
-                "direction": "{{message_direction}}",
-                "delay": {{delay|default:100}},
-            },
-            success: function(data) {
-                $('#message-page').html(data);
-            }
-        });
-    };
-    {% if not message_page.paginator.num_pages %}
-      $(function () {
-        setTimeout(load_results, {{delay|default:100}});
-      });
-    {% endif %}
 {% endblock %}
