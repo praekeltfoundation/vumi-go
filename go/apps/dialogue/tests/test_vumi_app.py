@@ -34,8 +34,11 @@ class TestDialogueApplication(VumiTestCase):
             'args': [sandboxer_js],
             'timeout': 10,
             'app_context': (
-                "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01')"
-                " return require(m); return null; }, Buffer: Buffer}"
+                "{require: function(m) {"
+                " if (['moment', 'url', 'querystring', 'crypto', 'lodash',"
+                " 'q', 'jed', 'libxmljs', 'zlib', 'vumigo_v01', 'vumigo_v02'"
+                "].indexOf(m) >= 0) return require(m); return null;"
+                " }, Buffer: Buffer}"
             ),
             'env': {
                 'NODE_PATH': node_path,
