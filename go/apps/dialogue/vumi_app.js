@@ -32,10 +32,10 @@ var DialogueApp = App.extend(function(self) {
 
     self.get_poll = function() {
         return self
-            .im.sandbox_config.get('poll', {json: true})
+            .im.sandbox_config.get('poll', {json: false})
             .then(function(poll) {
                 return _.defaults(poll, self.poll_defaults);
-           });
+            });
     };
 
     self.add_state = function(desc) {
