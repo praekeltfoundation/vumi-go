@@ -26,13 +26,12 @@ class ServiceComponentViewMixin(object):
         """Return the URL for the given ``view_name``"""
         return self.view_def.get_view_url(view_name, **kwargs)
 
-    def get_next_view(self, router):
+    def get_next_view(self, service):
         return 'show'
 
 
 class ServiceComponentApiView(ServiceComponentViewMixin, View):
     """Base class for service API views"""
-    pass
 
 
 class ServiceComponentTemplateView(ServiceComponentViewMixin, TemplateView):
@@ -123,7 +122,7 @@ class EditServiceComponentView(ServiceComponentTemplateView):
     Subclass this and set :attr:`edit_forms` to a list of tuples
     of the form `('key', FormClass)`.
 
-    The `key` should be a key into the servic component's config field. If
+    The `key` should be a key into the service component's config field. If
     `key` is `None`, the whole of the config field will be used.
 
     If the default behaviour is insufficient or problematic, implement
@@ -196,7 +195,7 @@ class EditServiceComponentView(ServiceComponentTemplateView):
 
 class ServiceComponentViewDefinitionBase(object):
     """
-    Definition of router UI.
+    Definition of service component UI.
 
     Subclass this for your shiny new service component and set the appropriate
     attributes and/or add special magic code.

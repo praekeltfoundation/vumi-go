@@ -20,8 +20,8 @@ class RedisKVStoreViewTests(GoDjangoTestCase):
             'service_component_type': u'kvstore.redis',
         })
         [service_key] = service_store.list_service_components()
-        rtr_helper = self.service_helper.get_service_helper_by_key(service_key)
-        self.assertRedirects(response, rtr_helper.get_view_url('edit'))
+        svc_helper = self.service_helper.get_service_helper_by_key(service_key)
+        self.assertRedirects(response, svc_helper.get_view_url('edit'))
 
     def test_show_stopped(self):
         svc_helper = self.service_helper.create_service_helper(
