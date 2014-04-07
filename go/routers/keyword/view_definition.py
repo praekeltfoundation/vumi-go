@@ -17,7 +17,7 @@ class BaseKeywordFormSet(forms.formsets.BaseFormSet):
     def to_config(self):
         keyword_endpoint_mapping = {}
         for form in self:
-            if not form.is_valid():
+            if (not form.is_valid()) or form.cleaned_data['DELETE']:
                 continue
             keyword = form.cleaned_data['keyword']
             target_endpoint = form.cleaned_data['target_endpoint']
