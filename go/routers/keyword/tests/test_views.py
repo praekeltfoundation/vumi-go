@@ -108,3 +108,27 @@ class KeywordViewTests(GoDjangoTestCase):
         self.assertEqual(set(router.extra_inbound_endpoints), set())
         self.assertEqual(
             set(router.extra_outbound_endpoints), set(['bar', 'quux']))
+
+    def test_edit_router_keyword_config_with_delete(self):
+        rtr_helper = self.router_helper.create_router_helper(started=True)
+        router = rtr_helper.get_router()
+        self.assertEqual(router.config, {})
+        response = self.client.post(rtr_helper.get_view_url('edit'), {
+            'keyword_endpoint_mapping-TOTAL_FORMS': ['2'],
+            'keyword_endpoint_mapping-INITIAL_FORMS': ['0'],
+            'keyword_endpoint_mapping-MAX_NUM_FORMS': [''],
+            'keyword_endpoint_mapping-0-keyword': ['foo'],
+            'keyword_endpoint_mapping-0-target_endpoint': ['bar'],
+            'keyword_endpoint_mapping-0-DELETE': ['on'],
+            'keyword_endpoint_mapping-1-keyword': ['baz'],
+            'keyword_endpoint_mapping-1-target_endpoint': ['quux'],
+            'keyword_endpoint_mapping-1-DELETE': [''],
+        })
+        self.assertRedirects(response, rtr_helper.get_view_url('show'))
+        router = rtr_helper.get_router()
+        self.assertEqual(router.config, {u'keyword_endpoint_mapping': {
+            'baz': 'quux',
+        }})
+        self.assertEqual(set(router.extra_inbound_endpoints), set())
+        self.assertEqual(
+            set(router.extra_outbound_endpoints), set(['quux']))
