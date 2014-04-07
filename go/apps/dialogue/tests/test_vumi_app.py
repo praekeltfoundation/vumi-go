@@ -100,7 +100,11 @@ class TestDialogueApplication(VumiTestCase):
     def test_user_message(self):
         conversation = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conversation)
-        yield self.app_helper.make_dispatch_inbound("hello", conv=conversation)
+        with LogCatcher(message='Switched to state:') as lc:
+            yield self.app_helper.make_dispatch_inbound(
+                "hello", conv=conversation)
+            self.assertEqual(lc.messages(),
+                             ['Switched to state: choice-1'])
         [reply] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(reply["content"],
                          "What is your favourite colour?\n1. Red\n2. Blue")
