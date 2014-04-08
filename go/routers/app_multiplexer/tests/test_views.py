@@ -121,3 +121,31 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
                     u'label': u'Mama',
                     u'endpoint': u'mama',
                 }]})
+
+    def test_user_input_good_with_delete(self):
+        rtr_helper = self.router_helper.create_router_helper(started=True)
+        router = rtr_helper.get_router()
+        self.assertEqual(router.config, {})
+        response = self.client.post(rtr_helper.get_view_url('edit'), {
+            'menu_title-content': ['Please select an application'],
+            'entries-TOTAL_FORMS': ['2'],
+            'entries-INITIAL_FORMS': ['0'],
+            'entries-MAX_NUM_FORMS': [''],
+            'entries-0-application_label': ['Flappy Bird'],
+            'entries-0-endpoint_name': ['flappy-bird'],
+            'entries-0-DELETE': ['on'],
+            'entries-0-ORDER': ['0'],
+            'entries-1-application_label': ['Mama'],
+            'entries-1-endpoint_name': ['mama'],
+            'entries-1-DELETE': [''],
+            'entries-1-ORDER': ['1'],
+        })
+        self.assertRedirects(response, rtr_helper.get_view_url('show'))
+        router = rtr_helper.get_router()
+        self.assertEqual(router.config, {
+            u'menu_title': {u'content': u'Please select an application'},
+            u'entries': [
+                {
+                    u'label': u'Mama',
+                    u'endpoint': u'mama',
+                }]})
