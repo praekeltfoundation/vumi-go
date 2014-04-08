@@ -326,10 +326,14 @@ class MessageSearchView(ConversationTemplateView):
                                                  token, page=int(page),
                                                  page_size=20)
             if match_result.is_in_progress():
-                tag_context.update({'delay': delay * 1.1})
-                return render(request,
-                              "conversation/message_list_table_load.html",
-                              tag_context)
+                # Still in progress, return html fragment with loading msg
+                if 'ajax' in request.GET:
+                    tag_context.update({'query': query, 'delay': delay * 1.1})
+                    return render(request,
+                                  "conversation/message_list_table_load.html",
+                                  tag_context)
+                else:
+                    raise Http404
             else:
                 message_paginator = match_result.paginator
                 try:
@@ -345,15 +349,16 @@ class MessageSearchView(ConversationTemplateView):
                     'token': token,
                     'query': query,
                 })
+                # if this is an async ajax request, just return the html
+                # fragment representing the table of matching messages
                 if 'ajax' in request.GET:
                     return render(request,
                                   "conversation/message_list_table.html",
                                   tag_context)
                 else:
                     return self.render_to_response(tag_context)
-
         else:
-            return self.render_to_response(tag_context)
+            raise Http404
 
     def post(self, request, conversation):
         return self.redirect_to(

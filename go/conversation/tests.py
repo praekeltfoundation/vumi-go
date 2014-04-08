@@ -698,7 +698,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         # create some messages to search for
         self.msg_helper.add_inbound_to_conv(conv, 5)
         response = self.client.get(
-            self.get_view_url(conv, 'message_list'),
+            self.get_view_url(conv, 'message_search'),
             {"q": 'inbound 3'})
 
         ms_client = self.message_store_helper.get_ms_client()
@@ -708,7 +708,6 @@ class TestConversationViews(BaseConversationViewTestCase):
             "q": "inbound 3",
             "token": token,
             "batch_id": conv.batch.key,
-            "direction": "inbound",
             "delay": 100,
         }
         for param, value in params.items():
@@ -720,41 +719,49 @@ class TestConversationViews(BaseConversationViewTestCase):
             'conversation/message_list_table_load.html' in template_names)
 
     def test_message_search_results(self):
+        """
+        We test the following sequence of interactions
+        1. User enters query into search box and kicks off search
+        2. First ajax call to poll for results should indicate that search is
+           still in progress
+        3. Second ajax call should finally return matching messages
+        """
+
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         # create some messages to search for
-        self.msg_helper.add_inbound_to_conv(conv, 5)
+        messages = self.msg_helper.add_inbound_to_conv(conv, 5)
 
-        self.client.get(self.get_view_url(conv, 'message_list'),
+        self.client.get(self.get_view_url(conv, 'message_search'),
                         {"q": 'inbound 3'})
+
         ms_client = self.message_store_helper.get_ms_client()
         [token] = ms_client.get_tokens()
 
-        fetch_results_url = self.get_view_url(conv, 'message_list')
+        fetch_results_url = self.get_view_url(conv, 'message_search')
         fetch_results_params = {
-            'q': 'hello world 1',
-            'batch_id': 'batch-id',
-            'direction': 'inbound',
+            'q': 'inbound 3',
+            'batch_id': conv.batch.key,
             'token': token,
             'delay': 100,
+            'ajax': 1,
         }
 
-        response1 = self.client.get(fetch_results_url, fetch_results_params)
-        response2 = self.client.get(fetch_results_url, fetch_results_params)
+        # First ajax call should return "still loading" message
+        response = self.client.get(fetch_results_url, fetch_results_params)
 
-        # First time it should still show the loading page
         self.assertTrue('conversation/message_list_table_load.html' in
-                        [t.name for t in response1.templates])
-        self.assertEqual(response1.context['delay'], 100)
+                        [t.name for t in response.templates])
+        self.assertTrue('One moment please ...' in response.content)
 
-        # Second time it should still render the messages
-        self.assertTrue('conversation/message_list.html' in
-                        [t.name for t in response2.templates])
-        self.assertEqual(response1.context['token'], token)
+        # Now add fake results for the query
+        ms_client.add_fake_results(token, messages)
 
-        # Third time we should list the matching messages
-        self.assertEqual(response2.context['token'], token)
-        self.assertEqual(
-            len(response2.context['message_page'].object_list), 10)
+        # Second ajax call should actually return matching messages
+        response = self.client.get(fetch_results_url, fetch_results_params)
+        self.assertTrue('conversation/message_list_table.html' in
+                        [t.name for t in response.templates])
+        for i in range(0, 5):
+            self.assertTrue(("inbound %i" % i) in response.content)
 
     def test_reply_on_inbound_messages_only(self):
         # Fake the routing setup.
