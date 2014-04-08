@@ -20,6 +20,15 @@ var DialogueApp = App.extend(function(self) {
         start_state: {uuid: null}
     };
 
+    self.events = {
+        'im inbound_event': function (event) {
+            var ev = event.event;
+            return event.im.log.info(
+                "Saw " + ev.event_type + " for message " +
+                ev.sent_message_id + ".");
+        }
+    };
+
     self.init = function() {
         return Q
             .all([self.get_poll(), self.im.contacts.for_user()])
@@ -32,10 +41,10 @@ var DialogueApp = App.extend(function(self) {
 
     self.get_poll = function() {
         return self
-            .im.sandbox_config.get('poll', {json: true})
+            .im.sandbox_config.get('poll', {json: false})
             .then(function(poll) {
                 return _.defaults(poll, self.poll_defaults);
-           });
+            });
     };
 
     self.add_state = function(desc) {

@@ -34,8 +34,11 @@ class TestDialogueApplication(VumiTestCase):
             'args': [sandboxer_js],
             'timeout': 10,
             'app_context': (
-                "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01')"
-                " return require(m); return null; }, Buffer: Buffer}"
+                "{require: function(m) {"
+                " if (['moment', 'url', 'querystring', 'crypto', 'lodash',"
+                " 'q', 'jed', 'libxmljs', 'zlib', 'vumigo_v01', 'vumigo_v02'"
+                "].indexOf(m) >= 0) return require(m); return null;"
+                " }, Buffer: Buffer}"
             ),
             'env': {
                 'NODE_PATH': node_path,
@@ -97,7 +100,11 @@ class TestDialogueApplication(VumiTestCase):
     def test_user_message(self):
         conversation = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conversation)
-        yield self.app_helper.make_dispatch_inbound("hello", conv=conversation)
+        with LogCatcher(message='Switched to state:') as lc:
+            yield self.app_helper.make_dispatch_inbound(
+                "hello", conv=conversation)
+            self.assertEqual(lc.messages(),
+                             ['Switched to state: choice-1'])
         [reply] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(reply["content"],
                          "What is your favourite colour?\n1. Red\n2. Blue")
