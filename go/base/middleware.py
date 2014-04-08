@@ -68,5 +68,5 @@ class ResponseTimeMiddleware(object):
             get_go_metrics_prefix() + 'django.',
             publisher=amqp.connection.get_metric_publisher())
         metrics.oneshot(metric, response_time)
-        metrics.publish_oneshot_metrics()
+        metrics.publish_metrics()
         return response

@@ -57,4 +57,4 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
 
 def fire_oneshot_metric(metrics, metric, value):
     metrics.oneshot(metric, value)
-    metrics.publish_oneshot_metrics()
+    metrics.publish_metrics()

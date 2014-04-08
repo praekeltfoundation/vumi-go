@@ -284,7 +284,7 @@ class GoWorkerMixin(object):
         metric = Metric(name, [agg])
         metrics = self.get_account_metric_manager(acc_key, store)
         metrics.oneshot(metric, value)
-        metrics.publish_oneshot_metrics()
+        metrics.publish_metrics()
 
     @inlineCallbacks
     def publish_conversation_metrics(self, user_api, conversation_key):
@@ -299,7 +299,7 @@ class GoWorkerMixin(object):
             value = yield metric.get_value(user_api)
             metrics.oneshot(metric.metric, value)
 
-        metrics.publish_oneshot_metrics()
+        metrics.publish_metrics()
 
     def collect_metrics(self, user_api, conversation_key):
         return self.publish_conversation_metrics(user_api, conversation_key)
