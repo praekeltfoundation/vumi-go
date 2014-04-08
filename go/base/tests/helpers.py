@@ -228,6 +228,9 @@ class FakeQuery(object):
         self.batch_id = batch_id
         self.direction = direction
         self.query = query
+        self.in_progress = True
+        self.results = []
+        self.total_count = 0
 
     def __repr__(self):
         return "<FakeQuery batch_id=%r direction=%r query=%r>" % (
@@ -276,12 +279,12 @@ class FakeMessageStoreClient(object):
         assert query == expected_query, (
             "Query for token %r does not match; expected %r; received %r"
             % (token, expected_query, query))
-        in_progress = False
-        # TODO: return real messages counts by doing a simple search in
-        #       self.mdb
-        total_count = 10
-        msgs = []
-        return in_progress, total_count, msgs
+        return query.in_progress, query.total_count, query.results
+
+    def add_fake_results(self, token, messages):
+        self._queries[token].in_progress = False
+        self._queries[token].total_count = len(messages)
+        self._queries[token].results = messages
 
 
 class MessageStoreClientHelper(object):
@@ -307,7 +310,8 @@ class MessageStoreClientHelper(object):
         self._patch_helper.cleanup()
 
     def _make_fake_client(self, *args, **kw):
-        self._client = FakeMessageStoreClient(self.mdb, *args, **kw)
+        if self._client is None:
+            self._client = FakeMessageStoreClient(self.mdb, *args, **kw)
         return self._client
 
     def get_ms_client(self):
