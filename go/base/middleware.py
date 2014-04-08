@@ -2,9 +2,12 @@ import time
 import logging
 
 from django.core.urlresolvers import resolve, Resolver404
+from django.conf import settings
+from vumi.blinkenlights.metrics import Metric, MetricManager
 
+from go.base import amqp
 from go.base.utils import vumi_api_for_user
-from go.vumitools.metrics import DjangoMetric
+from go.config import get_go_metrics_prefix
 from go.api.go_api.session_manager import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -36,7 +39,7 @@ class ResponseTimeMiddleware(object):
         func = resolve(request.path)[0]
         metric_name = '%s.%s.%s' % (
             func.__module__, func.__name__, request.method)
-        return DjangoMetric(metric_name.lower())
+        return Metric(metric_name.lower())
 
     def process_request(self, request):
         request.start_time = time.time()
@@ -60,5 +63,10 @@ class ResponseTimeMiddleware(object):
 
         response_time = start_time - time.time()
         response['X-Response-Time'] = response_time
-        metric.oneshot(value=response_time)
+        # TODO: Better way to fire these metrics.
+        metrics = MetricManager(
+            get_go_metrics_prefix() + 'django.',
+            publisher=amqp.connection.get_metric_publisher())
+        metrics.oneshot(metric, response_time)
+        metrics.publish_oneshot_metrics()
         return response

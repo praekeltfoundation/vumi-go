@@ -107,7 +107,7 @@ class TestGoApplicationWorker(VumiTestCase):
             conversation_key=self.conv.key,
             user_account_key=self.conv.user_account.key)
 
-        prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
+        prefix = "go.campaigns.test-0-user.conversations.%s" % self.conv.key
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
@@ -124,7 +124,7 @@ class TestGoApplicationWorker(VumiTestCase):
         yield self.app.publish_conversation_metrics(
             user_helper.user_api, self.conv.key)
 
-        prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
+        prefix = "go.campaigns.test-0-user.conversations.%s" % self.conv.key
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
@@ -141,4 +141,4 @@ class TestGoApplicationWorker(VumiTestCase):
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
-            [("campaigns.test-0-user.stores.some-store.some-metric", 42)])
+            [("go.campaigns.test-0-user.stores.some-store.some-metric", 42)])

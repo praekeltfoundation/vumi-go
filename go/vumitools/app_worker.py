@@ -5,13 +5,15 @@ from twisted.internet.defer import (
 from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
-from vumi.blinkenlights.metrics import MetricManager
+from vumi.blinkenlights.metrics import (
+    MetricManager, MetricPublisher, Metric, AVG)
 from vumi.config import IConfigData, ConfigText, ConfigDict, ConfigField
 from vumi.connectors import IgnoreMessage
 
 from go.config import get_conversation_definition
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
-from go.vumitools.metrics import AccountMetric
+from go.vumitools.metrics import (
+    get_account_metric_prefix, get_conversation_metric_prefix)
 from go.vumitools.utils import MessageMetadataHelper
 
 
@@ -44,8 +46,6 @@ class GoWorkerConfigData(object):
 class GoWorkerConfigMixin(object):
     worker_name = ConfigText(
         "Name of this worker.", required=True, static=True)
-    metrics_prefix = ConfigText(
-        "Metric name prefix.", default='go.', static=True)
     riak_manager = ConfigDict("Riak config.", static=True)
     redis_manager = ConfigDict("Redis config.", static=True)
 
@@ -98,8 +98,7 @@ class GoWorkerMixin(object):
         if config.worker_name is not None:
             self.worker_name = config.worker_name
 
-        self.metrics = yield self.start_publisher(
-            MetricManager, config.metrics_prefix)
+        self.metric_publisher = yield self.start_publisher(MetricPublisher)
 
         yield self._go_setup_vumi_api(config)
         yield self._go_setup_event_publisher(config)
@@ -113,7 +112,6 @@ class GoWorkerMixin(object):
         if self.control_consumer is not None:
             yield self.control_consumer.stop()
             self.control_consumer = None
-        self.metrics.stop()
 
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
@@ -269,20 +267,39 @@ class GoWorkerMixin(object):
     def publish_app_event(self, event):
         self.app_event_publisher.publish_message(event)
 
+    def get_account_metric_manager(self, account_key, store_name):
+        # TODO: Move this to an API.
+        prefix = get_account_metric_prefix(account_key, store_name)
+        return MetricManager(prefix, publisher=self.metric_publisher)
+
+    def get_conversation_metric_manager(self, conv):
+        # TODO: Move this to an API.
+        prefix = get_conversation_metric_prefix(conv)
+        return MetricManager(prefix, publisher=self.metric_publisher)
+
     def publish_account_metric(self, acc_key, store, name, value, agg=None):
-        metric = AccountMetric(acc_key, store, name, agg)
-        metric.oneshot(self.metrics, value)
+        # TODO: Collect the oneshot metrics and then publish all at once?
+        if agg is None:
+            agg = AVG
+        metric = Metric(name, [agg])
+        metrics = self.get_account_metric_manager(acc_key, store)
+        metrics.oneshot(metric, value)
+        metrics.publish_oneshot_metrics()
 
     @inlineCallbacks
     def publish_conversation_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_conversation(conversation_key)
+        metrics = self.get_conversation_metric_manager(conv)
 
         conv_type = conv.conversation_type
         conv_def = get_conversation_definition(conv_type, conv)
 
-        yield gatherResults([
-            m.oneshot(self.metrics, user_api=user_api)
-            for m in conv_def.get_metrics()])
+        # TODO: Switch to real metrics in conv def?
+        for metric in conv_def.get_metrics():
+            value = yield metric.get_value(user_api)
+            metrics.oneshot(metric.metric, value)
+
+        metrics.publish_oneshot_metrics()
 
     def collect_metrics(self, user_api, conversation_key):
         return self.publish_conversation_metrics(user_api, conversation_key)

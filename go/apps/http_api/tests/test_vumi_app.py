@@ -436,7 +436,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
 
         self.assertEqual(response.code, http.OK)
 
-        prefix = "campaigns.test-0-user.stores.metric_store"
+        prefix = "go.campaigns.test-0-user.stores.metric_store"
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),

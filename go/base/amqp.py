@@ -44,13 +44,17 @@ class AmqpConnection(object):
         return self.publish(metric.to_json(), exchange=self.metrics_exchange,
             routing_key='vumi.metrics')
 
-    def publish_metric(self, metric_name, aggregators, value, timestamp=None):
-        timestamp = timestamp or time.time()
-        metric_msg = MetricMessage()
-        metric_msg.append((metric_name,
-            tuple(sorted(agg.name for agg in aggregators)),
-            [(timestamp, value)]))
-        return self.publish_metric_message(metric_msg)
+    def get_metric_publisher(self):
+        return MetricPublisher(self)
+
+
+class MetricPublisher(object):
+    def __init__(self, connection):
+        self.connection = connection
+
+    def publish_message(self, msg):
+        return self.connection.publish_metric_message(msg)
+
 
 connection = AmqpConnection()
 

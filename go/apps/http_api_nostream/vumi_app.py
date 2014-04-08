@@ -53,7 +53,6 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         self.web_path = config.web_path
         self.web_port = config.web_port
         self.health_path = config.health_path
-        self.metrics_prefix = config.metrics_prefix
 
         # Set these to empty dictionaries because we're not interested
         # in using any of the helper functions at this point.

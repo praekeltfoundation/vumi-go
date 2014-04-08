@@ -1,9 +1,11 @@
 from functools import wraps
 
-from vumi.blinkenlights.metrics import Aggregator
+from vumi.blinkenlights.metrics import Aggregator, AVG
 
 from go.dashboard import client
-from go.vumitools.metrics import ConversationMetric, AccountMetric
+from go.vumitools.metrics import (
+    get_account_metric_prefix, get_conversation_metric_prefix,
+    ConversationMetric)
 
 
 def is_collection(obj):
@@ -148,6 +150,10 @@ class DashboardLayout(object):
         return self.entities
 
 
+def get_metric_diamondash_target(prefix, metric_name, agg):
+    return "%s%s.%s" % (prefix, metric_name, agg)
+
+
 class ConversationReportsLayout(DashboardLayout):
     def __init__(self, conv, entities=None):
         self.conv = conv
@@ -156,19 +162,18 @@ class ConversationReportsLayout(DashboardLayout):
     @classmethod
     def aggregator_from_target(cls, target):
         agg_name = target.get('aggregator')
-        return Aggregator.from_name(agg_name) if agg_name is not None else None
+        return Aggregator.from_name(agg_name) if agg_name is not None else AVG
 
     @ensure_handler_fields('name')
     def handle_conversation_metric(self, target):
-        metric = ConversationMetric(self.conv, target['name'])
-        return metric.get_diamondash_target()
+        metric = ConversationMetric(self.conv, target['name']).metric
+        prefix = get_conversation_metric_prefix(self.conv)
+        return get_metric_diamondash_target(
+            prefix, metric.name, metric.aggs[0])
 
     @ensure_handler_fields('store', 'name')
     def handle_account_metric(self, target):
         agg = self.aggregator_from_target(target)
-        metric = AccountMetric(
-            self.conv.user_account.key,
-            target['store'],
-            target['name'],
-            agg)
-        return metric.get_diamondash_target()
+        prefix = get_account_metric_prefix(
+            self.conv.user_account.key, target['store'])
+        return get_metric_diamondash_target(prefix, target['name'], agg.name)
