@@ -1,8 +1,7 @@
-import time
-
 from kombu import Connection, Exchange
+from zope.interface import implementer
 
-from vumi.blinkenlights.metrics import MetricMessage
+from vumi.blinkenlights.metrics import IMetricPublisher
 
 
 class AmqpConnection(object):
@@ -48,6 +47,7 @@ class AmqpConnection(object):
         return MetricPublisher(self)
 
 
+@implementer(IMetricPublisher)
 class MetricPublisher(object):
     def __init__(self, connection):
         self.connection = connection
