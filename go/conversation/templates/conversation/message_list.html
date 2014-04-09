@@ -3,7 +3,13 @@
 
 {% block content_extraclass %}conversations{% endblock %}
 
-{% block content_title %}Messages from {{ inbound_uniques_count }} unique people{% endblock %}
+{% block content_title %}
+  {% if message_direction == "inbound" %}
+    Messages from {{ inbound_uniques_count }} unique people
+  {% else %}
+    Messages to {{ outbound_uniques_count }} unique people
+  {% endif %}
+{% endblock %}
 
 {% block content_actions_right %}
     <div class="pull-left">
@@ -140,8 +146,8 @@
                 {% csrf_token %}
                 <div class="modal-body">
                     <p><span class="help-block">
-                      The file is potentially quite large and as a result the export 
-                      will be done in the background. When completed the results will 
+                      The file is potentially quite large and as a result the export
+                      will be done in the background. When completed the results will
                       be sent to you as a CSV file attached to an email.
                     </span><br/></p>
                 </div>
