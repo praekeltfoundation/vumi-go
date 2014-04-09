@@ -309,10 +309,13 @@ class ConversationWrapper(object):
         keys = yield self.mdb.cache.get_inbound_message_keys(
             self.batch.key, start, limit - 1)
 
-        replies = yield self.collect_messages(keys,
-            self.mdb.inbound_messages, include_sensitive, scrubber)
+        replies = yield self.collect_messages(
+            keys, self.mdb.inbound_messages, include_sensitive, scrubber)
 
-        returnValue(replies)
+        # Preserve order
+        returnValue(
+            sorted(replies, key=lambda msg: msg['timestamp'],
+                   reverse=True))
 
     def sent_messages(self, start=0, limit=100, include_sensitive=False,
                       scrubber=None):
@@ -348,10 +351,13 @@ class ConversationWrapper(object):
         keys = yield self.mdb.cache.get_outbound_message_keys(
             self.batch.key, start, limit - 1)
 
-        sent_messages = yield self.collect_messages(keys,
-            self.mdb.outbound_messages, include_sensitive, scrubber)
+        sent_messages = yield self.collect_messages(
+            keys, self.mdb.outbound_messages, include_sensitive, scrubber)
 
-        returnValue(sent_messages)
+        # Preserve order
+        returnValue(
+            sorted(sent_messages, key=lambda msg: msg['timestamp'],
+                   reverse=True))
 
     def find_inbound_messages_matching(self, pattern, flags="i",
                                        key="msg.content", ttl=None,
