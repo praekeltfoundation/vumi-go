@@ -34,7 +34,8 @@ class TestHttpApiViews(GoDjangoTestCase):
             'http_api-api_tokens': 'token',
             'http_api-push_message_url': 'http://messages/',
             'http_api-push_event_url': 'http://events/',
-            }, follow=True)
+            'http_api-metric_store': 'foo_metric_store',
+        }, follow=True)
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         reloaded_conv = conv_helper.get_conversation()
         self.assertEqual(reloaded_conv.config, {
@@ -42,5 +43,6 @@ class TestHttpApiViews(GoDjangoTestCase):
                 'push_event_url': 'http://events/',
                 'push_message_url': 'http://messages/',
                 'api_tokens': ['token'],
+                'metric_store': 'foo_metric_store'
             }
         })
