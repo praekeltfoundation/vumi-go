@@ -1,5 +1,15 @@
-# NOTE: this uses the exact same view definition as the no-stream HTTP API
-from go.apps.http_api_nostream.view_definition import (
-    ConversationViewDefinition)
+from go.conversation.view_definition import (
+    ConversationViewDefinitionBase, EditConversationView)
 
-__all__ = ['ConversationViewDefinition']
+from go.apps.http_api_nostream.view_definition import (
+    TokenForm)
+
+
+class EditHttpApiView(EditConversationView):
+    edit_forms = (
+        ('http_api', TokenForm),
+    )
+
+
+class ConversationViewDefinition(ConversationViewDefinitionBase):
+    edit_view = EditHttpApiView
