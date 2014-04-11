@@ -330,7 +330,6 @@ class ContactStore(PerAccountStore):
         """
         field = self._contact_field_for_addr(delivery_class, addr)
         keys = yield self.contacts.search(**field).get_keys()
-
         if keys:
             contacts = []
             bunches = yield self.contacts.load_all_bunches(keys)

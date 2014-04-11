@@ -1,19 +1,18 @@
 from go.router.view_definition import RouterViewDefinitionBase, EditRouterView
 
-from go.routers.group.forms import GroupEditForm
+from go.routers.group.forms import RoutingEntryFormSet
 from go.vumitools.contact import ContactStore
 
 
-class EditGroupRouterView(EditRouterView):
+class GroupRouterEditView(EditRouterView):
 
     edit_forms = (
-        ('config', GroupEditForm),
+        ('rules', RoutingEntryFormSet),
     )
 
     def retrieve_contact_groups(self, user_account):
         contact_store = ContactStore.from_user_account(user_account)
-        groups = contact_store.list_groups()
-        return groups
+        return contact_store.list_groups()
 
     def make_forms(self, router):
         config = router.config
@@ -29,4 +28,4 @@ class EditGroupRouterView(EditRouterView):
 
 
 class RouterViewDefinition(RouterViewDefinitionBase):
-    edit_view = EditGroupRouterView
+    edit_view = GroupRouterEditView

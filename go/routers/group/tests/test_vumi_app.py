@@ -8,12 +8,27 @@ from go.routers.tests.helpers import RouterWorkerHelper
 
 class TestGroupRouter(VumiTestCase):
 
-    router_class = GroupRouter
-
     @inlineCallbacks
     def setUp(self):
         self.router_helper = self.add_helper(RouterWorkerHelper(GroupRouter))
         self.router_worker = yield self.router_helper.get_router_worker({})
+        rules = []
+        for i in [1, 2]:
+            group = yield self.router_helper.create_group(
+                unicode("group-%i" % i))
+            yield self.router_helper.create_contact(
+                u"+2772438517%i" % i,
+                name=u"John",
+                surname=u"Smith",
+                groups=[group]
+            )
+            rules.append({
+                'group': group.key,
+                'endpoint': "endpoint-%i" % i
+            })
+        self.router_config = {
+            'rules': rules
+        }
 
     @inlineCallbacks
     def assert_routed_inbound(self, content, router, expected_endpoint):
@@ -40,3 +55,14 @@ class TestGroupRouter(VumiTestCase):
         router = yield self.router_helper.create_router(started=True)
         yield self.assert_routed_inbound("foo bar", router, 'default')
         yield self.assert_routed_inbound("baz quux", router, 'default')
+
+    @inlineCallbacks
+    def test_route_on_group(self):
+        router = yield self.router_helper.create_router(
+            started=True, config=self.router_config)
+        msg = yield self.router_helper.ri.make_dispatch_inbound(
+            "hello", router=router, from_addr=u"+27724385171")
+        emsg = msg.copy()
+        emsg.set_routing_endpoint("endpoint-1")
+        rmsg = self.router_helper.ro.get_dispatched_inbound()[-1]
+        self.assertEqual(emsg, rmsg)
