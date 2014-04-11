@@ -34,8 +34,11 @@ class TestDialogueApplication(VumiTestCase):
             'args': [sandboxer_js],
             'timeout': 10,
             'app_context': (
-                "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01')"
-                " return require(m); return null; }, Buffer: Buffer}"
+                "{require: function(m) {"
+                " if (['moment', 'url', 'querystring', 'crypto', 'lodash',"
+                " 'q', 'jed', 'libxmljs', 'zlib', 'vumigo_v01', 'vumigo_v02'"
+                "].indexOf(m) >= 0) return require(m); return null;"
+                " }, Buffer: Buffer}"
             ),
             'env': {
                 'NODE_PATH': node_path,
@@ -65,9 +68,9 @@ class TestDialogueApplication(VumiTestCase):
             config=config, groups=[group], delivery_class=u"sms")
         returnValue(conv)
 
-    def send_send_dialogue_command(self, conversation):
+    def send_send_jsbox_command(self, conversation):
         return self.app_helper.dispatch_command(
-            "send_dialogue",
+            "send_jsbox",
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key,
@@ -79,13 +82,14 @@ class TestDialogueApplication(VumiTestCase):
         conv = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conv)
         with LogCatcher(message='Switched to state:') as lc:
-            yield self.send_send_dialogue_command(conv)
+            yield self.send_send_jsbox_command(conv)
             self.assertEqual(lc.messages(),
                              ['Switched to state: choice-1'] * 2)
         msgs = self.app_helper.get_dispatched_outbound()
         for msg in msgs:
             self.assertEqual(msg["content"],
                              "What is your favourite colour?\n1. Red\n2. Blue")
+            self.assertEqual(msg["in_reply_to"], None)
             go_metadata = msg["helper_metadata"]["go"]
             self.assertEqual(go_metadata["conversation_type"], "dialogue")
             self.assertEqual(go_metadata["conversation_key"], conv.key)
@@ -96,7 +100,11 @@ class TestDialogueApplication(VumiTestCase):
     def test_user_message(self):
         conversation = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conversation)
-        yield self.app_helper.make_dispatch_inbound("hello", conv=conversation)
+        with LogCatcher(message='Switched to state:') as lc:
+            yield self.app_helper.make_dispatch_inbound(
+                "hello", conv=conversation)
+            self.assertEqual(lc.messages(),
+                             ['Switched to state: choice-1'])
         [reply] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(reply["content"],
                          "What is your favourite colour?\n1. Red\n2. Blue")

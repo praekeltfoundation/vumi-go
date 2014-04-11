@@ -30,8 +30,9 @@ class TestJsBoxApplication(VumiTestCase):
             'timeout': 10,
         })
 
-    def setup_conversation(self, config=None):
-        return self.app_helper.create_conversation(config=(config or {}))
+    def setup_conversation(self, config=None, **kw):
+        return self.app_helper.create_conversation(
+            config=(config or {}), **kw)
 
     def set_conversation_tag(self, msg, conversation):
         # TOOD: Move into AppWorkerTestCase once it's working
@@ -70,6 +71,29 @@ class TestJsBoxApplication(VumiTestCase):
             self.assertTrue("Starting javascript sandbox conversation "
                             "(key: u'%s')." % conversation.key
                             in lc.messages())
+
+    def send_send_jsbox_command(self, conversation):
+        return self.app_helper.dispatch_command(
+            "send_jsbox",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=conversation.batch.key,
+            delivery_class=conversation.delivery_class,
+        )
+
+    @inlineCallbacks
+    def test_send_jsbox_command(self):
+        group = yield self.app_helper.create_group_with_contacts(u'group', 2)
+        conv = yield self.setup_conversation(
+            config=self.mk_conv_config('on_inbound_message'),
+            groups=[group])
+        yield self.app_helper.start_conversation(conv)
+        with LogCatcher(message='From command:') as lc:
+            yield self.send_send_jsbox_command(conv)
+            self.assertEqual(lc.messages(),
+                             ['From command: inbound-message'] * 2)
+        msgs = self.app_helper.get_dispatched_outbound()
+        self.assertEqual(msgs, [])
 
     @inlineCallbacks
     def test_user_message(self):

@@ -2,27 +2,11 @@ from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 
 from go.apps.dialogue.dialogue_api import DialogueActionDispatcher
+from go.apps.jsbox.definition import SendJsboxAction
 
 
-class SendDialogueAction(ConversationAction):
-    action_name = 'send_dialogue'
+class SendDialogueAction(SendJsboxAction):
     action_display_name = 'Send Dialogue'
-
-    needs_confirmation = True
-
-    needs_group = True
-    needs_running = True
-
-    def check_disabled(self):
-        if self._conv.has_channel_supporting_generic_sends():
-            return None
-        return ("This action needs channels capable of sending"
-                " messages attached to this conversation.")
-
-    def perform_action(self, action_data):
-        return self.send_command(
-            'send_dialogue', batch_id=self._conv.batch.key,
-            delivery_class=self._conv.delivery_class)
 
 
 class DownloadUserDataAction(ConversationAction):
