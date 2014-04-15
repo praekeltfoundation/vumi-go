@@ -74,7 +74,6 @@ class TestDialogueApplication(VumiTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key,
-            delivery_class=conversation.delivery_class,
         )
 
     @inlineCallbacks
