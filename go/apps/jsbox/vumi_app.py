@@ -130,7 +130,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
             js_config = jsbox_js_config(conv.config)
             delivery_class = js_config.get('delivery_class')
         except Exception:
-            log.warning(
+            log.err(
                 "Bad jsbox js config: %s"
                 % (jsbox_config_value(conv.config, 'config'),))
             return

@@ -178,7 +178,10 @@ class TestJsBoxApplication(VumiTestCase):
 
         with LogCatcher() as lc:
             yield self.send_send_jsbox_command(conv)
-            self.assertTrue("Bad jsbox js config: bad" in lc.messages())
+
+            self.assertEqual(
+                [e['message'][0] for e in lc.errors],
+                "Bad jsbox js config: bad")
 
     @inlineCallbacks
     def test_user_message(self):
