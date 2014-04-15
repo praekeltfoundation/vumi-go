@@ -10,7 +10,7 @@ from vumi.config import ConfigDict
 from vumi import log
 
 from go.apps.jsbox.outbound import mk_inbound_push_trigger
-from go.apps.jsbox.utils import jsbox_config_value
+from go.apps.jsbox.utils import jsbox_config_value, jsbox_js_config
 from go.vumitools.app_worker import (
     GoApplicationMixin, GoApplicationConfigMixin)
 
@@ -123,8 +123,17 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
 
     @inlineCallbacks
     def process_command_send_jsbox(self, user_account_key, conversation_key,
-                                   batch_id, delivery_class):
+                                   batch_id):
         conv = yield self.get_conversation(user_account_key, conversation_key)
+
+        try:
+            js_config = jsbox_js_config(conv.config)
+            delivery_class = js_config.get('delivery_class')
+        except Exception:
+            log.warning(
+                "Bad jsbox js config: %s"
+                % (jsbox_config_value(conv.config, 'config'),))
+            return
 
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (

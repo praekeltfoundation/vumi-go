@@ -100,26 +100,85 @@ class TestJsBoxApplication(VumiTestCase):
             "send_jsbox",
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.batch.key,
-            delivery_class=conversation.delivery_class,
-        )
+            batch_id=conversation.batch.key)
 
     @inlineCallbacks
     def test_send_jsbox_command(self):
-        group = yield self.app_helper.create_group_with_contacts(u'group', 2)
-
-        conv = yield self.setup_conversation(
-            config=self.mk_conv_config(),
+        group = yield self.app_helper.create_group(u'group')
+        contact1 = yield self.app_helper.create_contact(
+            msisdn=u'+271',
+            name=u'a',
+            surname=u'a',
             groups=[group])
+        contact2 = yield self.app_helper.create_contact(
+            msisdn=u'+272',
+            name=u'b',
+            surname=u'b',
+            groups=[group])
+
+        config = self.mk_conv_config(
+            app=self.APPS['cmd'] % {'method': 'on_inbound_message'})
+        conv = yield self.setup_conversation(config=config, groups=[group])
         yield self.app_helper.start_conversation(conv)
 
-        with LogCatcher(message='From command:') as lc:
+        with LogCatcher(message='msg') as lc:
             yield self.send_send_jsbox_command(conv)
-            self.assertEqual(lc.messages(),
-                             ['From command: inbound-message'] * 2)
+            [msg1, msg2] = sorted(
+                [json.loads(m).get('msg') for m in lc.messages()],
+                key=lambda msg: msg['from_addr'])
+
+        self.assertEqual(msg1['from_addr'], contact1.msisdn)
+        self.assertEqual(msg2['from_addr'], contact2.msisdn)
 
         msgs = self.app_helper.get_dispatched_outbound()
         self.assertEqual(msgs, [])
+
+    @inlineCallbacks
+    def test_send_jsbox_command_configured_delivery_class(self):
+        group = yield self.app_helper.create_group(u'group')
+        contact1 = yield self.app_helper.create_contact(
+            msisdn=u'+271',
+            twitter_handle=u'@a',
+            name=u'a',
+            surname=u'a',
+            groups=[group])
+        contact2 = yield self.app_helper.create_contact(
+            msisdn=u'+272',
+            twitter_handle=u'@b',
+            name=u'b',
+            surname=u'b',
+            groups=[group])
+
+        config = self.mk_conv_config(
+            app=self.APPS['cmd'] % {'method': 'on_inbound_message'},
+            delivery_class='twitter')
+        conv = yield self.setup_conversation(config=config, groups=[group])
+        yield self.app_helper.start_conversation(conv)
+
+        with LogCatcher(message='msg') as lc:
+            yield self.send_send_jsbox_command(conv)
+            [msg1, msg2] = sorted(
+                [json.loads(m).get('msg') for m in lc.messages()],
+                key=lambda msg: msg['from_addr'])
+
+        self.assertEqual(msg1['from_addr'], contact1.twitter_handle)
+        self.assertEqual(msg2['from_addr'], contact2.twitter_handle)
+
+    @inlineCallbacks
+    def test_send_jsbox_command_bad_config(self):
+        group = yield self.app_helper.create_group(u'group')
+
+        config = self.mk_conv_config(
+            app=self.APPS['cmd'] % {'method': 'on_inbound_message'},
+            delivery_class='twitter')
+        config['jsbox_app_config']['config']['value'] = 'bad'
+
+        conv = yield self.setup_conversation(config=config, groups=[group])
+        yield self.app_helper.start_conversation(conv)
+
+        with LogCatcher() as lc:
+            yield self.send_send_jsbox_command(conv)
+            self.assertTrue("Bad jsbox js config: bad" in lc.messages())
 
     @inlineCallbacks
     def test_user_message(self):

@@ -19,9 +19,7 @@ class SendJsboxAction(ConversationAction):
                 " messages attached to this conversation.")
 
     def perform_action(self, action_data):
-        return self.send_command(
-            'send_jsbox', batch_id=self._conv.batch.key,
-            delivery_class=self._conv.delivery_class)
+        return self.send_command('send_jsbox', batch_id=self._conv.batch.key)
 
 
 class ViewLogsAction(ConversationAction):
