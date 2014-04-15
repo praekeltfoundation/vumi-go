@@ -1,7 +1,6 @@
-import json
-
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
+from go.apps.jsbox.utils import jsbox_js_config
 
 
 class SendJsboxAction(ConversationAction):
@@ -41,10 +40,8 @@ class ConversationDefinition(ConversationDefinitionBase):
     )
 
     def configured_endpoints(self, config):
-        app_config = config.get("jsbox_app_config", {})
-        raw_js_config = app_config.get("config", {}).get("value", {})
         try:
-            js_config = json.loads(raw_js_config)
+            js_config = jsbox_js_config(config)
         except Exception:
             return []
 
