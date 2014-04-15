@@ -45,8 +45,7 @@ class TestDialogueViews(GoDjangoTestCase):
             'send_jsbox',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.batch.key,
-            delivery_class=conversation.delivery_class))
+            batch_id=conversation.batch.key))
 
     def test_action_send_dialogue_no_group(self):
         conv_helper = self.setup_conversation(started=True, with_group=False)
