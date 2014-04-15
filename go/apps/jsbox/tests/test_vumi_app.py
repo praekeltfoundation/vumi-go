@@ -178,7 +178,6 @@ class TestJsBoxApplication(VumiTestCase):
 
         with LogCatcher() as lc:
             yield self.send_send_jsbox_command(conv)
-            print lc.errors
 
             self.assertTrue(any(
                 "Bad jsbox js config: bad" in
