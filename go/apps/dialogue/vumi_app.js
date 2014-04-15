@@ -15,9 +15,9 @@ var DialogueApp = App.extend(function(self) {
 
     self.poll_defaults = {
         states: [],
-        repeatable: false,
         accept_labels: true,
-        start_state: {uuid: null}
+        start_state: {uuid: null},
+        poll_metadata: {repeatable: false}
     };
 
     self.events = {
@@ -119,7 +119,7 @@ var DialogueApp = App.extend(function(self) {
         return new EndState(desc.uuid, {
             text: desc.text,
 
-            next: self.poll.repeatable
+            next: self.poll.poll_metadata.repeatable
                 ? 'states:start'
                 : null
         });

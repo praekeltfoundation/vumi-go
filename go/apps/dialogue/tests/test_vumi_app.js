@@ -159,7 +159,7 @@ describe("app", function() {
 
             it("should move to the start state next session if asked",
             function() {
-                return extend_poll({repeatable: true})
+                return extend_poll({poll_metadata: {repeatable: true}})
                     .setup.user.state('end-1')
                     .start()
                     .check.user.state('choice-1')
@@ -168,7 +168,7 @@ describe("app", function() {
 
             it("should not move to the start state next session if asked",
             function() {
-                return extend_poll({repeatable: false})
+                return extend_poll({poll_metadata: {repeatable: false}})
                     .setup.user.state('end-1')
                     .start()
                     .check.user.state('end-1')
