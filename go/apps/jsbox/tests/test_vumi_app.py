@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import pkg_resources
 
 import mock
@@ -16,6 +17,25 @@ from go.apps.tests.helpers import AppWorkerHelper
 
 
 class TestJsBoxApplication(VumiTestCase):
+    APPS = {
+        'success': """
+            api.%(method)s = function(command) {
+                this.log_info("From command: inbound-message",
+                    function (reply) {
+                        this.log_info("Log successful: " + reply.success);
+                        this.done();
+                    }
+                );
+            }
+        """,
+
+        'cmd': """
+            api.%(method)s = function(command) {
+                this.log_info(JSON.stringify(command));
+                this.done();
+            }
+        """
+    }
 
     @inlineCallbacks
     def setUp(self):
@@ -40,22 +60,25 @@ class TestJsBoxApplication(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, tag)
         return msg
 
-    def mk_conv_config(self, method):
-        app_js = """
-            api.%(method)s = function(command) {
-                this.log_info("From command: inbound-message",
-                    function (reply) {
-                        this.log_info("Log successful: " + reply.success);
-                        this.done();
-                    }
-                );
-            }
-        """ % {'method': method}
+    def mk_conv_config(self, app=None, delivery_class=None):
+        js_config = {}
+
+        if delivery_class is not None:
+            js_config['delivery_class'] = delivery_class
+
+        if app is None:
+            app = self.APPS['success'] % {'method': 'on_inbound_message'}
+
         config = {
-            'jsbox': {
-                'javascript': app_js,
+            'jsbox': {'javascript': app},
+            'jsbox_app_config': {
+                'config': {
+                    'key': 'config',
+                    'value': json.dumps(js_config)
+                }
             },
         }
+
         return config
 
     def mk_dummy_api(self, conversation):
@@ -84,21 +107,23 @@ class TestJsBoxApplication(VumiTestCase):
     @inlineCallbacks
     def test_send_jsbox_command(self):
         group = yield self.app_helper.create_group_with_contacts(u'group', 2)
+
         conv = yield self.setup_conversation(
-            config=self.mk_conv_config('on_inbound_message'),
+            config=self.mk_conv_config(),
             groups=[group])
         yield self.app_helper.start_conversation(conv)
+
         with LogCatcher(message='From command:') as lc:
             yield self.send_send_jsbox_command(conv)
             self.assertEqual(lc.messages(),
                              ['From command: inbound-message'] * 2)
+
         msgs = self.app_helper.get_dispatched_outbound()
         self.assertEqual(msgs, [])
 
     @inlineCallbacks
     def test_user_message(self):
-        conv = yield self.setup_conversation(
-            config=self.mk_conv_config('on_inbound_message'))
+        conv = yield self.setup_conversation(config=self.mk_conv_config())
         yield self.app_helper.start_conversation(conv)
         yield self.app_helper.make_dispatch_inbound("inbound", conv=conv)
 
@@ -114,7 +139,7 @@ class TestJsBoxApplication(VumiTestCase):
     @inlineCallbacks
     def test_user_message_sandbox_id(self):
         conversation = yield self.setup_conversation(
-            config=self.mk_conv_config('on_inbound_message'))
+            config=self.mk_conv_config())
         yield self.app_helper.start_conversation(conversation)
         msg = self.app_helper.make_inbound("inbound", conv=conversation)
         config = yield self.app.get_config(msg)
@@ -139,8 +164,9 @@ class TestJsBoxApplication(VumiTestCase):
 
     @inlineCallbacks
     def test_event(self):
+        app = self.APPS['success'] % {'method': 'on_inbound_event'}
         conversation = yield self.setup_conversation(
-            config=self.mk_conv_config('on_inbound_event'))
+            config=self.mk_conv_config(app=app))
         yield self.app_helper.start_conversation(conversation)
         msg = yield self.app_helper.make_stored_outbound(
             conversation, "outbound")
