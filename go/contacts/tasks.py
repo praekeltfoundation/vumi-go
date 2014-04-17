@@ -308,7 +308,6 @@ def import_and_update_contacts(contact_mangler, account_key, group_key,
 
     for contact_dictionary in contact_dictionaries:
         try:
-            contact_dictionary['groups'] = [group.key]
             key = contact_dictionary.pop('key')
             contact = contact_store.get_contact_by_key(key)
             contact_dictionary = contact_mangler(contact, contact_dictionary)
@@ -346,7 +345,14 @@ def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
         new_extra = {}
         new_extra.update(dict(contact.extra))
         new_extra.update(contact_dictionary.pop('extra', {}))
+
+        new_subscription = {}
+        new_subscription.update(dict(contact.subscription))
+        new_subscription.update(contact_dictionary.pop('subscription', {}))
+
         contact_dictionary['extra'] = new_extra
+        contact_dictionary['subscription'] = new_subscription
+        contact_dictionary['groups'] = [group_key]
         return contact_dictionary
 
     return import_and_update_contacts(
@@ -362,11 +368,24 @@ def import_existing_is_truth_contacts_file(account_key, group_key, file_name,
     def merge_operation(contact, contact_dictionary):
         # NOTE:     The order here is important, the existing extra is
         #           the truth which we want to maintain
+        cloned_contact_dictionary = contact_dictionary.copy()
+        cloned_contact_dictionary['groups'] = [group_key]
+
         new_extra = {}
         new_extra.update(contact_dictionary.pop('extra', {}))
         new_extra.update(dict(contact.extra))
-        contact_dictionary['extra'] = new_extra
-        return contact_dictionary
+        cloned_contact_dictionary['extra'] = new_extra
+
+        new_subscription = {}
+        new_subscription.update(contact_dictionary.pop('subscription', {}))
+        new_subscription.update(dict(contact.subscription))
+        cloned_contact_dictionary['subscription'] = new_subscription
+
+        for key, value in contact_dictionary.items():
+            if value:
+                cloned_contact_dictionary.pop(key)
+
+        return cloned_contact_dictionary
 
     return import_and_update_contacts(
         merge_operation, account_key, group_key,

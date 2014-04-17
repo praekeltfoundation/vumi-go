@@ -374,6 +374,7 @@ class TestContacts(BaseContactsTestCase):
             # Litmus to ensure we don't butcher stuff
             contact.extra['litmus_stay'] = u'red'
             contact.extra['litmus_overwrite'] = u'blue'
+            contact.subscription['sub'] = u'the-subscription'
             contact.dob = datetime(2014, 1, 2)
             contact.save()
             # what we're going to update
@@ -404,12 +405,7 @@ class TestContacts(BaseContactsTestCase):
             'column-3': 'msisdn',
             'column-4': 'litmus_overwrite',
             'column-5': 'litmus_new',
-            'normalize-0': '',
-            'normalize-1': '',
-            'normalize-2': '',
             'normalize-3': 'msisdn_za',
-            'normalize-4': '',
-            'normalize-5': '',
         }, import_rule='upload_is_truth')
 
         group = self.contact_store.get_group(group.key)
@@ -450,6 +446,10 @@ class TestContacts(BaseContactsTestCase):
         self.assertEqual(
             set([contact.dob for contact in updated_contacts]),
             set([datetime(2014, 1, 2)]))
+        self.assertEqual(
+            set([contact.subscription['sub']
+                 for contact in updated_contacts]),
+            set(['the-subscription']))
 
         os.unlink(csv.name)
 
@@ -461,9 +461,11 @@ class TestContacts(BaseContactsTestCase):
         contact_data = []
         for i in range(3):
             # the original contact
-            contact = self.mkcontact(name='', surname='', msisdn='270000000')
+            contact = self.mkcontact(
+                name='foo', surname='bar', msisdn='270000000')
             # Litmus to ensure we don't butcher stuff
             contact.extra['litmus_stay'] = u'red'
+            contact.subscription['sub'] = u'the-subscription'
             contact.dob = datetime(2014, 1, 2)
             contact.add_to_group(group2)
             contact.save()
@@ -495,12 +497,7 @@ class TestContacts(BaseContactsTestCase):
             'column-3': 'msisdn',
             'column-4': 'litmus_stay',
             'column-5': 'litmus_new',
-            'normalize-0': '',
-            'normalize-1': '',
-            'normalize-2': '',
             'normalize-3': 'msisdn_za',
-            'normalize-4': '',
-            'normalize-5': '',
         }, import_rule='existing_is_truth')
 
         group = self.contact_store.get_group(group1.key)
@@ -517,14 +514,14 @@ class TestContacts(BaseContactsTestCase):
             for contact in contact_data]
         self.assertEqual(
             set([contact.name for contact in updated_contacts]),
-            set(['name 0', 'name 1', 'name 2']))
+            set(['foo']))
         self.assertEqual(
             set([contact.surname for contact in updated_contacts]),
-            set(['surname 0', 'surname 1', 'surname 2']))
+            set(['bar']))
         # these are normalized for ZA
         self.assertEqual(
             set([contact.msisdn for contact in updated_contacts]),
-            set(['+2711111110', '+2711111111', '+2711111112']))
+            set(['270000000']))
         # check the litmus
         self.assertEqual(
             set([contact.extra['litmus_stay']
@@ -540,6 +537,10 @@ class TestContacts(BaseContactsTestCase):
         self.assertEqual(
             set([contact.dob for contact in updated_contacts]),
             set([datetime(2014, 1, 2)]))
+        self.assertEqual(
+            set([contact.subscription['sub']
+                 for contact in updated_contacts]),
+            set(['the-subscription']))
 
         groups = []
         for contact in updated_contacts:
