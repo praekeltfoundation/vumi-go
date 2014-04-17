@@ -308,7 +308,9 @@ def import_and_update_contacts(contact_mangler, account_key, group_key,
 
     for contact_dictionary in contact_dictionaries:
         try:
-            contact_dictionary['groups'] = [group.key]
+            group_keys = contact_dictionary.setdefault('groups', [])
+            if group.key not in group_keys:
+                contact_dictionary['groups'].append(group.key)
             key = contact_dictionary.pop('key')
             contact = contact_store.get_contact_by_key(key)
             contact_dictionary = contact_mangler(contact, contact_dictionary)
