@@ -315,6 +315,36 @@ class TestContacts(BaseContactsTestCase):
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
+    def test_upload_with_contact_uuid(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                                  'fixtures',
+                                  'sample-contacts-with-uuid-headers.csv'))
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(group.key))
+        preview_response = self.client.get(group_url(group.key))
+        self.assertContains(
+            preview_response, 'The file includes contact UUIDs.')
+
+    def test_upload_without_contact_uuid(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                                  'fixtures',
+                                  'sample-contacts-with-headers.csv'))
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(group.key))
+        preview_response = self.client.get(group_url(group.key))
+        self.assertContains(
+            preview_response, 'The file does not include contact UUIDs.')
+
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         new_group_name = u'Testing a ünicode grøüp'
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',

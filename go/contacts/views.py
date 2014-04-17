@@ -240,6 +240,10 @@ def _static_group(request, contact_store, group):
                 'contact_data_headers': headers,
                 'field_normalizer': FieldNormalizer(),
                 'contact_data_row': row,
+                # NOTE: Only if we have a key (contact UUID) value in the
+                #       row we can look at updating contacts instead of
+                #       only writing new ones.
+                'can_update_contacts': 'key' in row,
             })
         except (ValueError, ContactParserException):
             messages.error(request, 'Something is wrong with the file')
