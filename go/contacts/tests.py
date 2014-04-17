@@ -174,12 +174,15 @@ class TestContacts(BaseContactsTestCase):
 
         self.assertEqual(
             header,
-            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
-                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                      'extras-foo']))
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
+                'extras-foo']))
 
+        self.assertTrue(c1_data.startswith(c1.key))
         self.assertTrue(c1_data.endswith('baz,bar'))
+        self.assertTrue(c2_data.startswith(c2.key))
         self.assertTrue(c2_data.endswith('ipsum,lorem'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
@@ -686,16 +689,18 @@ class TestGroups(BaseContactsTestCase):
         zipfile = ZipFile(StringIO(contents), 'r')
         csv_contents = zipfile.open('contacts-export.csv', 'r').read()
 
-        [header, contact, _] = csv_contents.split('\r\n')
+        [header, csv_contact, _] = csv_contents.split('\r\n')
 
         self.assertEqual(
             header,
-            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
-                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                      'extras-foo']))
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
+                'extras-foo']))
 
-        self.assertTrue(contact.endswith('baz,bar'))
+        self.assertTrue(csv_contact.startswith(contact.key))
+        self.assertTrue(csv_contact.endswith('baz,bar'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
@@ -738,12 +743,15 @@ class TestGroups(BaseContactsTestCase):
 
         self.assertEqual(
             header,
-            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
-                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                      'extras-foo']))
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
+                'extras-foo']))
 
+        self.assertTrue(c1_data.startswith(contact_1.key))
         self.assertTrue(c1_data.endswith('baz,bar'))
+        self.assertTrue(c2_data.startswith(contact_2.key))
         self.assertTrue(c2_data.endswith('ipsum,lorem'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
