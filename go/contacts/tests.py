@@ -187,7 +187,7 @@ class TestContacts(BaseContactsTestCase):
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
-    def specify_columns(self, group_key, columns=None):
+    def specify_columns(self, group_key, columns=None, import_rule=None):
         group_url = reverse('contacts:group', kwargs={
             'group_key': group_key,
         })
@@ -202,6 +202,8 @@ class TestContacts(BaseContactsTestCase):
         }
         if columns:
             defaults.update(columns)
+        if import_rule is not None:
+            defaults['import_rule'] = import_rule
         return self.client.post(group_url, defaults)
 
     def test_contact_upload_into_new_group(self):
@@ -344,6 +346,34 @@ class TestContacts(BaseContactsTestCase):
         preview_response = self.client.get(group_url(group.key))
         self.assertContains(
             preview_response, 'The file does not include contact UUIDs.')
+
+    def test_import_upload_is_truth(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                                  'fixtures',
+                                  'sample-contacts-with-uuid-headers.csv'))
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(group.key))
+        self.specify_columns(group.key, columns={
+            'column-0': 'key',
+            'column-1': 'name',
+            'column-2': 'surname',
+            'column-3': 'msisdn',
+            'normalize-0': '',
+            'normalize-1': '',
+            'normalize-2': '',
+            'normalize-3': 'msisdn_za',
+        }, import_rule='upload_is_truth')
+
+        # group = self.contact_store.get_group(group.key)
+        # self.assertEqual(len(group.backlinks.contacts()), 2)
+        # self.assertEqual(len(mail.outbox), 1)
+        # self.assertTrue('successfully' in mail.outbox[0].subject)
+        # self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         new_group_name = u'Testing a ünicode grøüp'

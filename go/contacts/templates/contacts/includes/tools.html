@@ -155,11 +155,11 @@
                                         <p>
                                             Please specify what you would like to do:
                                         </p>
-                                        <input type="radio" name="action" value="create" checked="checked">
+                                        <input type="radio" name="import_rule" value="create" checked="checked">
                                             Do not update, create new contacts for every entry in the uploaded file. <br/>
-                                        <input type="radio" name="action" value="existing_is_truth">
+                                        <input type="radio" name="import_rule" value="existing_is_truth">
                                             Treat existing contacts as the Truth and augment with the uploaded file's contact data. <br/>
-                                        <input type="radio" name="action" value="new_is_truth">
+                                        <input type="radio" name="import_rule" value="upload_is_truth">
                                             Treat the uploaded file's contacts as the Truth and augment with existing contacts. <br/>
                                     {% else %}
                                         <h4>The file does not include contact UUIDs.</h4>

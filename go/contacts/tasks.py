@@ -230,8 +230,8 @@ def export_many_group_contacts(account_key, group_keys, include_extra=True):
 
 
 @task(ignore_result=True)
-def import_contacts_file(account_key, group_key, file_name, file_path,
-                         fields, has_header):
+def import_new_contacts_file(account_key, group_key, file_name, file_path,
+                             fields, has_header):
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
@@ -263,7 +263,7 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
             fail_silently=False)
 
-    except:
+    except Exception:
         # Clean up if something went wrong, either everything is written
         # or nothing is written
         for contact in written_contacts:
