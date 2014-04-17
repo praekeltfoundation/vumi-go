@@ -385,7 +385,9 @@ def import_existing_is_truth_contacts_file(account_key, group_key, file_name,
         cloned_contact_dictionary['subscription'] = new_subscription
 
         for key, value in contact_dictionary.items():
-            if value:
+            # If the contact already has any kind of value that resolves
+            # to `True` then skip it.
+            if getattr(contact, key, None):
                 cloned_contact_dictionary.pop(key)
 
         return cloned_contact_dictionary
