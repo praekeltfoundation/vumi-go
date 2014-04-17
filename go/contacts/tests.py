@@ -397,7 +397,7 @@ class TestContacts(BaseContactsTestCase):
         })
 
         self.assertRedirects(response, group_url(group.key))
-        resp = self.specify_columns(group.key, columns={
+        self.specify_columns(group.key, columns={
             'column-0': 'key',
             'column-1': 'name',
             'column-2': 'surname',
@@ -444,6 +444,89 @@ class TestContacts(BaseContactsTestCase):
         self.assertEqual(
             set([contact.extra['litmus_overwrite']]),
             set(['purple']))
+        self.assertEqual(
+            set([contact.dob]),
+            set([datetime(2014, 1, 2)]))
+
+        os.unlink(csv.name)
+
+    def test_import_existing_is_truth(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        # create existing contacts that'll be updated.
+        contact_data = []
+        for i in range(3):
+            # the original contact
+            contact = self.mkcontact(name='', surname='', msisdn='270000000')
+            # Litmus to ensure we don't butcher stuff
+            contact.extra['litmus_stay'] = u'red'
+            contact.dob = datetime(2014, 1, 2)
+            contact.save()
+            # what we're going to update
+            contact_data.append({
+                u'key': contact.key,
+                u'name': u'name %s' % (i,),
+                u'surname': u'surname %s' % (i,),
+                u'msisdn': u'271111111%s' % (i,),
+                u'litmus_stay': u'green',
+                u'litmus_new': u'blue',
+            })
+
+        csv = self.create_csv(
+            ['key', 'name', 'surname', 'msisdn',
+             'litmus_stay', 'litmus_new'],
+            contact_data)
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv,
+        })
+
+        self.assertRedirects(response, group_url(group.key))
+        self.specify_columns(group.key, columns={
+            'column-0': 'key',
+            'column-1': 'name',
+            'column-2': 'surname',
+            'column-3': 'msisdn',
+            'column-4': 'litmus_stay',
+            'column-5': 'litmus_new',
+            'normalize-0': '',
+            'normalize-1': '',
+            'normalize-2': '',
+            'normalize-3': 'msisdn_za',
+            'normalize-4': '',
+            'normalize-5': '',
+        }, import_rule='existing_is_truth')
+
+        group = self.contact_store.get_group(group.key)
+        self.assertEqual(len(group.backlinks.contacts()), 3)
+        [email] = mail.outbox
+
+        self.assertEqual('Contact import completed.', email.subject)
+        self.assertTrue(
+            "We've successfully imported 3 of your contact(s)" in email.body)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+        updated_contacts = [
+            self.contact_store.get_contact_by_key(contact['key'])
+            for contact in contact_data]
+        self.assertEqual(
+            set([contact.name for contact in updated_contacts]),
+            set(['name 0', 'name 1', 'name 2']))
+        self.assertEqual(
+            set([contact.surname for contact in updated_contacts]),
+            set(['surname 0', 'surname 1', 'surname 2']))
+        # these are normalized for ZA
+        self.assertEqual(
+            set([contact.msisdn for contact in updated_contacts]),
+            set(['+2711111110', '+2711111111', '+2711111112']))
+        # check the litmus
+        self.assertEqual(
+            set([contact.extra['litmus_stay']]),
+            set(['red']))
+        self.assertEqual(
+            set([contact.extra['litmus_new']]),
+            set(['blue']))
         self.assertEqual(
             set([contact.dob]),
             set([datetime(2014, 1, 2)]))

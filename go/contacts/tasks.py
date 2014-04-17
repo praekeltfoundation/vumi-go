@@ -294,9 +294,8 @@ def import_new_contacts_file(account_key, group_key, file_name, file_path,
         default_storage.delete(file_path)
 
 
-@task(ignore_result=True)
-def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
-                                         file_path, fields, has_header):
+def import_and_update_contacts(contact_mangler, account_key, group_key,
+                               file_name, file_path, fields, has_header):
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
@@ -312,16 +311,8 @@ def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
             contact_dictionary['groups'] = [group.key]
             key = contact_dictionary.pop('key')
             contact = contact_store.get_contact_by_key(key)
-            # NOTE: jumping through some hoops here because `update_contact`
-            #       treats `extra` as a single updateable field. Which we
-            #       may want in some cases but not this case.
-            #       We create a new extra dictionary by merging the new
-            #       extras into the old ones
-            new_extra = {}
-            new_extra.update(dict(contact.extra))
-            new_extra.update(contact_dictionary.pop('extra', {}))
-            contact_store.update_contact(
-                key, extra=new_extra, **contact_dictionary)
+            contact_dictionary = contact_mangler(contact, contact_dictionary)
+            contact_store.update_contact(key, **contact_dictionary)
             counter += 1
         except KeyError, e:
             errors.append((key, 'No key provided'))
@@ -343,3 +334,41 @@ def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
         email, settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
         fail_silently=False)
     default_storage.delete(file_path)
+
+
+@task(ignore_result=True)
+def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
+                                         file_path, fields, has_header):
+
+    def merge_operation(contact, contact_dictionary):
+        # NOTE:     The order here is important, the new extra is
+        #           the truth which we want to maintain
+        new_extra = {}
+        new_extra.update(dict(contact.extra))
+        new_extra.update(contact_dictionary.pop('extra', {}))
+        contact_dictionary['extra'] = new_extra
+        return contact_dictionary
+
+    return import_and_update_contacts(
+        merge_operation, account_key, group_key,
+        file_name, file_path,
+        fields, has_header)
+
+
+@task(ignore_result=True)
+def import_existing_is_truth_contacts_file(account_key, group_key, file_name,
+                                           file_path, fields, has_header):
+
+    def merge_operation(contact, contact_dictionary):
+        # NOTE:     The order here is important, the existing extra is
+        #           the truth which we want to maintain
+        new_extra = {}
+        new_extra.update(contact_dictionary.pop('extra', {}))
+        new_extra.update(dict(contact.extra))
+        contact_dictionary['extra'] = new_extra
+        return contact_dictionary
+
+    return import_and_update_contacts(
+        merge_operation, account_key, group_key,
+        file_name, file_path,
+        fields, has_header)
