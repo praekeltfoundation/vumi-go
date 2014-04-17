@@ -92,8 +92,11 @@ def contacts_to_csv(contacts, include_extra=True):
             extra_fields.update(contact.extra.keys())
     extra_fields = sorted(extra_fields)
 
-    # write the CSV header
-    writer.writerow(_contact_fields + ['extras-%s' % f for f in extra_fields])
+    # write the CSV header, prepend extras with `extra-` if it happens to
+    # overlap with any of the existing contact's fields.
+    writer.writerow(_contact_fields + [
+        ('extras-%s' % (f,) if f in _contact_fields else f)
+        for f in extra_fields])
 
     # loop over the contacts and create the row populated with
     # the values of the selected fields.

@@ -181,8 +181,8 @@ class TestContacts(BaseContactsTestCase):
             ','.join([
                 'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
                 'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                'extras-foo']))
+                'mxit_id', 'wechat_id', 'created_at', 'bar',
+                'foo']))
 
         self.assertTrue(c1_data.startswith(c1.key))
         self.assertTrue(c1_data.endswith('baz,bar'))
@@ -933,11 +933,56 @@ class TestGroups(BaseContactsTestCase):
             ','.join([
                 'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
                 'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                'extras-foo']))
+                'mxit_id', 'wechat_id', 'created_at', 'bar',
+                'foo']))
 
         self.assertTrue(csv_contact.startswith(contact.key))
         self.assertTrue(csv_contact.endswith('baz,bar'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'application/zip')
+
+    def test_group_contact_export_with_prefix(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        contact = self.mkcontact(groups=[group])
+        # Clear the group
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': group.key,
+        })
+
+        # add some extra info to ensure it gets exported properly
+        contact.extra['msisdn'] = u'bar'
+        contact.extra['name'] = u'baz'
+        contact.save()
+
+        response = self.client.post(group_url, {'_export': True})
+
+        self.assertRedirects(response, group_url)
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(email.recipients(), [self.user_email])
+        self.assertTrue(
+            '%s contacts export' % (group.name,) in email.subject)
+        self.assertTrue(
+            '1 contact(s) from group "%s" attached' % (group.name,)
+            in email.body)
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, csv_contact, _] = csv_contents.split('\r\n')
+        self.assertEqual(
+            header,
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'extras-msisdn',
+                'extras-name']))
+
+        self.assertTrue(csv_contact.startswith(contact.key))
+        self.assertTrue(csv_contact.endswith('bar,baz'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
@@ -983,8 +1028,8 @@ class TestGroups(BaseContactsTestCase):
             ','.join([
                 'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
                 'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                'extras-foo']))
+                'mxit_id', 'wechat_id', 'created_at', 'bar',
+                'foo']))
 
         self.assertTrue(c1_data.startswith(contact_1.key))
         self.assertTrue(c1_data.endswith('baz,bar'))
