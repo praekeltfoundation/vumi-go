@@ -61,6 +61,7 @@ def zipped_file(filename, data):
 
 
 _contact_fields = [
+    'key',
     'name',
     'surname',
     'email_address',
