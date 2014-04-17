@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import csv
+import os
+import tempfile
+from datetime import datetime
 from os import path
 from StringIO import StringIO
 from zipfile import ZipFile
@@ -347,33 +351,104 @@ class TestContacts(BaseContactsTestCase):
         self.assertContains(
             preview_response, 'The file does not include contact UUIDs.')
 
+    def create_temp_csv_file(self):
+        return tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+
+    def create_csv(self, fieldnames, data):
+        fp = self.create_temp_csv_file()
+        csv_writer = csv.DictWriter(fp, fieldnames=fieldnames)
+        csv_writer.writerow(dict(zip(fieldnames, fieldnames)))
+        for row in data:
+            csv_writer.writerow(row)
+        fp.seek(0)
+        return fp
+
     def test_import_upload_is_truth(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
-        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
-                                  'fixtures',
-                                  'sample-contacts-with-uuid-headers.csv'))
+
+        # create existing contacts that'll be updated.
+        contact_data = []
+        for i in range(3):
+            # the original contact
+            contact = self.mkcontact(name='', surname='', msisdn='270000000')
+            # Litmus to ensure we don't butcher stuff
+            contact.extra['litmus_stay'] = u'red'
+            contact.extra['litmus_overwrite'] = u'blue'
+            contact.dob = datetime(2014, 1, 2)
+            contact.save()
+            # what we're going to update
+            contact_data.append({
+                u'key': contact.key,
+                u'name': u'name %s' % (i,),
+                u'surname': u'surname %s' % (i,),
+                u'msisdn': u'271111111%s' % (i,),
+                u'litmus_new': u'green',
+                u'litmus_overwrite': u'purple',
+            })
+
+        csv = self.create_csv(
+            ['key', 'name', 'surname', 'msisdn',
+             'litmus_overwrite', 'litmus_new'],
+            contact_data)
 
         response = self.client.post(reverse('contacts:people'), {
             'contact_group': group.key,
-            'file': csv_file,
+            'file': csv,
         })
+
         self.assertRedirects(response, group_url(group.key))
-        self.specify_columns(group.key, columns={
+        resp = self.specify_columns(group.key, columns={
             'column-0': 'key',
             'column-1': 'name',
             'column-2': 'surname',
             'column-3': 'msisdn',
+            'column-4': 'litmus_overwrite',
+            'column-5': 'litmus_new',
             'normalize-0': '',
             'normalize-1': '',
             'normalize-2': '',
             'normalize-3': 'msisdn_za',
+            'normalize-4': '',
+            'normalize-5': '',
         }, import_rule='upload_is_truth')
 
-        # group = self.contact_store.get_group(group.key)
-        # self.assertEqual(len(group.backlinks.contacts()), 2)
-        # self.assertEqual(len(mail.outbox), 1)
-        # self.assertTrue('successfully' in mail.outbox[0].subject)
-        # self.assertEqual(default_storage.listdir("tmp"), ([], []))
+        group = self.contact_store.get_group(group.key)
+        self.assertEqual(len(group.backlinks.contacts()), 3)
+        [email] = mail.outbox
+
+        self.assertEqual('Contact import completed.', email.subject)
+        self.assertTrue(
+            "We've successfully imported 3 of your contact(s)" in email.body)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+        updated_contacts = [
+            self.contact_store.get_contact_by_key(contact['key'])
+            for contact in contact_data]
+        self.assertEqual(
+            set([contact.name for contact in updated_contacts]),
+            set(['name 0', 'name 1', 'name 2']))
+        self.assertEqual(
+            set([contact.surname for contact in updated_contacts]),
+            set(['surname 0', 'surname 1', 'surname 2']))
+        # these are normalized for ZA
+        self.assertEqual(
+            set([contact.msisdn for contact in updated_contacts]),
+            set(['+2711111110', '+2711111111', '+2711111112']))
+        # check the litmus
+        self.assertEqual(
+            set([contact.extra['litmus_stay']]),
+            set(['red']))
+        self.assertEqual(
+            set([contact.extra['litmus_new']]),
+            set(['green']))
+        self.assertEqual(
+            set([contact.extra['litmus_overwrite']]),
+            set(['purple']))
+        self.assertEqual(
+            set([contact.dob]),
+            set([datetime(2014, 1, 2)]))
+
+        os.unlink(csv.name)
 
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         new_group_name = u'Testing a ünicode grøüp'

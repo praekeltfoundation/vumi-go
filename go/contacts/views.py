@@ -180,11 +180,11 @@ def _static_group(request, contact_store, group):
             return redirect(reverse('contacts:index'))
         elif '_complete_contact_upload' in request.POST:
             try:
-                import_action = request.POST.get('import_action')
+                import_rule = request.POST.get('import_rule')
                 import_handler = {
                     'existing_is_truth': handle_import_existing_is_truth,
                     'upload_is_truth': handle_import_upload_is_truth,
-                }.get(import_action, handle_import_new_contacts)
+                }.get(import_rule, handle_import_new_contacts)
 
                 import_handler(request, group)
                 messages.info(
