@@ -40,6 +40,7 @@ setup(
         'django-pipeline==1.3.6',
         'txpostgres==1.1.0',
         'django-crispy-forms==1.4.0',
+	'treq>=0.2.1',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
