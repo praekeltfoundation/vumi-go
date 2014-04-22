@@ -156,6 +156,24 @@ def export_contacts(account_key, contact_keys, include_extra=True):
 
 
 @task(ignore_result=True)
+def export_all_contacts(account_key, include_extra=True):
+    """
+    Export all contacts as a CSV file and email to the account
+    holders' email address.
+
+    :param str account_key:
+        The account holders account key
+    :param bool include_extra:
+        Whether or not to include the extra data stored in the dynamic field.
+    """
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+    contact_store = api.contact_store
+    contact_keys = contact_store.contacts.all_keys()
+    return export_contacts(account_key, contact_keys,
+                           include_extra=include_extra)
+
+
+@task(ignore_result=True)
 def export_group_contacts(account_key, group_key, include_extra=True):
     """
     Export a group's contacts as a CSV file and email to the account
