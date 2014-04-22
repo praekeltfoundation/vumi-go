@@ -343,7 +343,11 @@ def _people(request):
             tasks.export_contacts.delay(
                 request.user_api.user_account_key,
                 request.POST.getlist('contact'))
-
+            messages.info(request, 'The export is scheduled and should '
+                                   'complete within a few minutes.')
+        elif '_export_all' in request.POST:
+            tasks.export_all_contacts.delay(
+                request.user_api.user_account_key)
             messages.info(request, 'The export is scheduled and should '
                                    'complete within a few minutes.')
         else:
