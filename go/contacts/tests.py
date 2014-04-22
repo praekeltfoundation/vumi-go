@@ -157,10 +157,64 @@ class TestContacts(BaseContactsTestCase):
         c2.extra['bar'] = u'ipsum'
         c2.save()
 
-        self.client.post(reverse('contacts:people'), {
+        response = self.client.post(reverse('contacts:people'), {
             '_export': True,
             'contact': [c1.key, c2.key],
         })
+
+        self.assertContains(
+            response,
+            "The export is scheduled and should complete within a few"
+            " minutes.")
+
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(email.recipients(), [self.user_email])
+        self.assertTrue('Contacts export' in email.subject)
+        self.assertTrue('2 contact(s)' in email.body)
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, c1_data, c2_data, _] = csv_contents.split('\r\n')
+
+        self.assertEqual(
+            header,
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'bar',
+                'foo']))
+
+        self.assertTrue(c1_data.startswith(c1.key))
+        self.assertTrue(c1_data.endswith('baz,bar'))
+        self.assertTrue(c2_data.startswith(c2.key))
+        self.assertTrue(c2_data.endswith('ipsum,lorem'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'application/zip')
+
+    def test_exporting_all_contacts(self):
+        c1 = self.mkcontact()
+        c1.extra['foo'] = u'bar'
+        c1.extra['bar'] = u'baz'
+        c1.save()
+
+        c2 = self.mkcontact()
+        c2.extra['foo'] = u'lorem'
+        c2.extra['bar'] = u'ipsum'
+        c2.save()
+
+        response = self.client.post(reverse('contacts:people'), {
+            '_export_all': True,
+        })
+
+        self.assertContains(
+            response,
+            "The export is scheduled and should complete within a few"
+            " minutes.")
 
         self.assertEqual(len(mail.outbox), 1)
         [email] = mail.outbox
