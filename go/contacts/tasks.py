@@ -168,9 +168,9 @@ def export_all_contacts(account_key, include_extra=True):
     """
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
-    contact_keys = contact_store.all_keys()
-    return export_contacts.delay(account_key, contact_keys,
-                                 include_extra=include_extra)
+    contact_keys = contact_store.contacts.all_keys()
+    return export_contacts(account_key, contact_keys,
+                           include_extra=include_extra)
 
 
 @task(ignore_result=True)
