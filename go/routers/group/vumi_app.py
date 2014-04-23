@@ -27,11 +27,9 @@ class GroupRouter(GoRouterWorker):
         if contact is None:
             return 'default'
         contact_groups = set(contact.groups.keys())
-        rules = dict([(x['group'], x['endpoint']) for x in config.rules])
-        for group_key in contact_groups:
-            if group_key not in rules:
-                continue
-            return rules[group_key]
+        for rule in config.rules:
+            if rule['group'] in contact_groups:
+                return rule['endpoint']
         return 'default'
 
     @inlineCallbacks

@@ -79,3 +79,21 @@ class TestGroupRouter(VumiTestCase):
                 {'group': group.key, 'endpoint': 'group_ep'},
             ]})
         yield self.assert_routed_inbound(contact.msisdn, router, 'group_ep')
+
+    @inlineCallbacks
+    def test_inbound_contact_in_multiple_groups(self):
+        """
+        If the message is from a contact in multiple configured groups, it
+        should be dispatched to the endpoint in the first matching rule.
+        """
+        # We use lots of groups here to decrease the false positive chance.
+        groups = [(yield self.router_helper.create_group(u"group%s" % i))
+                  for i in range(10)]
+        contact = yield self.router_helper.create_contact(
+            u"+27831234567", groups=groups[2:])
+        router = yield self.router_helper.create_router(started=True, config={
+            'rules': [
+                {'group': group.key, 'endpoint': '%s_ep' % group.name}
+                for group in groups
+            ]})
+        yield self.assert_routed_inbound(contact.msisdn, router, 'group2_ep')
