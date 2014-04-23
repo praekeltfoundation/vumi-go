@@ -10,7 +10,8 @@ class RoutingEntryForm(forms.Form):
 class BaseRoutingEntryFormSet(forms.formsets.BaseFormSet):
 
     def __init__(self, *args, **kwargs):
-        self._contact_groups = kwargs.pop('groups', [])
+        groups = kwargs.pop('groups', [])
+        self._group_choices = [(group.key, group.name) for group in groups]
         super(BaseRoutingEntryFormSet, self).__init__(*args, **kwargs)
 
     @staticmethod
@@ -37,14 +38,12 @@ class BaseRoutingEntryFormSet(forms.formsets.BaseFormSet):
     def add_fields(self, form, index):
         super(BaseRoutingEntryFormSet, self).add_fields(form, index)
         form.fields['group'] = forms.ChoiceField(
-            label="Group",
-            choices=[(grp.key, grp.name) for grp in self._contact_groups],
-            initial=self.initial.get(index, {}).get('group', None)
-        )
+            label="Group", choices=self._group_choices)
 
 
 RoutingEntryFormSet = forms.formsets.formset_factory(
     RoutingEntryForm,
     can_delete=True,
+    can_order=True,
     extra=1,
     formset=BaseRoutingEntryFormSet)
