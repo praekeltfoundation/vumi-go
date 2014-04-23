@@ -8,6 +8,7 @@ find go/ -name '__pycache__' -delete
 echo "=== Erasing previous coverage data..."
 coverage erase
 echo "=== Running tests..."
+export VUMI_TEST_NODE_PATH="$(which node)"
 # This is necessary so that we import test modules from the working dir instead
 # of the installed package.
 export PYTHONPATH=.
