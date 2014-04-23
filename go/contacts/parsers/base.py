@@ -134,6 +134,7 @@ class FieldNormalizer(object):
 class ContactFileParser(object):
 
     DEFAULT_HEADERS = {
+        'key': 'UUID',
         'name': 'Name',
         'surname': 'Surname',
         'bbm_pin': 'BBM Pin',

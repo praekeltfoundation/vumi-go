@@ -1,0 +1,17 @@
+Hi {{user.get_full_name|safe}}!
+{% if count > 0 %}
+We've successfully imported {{count}} of your contact(s).
+They're all stored in the group {{group.name|safe}}
+
+{% if errors %}Unfortunately there were also {{errors|length}} errors. These are listed below:{% endif %}{% else %}
+We were not able to import any of your contacts unfortunately.
+
+{% if errors %}The errors are listed below:{% endif %}{% endif %}
+
+{% for key, error in errors %}{{key|safe}}: {{error|safe}}
+{% endfor %}
+Please visit http://go.vumi.org.
+
+thanks!
+
+Vumi Go.
