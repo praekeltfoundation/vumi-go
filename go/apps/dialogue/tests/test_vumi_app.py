@@ -6,8 +6,8 @@ import pkg_resources
 import os
 
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import SkipTest
 
+from vumi.application.tests.helpers import find_nodejs_or_skip_test
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
@@ -20,8 +20,7 @@ class TestDialogueApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        if DialogueApplication.find_nodejs() is None:
-            raise SkipTest("No node.js executable found.")
+        nodejs_executable = find_nodejs_or_skip_test(DialogueApplication)
 
         self.app_helper = self.add_helper(AppWorkerHelper(DialogueApplication))
 
@@ -31,6 +30,7 @@ class TestDialogueApplication(VumiTestCase):
         redis = yield self.app_helper.vumi_helper.get_redis_manager()
         self.kv_redis = redis.sub_manager('kv')
         self.app = yield self.app_helper.get_app_worker({
+            'executable': nodejs_executable,
             'args': [sandboxer_js],
             'timeout': 10,
             'app_context': (

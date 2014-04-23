@@ -5,9 +5,9 @@ import pkg_resources
 import mock
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import SkipTest
 
 from vumi.application.sandbox import JsSandbox, SandboxCommand
+from vumi.application.tests.helpers import find_nodejs_or_skip_test
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
@@ -39,13 +39,12 @@ class TestJsBoxApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        if JsSandbox.find_nodejs() is None:
-            raise SkipTest("No node.js executable found.")
-
+        nodejs_executable = find_nodejs_or_skip_test(JsSandbox)
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')
         self.app_helper = self.add_helper(AppWorkerHelper(JsBoxApplication))
         self.app = yield self.app_helper.get_app_worker({
+            'executable': nodejs_executable,
             'args': [sandboxer_js],
             'timeout': 10,
         })
