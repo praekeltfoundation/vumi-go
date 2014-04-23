@@ -12,6 +12,7 @@ from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 
 from go.vumitools.api import VumiUserApi
+from go.vumitools.contact.models import ContactNotFoundError
 from go.base.models import UserProfile
 from go.base.utils import UnicodeCSVWriter
 from go.contacts.parsers import ContactFileParser
@@ -61,6 +62,7 @@ def zipped_file(filename, data):
 
 
 _contact_fields = [
+    'key',
     'name',
     'surname',
     'email_address',
@@ -90,8 +92,11 @@ def contacts_to_csv(contacts, include_extra=True):
             extra_fields.update(contact.extra.keys())
     extra_fields = sorted(extra_fields)
 
-    # write the CSV header
-    writer.writerow(_contact_fields + ['extras-%s' % f for f in extra_fields])
+    # write the CSV header, prepend extras with `extra-` if it happens to
+    # overlap with any of the existing contact's fields.
+    writer.writerow(_contact_fields + [
+        ('extras-%s' % (f,) if f in _contact_fields else f)
+        for f in extra_fields])
 
     # loop over the contacts and create the row populated with
     # the values of the selected fields.
@@ -148,6 +153,24 @@ def export_contacts(account_key, contact_keys, include_extra=True):
 
     email.attach('contacts-export.zip', file, 'application/zip')
     email.send()
+
+
+@task(ignore_result=True)
+def export_all_contacts(account_key, include_extra=True):
+    """
+    Export all contacts as a CSV file and email to the account
+    holders' email address.
+
+    :param str account_key:
+        The account holders account key
+    :param bool include_extra:
+        Whether or not to include the extra data stored in the dynamic field.
+    """
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+    contact_store = api.contact_store
+    contact_keys = contact_store.contacts.all_keys()
+    return export_contacts(account_key, contact_keys,
+                           include_extra=include_extra)
 
 
 @task(ignore_result=True)
@@ -229,8 +252,8 @@ def export_many_group_contacts(account_key, group_keys, include_extra=True):
 
 
 @task(ignore_result=True)
-def import_contacts_file(account_key, group_key, file_name, file_path,
-                         fields, has_header):
+def import_new_contacts_file(account_key, group_key, file_name, file_path,
+                             fields, has_header):
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
@@ -262,7 +285,7 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
             fail_silently=False)
 
-    except:
+    except Exception:
         # Clean up if something went wrong, either everything is written
         # or nothing is written
         for contact in written_contacts:
@@ -290,3 +313,107 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
             ], fail_silently=False)
     finally:
         default_storage.delete(file_path)
+
+
+def import_and_update_contacts(contact_mangler, account_key, group_key,
+                               file_name, file_path, fields, has_header):
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+    contact_store = api.contact_store
+    group = contact_store.get_group(group_key)
+    user_profile = UserProfile.objects.get(user_account=account_key)
+    extension, parser = ContactFileParser.get_parser(file_name)
+    contact_dictionaries = parser.parse_file(file_path, fields, has_header)
+
+    errors = []
+    counter = 0
+
+    for contact_dictionary in contact_dictionaries:
+        try:
+            key = contact_dictionary.pop('key')
+            contact = contact_store.get_contact_by_key(key)
+            contact_dictionary = contact_mangler(contact, contact_dictionary)
+            contact_store.update_contact(key, **contact_dictionary)
+            counter += 1
+        except KeyError, e:
+            errors.append((key, 'No key provided'))
+        except ContactNotFoundError, e:
+            errors.append((key, str(e)))
+        except Exception, e:
+            errors.append((key, str(e)))
+
+    email = render_to_string(
+        'contacts/import_upload_is_truth_completed_mail.txt', {
+            'count': counter,
+            'errors': errors,
+            'group': group,
+            'user': user_profile.user,
+        })
+
+    send_mail(
+        'Contact import completed.',
+        email, settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
+        fail_silently=False)
+    default_storage.delete(file_path)
+
+
+@task(ignore_result=True)
+def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
+                                         file_path, fields, has_header):
+
+    def merge_operation(contact, contact_dictionary):
+        # NOTE:     The order here is important, the new extra is
+        #           the truth which we want to maintain
+        new_extra = {}
+        new_extra.update(dict(contact.extra))
+        new_extra.update(contact_dictionary.pop('extra', {}))
+
+        new_subscription = {}
+        new_subscription.update(dict(contact.subscription))
+        new_subscription.update(contact_dictionary.pop('subscription', {}))
+
+        contact_dictionary['extra'] = new_extra
+        contact_dictionary['subscription'] = new_subscription
+        contact_dictionary['groups'] = [group_key]
+        return contact_dictionary
+
+    return import_and_update_contacts(
+        merge_operation, account_key, group_key,
+        file_name, file_path,
+        fields, has_header)
+
+
+@task(ignore_result=True)
+def import_existing_is_truth_contacts_file(account_key, group_key, file_name,
+                                           file_path, fields, has_header):
+
+    def merge_operation(contact, contact_dictionary):
+        # NOTE:     The order here is important, the existing extra is
+        #           the truth which we want to maintain
+        cloned_contact_dictionary = contact_dictionary.copy()
+        cloned_contact_dictionary['groups'] = [group_key]
+
+        new_extra = {}
+        new_extra.update(contact_dictionary.pop('extra', {}))
+        new_extra.update(dict(contact.extra))
+        cloned_contact_dictionary['extra'] = new_extra
+
+        new_subscription = {}
+        new_subscription.update(contact_dictionary.pop('subscription', {}))
+        new_subscription.update(dict(contact.subscription))
+        cloned_contact_dictionary['subscription'] = new_subscription
+
+        for key in contact_dictionary.keys():
+            # NOTE: If the contact already has any kind of value that
+            #       resolves to `True` then skip it.
+            #       The current implementation also means that we'll
+            #       replace attributes that are empty strings.
+            value = getattr(contact, key, None)
+            if value:
+                cloned_contact_dictionary.pop(key)
+
+        return cloned_contact_dictionary
+
+    return import_and_update_contacts(
+        merge_operation, account_key, group_key,
+        file_name, file_path,
+        fields, has_header)
