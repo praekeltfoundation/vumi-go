@@ -1,6 +1,6 @@
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+from vumi.tests.helpers import VumiTestCase
 
 from go.routers.group.vumi_app import GroupRouter
 from go.routers.tests.helpers import RouterWorkerHelper
@@ -12,30 +12,11 @@ class TestGroupRouter(VumiTestCase):
     def setUp(self):
         self.router_helper = self.add_helper(RouterWorkerHelper(GroupRouter))
         self.router_worker = yield self.router_helper.get_router_worker({})
-        self.persistence_helper = self.add_helper(PersistenceHelper())
-
-        rules = []
-        for i in [1, 2]:
-            group = yield self.router_helper.create_group(
-                unicode("group-%i" % i))
-            yield self.router_helper.create_contact(
-                u"+2772438517%i" % i,
-                name=u"John",
-                surname=u"Smith",
-                groups=[group]
-            )
-            rules.append({
-                'group': group.key,
-                'endpoint': "endpoint-%i" % i
-            })
-        self.router_config = {
-            'rules': rules
-        }
 
     @inlineCallbacks
-    def assert_routed_inbound(self, content, router, expected_endpoint):
+    def assert_routed_inbound(self, from_addr, router, expected_endpoint):
         msg = yield self.router_helper.ri.make_dispatch_inbound(
-            content, router=router)
+            "hello", from_addr=from_addr, router=router)
         emsg = msg.copy()
         emsg.set_routing_endpoint(expected_endpoint)
         rmsg = self.router_helper.ro.get_dispatched_inbound()[-1]
@@ -55,16 +36,46 @@ class TestGroupRouter(VumiTestCase):
     @inlineCallbacks
     def test_inbound_no_config(self):
         router = yield self.router_helper.create_router(started=True)
-        yield self.assert_routed_inbound("foo bar", router, 'default')
-        yield self.assert_routed_inbound("baz quux", router, 'default')
+        yield self.assert_routed_inbound("from_addr", router, 'default')
 
     @inlineCallbacks
-    def test_route_on_group(self):
-        router = yield self.router_helper.create_router(
-            started=True, config=self.router_config)
-        msg = yield self.router_helper.ri.make_dispatch_inbound(
-            "hello", router=router, from_addr=u"+27724385171")
-        emsg = msg.copy()
-        emsg.set_routing_endpoint("endpoint-1")
-        rmsg = self.router_helper.ro.get_dispatched_inbound()[-1]
-        self.assertEqual(emsg, rmsg)
+    def test_inbound_no_contact(self):
+        """
+        If the message has no associated contact, it should be dispatched to
+        the `default` endpoint.
+        """
+        group = yield self.router_helper.create_group(u"group")
+        router = yield self.router_helper.create_router(started=True, config={
+            'rules': [
+                {'group': group.key, 'endpoint': 'group_ep'},
+            ]})
+        yield self.assert_routed_inbound("+27831234567", router, 'default')
+
+    @inlineCallbacks
+    def test_inbound_contact_not_in_group(self):
+        """
+        If the message is from a contact in no groups, it should be dispatched
+        to the `default` endpoint.
+        """
+        group = yield self.router_helper.create_group(u"group")
+        contact = yield self.router_helper.create_contact(u"+27831234567")
+        router = yield self.router_helper.create_router(started=True, config={
+            'rules': [
+                {'group': group.key, 'endpoint': 'group_ep'},
+            ]})
+        yield self.assert_routed_inbound(contact.msisdn, router, 'default')
+
+    @inlineCallbacks
+    def test_inbound_contact_in_group(self):
+        """
+        If the message is from a contact in a configured group, it should be
+        dispatched to the appropriate endpoint.
+        """
+        group = yield self.router_helper.create_group(u"group")
+        contact = yield self.router_helper.create_contact(
+            u"+27831234567", groups=[group])
+        router = yield self.router_helper.create_router(started=True, config={
+            'rules': [
+                {'group': group.key, 'endpoint': 'group_ep'},
+            ]})
+        yield self.assert_routed_inbound(contact.msisdn, router, 'group_ep')
