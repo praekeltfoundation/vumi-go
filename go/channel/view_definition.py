@@ -95,7 +95,7 @@ class ChannelViewDefinitionBase(object):
     def get_view_url(self, view_name, channel_key):
         kwargs = {
             'path_suffix': self._view_mapping[view_name].path_suffix,
-            'channel_key': urllib.quote(channel_key),
+            'channel_key': channel_key,
         }
         return reverse('channels:channel', kwargs=kwargs)
 

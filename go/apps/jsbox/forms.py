@@ -1,5 +1,5 @@
 from django import forms
-from django.forms.formsets import BaseFormSet, DEFAULT_MAX_NUM
+from django.forms.formsets import BaseFormSet, formset_factory
 
 from go.base.widgets import CodeField, SourceUrlField
 
@@ -48,13 +48,7 @@ class JsboxAppConfigForm(forms.Form):
         }
 
 
-class JsboxAppConfigFormset(BaseFormSet):
-    form = JsboxAppConfigForm
-    absolute_max = DEFAULT_MAX_NUM
-    extra = 1
-    can_order = False
-    can_delete = True
-    max_num = None
+class BaseJsboxAppConfigFormset(BaseFormSet):
 
     def to_config(self):
         metadata = {}
@@ -76,3 +70,7 @@ class JsboxAppConfigFormset(BaseFormSet):
                 submeta = getattr(cls.form, 'initial_from_config')(submeta)
             initials.append(submeta)
         return initials
+
+JsboxAppConfigFormset = formset_factory(
+    JsboxAppConfigForm, can_delete=True, extra=1,
+    formset=BaseJsboxAppConfigFormset)

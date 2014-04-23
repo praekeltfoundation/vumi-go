@@ -1,5 +1,5 @@
 from django.core import urlresolvers
-from django.conf.urls.defaults import patterns
+from django.conf.urls import patterns
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.forms.models import modelformset_factory
