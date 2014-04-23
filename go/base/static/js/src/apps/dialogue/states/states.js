@@ -192,7 +192,7 @@
     },
 
     onStoreOnContact: function(e) {
-      this.model.set('store_on_contact', this.$('.store-on-contact').prop(':checked'));
+      this.model.set('store_on_contact', this.$('.store-on-contact').prop('checked'));
     },
 
     // Keep a backup to restore the model for when the user cancels the edit
