@@ -312,7 +312,7 @@ describe("go.apps.dialogue.states", function() {
         assert.equal(state.model.get('store_on_contact'), false);
 
         editMode.$('.store-on-contact')
-          .prop(':checked', true)
+          .prop('checked', true)
           .change();
 
         assert.equal(state.model.get('store_on_contact'), true);
