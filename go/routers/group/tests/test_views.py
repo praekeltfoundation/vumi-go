@@ -72,6 +72,19 @@ class GroupViewTests(GoDjangoTestCase):
         response = self.client.get(rtr_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
 
+    def test_edit_shows_only_static_groups(self):
+        static_group = self.router_helper.create_group(u'staticgroup')
+        smart_group = self.router_helper.create_smart_group(u'smartgroup', u'')
+        rtr_helper = self.router_helper.create_router_helper(started=True)
+        response = self.client.get(rtr_helper.get_view_url('edit'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, static_group.key)
+        self.assertContains(response, static_group.name)
+        self.assertNotContains(response, smart_group.key)
+        self.assertNotContains(response, smart_group.name)
+        self.assertContains(
+            response, "Smart groups are not currently supported")
+
     def test_get_edit_small_config(self):
         group = self.router_helper.create_group(u'mygroup')
         rtr_helper = self.router_helper.create_router_helper(

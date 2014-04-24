@@ -43,6 +43,14 @@ class RouterHelper(object):
 
     @proxyable
     @maybe_async
+    def create_smart_group(self, group_name, query):
+        user_helper = yield self.vumi_helper.get_or_create_user()
+        contact_store = user_helper.user_api.contact_store
+        group = yield contact_store.new_smart_group(group_name, query)
+        returnValue(group)
+
+    @proxyable
+    @maybe_async
     def create_contact(self, msisdn, **kw):
         kw.setdefault('name', u"First")
         kw.setdefault('surname', u"Last")

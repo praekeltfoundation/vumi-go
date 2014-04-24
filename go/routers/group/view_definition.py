@@ -13,7 +13,8 @@ class BaseRoutingEntryFormSet(forms.formsets.BaseFormSet):
 
     def __init__(self, *args, **kwargs):
         groups = kwargs.pop('groups', [])
-        self._group_choices = [(group.key, group.name) for group in groups]
+        self._group_choices = [(group.key, group.name) for group in groups
+                               if not group.is_smart_group()]
         super(BaseRoutingEntryFormSet, self).__init__(*args, **kwargs)
 
     @staticmethod
@@ -40,7 +41,8 @@ class BaseRoutingEntryFormSet(forms.formsets.BaseFormSet):
     def add_fields(self, form, index):
         super(BaseRoutingEntryFormSet, self).add_fields(form, index)
         form.fields['group'] = forms.ChoiceField(
-            label="Group", choices=self._group_choices)
+            label="Group", choices=self._group_choices,
+            help_text="Note: Smart groups are not currently supported.")
 
 
 RoutingEntryFormSet = forms.formsets.formset_factory(
