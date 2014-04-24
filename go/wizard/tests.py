@@ -62,6 +62,28 @@ class TestWizardViews(GoDjangoTestCase):
         # Check that we have a tagpool/tag in the response
         self.assertContains(response, 'longcode:')
 
+    def test_get_create_view_emtpy_or_exhausted_tagpool(self):
+        self.user_helper.add_app_permission(u'go.apps.bulk_message')
+        self.user_helper.add_app_permission(u'go.apps.subscription')
+        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
+        self.vumi_helper.setup_tagpool(u'empty', [])
+        self.vumi_helper.setup_tagpool(u'exhausted', [u'tag1'])
+        self.user_helper.add_tagpool_permission(u'longcode')
+        self.user_helper.add_tagpool_permission(u'empty')
+        self.user_helper.add_tagpool_permission(u'exhausted')
+        self.user_helper.user_api.acquire_tag(u'exhausted')
+        response = self.client.get(reverse('wizard:create'))
+        # Check that we have a few conversation types in the response
+        self.assertContains(response, 'bulk_message')
+        self.assertContains(response, 'subscription')
+        self.assertNotContains(response, 'survey')
+        # Check that we have a tagpool/tag in the response
+        self.assertContains(response, 'longcode:')
+        # Check that we don't have the empty or exhausted tagpools in the
+        # response
+        self.assertNotContains(response, 'empty:')
+        self.assertNotContains(response, 'exhausted:')
+
     def test_get_create_view_with_existing_routers(self):
         self.user_helper.add_app_permission(u'go.apps.bulk_message')
         self.user_helper.add_app_permission(u'go.apps.subscription')
