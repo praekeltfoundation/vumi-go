@@ -218,3 +218,110 @@ class GoAccountCommandTestCase(GoCommandTestCase):
             options['email_address'] = self.user_email
         return super(GoAccountCommandTestCase, self).call_command(
             *command, **options)
+
+
+class FakeQuery(object):
+    """
+    A fake MessageStoreClient query.
+    """
+    def __init__(self, batch_id, direction, query):
+        self.batch_id = batch_id
+        self.direction = direction
+        self.query = query
+        self.in_progress = True
+        self.results = []
+        self.total_count = 0
+
+    def __repr__(self):
+        return "<FakeQuery batch_id=%r direction=%r query=%r>" % (
+            self.batch_id, self.direction, self.query
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, FakeQuery):
+            return NotImplemented
+        return (self.batch_id == other.batch_id and
+                self.direction == other.direction and
+                self.query == other.query)
+
+
+class FakeMessageStoreClient(object):
+    """
+    A fake MessageStoreClient for searching a local message store.
+    """
+
+    def __init__(self, mdb, base_url):
+        self.base_url = base_url
+        self._mdb = mdb
+        self._queries = {}
+
+    def get_tokens(self):
+        return self._queries.keys()
+
+    @staticmethod
+    def _mk_query(batch_id, direction, query):
+        return {
+            "batch_id": batch_id,
+            "direction": direction,
+        }
+
+    def match(self, batch_id, direction, query):
+        token = uuid.uuid4().get_hex()
+        self._queries[token] = FakeQuery(batch_id, direction, query)
+        return token
+
+    def match_results(self, batch_id, direction, token, start, stop):
+        query = self._queries.get(token)
+        assert query is not None, (
+            "FakeMessageStoreClient received unrecognized token %r"
+            % (token,))
+        expected_query = FakeQuery(batch_id, direction, query.query)
+        assert query == expected_query, (
+            "Query for token %r does not match; expected %r; received %r"
+            % (token, expected_query, query))
+        return query.in_progress, query.total_count, query.results
+
+    def add_fake_results(self, token, messages):
+        self._queries[token].in_progress = False
+        self._queries[token].total_count = len(messages)
+        self._queries[token].results = messages
+
+
+class MessageStoreClientHelper(object):
+    implements(IHelper)
+
+    def __init__(self, mdb, client_module=None, client_attribute=None):
+        self.mdb = mdb
+        if client_module is None:
+            from go.base import message_store_client as client_module
+        if client_attribute is None:
+            client_attribute = 'Client'
+        self._patch_helper = PatchHelper()
+        self._client_module = client_module
+        self._client_attribute = client_attribute
+        self._client = None
+
+    def setup(self):
+        self._patch_helper.monkey_patch(
+            self._client_module, self._client_attribute,
+            self._make_fake_client)
+
+    def cleanup(self):
+        self._patch_helper.cleanup()
+
+    def _make_fake_client(self, *args, **kw):
+        if self._client is None:
+            self._client = FakeMessageStoreClient(self.mdb, *args, **kw)
+        return self._client
+
+    def get_ms_client(self):
+        """
+        Return the fake message store client.
+
+        :raises AssertionError:
+            If called when no client has been created.
+        """
+        assert self._client is not None, (
+            "MessageStoreClient.get_ms_client should only be called after"
+            " a FakeMessageStoreClient has been created.")
+        return self._client

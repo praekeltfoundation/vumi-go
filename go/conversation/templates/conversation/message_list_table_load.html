@@ -1,4 +1,4 @@
-<table class="table table-bordered table-striped">
+<table class="table">
     <thead>
         <tr>
             <th width="32">Type</th>
@@ -17,24 +17,3 @@
         </tr>
     </tbody>
 </table>
-<script>
-    function load_results() {
-        $.ajax({
-            url: "{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='message_search_result/' %}",
-            data: {
-                "q": "{{query}}",
-                "token": "{{token}}",
-                "batch_id": "{{batch_id}}",
-                "direction": "{{message_direction}}",
-                "delay": {{delay|default:100}},
-            },
-            success: function(data) {
-                $('#message-page').html(data);
-            }
-        });
-    };
-
-    $(function () {
-        setTimeout(load_results, {{delay|default:100}});
-    });
-</script>

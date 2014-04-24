@@ -18,16 +18,10 @@
             <button class="btn btn-default" disabled="disabled">Delete</button>
             -->
         </span>
-
-        &nbsp; With message:
-        <!-- These exist in the previous template, but not the new design.
-        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound">Download Received Stats</a>
-        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
-        -->
         <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export</a>
     </div>
 
-    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
+    <form id="search-filter" name="search-filter" action="{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='message_search/' %}" method="get" class="form-inline pull-right">
         <input type="hidden" name="direction" value="{{message_direction}}">
 
         <div class="form-group">
@@ -39,7 +33,6 @@
 {% endblock %}
 
 {% block content_main %}
-
     <div class="row">
         <div class="col-md-3 sidebar">
 
@@ -78,11 +71,7 @@
                 <div class="tab-content" id="message-page">
                     <div class="tab-pane active">
                       <form class="table-form-view" method="post" action="">
-                        {% if message_page.paginator.num_pages %}
                           {% include "conversation/message_list_table.html" %}
-                        {% else %}
-                          {% include "conversation/message_list_table_load.html" %}
-                        {% endif %}
                       </form>
                     </div>
                     <div class="tab-pane" id="outbound-msg-stats">
