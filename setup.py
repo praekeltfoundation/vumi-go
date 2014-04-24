@@ -19,7 +19,7 @@ setup(
         # installed before us. They're listed first so that we fail fast
         # instead of working through all the other requirements before
         # discovering that they aren't available should that be the case.
-        'Django==1.5.5',
+        'Django>=1.6,<1.7',
         'gunicorn==0.15.0',
         'South==0.8.2',
         'psycopg2==2.4',
@@ -33,9 +33,9 @@ setup(
         'requests==0.14.2',
         'mock==1.0.1',
         'raven>=2.0,<3.0',
-        'django-debug-toolbar==0.9.4',
+        'django-debug-toolbar',
         'kombu==2.5.6',
-        'librabbitmq==1.0.1',
+        'librabbitmq',
         'hiredis==0.1.1',
         'django-pipeline==1.3.6',
         'txpostgres==1.1.0',
