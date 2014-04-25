@@ -631,6 +631,24 @@ class TestConversationViews(BaseConversationViewTestCase):
             response, '<tr><th>Failed</th><td>4</td><td>40%</td></tr>',
             html=True)
 
+    def test_message_list_inbound_uniques_display(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
+        response = self.client.get(self.get_view_url(conv, 'message_list'))
+        self.assertContains(
+            response, 'Messages from 10 unique people')
+
+    def test_message_list_outbound_uniques_display(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
+        replies = self.msg_helper.add_replies_to_conv(conv, msgs)
+        response = self.client.get(
+            self.get_view_url(conv, 'message_list'), {
+                'direction': 'outbound'
+            })
+        self.assertContains(
+            response, 'Messages to 10 unique people')
+
     def test_message_list_no_sensitive_msgs(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
 

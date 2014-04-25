@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import csv
+import os
+import tempfile
+from datetime import datetime
 from os import path
 from StringIO import StringIO
 from zipfile import ZipFile
@@ -153,10 +157,15 @@ class TestContacts(BaseContactsTestCase):
         c2.extra['bar'] = u'ipsum'
         c2.save()
 
-        self.client.post(reverse('contacts:people'), {
+        response = self.client.post(reverse('contacts:people'), {
             '_export': True,
             'contact': [c1.key, c2.key],
         })
+
+        self.assertContains(
+            response,
+            "The export is scheduled and should complete within a few"
+            " minutes.")
 
         self.assertEqual(len(mail.outbox), 1)
         [email] = mail.outbox
@@ -174,17 +183,69 @@ class TestContacts(BaseContactsTestCase):
 
         self.assertEqual(
             header,
-            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
-                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                      'extras-foo']))
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'bar',
+                'foo']))
 
+        self.assertTrue(c1_data.startswith(c1.key))
         self.assertTrue(c1_data.endswith('baz,bar'))
+        self.assertTrue(c2_data.startswith(c2.key))
         self.assertTrue(c2_data.endswith('ipsum,lorem'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
-    def specify_columns(self, group_key, columns=None):
+    def test_exporting_all_contacts(self):
+        c1 = self.mkcontact()
+        c1.extra['foo'] = u'bar'
+        c1.extra['bar'] = u'baz'
+        c1.save()
+
+        c2 = self.mkcontact()
+        c2.extra['foo'] = u'lorem'
+        c2.extra['bar'] = u'ipsum'
+        c2.save()
+
+        response = self.client.post(reverse('contacts:people'), {
+            '_export_all': True,
+        })
+
+        self.assertContains(
+            response,
+            "The export is scheduled and should complete within a few"
+            " minutes.")
+
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(email.recipients(), [self.user_email])
+        self.assertTrue('Contacts export' in email.subject)
+        self.assertTrue('2 contact(s)' in email.body)
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, c1_data, c2_data, _] = csv_contents.split('\r\n')
+
+        self.assertEqual(
+            header,
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'bar',
+                'foo']))
+
+        self.assertTrue(c1_data.startswith(c1.key))
+        self.assertTrue(c1_data.endswith('baz,bar'))
+        self.assertTrue(c2_data.startswith(c2.key))
+        self.assertTrue(c2_data.endswith('ipsum,lorem'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'application/zip')
+
+    def specify_columns(self, group_key, columns=None, import_rule=None):
         group_url = reverse('contacts:group', kwargs={
             'group_key': group_key,
         })
@@ -199,6 +260,8 @@ class TestContacts(BaseContactsTestCase):
         }
         if columns:
             defaults.update(columns)
+        if import_rule is not None:
+            defaults['import_rule'] = import_rule
         return self.client.post(group_url, defaults)
 
     def test_contact_upload_into_new_group(self):
@@ -311,6 +374,237 @@ class TestContacts(BaseContactsTestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+    def test_upload_with_contact_uuid(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                                  'fixtures',
+                                  'sample-contacts-with-uuid-headers.csv'))
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(group.key))
+        preview_response = self.client.get(group_url(group.key))
+        self.assertContains(
+            preview_response, 'The file includes contact UUIDs.')
+
+    def test_upload_without_contact_uuid(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                                  'fixtures',
+                                  'sample-contacts-with-headers.csv'))
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(group.key))
+        preview_response = self.client.get(group_url(group.key))
+        self.assertContains(
+            preview_response, 'The file does not include contact UUIDs.')
+
+    def create_temp_csv_file(self):
+        return tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+
+    def create_csv(self, fieldnames, data):
+        fp = self.create_temp_csv_file()
+        csv_writer = csv.DictWriter(fp, fieldnames=fieldnames)
+        csv_writer.writerow(dict(zip(fieldnames, fieldnames)))
+        for row in data:
+            csv_writer.writerow(row)
+        fp.seek(0)
+        return fp
+
+    def test_import_upload_is_truth(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        # create existing contacts that'll be updated.
+        contact_data = []
+        for i in range(3):
+            # the original contact
+            contact = self.mkcontact(name='', surname='', msisdn='270000000')
+            # Litmus to ensure we don't butcher stuff
+            contact.extra['litmus_stay'] = u'red'
+            contact.extra['litmus_overwrite'] = u'blue'
+            contact.subscription['sub'] = u'the-subscription'
+            contact.dob = datetime(2014, 1, 2)
+            contact.save()
+            # what we're going to update
+            contact_data.append({
+                u'key': contact.key,
+                u'name': u'name %s' % (i,),
+                u'surname': u'surname %s' % (i,),
+                u'msisdn': u'271111111%s' % (i,),
+                u'litmus_new': u'green',
+                u'litmus_overwrite': u'purple',
+            })
+
+        csv = self.create_csv(
+            ['key', 'name', 'surname', 'msisdn',
+             'litmus_overwrite', 'litmus_new'],
+            contact_data)
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv,
+        })
+
+        self.assertRedirects(response, group_url(group.key))
+        self.specify_columns(group.key, columns={
+            'column-0': 'key',
+            'column-1': 'name',
+            'column-2': 'surname',
+            'column-3': 'msisdn',
+            'column-4': 'litmus_overwrite',
+            'column-5': 'litmus_new',
+            'normalize-3': 'msisdn_za',
+        }, import_rule='upload_is_truth')
+
+        group = self.contact_store.get_group(group.key)
+        self.assertEqual(len(group.backlinks.contacts()), 3)
+        [email] = mail.outbox
+
+        self.assertEqual('Contact import completed.', email.subject)
+        self.assertTrue(
+            "We've successfully imported 3 of your contact(s)" in email.body)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+        updated_contacts = [
+            self.contact_store.get_contact_by_key(contact['key'])
+            for contact in contact_data]
+        self.assertEqual(
+            set([contact.name for contact in updated_contacts]),
+            set(['name 0', 'name 1', 'name 2']))
+        self.assertEqual(
+            set([contact.surname for contact in updated_contacts]),
+            set(['surname 0', 'surname 1', 'surname 2']))
+        # these are normalized for ZA
+        self.assertEqual(
+            set([contact.msisdn for contact in updated_contacts]),
+            set(['+2711111110', '+2711111111', '+2711111112']))
+        # check the litmus
+        self.assertEqual(
+            set([contact.extra['litmus_stay']
+                 for contact in updated_contacts]),
+            set(['red']))
+        self.assertEqual(
+            set([contact.extra['litmus_new']
+                 for contact in updated_contacts]),
+            set(['green']))
+        self.assertEqual(
+            set([contact.extra['litmus_overwrite']
+                 for contact in updated_contacts]),
+            set(['purple']))
+        self.assertEqual(
+            set([contact.dob for contact in updated_contacts]),
+            set([datetime(2014, 1, 2)]))
+        self.assertEqual(
+            set([contact.subscription['sub']
+                 for contact in updated_contacts]),
+            set(['the-subscription']))
+
+        os.unlink(csv.name)
+
+    def test_import_existing_is_truth(self):
+        group1 = self.contact_store.new_group(TEST_GROUP_NAME)
+        group2 = self.contact_store.new_group(TEST_GROUP_NAME + ' 2')
+
+        # create existing contacts that'll be updated.
+        contact_data = []
+        for i in range(3):
+            # the original contact
+            contact = self.mkcontact(
+                name='foo', surname='bar', msisdn='270000000')
+            # Litmus to ensure we don't butcher stuff
+            contact.extra['litmus_stay'] = u'red'
+            contact.subscription['sub'] = u'the-subscription'
+            contact.dob = datetime(2014, 1, 2)
+            contact.add_to_group(group2)
+            contact.save()
+            # what we're going to update
+            contact_data.append({
+                u'key': contact.key,
+                u'name': u'name %s' % (i,),
+                u'surname': u'surname %s' % (i,),
+                u'msisdn': u'271111111%s' % (i,),
+                u'litmus_stay': u'green',
+                u'litmus_new': u'blue',
+            })
+
+        csv = self.create_csv(
+            ['key', 'name', 'surname', 'msisdn',
+             'litmus_stay', 'litmus_new'],
+            contact_data)
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group1.key,
+            'file': csv,
+        })
+
+        self.assertRedirects(response, group_url(group1.key))
+        self.specify_columns(group1.key, columns={
+            'column-0': 'key',
+            'column-1': 'name',
+            'column-2': 'surname',
+            'column-3': 'msisdn',
+            'column-4': 'litmus_stay',
+            'column-5': 'litmus_new',
+            'normalize-3': 'msisdn_za',
+        }, import_rule='existing_is_truth')
+
+        group = self.contact_store.get_group(group1.key)
+        self.assertEqual(len(group.backlinks.contacts()), 3)
+        [email] = mail.outbox
+
+        self.assertEqual('Contact import completed.', email.subject)
+        self.assertTrue(
+            "We've successfully imported 3 of your contact(s)" in email.body)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+        updated_contacts = [
+            self.contact_store.get_contact_by_key(contact['key'])
+            for contact in contact_data]
+        self.assertEqual(
+            set([contact.name for contact in updated_contacts]),
+            set(['foo']))
+        self.assertEqual(
+            set([contact.surname for contact in updated_contacts]),
+            set(['bar']))
+        # these are normalized for ZA
+        self.assertEqual(
+            set([contact.msisdn for contact in updated_contacts]),
+            set(['270000000']))
+        # check the litmus
+        self.assertEqual(
+            set([contact.extra['litmus_stay']
+                 for contact in updated_contacts]),
+            set(['red']))
+        self.assertEqual(
+            set([contact.extra['litmus_new']
+                 for contact in updated_contacts]),
+            set(['blue']))
+        self.assertEqual(
+            set([contact.dob for contact in updated_contacts]),
+            set([datetime(2014, 1, 2)]))
+        self.assertEqual(
+            set([contact.dob for contact in updated_contacts]),
+            set([datetime(2014, 1, 2)]))
+        self.assertEqual(
+            set([contact.subscription['sub']
+                 for contact in updated_contacts]),
+            set(['the-subscription']))
+
+        groups = []
+        for contact in updated_contacts:
+            groups.extend(contact.groups.keys())
+
+        self.assertEqual(
+            set(groups),
+            set([group1.key, group2.key]))
+
+        os.unlink(csv.name)
 
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         new_group_name = u'Testing a ünicode grøüp'
@@ -686,16 +980,63 @@ class TestGroups(BaseContactsTestCase):
         zipfile = ZipFile(StringIO(contents), 'r')
         csv_contents = zipfile.open('contacts-export.csv', 'r').read()
 
-        [header, contact, _] = csv_contents.split('\r\n')
+        [header, csv_contact, _] = csv_contents.split('\r\n')
 
         self.assertEqual(
             header,
-            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
-                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                      'extras-foo']))
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'bar',
+                'foo']))
 
-        self.assertTrue(contact.endswith('baz,bar'))
+        self.assertTrue(csv_contact.startswith(contact.key))
+        self.assertTrue(csv_contact.endswith('baz,bar'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'application/zip')
+
+    def test_group_contact_export_with_prefix(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        contact = self.mkcontact(groups=[group])
+        # Clear the group
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': group.key,
+        })
+
+        # add some extra info to ensure it gets exported properly
+        contact.extra['msisdn'] = u'bar'
+        contact.extra['name'] = u'baz'
+        contact.save()
+
+        response = self.client.post(group_url, {'_export': True})
+
+        self.assertRedirects(response, group_url)
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(email.recipients(), [self.user_email])
+        self.assertTrue(
+            '%s contacts export' % (group.name,) in email.subject)
+        self.assertTrue(
+            '1 contact(s) from group "%s" attached' % (group.name,)
+            in email.body)
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, csv_contact, _] = csv_contents.split('\r\n')
+        self.assertEqual(
+            header,
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'extras-msisdn',
+                'extras-name']))
+
+        self.assertTrue(csv_contact.startswith(contact.key))
+        self.assertTrue(csv_contact.endswith('bar,baz'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
@@ -738,12 +1079,15 @@ class TestGroups(BaseContactsTestCase):
 
         self.assertEqual(
             header,
-            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
-                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'mxit_id', 'wechat_id', 'created_at', 'extras-bar',
-                      'extras-foo']))
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'bar',
+                'foo']))
 
+        self.assertTrue(c1_data.startswith(contact_1.key))
         self.assertTrue(c1_data.endswith('baz,bar'))
+        self.assertTrue(c2_data.startswith(contact_2.key))
         self.assertTrue(c2_data.endswith('ipsum,lorem'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')

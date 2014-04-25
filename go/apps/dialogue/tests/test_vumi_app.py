@@ -6,8 +6,8 @@ import pkg_resources
 import os
 
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import SkipTest
 
+from vumi.application.tests.helpers import find_nodejs_or_skip_test
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
@@ -20,8 +20,7 @@ class TestDialogueApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        if DialogueApplication.find_nodejs() is None:
-            raise SkipTest("No node.js executable found.")
+        nodejs_executable = find_nodejs_or_skip_test(DialogueApplication)
 
         self.app_helper = self.add_helper(AppWorkerHelper(DialogueApplication))
 
@@ -31,11 +30,15 @@ class TestDialogueApplication(VumiTestCase):
         redis = yield self.app_helper.vumi_helper.get_redis_manager()
         self.kv_redis = redis.sub_manager('kv')
         self.app = yield self.app_helper.get_app_worker({
+            'executable': nodejs_executable,
             'args': [sandboxer_js],
             'timeout': 10,
             'app_context': (
-                "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01')"
-                " return require(m); return null; }, Buffer: Buffer}"
+                "{require: function(m) {"
+                " if (['moment', 'url', 'querystring', 'crypto', 'lodash',"
+                " 'q', 'jed', 'libxmljs', 'zlib', 'vumigo_v01', 'vumigo_v02'"
+                "].indexOf(m) >= 0) return require(m); return null;"
+                " }, Buffer: Buffer}"
             ),
             'env': {
                 'NODE_PATH': node_path,
@@ -71,7 +74,6 @@ class TestDialogueApplication(VumiTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key,
-            delivery_class=conversation.delivery_class,
         )
 
     @inlineCallbacks
@@ -97,7 +99,11 @@ class TestDialogueApplication(VumiTestCase):
     def test_user_message(self):
         conversation = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conversation)
-        yield self.app_helper.make_dispatch_inbound("hello", conv=conversation)
+        with LogCatcher(message='Switched to state:') as lc:
+            yield self.app_helper.make_dispatch_inbound(
+                "hello", conv=conversation)
+            self.assertEqual(lc.messages(),
+                             ['Switched to state: choice-1'])
         [reply] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(reply["content"],
                          "What is your favourite colour?\n1. Red\n2. Blue")

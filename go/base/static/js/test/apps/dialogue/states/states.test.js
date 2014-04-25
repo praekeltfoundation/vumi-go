@@ -147,6 +147,19 @@ describe("go.apps.dialogue.states", function() {
       });
     });
 
+    describe(".render", function() {
+      it("should mark whether the user's answer should be stored on the contact",
+      function() {
+        state.model.set('store_on_contact', true);
+        state.render();
+        assert(state.$('.store-on-contact').prop('checked'));
+
+        state.model.set('store_on_contact', false);
+        state.render();
+        assert(!state.$('.store-on-contact').prop('checked'));
+      });
+    });
+
     describe(".cancel", function() {
       it("should change the model back to its old state", function() {
         assert.deepEqual(state.model.toJSON(), {
@@ -312,7 +325,7 @@ describe("go.apps.dialogue.states", function() {
         assert.equal(state.model.get('store_on_contact'), false);
 
         editMode.$('.store-on-contact')
-          .prop(':checked', true)
+          .prop('checked', true)
           .change();
 
         assert.equal(state.model.get('store_on_contact'), true);

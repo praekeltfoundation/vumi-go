@@ -15,9 +15,18 @@ var DialogueApp = App.extend(function(self) {
 
     self.poll_defaults = {
         states: [],
-        repeatable: false,
         accept_labels: true,
-        start_state: {uuid: null}
+        start_state: {uuid: null},
+        poll_metadata: {repeatable: false}
+    };
+
+    self.events = {
+        'im inbound_event': function (event) {
+            var ev = event.event;
+            return event.im.log.info(
+                "Saw " + ev.event_type + " for message " +
+                ev.sent_message_id + ".");
+        }
     };
 
     self.init = function() {
@@ -32,10 +41,10 @@ var DialogueApp = App.extend(function(self) {
 
     self.get_poll = function() {
         return self
-            .im.sandbox_config.get('poll', {json: true})
+            .im.sandbox_config.get('poll', {json: false})
             .then(function(poll) {
                 return _.defaults(poll, self.poll_defaults);
-           });
+            });
     };
 
     self.add_state = function(desc) {
@@ -110,7 +119,7 @@ var DialogueApp = App.extend(function(self) {
         return new EndState(desc.uuid, {
             text: desc.text,
 
-            next: self.poll.repeatable
+            next: self.poll.poll_metadata.repeatable
                 ? 'states:start'
                 : null
         });

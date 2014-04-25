@@ -8,11 +8,11 @@ from django.core.files.storage import default_storage
 
 def store_temporarily(django_file_object):
     django_content_file = File(file=django_file_object,
-        name=django_file_object.name)
+                               name=django_file_object.name)
     temp_file_name = 'tmp-%s-%s.upload' % (date.today().isoformat(),
-        uuid.uuid4().hex,)
+                                           uuid.uuid4().hex,)
     temp_file_path = default_storage.save(os.path.join('tmp', temp_file_name),
-        django_content_file)
+                                          django_content_file)
     return django_file_object.name, temp_file_path
 
 

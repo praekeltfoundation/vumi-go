@@ -13,24 +13,26 @@ describe("app", function() {
     describe("DialogueApp", function() {
         var poll;
         var tester;
-        
+
         beforeEach(function() {
             poll = _.cloneDeep(dummy_polls.simple_poll);
 
             tester = new AppTester(new DialogueApp())
                 .setup.config.app({name: 'dialogue_app'})
-                .setup.config({poll: poll})
+                .setup.config({poll: poll}, {json: false})
                 .setup.user.addr('+27123');
         });
 
+        function extend_poll(poll_extend) {
+            return tester.setup.config({
+                poll: _.extend(poll, poll_extend)
+            },
+            {json: false});
+        }
+
         it("should throw an error if an unknown state type is encountered",
         function() {
-            return tester
-                .setup.config({
-                    poll: _.extend(poll, {
-                        states: [{type: 'unknown'}]
-                    })
-                })
+            return extend_poll({states: [{type: 'unknown'}]})
                 .run()
                 .catch(function(e) {
                     assert(e instanceof Error);
@@ -42,10 +44,7 @@ describe("app", function() {
 
         it("should stay on the same state if a state has no next state",
         function() {
-            return tester
-                .setup.config({
-                    poll: _.extend(poll, {connections: []})
-                })
+            return extend_poll({connections: []})
                 .setup.user.state('choice-1')
                 .input('1')
                 .check.user.state('choice-1')
@@ -97,10 +96,7 @@ describe("app", function() {
             });
 
             it("should only accept number based answers if asked", function() {
-                return tester
-                    .setup.config({
-                        poll: _.extend(poll, {accept_labels: false})
-                    })
+                return extend_poll({accept_labels: false})
                     .setup.user.state('choice-1')
                     .input('Red')
                     .check.user.state('choice-1')
@@ -109,10 +105,7 @@ describe("app", function() {
 
             it("should accept label and number based answers if asked",
             function() {
-                return tester
-                    .setup.config({
-                        poll: _.extend(poll, {accept_labels: true})
-                    })
+                return extend_poll({accept_labels: true})
                     .setup.user.state('choice-1')
                     .input('Red')
                     .check.user.state('freetext-1')
@@ -166,10 +159,7 @@ describe("app", function() {
 
             it("should move to the start state next session if asked",
             function() {
-                return tester
-                    .setup.config({
-                        poll: _.extend(poll, {repeatable: true})
-                    })
+                return extend_poll({poll_metadata: {repeatable: true}})
                     .setup.user.state('end-1')
                     .start()
                     .check.user.state('choice-1')
@@ -178,10 +168,7 @@ describe("app", function() {
 
             it("should not move to the start state next session if asked",
             function() {
-                return tester
-                    .setup.config({
-                        poll: _.extend(poll, {repeatable: false})
-                    })
+                return extend_poll({poll_metadata: {repeatable: false}})
                     .setup.user.state('end-1')
                     .start()
                     .check.user.state('end-1')
