@@ -177,9 +177,8 @@ class AppWorkerHelper(object):
         metrics = []
         for metric_msg in self.worker_helper.get_dispatched_metrics():
             for name, _aggs, data in metric_msg:
-                [datapoint] = data
-                _time, value = datapoint
-                metrics.append((name, value))
+                for _time, value in data:
+                    metrics.append((name, value))
         return metrics
 
     def get_dispatched_app_events(self):
