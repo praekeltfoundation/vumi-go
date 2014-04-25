@@ -63,7 +63,7 @@ class GoWorkerMixin(object):
             'riak_manager': config.riak_manager,
             'redis_manager': config.redis_manager,
             }
-        d = VumiApi.from_config_async(api_config, self._amqp_client)
+        d = VumiApi.from_config_async(api_config, self.command_publisher)
 
         def cb(vumi_api):
             self.vumi_api = vumi_api
@@ -78,16 +78,23 @@ class GoWorkerMixin(object):
         d = self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
-            exchange_name=api_routing_config['exchange'],
+            exchange_name=api_routing_config['exchange_name'],
             exchange_type=api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
         return d.addCallback(lambda r: setattr(self, 'control_consumer', r))
+
+    def _go_setup_command_publisher(self, config):
+        api_routing_config = VumiApiCommand.default_routing_config()
+        if config.api_routing:
+            api_routing_config.update(config.api_routing)
+        d = self.publish_to(**api_routing_config)
+        return d.addCallback(lambda r: setattr(self, 'command_publisher', r))
 
     def _go_setup_event_publisher(self, config):
         app_event_routing_config = VumiApiEvent.default_routing_config()
         if config.app_event_routing:
             app_event_routing_config.update(config.app_event_routing)
-        d = self.publish_to(app_event_routing_config['routing_key'])
+        d = self.publish_to(**app_event_routing_config)
         return d.addCallback(lambda r: setattr(self, 'app_event_publisher', r))
 
     @inlineCallbacks
@@ -101,8 +108,9 @@ class GoWorkerMixin(object):
         self.metrics = yield self.start_publisher(
             MetricManager, config.metrics_prefix)
 
-        yield self._go_setup_vumi_api(config)
+        yield self._go_setup_command_publisher(config)
         yield self._go_setup_event_publisher(config)
+        yield self._go_setup_vumi_api(config)
         yield self._go_setup_command_consumer(config)
 
     @inlineCallbacks

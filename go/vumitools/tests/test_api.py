@@ -470,7 +470,7 @@ class TestVumiApiCommand(VumiTestCase):
     def test_default_routing_config(self):
         cfg = VumiApiCommand.default_routing_config()
         self.assertEqual(cfg, {
-            'exchange': 'vumi',
+            'exchange_name': 'vumi',
             'exchange_type': 'direct',
             'routing_key': 'vumi.api',
             'durable': True,
@@ -481,7 +481,7 @@ class TestVumiApiEvent(VumiTestCase):
     def test_default_routing_config(self):
         cfg = VumiApiEvent.default_routing_config()
         self.assertEqual(cfg, {
-            'exchange': 'vumi',
+            'exchange_name': 'vumi',
             'exchange_type': 'direct',
             'routing_key': 'vumi.event',
             'durable': True,

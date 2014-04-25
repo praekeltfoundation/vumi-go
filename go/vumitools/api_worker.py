@@ -49,7 +49,7 @@ class CommandDispatcher(ApplicationWorker):
         self.api_consumer = yield self.consume(
             self.api_routing_config['routing_key'],
             self.consume_control_command,
-            exchange_name=self.api_routing_config['exchange'],
+            exchange_name=self.api_routing_config['exchange_name'],
             exchange_type=self.api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
 
@@ -92,8 +92,10 @@ class EventDispatcher(ApplicationWorker):
     # TODO: Make this not an ApplicationWorker.
 
     def validate_config(self):
-        self.api_routing_config = VumiApiEvent.default_routing_config()
-        self.api_routing_config.update(self.config.get('api_routing', {}))
+        self.event_routing_config = VumiApiEvent.default_routing_config()
+        self.event_routing_config.update(self.config.get('api_routing', {}))
+        self.command_routing_config = VumiApiCommand.default_routing_config()
+        self.command_routing_config.update(self.config.get('api_routing', {}))
         self.api_event_consumer = None
         self.handler_config = self.config.get('event_handlers', {})
         self.account_handler_configs = self.config.get(
@@ -103,9 +105,10 @@ class EventDispatcher(ApplicationWorker):
     def setup_application(self):
         self.handlers = {}
 
-        self.api_command_publisher = yield self.publish_to('vumi.api')
+        self.api_command_publisher = yield self.publish_to(
+            **self.command_routing_config)
         self.vumi_api = yield VumiApi.from_config_async(
-            self.config, self._amqp_client)
+            self.config, self.api_command_publisher)
         self.account_config = {}
 
         for name, handler_class in self.handler_config.items():
@@ -114,10 +117,10 @@ class EventDispatcher(ApplicationWorker):
             yield self.handlers[name].setup_handler()
 
         self.api_event_consumer = yield self.consume(
-            self.api_routing_config['routing_key'],
+            self.event_routing_config['routing_key'],
             self.consume_api_event,
-            exchange_name=self.api_routing_config['exchange'],
-            exchange_type=self.api_routing_config['exchange_type'],
+            exchange_name=self.event_routing_config['exchange_name'],
+            exchange_type=self.event_routing_config['exchange_type'],
             message_class=VumiApiEvent)
 
     @inlineCallbacks
