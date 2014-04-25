@@ -10,7 +10,9 @@ from vumi.config import IConfigData, ConfigText, ConfigDict, ConfigField
 from vumi.connectors import IgnoreMessage
 
 from go.config import get_conversation_definition
-from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
+from go.vumitools.api import (
+    VumiApi, VumiApiCommand, VumiApiEvent, ApiCommandPublisher,
+    ApiEventPublisher)
 from go.vumitools.metrics import AccountMetric
 from go.vumitools.utils import MessageMetadataHelper
 
@@ -49,9 +51,6 @@ class GoWorkerConfigMixin(object):
     riak_manager = ConfigDict("Riak config.", static=True)
     redis_manager = ConfigDict("Redis config.", static=True)
 
-    api_routing = ConfigDict("AMQP config for API commands.", static=True)
-    app_event_routing = ConfigDict("AMQP config for app events.", static=True)
-
 
 class GoWorkerMixin(object):
     redis = None
@@ -72,29 +71,18 @@ class GoWorkerMixin(object):
         return d.addCallback(cb)
 
     def _go_setup_command_consumer(self, config):
-        api_routing_config = VumiApiCommand.default_routing_config()
-        if config.api_routing:
-            api_routing_config.update(config.api_routing)
         d = self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
-            exchange_name=api_routing_config['exchange_name'],
-            exchange_type=api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
         return d.addCallback(lambda r: setattr(self, 'control_consumer', r))
 
     def _go_setup_command_publisher(self, config):
-        api_routing_config = VumiApiCommand.default_routing_config()
-        if config.api_routing:
-            api_routing_config.update(config.api_routing)
-        d = self.publish_to(**api_routing_config)
+        d = self.start_publisher(ApiCommandPublisher)
         return d.addCallback(lambda r: setattr(self, 'command_publisher', r))
 
     def _go_setup_event_publisher(self, config):
-        app_event_routing_config = VumiApiEvent.default_routing_config()
-        if config.app_event_routing:
-            app_event_routing_config.update(config.app_event_routing)
-        d = self.publish_to(**app_event_routing_config)
+        d = self.start_publisher(ApiEventPublisher)
         return d.addCallback(lambda r: setattr(self, 'app_event_publisher', r))
 
     @inlineCallbacks

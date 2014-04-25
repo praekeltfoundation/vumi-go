@@ -8,13 +8,13 @@ from twisted.python.monkey import MonkeyPatcher
 from zope.interface import implements
 
 from vumi.blinkenlights.metrics import MetricMessage
-from vumi.service import Publisher
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
     generate_proxies, IHelper, maybe_async_return)
 
 import go.config
-from go.vumitools.api import VumiApi, VumiApiEvent, VumiApiCommand
+from go.vumitools.api import (
+    VumiApi, VumiApiEvent, VumiApiCommand, ApiCommandPublisher)
 from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.utils import MessageMetadataHelper
 
@@ -343,16 +343,10 @@ class VumiApiHelper(object):
         self._vumi_api = VumiApi.from_config_sync(
             settings.VUMI_API_CONFIG, go.base.amqp.connection)
 
-    def _make_publisher(self):
-        # We don't have access to a Worker object, so we can't use
-        # .publish_to(). :-(
-        return type("VumiApiCommandPublisher", (Publisher,),
-                    VumiApiCommand.default_routing_config())
-
     def setup_async_vumi_api(self):
         worker_helper = self.get_worker_helper()
         amqp_client = worker_helper.get_fake_amqp_client(worker_helper.broker)
-        d = amqp_client.start_publisher(self._make_publisher())
+        d = amqp_client.start_publisher(ApiCommandPublisher)
         d.addCallback(lambda cmd_publisher: VumiApi.from_config_async(
             self.mk_config({}), cmd_publisher))
         return d.addCallback(self.set_vumi_api)

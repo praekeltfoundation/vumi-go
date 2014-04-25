@@ -16,6 +16,7 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
+from vumi.service import Publisher
 from vumi import log
 
 from go.config import (
@@ -595,19 +596,23 @@ class AsyncMessageSender(object):
         return self.command_publisher.publish_message(command)
 
 
+class ApiCommandPublisher(Publisher):
+    """
+    Publisher for VumiApiCommand messages.
+    """
+    routing_key = "vumi.api"
+    durable = True
+
+
+class ApiEventPublisher(Publisher):
+    """
+    Publisher for VumiApiEvent messages.
+    """
+    routing_key = "vumi.event"
+    durable = True
+
+
 class VumiApiCommand(Message):
-
-    _DEFAULT_ROUTING_CONFIG = {
-        'exchange_name': 'vumi',
-        'exchange_type': 'direct',
-        'routing_key': 'vumi.api',
-        'durable': True,
-    }
-
-    @classmethod
-    def default_routing_config(cls):
-        return cls._DEFAULT_ROUTING_CONFIG.copy()
-
     @classmethod
     def command(cls, worker_name, command_name, *args, **kwargs):
         return cls(**{
@@ -630,18 +635,6 @@ class VumiApiCommand(Message):
 
 
 class VumiApiEvent(Message):
-
-    _DEFAULT_ROUTING_CONFIG = {
-        'exchange_name': 'vumi',
-        'exchange_type': 'direct',
-        'routing_key': 'vumi.event',
-        'durable': True,
-    }
-
-    @classmethod
-    def default_routing_config(cls):
-        return cls._DEFAULT_ROUTING_CONFIG.copy()
-
     @classmethod
     def event(cls, account_key, conversation_key, event_type, content):
         return cls(account_key=account_key,
