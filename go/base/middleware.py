@@ -2,7 +2,6 @@ import time
 import logging
 
 from django.core.urlresolvers import resolve, Resolver404
-from django.conf import settings
 from vumi.blinkenlights.metrics import Metric, MetricManager
 
 from go.base import amqp
