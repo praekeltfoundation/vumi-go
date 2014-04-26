@@ -20,15 +20,6 @@ var DialogueApp = App.extend(function(self) {
         poll_metadata: {repeatable: false}
     };
 
-    self.events = {
-        'im inbound_event': function (event) {
-            var ev = event.event;
-            return event.im.log.info(
-                "Saw " + ev.event_type + " for message " +
-                ev.sent_message_id + ".");
-        }
-    };
-
     self.init = function() {
         return Q
             .all([self.get_poll(), self.im.contacts.for_user()])
