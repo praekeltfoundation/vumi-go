@@ -119,8 +119,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         We only want to process events in the sandbox if configured to do so.
         """
         config = yield self.get_config(event)
-        app_config = config.jsbox_app_config.get('config', {}).get('value')
-        app_config = json.loads(app_config or '{}')
+        app_config = jsbox_js_config(config.conversation.config)
         if app_config.get('process_events'):
             yield super(JsBoxApplication, self).process_event_in_sandbox(event)
         else:
