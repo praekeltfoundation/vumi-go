@@ -114,11 +114,11 @@ class TestDialogueApplication(VumiTestCase):
         yield self.app_helper.start_conversation(conversation)
         msg = yield self.app_helper.make_stored_outbound(
             conversation, "foo")
-        with LogCatcher(message="Saw") as lc:
+        with LogCatcher(message="Ignoring") as lc:
             yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
-            self.assertEqual(
-                lc.messages(),
-                ['Saw ack for message %s.' % (msg['message_id'],)])
+        self.assertEqual(
+            lc.messages(),
+            ["Ignoring event for conversation: %s" % (conversation.key,)])
 
     @inlineCallbacks
     def test_delivery_report(self):
@@ -126,12 +126,12 @@ class TestDialogueApplication(VumiTestCase):
         yield self.app_helper.start_conversation(conversation)
         msg = yield self.app_helper.make_stored_outbound(
             conversation, "foo")
-        with LogCatcher(message="Saw") as lc:
+        with LogCatcher(message="Ignoring") as lc:
             yield self.app_helper.make_dispatch_delivery_report(
                 msg, conv=conversation)
-            self.assertEqual(
-                lc.messages(),
-                ['Saw delivery_report for message %s.' % (msg['message_id'],)])
+        self.assertEqual(
+            lc.messages(),
+            ["Ignoring event for conversation: %s" % (conversation.key,)])
 
     @inlineCallbacks
     def test_send_message_command(self):

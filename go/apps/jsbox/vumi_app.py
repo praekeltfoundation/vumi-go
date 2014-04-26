@@ -3,6 +3,9 @@
 
 """Vumi application worker for the vumitools API."""
 
+import json
+import logging
+
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application.sandbox import JsSandbox, SandboxResource
@@ -110,6 +113,23 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
             return
         yield super(JsBoxApplication, self).process_message_in_sandbox(msg)
 
+    @inlineCallbacks
+    def process_event_in_sandbox(self, event):
+        """
+        We only want to process events in the sandbox if configured to do so.
+        """
+        config = yield self.get_config(event)
+        js_config = self.get_jsbox_js_config(config.conversation)
+        if js_config is None:
+            return
+        if js_config.get('process_events'):
+            yield super(JsBoxApplication, self).process_event_in_sandbox(event)
+        else:
+            api = self.create_sandbox_api(self.resources, config)
+            log_msg = "Ignoring event for conversation: %s" % (
+                config.conversation.key,)
+            yield api.log(log_msg, logging.INFO)
+
     def process_command_start(self, user_account_key, conversation_key):
         log.info("Starting javascript sandbox conversation (key: %r)." %
                  (conversation_key,))
@@ -121,19 +141,23 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         msg = mk_inbound_push_trigger(to_addr, conversation)
         return self.consume_user_message(msg)
 
-    @inlineCallbacks
-    def process_command_send_jsbox(self, user_account_key, conversation_key,
-                                   batch_id):
-        conv = yield self.get_conversation(user_account_key, conversation_key)
-
+    def get_jsbox_js_config(self, conv):
         try:
-            js_config = jsbox_js_config(conv.config)
-            delivery_class = js_config.get('delivery_class')
+            return jsbox_js_config(conv.config)
         except Exception:
             log.err(
                 "Bad jsbox js config: %s"
                 % (jsbox_config_value(conv.config, 'config'),))
             return
+
+    @inlineCallbacks
+    def process_command_send_jsbox(self, user_account_key, conversation_key,
+                                   batch_id):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        js_config = self.get_jsbox_js_config(conv)
+        if js_config is None:
+            return
+        delivery_class = js_config.get('delivery_class')
 
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (
