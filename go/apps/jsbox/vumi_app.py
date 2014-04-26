@@ -3,6 +3,9 @@
 
 """Vumi application worker for the vumitools API."""
 
+import json
+import logging
+
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application.sandbox import JsSandbox, SandboxResource
@@ -109,6 +112,22 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
                 config.conversation.key,))
             return
         yield super(JsBoxApplication, self).process_message_in_sandbox(msg)
+
+    @inlineCallbacks
+    def process_event_in_sandbox(self, event):
+        """
+        We only want to process events in the sandbox if configured to do so.
+        """
+        config = yield self.get_config(event)
+        app_config = config.jsbox_app_config.get('config', {}).get('value')
+        app_config = json.loads(app_config or '{}')
+        if app_config.get('process_events'):
+            yield super(JsBoxApplication, self).process_event_in_sandbox(event)
+        else:
+            api = self.create_sandbox_api(self.resources, config)
+            log_msg = "Ignoring event for conversation: %s" % (
+                config.conversation.key,)
+            yield api.log(log_msg, logging.INFO)
 
     def process_command_start(self, user_account_key, conversation_key):
         log.info("Starting javascript sandbox conversation (key: %r)." %
