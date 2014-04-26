@@ -77,5 +77,5 @@ class DialogueApplication(JsBoxApplication):
         config = yield self.get_config(event)
         api = self.create_sandbox_api(self.resources, config)
         log_msg = "Saw %s for message %s." % (
-            event['event_type'], event['sent_message_id'])
+            event['event_type'], event['user_message_id'])
         yield api.log(log_msg, logging.info)
