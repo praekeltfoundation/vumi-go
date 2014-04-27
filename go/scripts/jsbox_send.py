@@ -118,17 +118,13 @@ class JsBoxSendWorker(Worker):
 
 @inlineCallbacks
 def main(options):
-    quiet = options['quiet']
-
     worker_creator = WorkerCreator(options.vumi_options)
     worker_creator.create_worker_by_class(
         JsBoxSendWorker, options.get_vumigo_config())
 
-    in_file = sys.stdin
-    out_file = sys.stdout if not quiet else None
-
     worker = yield JsBoxSendWorker.WORKER_QUEUE.get()
-    yield worker.process_file(in_file, out_file)
+    yield worker.send_jsbox(
+        options['user-account-key'], options['conversation-key'])
     reactor.stop()
 
 
