@@ -119,8 +119,9 @@ class JsBoxSendWorker(Worker):
 @inlineCallbacks
 def main(options):
     worker_creator = WorkerCreator(options.vumi_options)
-    worker_creator.create_worker_by_class(
+    service = worker_creator.create_worker_by_class(
         JsBoxSendWorker, options.get_vumigo_config())
+    service.startService()
 
     worker = yield JsBoxSendWorker.WORKER_QUEUE.get()
     yield worker.send_jsbox(
