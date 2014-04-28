@@ -3,6 +3,7 @@ from twisted.python import usage
 from twisted.internet import reactor
 from twisted.internet.defer import (
     maybeDeferred, DeferredQueue, inlineCallbacks, returnValue)
+from twisted.internet.task import deferLater
 from vumi.service import Worker, WorkerCreator
 from vumi.servicemaker import VumiOptions
 import yaml
@@ -53,6 +54,7 @@ class JsBoxSendWorker(Worker):
     stderr = sys.stderr
 
     SUPPORTED_APPS = ('jsbox', 'dialogue')
+    SEND_DELAY = 0.01  # No more than 100 msgs/second to the queue.
 
     def send_inbound_push_trigger(self, to_addr, conversation):
         self.emit('Starting %r -> %s' % (conversation, to_addr), err=True)
@@ -80,6 +82,8 @@ class JsBoxSendWorker(Worker):
     def send_to_conv(self, conv, msg):
         publisher = self._publishers[conv.conversation_type]
         yield publisher.publish_message(msg)
+        # Give the reactor time to actually send the message.
+        yield deferLater(reactor, self.SEND_DELAY, lambda: None)
 
     @inlineCallbacks
     def make_publisher(self, conv_type):
