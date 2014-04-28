@@ -78,16 +78,13 @@ class JsBoxSendWorker(Worker):
 
     @inlineCallbacks
     def send_to_conv(self, conv, msg):
-        publisher = yield self.get_conv_publisher(conv)
+        publisher = self._publishers[conv.conversation_type]
         yield publisher.publish_message(msg)
 
     @inlineCallbacks
-    def get_conv_publisher(self, conv):
-        conv_type = conv.conversation_type.encode('utf8')
+    def make_publisher(self, conv_type):
         routing_key = '%s_transport.inbound' % (conv_type,)
-        if routing_key not in self._publishers:
-            self._publishers[routing_key] = yield self.publish_to(routing_key)
-        returnValue(self._publishers[routing_key])
+        self._publishers[conv_type] = yield self.publish_to(routing_key)
 
     @inlineCallbacks
     def get_conversation(self, user_account_key, conversation_key):
@@ -106,6 +103,8 @@ class JsBoxSendWorker(Worker):
         self.vumi_api = yield VumiApi.from_config_async(
             self.config, self._amqp_client)
         self._publishers = {}
+        for conv_type in self.SUPPORTED_APPS:
+            yield self.make_publisher(conv_type)
         self.WORKER_QUEUE.put(self)
 
     def emit(self, obj, err=False):
