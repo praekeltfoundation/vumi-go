@@ -2,10 +2,45 @@ import json
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock
+from twisted.python import usage
 from vumi.tests.helpers import VumiTestCase
 
-from go.scripts.jsbox_send import JsBoxSendWorker, ScriptError, Ticker
+from go.scripts.jsbox_send import (
+    JsBoxSendWorker, JsBoxSendOptions, ScriptError, Ticker)
 from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
+
+
+class TestJsBoxSendOptions(VumiTestCase):
+
+    DEFAULT_ARGS = (
+        "--vumigo-config", "default.yaml",
+        "--user-account-key", "user-123",
+        "--conversation-key", "conv-456",
+    )
+
+    def mk_opts(self, args, add_defaults=True):
+        args.extend(self.DEFAULT_ARGS)
+        opts = JsBoxSendOptions()
+        opts.parseOptions(args)
+        return opts
+
+    def test_hz_default(self):
+        opts = self.mk_opts([])
+        self.assertEqual(opts['hz'], 60.0)
+
+    def test_hz_override(self):
+        opts = self.mk_opts(["--hz", '10.0'])
+        self.assertEqual(opts['hz'], 10.0)
+
+    def test_hz_negative_or_zero(self):
+        self.assertRaises(
+            usage.UsageError,
+            self.mk_opts, ["--hz", "-5.0"])
+
+    def test_hz_not_numeric(self):
+        self.assertRaises(
+            usage.UsageError,
+            self.mk_opts, ["--hz", "foo"])
 
 
 class TestTickjer(VumiTestCase):
