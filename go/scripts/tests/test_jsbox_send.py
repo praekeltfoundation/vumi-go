@@ -1,10 +1,57 @@
 import json
 
 from twisted.internet.defer import inlineCallbacks
+from twisted.internet.task import Clock
 from vumi.tests.helpers import VumiTestCase
 
-from go.scripts.jsbox_send import JsBoxSendWorker, ScriptError
+from go.scripts.jsbox_send import JsBoxSendWorker, ScriptError, Ticker
 from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
+
+
+class TestTickjer(VumiTestCase):
+    def setUp(self):
+        self.override_ticker_clock()
+
+    def override_ticker_clock(self):
+        orig_clock = Ticker.clock
+
+        def restore_clock():
+            Ticker.clock = orig_clock
+
+        Ticker.clock = Clock()
+        self.add_cleanup(restore_clock)
+
+    def test_first_tick(self):
+        t = Ticker(hz=1)
+
+        d1 = t.tick()
+        self.assertFalse(d1.called)
+        t.clock.advance(0)
+        self.assertTrue(d1.called)
+
+    def test_fast(self):
+        t = Ticker(hz=1)
+
+        t.tick()
+        t.clock.advance(0.1)
+
+        d = t.tick()
+        self.assertFalse(d.called)
+        t.clock.advance(0.5)
+        self.assertFalse(d.called)
+        t.clock.advance(0.5)
+        self.assertTrue(d.called)
+
+    def test_slow(self):
+        t = Ticker(hz=1)
+
+        t.tick()
+        t.clock.advance(1.5)
+
+        d = t.tick()
+        self.assertFalse(d.called)
+        t.clock.advance(0)
+        self.assertTrue(d.called)
 
 
 class TestJsBoxSend(VumiTestCase):
