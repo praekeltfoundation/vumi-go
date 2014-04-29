@@ -2,7 +2,7 @@ import sys
 from twisted.python import usage
 from twisted.internet import reactor
 from twisted.internet.defer import (
-    maybeDeferred, DeferredQueue, inlineCallbacks, returnValue)
+    maybeDeferred, Deferred, DeferredQueue, inlineCallbacks, returnValue)
 from twisted.internet.task import deferLater
 from vumi.service import Worker, WorkerCreator
 from vumi.servicemaker import VumiOptions
@@ -27,6 +27,8 @@ class JsBoxSendOptions(VumiOptions):
          "Conversation to send messages to."],
         ["vumigo-config", None, None,
          "File containing persistence configuration."],
+        ["hz", None, "60.0",
+         "Maximum number of messages to send per second."],
     ]
 
     def postOptions(self):
@@ -40,10 +42,49 @@ class JsBoxSendOptions(VumiOptions):
         if not self['conversation-key']:
             raise usage.UsageError(
                 "Please provide the conversation-key parameter.")
+        try:
+            hz = float(self['hz'])
+        except (TypeError, ValueError):
+            hz_okay = False
+        else:
+            hz_okay = bool(hz > 0)
+        if not hz_okay:
+            raise usage.UsageError(
+                "Please provide a positive float for hz")
+        self['hz'] = hz
 
     def get_vumigo_config(self):
         with file(self['vumigo-config'], 'r') as stream:
             return yaml.safe_load(stream)
+
+
+class Ticker(object):
+    """
+    An object that limits calls to a fixed number per second.
+
+    :param float hz:
+       Times per second that :meth:``tick`` may be called.
+    """
+
+    clock = reactor
+
+    def __init__(self, hz):
+        self._hz = hz
+        self._min_dt = 1.0 / hz
+        self._last = None
+
+    def tick(self):
+        d = Deferred()
+        delay = 0
+        if self._last is None:
+            self._last = self.clock.seconds()
+        else:
+            now = self.clock.seconds()
+            dt = now - self._last
+            delay = 0 if (dt > self._min_dt) else (self._min_dt - dt)
+            self._last = now
+        self.clock.callLater(delay, d.callback, None)
+        return d
 
 
 class JsBoxSendWorker(Worker):
@@ -62,12 +103,14 @@ class JsBoxSendWorker(Worker):
         return self.send_to_conv(conversation, msg)
 
     @inlineCallbacks
-    def send_jsbox(self, user_account_key, conversation_key):
+    def send_jsbox(self, user_account_key, conversation_key, hz=60):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         delivery_class = jsbox_js_config(conv.config).get('delivery_class')
         to_addrs = yield self.get_contact_addrs_for_conv(conv, delivery_class)
+        ticker = Ticker(hz=hz)
         for to_addr in to_addrs:
             yield self.send_inbound_push_trigger(to_addr, conv)
+            yield ticker.tick()
 
     @inlineCallbacks
     def get_contact_addrs_for_conv(self, conv, delivery_class):
@@ -128,7 +171,8 @@ def main(options):
 
     worker = yield JsBoxSendWorker.WORKER_QUEUE.get()
     yield worker.send_jsbox(
-        options['user-account-key'], options['conversation-key'])
+        options['user-account-key'], options['conversation-key'],
+        hz=options['hz'])
     reactor.stop()
 
 

@@ -1,10 +1,92 @@
 import json
 
 from twisted.internet.defer import inlineCallbacks
+from twisted.internet.task import Clock
+from twisted.python import usage
 from vumi.tests.helpers import VumiTestCase
 
-from go.scripts.jsbox_send import JsBoxSendWorker, ScriptError
+from go.scripts.jsbox_send import (
+    JsBoxSendWorker, JsBoxSendOptions, ScriptError, Ticker)
 from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
+
+
+class TestJsBoxSendOptions(VumiTestCase):
+
+    DEFAULT_ARGS = (
+        "--vumigo-config", "default.yaml",
+        "--user-account-key", "user-123",
+        "--conversation-key", "conv-456",
+    )
+
+    def mk_opts(self, args, add_defaults=True):
+        args.extend(self.DEFAULT_ARGS)
+        opts = JsBoxSendOptions()
+        opts.parseOptions(args)
+        return opts
+
+    def test_hz_default(self):
+        opts = self.mk_opts([])
+        self.assertEqual(opts['hz'], 60.0)
+
+    def test_hz_override(self):
+        opts = self.mk_opts(["--hz", '10.0'])
+        self.assertEqual(opts['hz'], 10.0)
+
+    def test_hz_negative_or_zero(self):
+        self.assertRaises(
+            usage.UsageError,
+            self.mk_opts, ["--hz", "-5.0"])
+
+    def test_hz_not_numeric(self):
+        self.assertRaises(
+            usage.UsageError,
+            self.mk_opts, ["--hz", "foo"])
+
+
+class TestTickjer(VumiTestCase):
+    def setUp(self):
+        self.override_ticker_clock()
+
+    def override_ticker_clock(self):
+        orig_clock = Ticker.clock
+
+        def restore_clock():
+            Ticker.clock = orig_clock
+
+        Ticker.clock = Clock()
+        self.add_cleanup(restore_clock)
+
+    def test_first_tick(self):
+        t = Ticker(hz=1)
+
+        d1 = t.tick()
+        self.assertFalse(d1.called)
+        t.clock.advance(0)
+        self.assertTrue(d1.called)
+
+    def test_fast(self):
+        t = Ticker(hz=1)
+
+        t.tick()
+        t.clock.advance(0.1)
+
+        d = t.tick()
+        self.assertFalse(d.called)
+        t.clock.advance(0.5)
+        self.assertFalse(d.called)
+        t.clock.advance(0.5)
+        self.assertTrue(d.called)
+
+    def test_slow(self):
+        t = Ticker(hz=1)
+
+        t.tick()
+        t.clock.advance(1.5)
+
+        d = t.tick()
+        self.assertFalse(d.called)
+        t.clock.advance(0)
+        self.assertTrue(d.called)
 
 
 class TestJsBoxSend(VumiTestCase):
