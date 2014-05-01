@@ -29,6 +29,8 @@ class JsBoxSendOptions(VumiOptions):
          "File containing persistence configuration."],
         ["hz", None, "60.0",
          "Maximum number of messages to send per second."],
+        ["exclude-addresses-file", None, None,
+         "File containing addresses to exclude, one per line."],
     ]
 
     def postOptions(self):
@@ -98,27 +100,48 @@ class JsBoxSendWorker(Worker):
     SEND_DELAY = 0.01  # No more than 100 msgs/second to the queue.
 
     def send_inbound_push_trigger(self, to_addr, conversation):
-        self.emit('Starting %r -> %s' % (conversation, to_addr), err=True)
+        self.emit('Starting %r [%s] -> %s' % (
+            conversation.name, conversation.key, to_addr))
         msg = mk_inbound_push_trigger(to_addr, conversation)
         return self.send_to_conv(conversation, msg)
 
     @inlineCallbacks
-    def send_jsbox(self, user_account_key, conversation_key, hz=60):
+    def send_jsbox(self, user_account_key, conversation_key, hz=60,
+                   addr_exclude_path=None):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         delivery_class = jsbox_js_config(conv.config).get('delivery_class')
-        to_addrs = yield self.get_contact_addrs_for_conv(conv, delivery_class)
+        excluded_addrs = self.get_excluded_addrs(addr_exclude_path)
+        to_addrs = yield self.get_contact_addrs_for_conv(
+            conv, delivery_class, excluded_addrs)
         ticker = Ticker(hz=hz)
-        for to_addr in to_addrs:
+        for i, to_addr in enumerate(to_addrs):
             yield self.send_inbound_push_trigger(to_addr, conv)
+            if (i + 1) % 100 == 0:
+                self.emit("Messages sent: %s / %s" % (i + 1, len(to_addrs)))
             yield ticker.tick()
 
+    def get_excluded_addrs(self, addr_exclude_path):
+        if addr_exclude_path is None:
+            return set()
+
+        excluded_addrs = set()
+        with open(addr_exclude_path, 'r') as exclude_file:
+            for line in exclude_file.readlines():
+                line = line.strip()
+                if line:
+                    excluded_addrs.add(line)
+        return excluded_addrs
+
     @inlineCallbacks
-    def get_contact_addrs_for_conv(self, conv, delivery_class):
+    def get_contact_addrs_for_conv(self, conv, delivery_class, excluded_addrs):
         addrs = []
         for contacts in (yield conv.get_opted_in_contact_bunches(
                 delivery_class)):
             for contact in (yield contacts):
-                addrs.append(contact.addr_for(delivery_class))
+                addr = contact.addr_for(delivery_class)
+                if addr not in excluded_addrs:
+                    addrs.append(addr)
+            self.emit("Addresses collected: %s" % (len(addrs),))
         returnValue(addrs)
 
     @inlineCallbacks
@@ -172,7 +195,7 @@ def main(options):
     worker = yield JsBoxSendWorker.WORKER_QUEUE.get()
     yield worker.send_jsbox(
         options['user-account-key'], options['conversation-key'],
-        hz=options['hz'])
+        options['hz'], options['exclude-addresses-file'])
     reactor.stop()
 
 
