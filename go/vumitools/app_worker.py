@@ -80,7 +80,7 @@ class GoWorkerMixin(object):
             self.consume_control_command,
             exchange_name=api_routing_config['exchange'],
             exchange_type=api_routing_config['exchange_type'],
-            message_class=VumiApiCommand)
+            message_class=VumiApiCommand, prefetch_count=1)
         return d.addCallback(lambda r: setattr(self, 'control_consumer', r))
 
     def _go_setup_event_publisher(self, config):
