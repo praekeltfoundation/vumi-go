@@ -255,10 +255,8 @@ class VumiUserApi(object):
         returnValue(SortedDict([(router_type, router_settings[router_type])
                                 for router_type in sorted(router_settings)]))
 
-    @Manager.calls_manager
     def list_groups(self):
-        returnValue(sorted((yield self.contact_store.list_groups()),
-            key=lambda group: group.name))
+        return self.contact_store.list_groups()
 
     @Manager.calls_manager
     def new_conversation(self, conversation_type, name, description, config,

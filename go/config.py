@@ -136,6 +136,10 @@ _VUMI_INSTALLED_ROUTERS = {
         'namespace': 'keyword',
         'display_name': 'Keyword',
     },
+    'go.routers.group': {
+        'namespace': 'group',
+        'display_name': 'Group',
+    },
     'go.routers.app_multiplexer': {
         'namespace': 'app_multiplexer',
         'display_name': 'Application Multiplexer',

@@ -326,11 +326,10 @@ class ContactStore(PerAccountStore):
     def contact_for_addr(self, delivery_class, addr, create=True):
         """
         Returns a contact from a delivery class and address, raising a
-        ContactNotFound exception if the contact does not exist.
+        ContactNotFoundError exception if the contact does not exist.
         """
         field = self._contact_field_for_addr(delivery_class, addr)
         keys = yield self.contacts.search(**field).get_keys()
-
         if keys:
             contacts = []
             bunches = yield self.contacts.load_all_bunches(keys)
