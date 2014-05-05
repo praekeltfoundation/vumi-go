@@ -4,10 +4,9 @@ from uuid import uuid4
 from datetime import datetime
 
 from twisted.internet.defer import returnValue
-
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
-                                 Dynamic)
+from vumi.persist.fields import (
+    Unicode, ManyToMany, ForeignKey, Timestamp, Dynamic)
 
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact.migrations import ContactMigrator
@@ -44,28 +43,30 @@ class ContactGroup(Model):
 
 
 class Contact(Model):
+    """A contact"""
 
-    VERSION = 1
+    VERSION = 2
     MIGRATOR = ContactMigrator
 
-    """A contact"""
     # key is UUID
     user_account = ForeignKey(UserAccount)
     name = Unicode(max_length=255, null=True)
     surname = Unicode(max_length=255, null=True)
     email_address = Unicode(null=True)  # EmailField?
-    msisdn = Unicode(max_length=255)
     dob = Timestamp(null=True)
     twitter_handle = Unicode(max_length=100, null=True)
     facebook_id = Unicode(max_length=100, null=True)
     bbm_pin = Unicode(max_length=100, null=True)
-    gtalk_id = Unicode(null=True)
-    mxit_id = Unicode(null=True)
-    wechat_id = Unicode(null=True)
     created_at = Timestamp(default=datetime.utcnow)
     groups = ManyToMany(ContactGroup)
     extra = Dynamic(prefix='extras-')
     subscription = Dynamic(prefix='subscription-')
+
+    # Address fields
+    msisdn = Unicode(max_length=255, index=True)
+    gtalk_id = Unicode(null=True, index=True)
+    mxit_id = Unicode(null=True, index=True)
+    wechat_id = Unicode(null=True, index=True)
 
     def add_to_group(self, group):
         if isinstance(group, ContactGroup):
