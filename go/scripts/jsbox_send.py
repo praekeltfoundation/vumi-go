@@ -2,7 +2,7 @@ import sys
 from twisted.python import usage
 from twisted.internet import reactor
 from twisted.internet.defer import (
-    maybeDeferred, DeferredQueue, inlineCallbacks, returnValue)
+    maybeDeferred, Deferred, DeferredQueue, inlineCallbacks, returnValue)
 from twisted.internet.task import deferLater
 from vumi.service import Worker, WorkerCreator
 from vumi.servicemaker import VumiOptions
@@ -27,6 +27,10 @@ class JsBoxSendOptions(VumiOptions):
          "Conversation to send messages to."],
         ["vumigo-config", None, None,
          "File containing persistence configuration."],
+        ["hz", None, "60.0",
+         "Maximum number of messages to send per second."],
+        ["exclude-addresses-file", None, None,
+         "File containing addresses to exclude, one per line."],
     ]
 
     def postOptions(self):
@@ -40,10 +44,49 @@ class JsBoxSendOptions(VumiOptions):
         if not self['conversation-key']:
             raise usage.UsageError(
                 "Please provide the conversation-key parameter.")
+        try:
+            hz = float(self['hz'])
+        except (TypeError, ValueError):
+            hz_okay = False
+        else:
+            hz_okay = bool(hz > 0)
+        if not hz_okay:
+            raise usage.UsageError(
+                "Please provide a positive float for hz")
+        self['hz'] = hz
 
     def get_vumigo_config(self):
         with file(self['vumigo-config'], 'r') as stream:
             return yaml.safe_load(stream)
+
+
+class Ticker(object):
+    """
+    An object that limits calls to a fixed number per second.
+
+    :param float hz:
+       Times per second that :meth:``tick`` may be called.
+    """
+
+    clock = reactor
+
+    def __init__(self, hz):
+        self._hz = hz
+        self._min_dt = 1.0 / hz
+        self._last = None
+
+    def tick(self):
+        d = Deferred()
+        delay = 0
+        if self._last is None:
+            self._last = self.clock.seconds()
+        else:
+            now = self.clock.seconds()
+            dt = now - self._last
+            delay = 0 if (dt > self._min_dt) else (self._min_dt - dt)
+            self._last = now
+        self.clock.callLater(delay, d.callback, None)
+        return d
 
 
 class JsBoxSendWorker(Worker):
@@ -57,25 +100,48 @@ class JsBoxSendWorker(Worker):
     SEND_DELAY = 0.01  # No more than 100 msgs/second to the queue.
 
     def send_inbound_push_trigger(self, to_addr, conversation):
-        self.emit('Starting %r -> %s' % (conversation, to_addr), err=True)
+        self.emit('Starting %r [%s] -> %s' % (
+            conversation.name, conversation.key, to_addr))
         msg = mk_inbound_push_trigger(to_addr, conversation)
         return self.send_to_conv(conversation, msg)
 
     @inlineCallbacks
-    def send_jsbox(self, user_account_key, conversation_key):
+    def send_jsbox(self, user_account_key, conversation_key, hz=60,
+                   addr_exclude_path=None):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         delivery_class = jsbox_js_config(conv.config).get('delivery_class')
-        to_addrs = yield self.get_contact_addrs_for_conv(conv, delivery_class)
-        for to_addr in to_addrs:
+        excluded_addrs = self.get_excluded_addrs(addr_exclude_path)
+        to_addrs = yield self.get_contact_addrs_for_conv(
+            conv, delivery_class, excluded_addrs)
+        ticker = Ticker(hz=hz)
+        for i, to_addr in enumerate(to_addrs):
             yield self.send_inbound_push_trigger(to_addr, conv)
+            if (i + 1) % 100 == 0:
+                self.emit("Messages sent: %s / %s" % (i + 1, len(to_addrs)))
+            yield ticker.tick()
+
+    def get_excluded_addrs(self, addr_exclude_path):
+        if addr_exclude_path is None:
+            return set()
+
+        excluded_addrs = set()
+        with open(addr_exclude_path, 'r') as exclude_file:
+            for line in exclude_file.readlines():
+                line = line.strip()
+                if line:
+                    excluded_addrs.add(line)
+        return excluded_addrs
 
     @inlineCallbacks
-    def get_contact_addrs_for_conv(self, conv, delivery_class):
+    def get_contact_addrs_for_conv(self, conv, delivery_class, excluded_addrs):
         addrs = []
         for contacts in (yield conv.get_opted_in_contact_bunches(
                 delivery_class)):
             for contact in (yield contacts):
-                addrs.append(contact.addr_for(delivery_class))
+                addr = contact.addr_for(delivery_class)
+                if addr not in excluded_addrs:
+                    addrs.append(addr)
+            self.emit("Addresses collected: %s" % (len(addrs),))
         returnValue(addrs)
 
     @inlineCallbacks
@@ -128,7 +194,8 @@ def main(options):
 
     worker = yield JsBoxSendWorker.WORKER_QUEUE.get()
     yield worker.send_jsbox(
-        options['user-account-key'], options['conversation-key'])
+        options['user-account-key'], options['conversation-key'],
+        options['hz'], options['exclude-addresses-file'])
     reactor.stop()
 
 
