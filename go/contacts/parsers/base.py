@@ -165,7 +165,7 @@ class ContactFileParser(object):
         at the row being a row with column headers and not column values.
         """
         column_set = set([column.lower().strip() for column in columns])
-        hint_set = set(['phone', 'contact', 'msisdn', 'number'])
+        hint_set = set(['phone', 'contact', 'msisdn', 'number', 'key'])
         return hint_set.intersection(column_set)
 
     @classmethod
