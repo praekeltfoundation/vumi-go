@@ -109,16 +109,29 @@ class TestDialogueApplication(VumiTestCase):
                          "What is your favourite colour?\n1. Red\n2. Blue")
 
     @inlineCallbacks
-    def test_event(self):
+    def test_ack(self):
         conversation = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conversation)
         msg = yield self.app_helper.make_stored_outbound(
             conversation, "foo")
-        with LogCatcher(message="Saw") as lc:
+        with LogCatcher(message="Ignoring") as lc:
             yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
-            self.assertEqual(
-                lc.messages(),
-                ['Saw ack for message %s.' % (msg['message_id'],)])
+        self.assertEqual(
+            lc.messages(),
+            ["Ignoring event for conversation: %s" % (conversation.key,)])
+
+    @inlineCallbacks
+    def test_delivery_report(self):
+        conversation = yield self.setup_conversation()
+        yield self.app_helper.start_conversation(conversation)
+        msg = yield self.app_helper.make_stored_outbound(
+            conversation, "foo")
+        with LogCatcher(message="Ignoring") as lc:
+            yield self.app_helper.make_dispatch_delivery_report(
+                msg, conv=conversation)
+        self.assertEqual(
+            lc.messages(),
+            ["Ignoring event for conversation: %s" % (conversation.key,)])
 
     @inlineCallbacks
     def test_send_message_command(self):

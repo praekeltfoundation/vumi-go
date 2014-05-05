@@ -142,3 +142,6 @@ class TestGoApplicationWorker(VumiTestCase):
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
             [("campaigns.test-0-user.stores.some-store.some-metric", 42)])
+
+    def test_control_queue_prefetch(self):
+        self.assertEqual(self.app.control_consumer.prefetch_count, 1)
