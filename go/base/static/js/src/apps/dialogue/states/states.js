@@ -250,7 +250,8 @@
       dummy: 'go.apps.dialogue.states.dummy.DummyStateView',
       choice: 'go.apps.dialogue.states.choice.ChoiceStateView',
       freetext: 'go.apps.dialogue.states.freetext.FreeTextStateView',
-      end: 'go.apps.dialogue.states.end.EndStateView'
+      end: 'go.apps.dialogue.states.end.EndStateView',
+      group: 'go.apps.dialogue.states.group.GroupStateView'
     },
 
     events: {
