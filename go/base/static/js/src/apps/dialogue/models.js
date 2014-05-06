@@ -6,8 +6,7 @@
   var stateMachine = go.components.stateMachine,
       EndpointModel = stateMachine.EndpointModel,
       ConnectionModel = stateMachine.ConnectionModel,
-      StateModel = stateMachine.StateModel,
-      StateMachineModel = stateMachine.StateMachineModel;
+      StateModel = stateMachine.StateModel;
 
   var Model = go.components.models.Model;
 
@@ -119,6 +118,26 @@
     }
   });
 
+  var GroupStateModel = DialogueStateModel.extend({
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'entry_endpoint',
+      relatedModel: DialogueEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'exit_endpoint',
+      relatedModel: DialogueEndpointModel
+    }],
+
+    defaults: function() {
+      return _({
+        group: null,
+        entry_endpoint: {},
+        exit_endpoint: {}
+      }).defaults(GroupStateModel.__super__.defaults.call(this));
+    }
+  });
+
   var EndStateModel = DialogueStateModel.extend({
     storableOnContact: false,
 
@@ -218,6 +237,7 @@
     DummyStateModel: DummyStateModel,
     ChoiceStateModel: ChoiceStateModel,
     FreeTextStateModel: FreeTextStateModel,
-    EndStateModel: EndStateModel
+    EndStateModel: EndStateModel,
+    GroupStateModel: GroupStateModel
   });
 })(go.apps.dialogue.models = {});
