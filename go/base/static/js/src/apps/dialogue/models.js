@@ -3,12 +3,16 @@
 // Models for dialogue screen.
 
 (function(exports) {
+  var Model = go.components.models.Model;
+
   var stateMachine = go.components.stateMachine,
       EndpointModel = stateMachine.EndpointModel,
       ConnectionModel = stateMachine.ConnectionModel,
       StateModel = stateMachine.StateModel;
 
-  var Model = go.components.models.Model;
+  var contacts = go.contacts.models,
+      GroupModel = contacts.GroupModel,
+      GroupCollection = contacts.GroupCollection;
 
   var DialogueEndpointModel = EndpointModel.extend({
     defaults: function() { return {uuid: uuid.v4()}; }
@@ -35,7 +39,8 @@
       dummy: 'go.apps.dialogue.models.DummyStateModel',
       choice: 'go.apps.dialogue.models.ChoiceStateModel',
       freetext: 'go.apps.dialogue.models.FreeTextStateModel',
-      end: 'go.apps.dialogue.models.EndStateModel'
+      end: 'go.apps.dialogue.models.EndStateModel',
+      group: 'go.apps.dialogue.models.GroupStateModel'
     },
 
     defaults: function() {
@@ -198,6 +203,11 @@
       key: 'urls',
       relatedModel: Model
     }, {
+      type: Backbone.HasMany,
+      key: 'groups',
+      relatedModel: GroupModel,
+      collectionType: GroupCollection
+    }, {
       type: Backbone.HasOne,
       key: 'poll_metadata',
       relatedModel: DialogueMetadataModel
@@ -221,6 +231,7 @@
     defaults: {
       states: [],
       urls: {},
+      groups: [],
       connections: [],
       poll_metadata: {}
     }

@@ -11,6 +11,19 @@
     conversation_key: 'conversation-1',
     poll_metadata: {repeatable: false},
     start_state: {uuid: 'state1'},
+    groups: [{
+      key: 'group1',
+      name: 'Group1',
+      urls: null
+    }, {
+      key: 'group2',
+      name: 'Group2',
+      urls: null
+    }, {
+      key: 'group3',
+      name: 'Group3',
+      urls: null
+    }],
     urls: {
       show: 'conversation:show:conversation-1'
     },
