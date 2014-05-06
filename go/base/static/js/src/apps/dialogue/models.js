@@ -124,6 +124,8 @@
   });
 
   var GroupStateModel = DialogueStateModel.extend({
+    storableOnContact: false,
+
     relations: [{
       type: Backbone.HasOne,
       key: 'entry_endpoint',
