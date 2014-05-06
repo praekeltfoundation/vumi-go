@@ -20,9 +20,15 @@
     <label class="control-label section-header">Choose the type of question</label>
 
     <select class="type form-control">
-      <option value="choice">Recipients select one option from a list</option>
-      <option value="freetext">Recipients can reply with their own text</option>
-      <option value="end">Recipients are shown text and the session ends</option>
+      <optgroup label="Screens">
+        <option value="choice">Recipients select one option from a list</option>
+        <option value="freetext">Recipients can reply with their own text</option>
+        <option value="end">Recipients are shown text and the session ends</option>
+      </optgroup>
+
+      <optgroup label="Actions">
+        <option value="group">Recipients are added to a contact group</option>
+      </optgroup>
     </select>
   </div>
 
