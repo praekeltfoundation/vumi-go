@@ -332,8 +332,9 @@ class ContactStore(PerAccountStore):
 
     def new_contact_for_addr(self, delivery_class, addr):
         field, value = self._contact_field_for_addr(delivery_class, addr)
-        field.setdefault('msisdn', u'unknown')
-        return self.new_contact(**{field: value})
+        field_dict = {field: value}
+        field_dict.setdefault('msisdn', u'unknown')
+        return self.new_contact(**field_dict)
 
     @Manager.calls_manager
     def contact_for_addr(self, delivery_class, addr, create=True):

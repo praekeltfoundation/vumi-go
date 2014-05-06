@@ -212,3 +212,16 @@ class TestContactStore(VumiTestCase):
         found_contact = yield self.contact_store.contact_for_addr(
             'sms', u'+27831234567', create=False)
         self.assertEqual(contact.key, found_contact.key)
+
+    @inlineCallbacks
+    def test_new_contact_for_addr(self):
+        contact = yield self.contact_store.new_contact_for_addr(
+            'sms', u'+27831234567')
+        self.assertEqual(contact.msisdn, u'+27831234567')
+
+    @inlineCallbacks
+    def test_new_contact_for_addr_gtalk(self):
+        contact = yield self.contact_store.new_contact_for_addr(
+            'gtalk', u'foo@example.com')
+        self.assertEqual(contact.gtalk_id, u'foo@example.com')
+        self.assertEqual(contact.msisdn, u'unknown')
