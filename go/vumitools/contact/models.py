@@ -106,6 +106,18 @@ class Contact(Model):
 class ContactStore(PerAccountStore):
     NONSETTABLE_CONTACT_FIELDS = ['$VERSION', 'user_account']
 
+    # These two values control how contacts are found based on address.
+    # If FIND_BY_INDEX is disabled, search will be used instead of index
+    # lookups to find contacts. This will improve performance if contacts have
+    # not yet been migrated to version 2.
+    # If FIND_BY_INDEX_SEARCH_FALLBACK is disabled, the fallback search (used
+    # when the index lookup is enabled and finds nothing) will be disabled.
+    # This avoids unnecessary work if the contacts being sought don't exist,
+    # but will result in false negatives if there are matching contacts that
+    # have not yet been migrated to version 2.
+    FIND_BY_INDEX = True
+    FIND_BY_INDEX_SEARCH_FALLBACK = True
+
     def setup_proxies(self):
         self.contacts = self.manager.proxy(Contact)
         self.groups = self.manager.proxy(ContactGroup)
@@ -305,23 +317,23 @@ class ContactStore(PerAccountStore):
     def _contact_field_for_addr(self, delivery_class, addr):
         # TODO: change when we have proper address types in vumi
         if delivery_class in ('sms', 'ussd'):
-            return {'msisdn': '+' + addr.lstrip('+')}
+            return ('msisdn', '+' + addr.lstrip('+'))
         elif delivery_class == 'gtalk':
-            return {'gtalk_id': addr.partition('/')[0]}
+            return ('gtalk_id', addr.partition('/')[0])
         elif delivery_class == 'twitter':
-            return {'twitter_handle': addr}
+            return ('twitter_handle', addr)
         elif delivery_class == 'mxit':
-            return {'mxit_id': addr}
+            return ('mxit_id', addr)
         elif delivery_class == 'wechat':
-            return {'wechat_id': addr}
+            return ('wechat_id', addr)
         else:
             raise ContactError(
                 "Unsupported transport_type %r" % delivery_class)
 
     def new_contact_for_addr(self, delivery_class, addr):
-        field = self._contact_field_for_addr(delivery_class, addr)
+        field, value = self._contact_field_for_addr(delivery_class, addr)
         field.setdefault('msisdn', u'unknown')
-        return self.new_contact(**field)
+        return self.new_contact(**{field: value})
 
     @Manager.calls_manager
     def contact_for_addr(self, delivery_class, addr, create=True):
@@ -329,8 +341,15 @@ class ContactStore(PerAccountStore):
         Returns a contact from a delivery class and address, raising a
         ContactNotFoundError exception if the contact does not exist.
         """
-        field = self._contact_field_for_addr(delivery_class, addr)
-        keys = yield self.contacts.search(**field).get_keys()
+        field, value = self._contact_field_for_addr(delivery_class, addr)
+        keys = None
+        if self.FIND_BY_INDEX:
+            keys = yield self.contacts.index_keys(field, value)
+        if (keys is None) or (self.FIND_BY_INDEX_SEARCH_FALLBACK and not keys):
+            # Either we didn't try an index lookup (keys is None) or fallback
+            # search is enabled and the index lookup found nothing.
+            keys = yield self.contacts.search(**{field: value}).get_keys()
+
         if keys:
             contacts = []
             bunches = yield self.contacts.load_all_bunches(keys)

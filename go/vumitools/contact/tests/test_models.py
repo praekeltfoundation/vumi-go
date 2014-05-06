@@ -1,14 +1,14 @@
 from twisted.internet.defer import inlineCallbacks
-
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 
 from go.vumitools.account.models import AccountStore
+from go.vumitools.contact.models import ContactNotFoundError
 from go.vumitools.contact.models import ContactStore as ContactStoreV2
 from go.vumitools.contact.old_models import ContactStoreVNone, ContactStoreV1
+from go.vumitools.tests.helpers import VumiApiHelper
 
 
 class TestContact(VumiTestCase):
-
     @inlineCallbacks
     def setUp(self):
         self.persistence_helper = self.add_helper(
@@ -20,10 +20,8 @@ class TestContact(VumiTestCase):
         # Some old stores for testing migrations.
         self.contact_store_vnone = ContactStoreVNone(
             riak_manager, self.user.key)
-        self.contact_store_v1 = ContactStoreV1(
-            riak_manager, self.user.key)
-        self.contact_store_v2 = ContactStoreV2(
-            riak_manager, self.user.key)
+        self.contact_store_v1 = ContactStoreV1(riak_manager, self.user.key)
+        self.contact_store_v2 = ContactStoreV2(riak_manager, self.user.key)
 
     def assert_index(self, model_obj, index_name, *index_values):
         values = []
@@ -117,3 +115,85 @@ class TestContact(VumiTestCase):
         self.assert_index(contact, 'msisdn_bin', 'msisdn')
         self.assert_index(contact, 'mxit_id_bin', 'mxit')
         self.assert_index(contact, 'wechat_id_bin', 'wechat')
+
+
+class TestContactStore(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.get_or_create_user()
+        riak_manager = self.vumi_helper.get_riak_manager()
+        self.contact_store = ContactStoreV2(
+            riak_manager, self.user_helper.account_key)
+        # Old store for making unindexed contacts.
+        self.contact_store_v1 = ContactStoreV1(
+            riak_manager, self.user_helper.account_key)
+
+    @inlineCallbacks
+    def test_contact_for_addr_not_found(self):
+        yield self.contact_store.new_contact(
+            name=u'name', msisdn=u'+27831234567')
+        self.contact_store.FIND_BY_INDEX_SEARCH_FALLBACK = False
+        contact_d = self.contact_store.contact_for_addr(
+            'sms', u'nothing', create=False)
+        yield self.assertFailure(contact_d, ContactNotFoundError)
+
+    @inlineCallbacks
+    def test_contact_for_addr_msisdn(self):
+        contact = yield self.contact_store.new_contact(
+            name=u'name', msisdn=u'+27831234567')
+        found_contact = yield self.contact_store.contact_for_addr(
+            'sms', u'+27831234567', create=False)
+        self.assertEqual(contact.key, found_contact.key)
+
+    @inlineCallbacks
+    def test_contact_for_addr_gtalk(self):
+        contact = yield self.contact_store.new_contact(
+            name=u'name', msisdn=u'+27831234567', gtalk_id=u'foo@example.com')
+        found_contact = yield self.contact_store.contact_for_addr(
+            'gtalk', u'foo@example.com', create=False)
+        self.assertEqual(contact.key, found_contact.key)
+
+    @inlineCallbacks
+    def test_contact_for_addr_unindexed(self):
+        contact = yield self.contact_store_v1.new_contact(
+            name=u'name', msisdn=u'+27831234567')
+        found_contact = yield self.contact_store.contact_for_addr(
+            'sms', u'+27831234567', create=False)
+        self.assertEqual(contact.key, found_contact.key)
+
+    @inlineCallbacks
+    def test_contact_for_addr_unindexed_index_disabled(self):
+        contact = yield self.contact_store_v1.new_contact(
+            name=u'name', msisdn=u'+27831234567')
+        self.contact_store.FIND_BY_INDEX = False
+        found_contact = yield self.contact_store.contact_for_addr(
+            'sms', u'+27831234567', create=False)
+        self.assertEqual(contact.key, found_contact.key)
+
+    @inlineCallbacks
+    def test_contact_for_addr_unindexed_index_and_fallback_disabled(self):
+        contact = yield self.contact_store_v1.new_contact(
+            name=u'name', msisdn=u'+27831234567')
+        self.contact_store.FIND_BY_INDEX = False
+        found_contact = yield self.contact_store.contact_for_addr(
+            'sms', u'+27831234567', create=False)
+        self.assertEqual(contact.key, found_contact.key)
+
+    @inlineCallbacks
+    def test_contact_for_addr_unindexed_fallback_disabled(self):
+        yield self.contact_store_v1.new_contact(
+            name=u'name', msisdn=u'+27831234567')
+        self.contact_store.FIND_BY_INDEX_SEARCH_FALLBACK = False
+        contact_d = self.contact_store.contact_for_addr(
+            'sms', u'+27831234567', create=False)
+        yield self.assertFailure(contact_d, ContactNotFoundError)
+
+    @inlineCallbacks
+    def test_contact_for_addr_indexed_fallback_disabled(self):
+        contact = yield self.contact_store.new_contact(
+            name=u'name', msisdn=u'+27831234567')
+        self.contact_store.FIND_BY_INDEX_SEARCH_FALLBACK = False
+        found_contact = yield self.contact_store.contact_for_addr(
+            'sms', u'+27831234567', create=False)
+        self.assertEqual(contact.key, found_contact.key)
