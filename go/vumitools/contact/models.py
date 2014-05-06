@@ -364,9 +364,10 @@ class ContactStore(PerAccountStore):
 
         if create:
             contact_id = uuid4().get_hex()
-            field.setdefault('msisdn', u'unknown')
+            field_dict = {field: value}
+            field_dict.setdefault('msisdn', u'unknown')
             returnValue(self.contacts(
-                contact_id, user_account=self.user_account_key, **field))
+                contact_id, user_account=self.user_account_key, **field_dict))
 
         raise ContactNotFoundError(
             "Contact with address '%s' for delivery class '%s' not found."
