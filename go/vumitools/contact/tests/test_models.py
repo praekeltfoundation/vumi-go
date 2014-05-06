@@ -23,15 +23,17 @@ class TestContact(VumiTestCase):
         self.contact_store_v1 = ContactStoreV1(riak_manager, self.user.key)
         self.contact_store_v2 = ContactStoreV2(riak_manager, self.user.key)
 
-    def assert_index(self, model_obj, index_name, *index_values):
-        values = []
+    def assert_with_index(self, model_obj, field, value):
+        self.assertEqual(getattr(model_obj, field), value)
+        index_name = '%s_bin' % (field,)
+        index_values = []
         for index in model_obj._riak_object.get_indexes():
             if index.get_field() == index_name:
-                values.append(index.get_value())
-        self.assertEqual(
-            sorted(index_values), sorted(values),
-            "Index value mismatch for %r: Expected %s, got %s" % (
-                index_name, sorted(index_values), sorted(values)))
+                index_values.append(index.get_value())
+        if value is None:
+            self.assertEqual([], index_values)
+        else:
+            self.assertEqual([value], index_values)
 
     @inlineCallbacks
     def test_contact_vnone(self):
@@ -39,6 +41,14 @@ class TestContact(VumiTestCase):
             name=u'name', msisdn=u'msisdn')
         self.assertEqual(contact.name, 'name')
         self.assertEqual(contact.msisdn, 'msisdn')
+
+    @inlineCallbacks
+    def test_contact_v1(self):
+        contact = yield self.contact_store_v1.new_contact(
+            msisdn=u'msisdn', mxit_id=u'mxit', wechat_id=u'wechat')
+        self.assertEqual(contact.msisdn, 'msisdn')
+        self.assertEqual(contact.mxit_id, 'mxit')
+        self.assertEqual(contact.wechat_id, 'wechat')
 
     @inlineCallbacks
     def test_contact_vnone_to_v1(self):
@@ -59,10 +69,27 @@ class TestContact(VumiTestCase):
         self.assertEqual(contact_v1.VERSION, 1)
 
     @inlineCallbacks
+    def test_contact_v2(self):
+        contact = yield self.contact_store_v2.new_contact(
+            name=u'name', msisdn=u'msisdn', twitter_handle=u'twitter',
+            facebook_id=u'facebook', bbm_pin=u'bbm', gtalk_id=u'gtalk',
+            mxit_id=u'mxit', wechat_id=u'wechat')
+
+        self.assertEqual(contact.name, 'name')
+        self.assert_with_index(contact, 'msisdn', 'msisdn')
+        self.assert_with_index(contact, 'twitter_handle', 'twitter')
+        self.assert_with_index(contact, 'facebook_id', 'facebook')
+        self.assert_with_index(contact, 'bbm_pin', 'bbm')
+        self.assert_with_index(contact, 'gtalk_id', 'gtalk')
+        self.assert_with_index(contact, 'mxit_id', 'mxit')
+        self.assert_with_index(contact, 'wechat_id', 'wechat')
+
+    @inlineCallbacks
     def test_contact_v1_to_v2(self):
         contact_v1 = yield self.contact_store_v1.new_contact(
-            name=u'name', msisdn=u'msisdn', mxit_id=u'mxit',
-            wechat_id=u'wechat')
+            name=u'name', msisdn=u'msisdn', twitter_handle=u'twitter',
+            facebook_id=u'facebook', bbm_pin=u'bbm', gtalk_id=u'gtalk',
+            mxit_id=u'mxit', wechat_id=u'wechat')
         contact_v1.extra["thing"] = u"extra-thing"
         contact_v1.subscription["app"] = u"1"
         yield contact_v1.save()
@@ -70,18 +97,22 @@ class TestContact(VumiTestCase):
         contact_v2 = yield self.contact_store_v2.get_contact_by_key(
             contact_v1.key)
         self.assertEqual(contact_v2.name, 'name')
-        self.assertEqual(contact_v2.msisdn, 'msisdn')
-        self.assertEqual(contact_v2.mxit_id, 'mxit')
-        self.assertEqual(contact_v2.wechat_id, 'wechat')
         self.assertEqual(contact_v2.extra["thing"], u"extra-thing")
         self.assertEqual(contact_v2.subscription["app"], u"1")
         self.assertEqual(contact_v2.VERSION, 2)
-        self.assert_index(contact_v2, 'msisdn_bin', 'msisdn')
+        self.assert_with_index(contact_v2, 'msisdn', 'msisdn')
+        self.assert_with_index(contact_v2, 'twitter_handle', 'twitter')
+        self.assert_with_index(contact_v2, 'facebook_id', 'facebook')
+        self.assert_with_index(contact_v2, 'bbm_pin', 'bbm')
+        self.assert_with_index(contact_v2, 'gtalk_id', 'gtalk')
+        self.assert_with_index(contact_v2, 'mxit_id', 'mxit')
+        self.assert_with_index(contact_v2, 'wechat_id', 'wechat')
 
     @inlineCallbacks
     def test_contact_vnone_to_v2(self):
         contact_vnone = yield self.contact_store_vnone.new_contact(
-            name=u'name', msisdn=u'msisdn')
+            name=u'name', msisdn=u'msisdn', twitter_handle=u'twitter',
+            facebook_id=u'facebook', bbm_pin=u'bbm', gtalk_id=u'gtalk')
         contact_vnone.extra["thing"] = u"extra-thing"
         contact_vnone.subscription["app"] = u"1"
         yield contact_vnone.save()
@@ -89,32 +120,16 @@ class TestContact(VumiTestCase):
         contact_v2 = yield self.contact_store_v2.get_contact_by_key(
             contact_vnone.key)
         self.assertEqual(contact_v2.name, 'name')
-        self.assertEqual(contact_v2.msisdn, 'msisdn')
-        self.assertEqual(contact_v2.mxit_id, None)
-        self.assertEqual(contact_v2.wechat_id, None)
         self.assertEqual(contact_v2.extra["thing"], u"extra-thing")
         self.assertEqual(contact_v2.subscription["app"], u"1")
         self.assertEqual(contact_v2.VERSION, 2)
-        self.assert_index(contact_v2, 'msisdn_bin', 'msisdn')
-
-    @inlineCallbacks
-    def test_contact_v1(self):
-        contact = yield self.contact_store_v1.new_contact(
-            msisdn=u'msisdn', mxit_id=u'mxit', wechat_id=u'wechat')
-        self.assertEqual(contact.msisdn, 'msisdn')
-        self.assertEqual(contact.mxit_id, 'mxit')
-        self.assertEqual(contact.wechat_id, 'wechat')
-
-    @inlineCallbacks
-    def test_contact_v2(self):
-        contact = yield self.contact_store_v2.new_contact(
-            msisdn=u'msisdn', mxit_id=u'mxit', wechat_id=u'wechat')
-        self.assertEqual(contact.msisdn, 'msisdn')
-        self.assertEqual(contact.mxit_id, 'mxit')
-        self.assertEqual(contact.wechat_id, 'wechat')
-        self.assert_index(contact, 'msisdn_bin', 'msisdn')
-        self.assert_index(contact, 'mxit_id_bin', 'mxit')
-        self.assert_index(contact, 'wechat_id_bin', 'wechat')
+        self.assert_with_index(contact_v2, 'msisdn', 'msisdn')
+        self.assert_with_index(contact_v2, 'twitter_handle', 'twitter')
+        self.assert_with_index(contact_v2, 'facebook_id', 'facebook')
+        self.assert_with_index(contact_v2, 'bbm_pin', 'bbm')
+        self.assert_with_index(contact_v2, 'gtalk_id', 'gtalk')
+        self.assert_with_index(contact_v2, 'mxit_id', None)
+        self.assert_with_index(contact_v2, 'wechat_id', None)
 
 
 class TestContactStore(VumiTestCase):

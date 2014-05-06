@@ -24,8 +24,7 @@ class ContactMigrator(ModelMigrator):
     def migrate_from_1(self, mdata):
 
         mdata.copy_values(
-            'name', 'surname', 'email_address', 'dob', 'twitter_handle',
-            'facebook_id', 'bbm_pin', 'created_at')
+            'name', 'surname', 'email_address', 'dob', 'created_at')
 
         mdata.copy_dynamic_values(
             'extras-', 'subscription-')
@@ -34,8 +33,16 @@ class ContactMigrator(ModelMigrator):
         # Add stuff that's new in this version
         mdata.set_value('$VERSION', 2)
 
-        for field in ('msisdn', 'gtalk_id', 'mxit_id', 'wechat_id'):
-            mdata.set_value(
-                field, mdata.old_data[field], index=('%s_bin' % (field,)))
+        new_index_fields = (
+            'msisdn', 'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+            'mxit_id', 'wechat_id')
+
+        for field in new_index_fields:
+            value = mdata.old_data[field]
+            # Only set index if value is set.
+            if value is not None:
+                mdata.set_value(field, value, index=('%s_bin' % (field,)))
+            else:
+                mdata.set_value(field, value)
 
         return mdata

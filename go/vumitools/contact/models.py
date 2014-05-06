@@ -54,9 +54,6 @@ class Contact(Model):
     surname = Unicode(max_length=255, null=True)
     email_address = Unicode(null=True)  # EmailField?
     dob = Timestamp(null=True)
-    twitter_handle = Unicode(max_length=100, null=True)
-    facebook_id = Unicode(max_length=100, null=True)
-    bbm_pin = Unicode(max_length=100, null=True)
     created_at = Timestamp(default=datetime.utcnow)
     groups = ManyToMany(ContactGroup)
     extra = Dynamic(prefix='extras-')
@@ -64,6 +61,9 @@ class Contact(Model):
 
     # Address fields
     msisdn = Unicode(max_length=255, index=True)
+    twitter_handle = Unicode(max_length=100, null=True, index=True)
+    facebook_id = Unicode(max_length=100, null=True, index=True)
+    bbm_pin = Unicode(max_length=100, null=True, index=True)
     gtalk_id = Unicode(null=True, index=True)
     mxit_id = Unicode(null=True, index=True)
     wechat_id = Unicode(null=True, index=True)
