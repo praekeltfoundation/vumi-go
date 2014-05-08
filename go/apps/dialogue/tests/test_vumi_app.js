@@ -189,9 +189,11 @@ describe("app", function() {
                     .setup.user.state('choice-1')
                     .input('1')
                     .check(function(api) {
-                        assert.deepEqual(api.contacts.store[0].groups, [
-                            'group-2',
-                            'group-1'
+                        var contact = api.contacts.store[0];
+
+                        assert.deepEqual(contact.groups.sort(), [
+                            'group-1',
+                            'group-2'
                         ]);
                     })
                     .run();
