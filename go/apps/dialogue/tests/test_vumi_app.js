@@ -199,6 +199,32 @@ describe("app", function() {
                     .run();
             });
 
+            it("should not change the contact's groups if none is assigned",
+            function() {
+                return tester
+                    .setup(function(api) {
+                      var state = _.find(api.config.store.poll.states, {
+                        uuid: 'group-1'
+                      });
+
+                      state.group = null;
+                    })
+                    .setup(function(api) {
+                        api.contacts.add({
+                            msisdn: '+27123',
+                            groups: ['group-2']
+                        });
+                    })
+                    .setup.user.addr('+27123')
+                    .setup.user.state('choice-1')
+                    .input('1')
+                    .check(function(api) {
+                        var contact = api.contacts.store[0];
+                        assert.deepEqual(contact.groups.sort(), ['group-2']);
+                    })
+                    .run();
+            });
+
             it("should redirect to the state linked to the exit endpoint",
             function() {
                 return tester

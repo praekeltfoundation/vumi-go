@@ -119,7 +119,9 @@ var DialogueApp = App.extend(function(self) {
     };
 
     self.types.group = function(desc) {
-        self.contact.groups.push(desc.group.key);
+        if (desc.group) {
+          self.contact.groups.push(desc.group.key);
+        }
 
         return self.im.contacts.save(self.contact).then(function() {
             return self.states.create(self.next(desc.exit_endpoint));
