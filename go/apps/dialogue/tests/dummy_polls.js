@@ -23,10 +23,8 @@ var simple_poll = {
     {
         uuid: "group-1",
         name: "Message 2",
-        store_as: "message-2",
         type: "group",
         group: {key: 'group-1'},
-        store_on_contact: true,
         entry_endpoint: {uuid: "endpoint-3"},
         exit_endpoint: {uuid: "endpoint-4"}
     },
