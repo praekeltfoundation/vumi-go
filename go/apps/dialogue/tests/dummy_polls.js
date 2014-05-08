@@ -21,14 +21,22 @@ var simple_poll = {
         ]
     },
     {
-        uuid: "freetext-1",
+        uuid: "group-1",
         name: "Message 2",
-        store_as: "message-2",
+        type: "group",
+        group: {key: 'group-1'},
+        entry_endpoint: {uuid: "endpoint-3"},
+        exit_endpoint: {uuid: "endpoint-4"}
+    },
+    {
+        uuid: "freetext-1",
+        name: "Message 3",
+        store_as: "message-3",
         type: "freetext",
         store_on_contact: true,
-        entry_endpoint: {uuid: "endpoint-3"},
+        entry_endpoint: {uuid: "endpoint-5"},
         // freetext specific
-        exit_endpoint: {uuid: "endpoint-4"},
+        exit_endpoint: {uuid: "endpoint-6"},
         text: "What is your name?"
     },
     {
@@ -37,7 +45,7 @@ var simple_poll = {
        store_as: "ending-1",
        type: "end",
        store_on_contact: true,
-       entry_endpoint: {uuid: "endpoint-5"},
+       entry_endpoint: {uuid: "endpoint-7"},
        // end specific
        text: "Thank you for taking our survey"
     }
@@ -48,12 +56,16 @@ var simple_poll = {
        target: {uuid: "endpoint-3"}
      },
      {
-       source: {uuid: "endpoint-2"},
+       source: {uuid: "endpoint-4"},
        target: {uuid: "endpoint-5"}
      },
      {
-       source: {uuid: "endpoint-4"},
-       target: {uuid: "endpoint-5"}
+       source: {uuid: "endpoint-2"},
+       target: {uuid: "endpoint-7"}
+     },
+     {
+       source: {uuid: "endpoint-6"},
+       target: {uuid: "endpoint-7"}
      }
   ]
 };
