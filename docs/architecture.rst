@@ -45,14 +45,14 @@ Vumi Go Architecture
    group {
      // middleware + Django
      auth [class="auth", label="Authentication"];
-     django [class="django", label="Django"];
+     django [class="django", label="Django ☢"];
      generic_service [class="service", shape="dots"];
    }
 
    group {
      label = "Services";
 
-     go_api [class="service", label="Go API", description="Conversations, Routers, Channels & Routing Table"];
+     go_api [class="service", label="Go API ☢", description="Conversations, Routers, Channels & Routing Table"];
      message_store_api [class="service", label="Message Store API"];
      contact_store_api [class="service", label="Contact Store API"];
      tag_pool_api [class="service", label="Tag Pool API"];
@@ -87,3 +87,13 @@ Vumi Go Architecture
    tag_pool_api -> redis [class="to_redis"];
 
    django -> nginx_redirect -> generic_service;
+
+
+Notes
+-----
+
+  * ☢ indicates that a component requires requests to be
+    authenticated (i.e. it is intended to be exposed as a public service).
+
+  * Public services are expected to use Nginx internal redirects
+    to return results of specific requests to internal services as needed.
