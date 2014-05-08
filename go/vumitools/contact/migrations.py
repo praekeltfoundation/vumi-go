@@ -39,10 +39,6 @@ class ContactMigrator(ModelMigrator):
 
         for field in new_index_fields:
             value = mdata.old_data[field]
-            # Only set index if value is set.
-            if value is not None:
-                mdata.set_value(field, value, index=('%s_bin' % (field,)))
-            else:
-                mdata.set_value(field, value)
+            mdata.set_value(field, value, index=('%s_bin' % (field,)))
 
         return mdata
