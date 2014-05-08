@@ -31,6 +31,9 @@ extensions = [
     'sphinxcontrib.blockdiag',
 ]
 
+blockdiag_fontpath = "_static/dejavu/DejaVuSans-Bold.ttf"
+blockdiag_antialias = "true"
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
