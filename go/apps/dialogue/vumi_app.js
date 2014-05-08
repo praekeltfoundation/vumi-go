@@ -119,15 +119,11 @@ var DialogueApp = App.extend(function(self) {
     };
 
     self.types.group = function(desc) {
-        return self
-            .states.create(self.next(desc.exit_endpoint))
-            .then(function(state) {
-                state.on('state:enter', function() {
-                    self.contact.groups.push(desc.group.key);
-                });
+        self.contact.groups.push(desc.group.key);
 
-                return state;
-            });
+        return self.im.contacts.save(self.contact).then(function() {
+            return self.states.create(self.next(desc.exit_endpoint));
+        });
     };
 
     self.states.add('states:start', function() {
