@@ -74,7 +74,7 @@ class GoWorkerMixin(object):
         d = self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
-            message_class=VumiApiCommand)
+            message_class=VumiApiCommand, prefetch_count=1)
         return d.addCallback(lambda r: setattr(self, 'control_consumer', r))
 
     def _go_setup_command_publisher(self, config):
@@ -521,10 +521,10 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
     def get_config(self, msg, ctxt=None):
         return self.get_message_config(msg)
 
-    def handle_inbound(self, config, msg):
+    def handle_inbound(self, config, msg, conn_name):
         raise NotImplementedError()
 
-    def handle_outbound(self, config, msg):
+    def handle_outbound(self, config, msg, conn_name):
         raise NotImplementedError()
 
     def handle_event(self, config, event, conn_name):

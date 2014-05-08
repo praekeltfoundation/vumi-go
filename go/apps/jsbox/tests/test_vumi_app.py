@@ -59,9 +59,7 @@ class TestJsBoxApplication(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, tag)
         return msg
 
-    def mk_conv_config(self, app=None, delivery_class=None):
-        js_config = {}
-
+    def mk_conv_config(self, app=None, delivery_class=None, **js_config):
         if delivery_class is not None:
             js_config['delivery_class'] = delivery_class
 
@@ -186,7 +184,9 @@ class TestJsBoxApplication(VumiTestCase):
     def test_user_message(self):
         conv = yield self.setup_conversation(config=self.mk_conv_config())
         yield self.app_helper.start_conversation(conv)
-        yield self.app_helper.make_dispatch_inbound("inbound", conv=conv)
+        with LogCatcher(message="Log successful") as lc:
+            yield self.app_helper.make_dispatch_inbound("inbound", conv=conv)
+        self.assertEqual(lc.messages(), ["Log successful: true"])
 
     @inlineCallbacks
     def test_user_message_no_javascript(self):
@@ -224,14 +224,34 @@ class TestJsBoxApplication(VumiTestCase):
         check_inference_for('mxit', 'mxit')
 
     @inlineCallbacks
-    def test_event(self):
+    def test_event_not_in_sandbox(self):
         app = self.APPS['success'] % {'method': 'on_inbound_event'}
         conversation = yield self.setup_conversation(
             config=self.mk_conv_config(app=app))
         yield self.app_helper.start_conversation(conversation)
         msg = yield self.app_helper.make_stored_outbound(
             conversation, "outbound")
-        yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
+        with LogCatcher() as lc:
+            yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
+        self.assertFalse("Log successful: true" in lc.messages())
+        self.assertTrue(
+            "Ignoring event for conversation: %s" % (conversation.key,)
+            in lc.messages())
+
+    @inlineCallbacks
+    def test_event_in_sandbox(self):
+        app = self.APPS['success'] % {'method': 'on_inbound_event'}
+        conversation = yield self.setup_conversation(
+            config=self.mk_conv_config(app=app, process_events=True))
+        yield self.app_helper.start_conversation(conversation)
+        msg = yield self.app_helper.make_stored_outbound(
+            conversation, "outbound")
+        with LogCatcher() as lc:
+            yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
+        self.assertTrue("Log successful: true" in lc.messages())
+        self.assertFalse(
+            "Ignoring event for conversation: %s" % (conversation.key,)
+            in lc.messages())
 
     @inlineCallbacks
     def test_conversation_for_api(self):

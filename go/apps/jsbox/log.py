@@ -75,11 +75,13 @@ class GoLoggingResource(LoggingResource):
 
     @inlineCallbacks
     def log(self, api, msg, level):
-        log.msg(msg, logLevel=level)
-
         conv = self.app_worker.conversation_for_api(api)
         campaign_key = conv.user_account.key
         conversation_key = conv.key
+
+        internal_msg = "[Account: %s, Conversation: %s] %s" % (
+            campaign_key, conversation_key, msg)
+        log.msg(internal_msg, logLevel=level)
 
         yield self.log_manager.add_log(campaign_key, conversation_key,
                                        msg, level)
