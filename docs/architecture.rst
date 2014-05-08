@@ -20,7 +20,7 @@ Vumi Go Architecture
      label = "Outside World";
 
      // outside
-     browser [class="external", label="Person with Browser"];
+     browser [class="external", label="Person\nwith Browser"];
      api_client [class="external", label="API Client"];
    }
 
@@ -61,7 +61,8 @@ Vumi Go Architecture
 
    auth -> go_api;
 
-   django -> postgres;
+   django -> postgres [style=dotted];
+   billing_api -> postgres [style=dotted];
 
    go_api -> riak;
    go_api -> redis;
@@ -71,4 +72,3 @@ Vumi Go Architecture
    contact_store_api -> redis;
    tag_pool_api -> riak;
    tag_pool_api -> redis;
-   billing_api -> postgres;
