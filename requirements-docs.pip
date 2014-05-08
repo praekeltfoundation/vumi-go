@@ -2,6 +2,7 @@
 # only, used by readthedocs.org for publishing
 # docs on http://vumi-go.readthedocs.org/
 Sphinx
-Django==1.4.2
+sphinxcontrib-blockdiag
 -e git+git://github.com/praekelt/vumi.git@develop#egg=vumi-dev
+Django==1.5.5
 protobuf==2.5.0
