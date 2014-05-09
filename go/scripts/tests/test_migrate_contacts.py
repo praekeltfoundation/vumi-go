@@ -145,6 +145,7 @@ class TestMigrateContacts(VumiTestCase):
         worker.migrate_contact = lambda user_api, contact_key: None
         yield worker.migrate_contacts_for_account(user.account_key)
         self.assertEqual(worker.stdout.getvalue(), ''.join([
+            'Starting migration of 1000 contacts.\n',
             'Contacts migrated: 100 / 1000\n',
             'Contacts migrated: 200 / 1000\n',
             'Contacts migrated: 300 / 1000\n',
@@ -155,4 +156,5 @@ class TestMigrateContacts(VumiTestCase):
             'Contacts migrated: 800 / 1000\n',
             'Contacts migrated: 900 / 1000\n',
             'Contacts migrated: 1000 / 1000\n',
+            'Finished migrating 1000 contacts.\n',
         ]))
