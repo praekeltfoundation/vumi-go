@@ -46,7 +46,9 @@ var DialogueApp = App.extend(function(self) {
                 "Unknown dialogue state type: '" + desc.type + "'");
         }
 
-        return self.states.add(type(desc));
+        return self.states.add(desc.uuid, function() {
+            return type(desc);
+        });
     };
 
     self.next = function(endpoint) {
@@ -113,6 +115,16 @@ var DialogueApp = App.extend(function(self) {
             next: self.poll.poll_metadata.repeatable
                 ? 'states:start'
                 : null
+        });
+    };
+
+    self.types.group = function(desc) {
+        if (desc.group) {
+          self.contact.groups.push(desc.group.key);
+        }
+
+        return self.im.contacts.save(self.contact).then(function() {
+            return self.states.create(self.next(desc.exit_endpoint));
         });
     };
 
