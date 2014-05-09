@@ -13,15 +13,15 @@
     start_state: {uuid: 'state1'},
     groups: [{
       key: 'group1',
-      name: 'Group1',
+      name: 'Group 1',
       urls: null
     }, {
       key: 'group2',
-      name: 'Group2',
+      name: 'Group 2',
       urls: null
     }, {
       key: 'group3',
-      name: 'Group3',
+      name: 'Group 3',
       urls: null
     }],
     urls: {
@@ -75,6 +75,16 @@
       store_as: 'dummy-message-1',
       entry_endpoint: {uuid: 'endpoint6'},
       exit_endpoint: {uuid: 'endpoint7'}
+    }, {
+      uuid: 'state5',
+      name: 'Message 5',
+      type: 'group',
+      group: {key: 'group1'},
+      user_defined_store_as: false,
+      store_on_contact: false,
+      store_as: 'message-5',
+      entry_endpoint: {uuid: 'endpoint8'},
+      exit_endpoint: {uuid: 'endpoint9'}
     }],
     connections: [{
      uuid: 'endpoint1-endpoint3',
