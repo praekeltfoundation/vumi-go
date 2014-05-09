@@ -17,7 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.base import message_store_client as ms_client
-from go.base.utils import page_range_window
+from go.base.utils import page_range_window, sendfile
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
@@ -194,6 +194,29 @@ class ShowConversationView(ConversationTemplateView):
         return self.render_to_response(params)
 
 
+class ExportMessageView(ConversationApiView):
+    view_name = 'export_messages'
+    path_suffix = 'export_messages/'
+
+    def get(self, request, conversation):
+        direction = request.GET.get('direction', 'inbound')
+        if direction not in ['inbound', 'outbound']:
+            raise Http404()
+
+        url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
+                                                      direction)
+        return sendfile(url, buffering=False)
+
+    def post(self, request, conversation):
+        export_conversation_messages_unsorted.delay(
+            request.user_api.user_account_key, conversation.key)
+        messages.info(request, 'Conversation messages CSV file export '
+                                'scheduled. CSV file should arrive in '
+                                'your mailbox shortly.')
+        return self.redirect_to(
+            'message_list', conversation_key=conversation.key)
+
+
 class MessageListView(ConversationTemplateView):
     view_name = 'message_list'
     path_suffix = 'message_list/'
@@ -300,12 +323,6 @@ class MessageListView(ConversationTemplateView):
         )
 
     def post(self, request, conversation):
-        if '_export_conversation_messages' in request.POST:
-            export_conversation_messages_unsorted.delay(
-                request.user_api.user_account_key, conversation.key)
-            messages.info(request, 'Conversation messages CSV file export '
-                                    'scheduled. CSV file should arrive in '
-                                    'your mailbox shortly.')
         if '_send_one_off_reply' in request.POST:
             form = ReplyToMessageForm(request.POST)
             if form.is_valid():
@@ -730,6 +747,7 @@ class ConversationViewDefinitionBase(object):
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
         MessageListView,
+        ExportMessageView,
         EditConversationDetailView,
         EditConversationGroupsView,
         StartConversationView,

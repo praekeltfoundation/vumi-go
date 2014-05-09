@@ -10,7 +10,7 @@ from go.base.tests.helpers import GoDjangoTestCase
 import go.base.utils
 from go.base.utils import (
     get_conversation_view_definition, get_router_view_definition,
-    UnicodeDictWriter, extract_auth_from_url)
+    UnicodeDictWriter, extract_auth_from_url, sendfile)
 from go.errors import UnknownConversationType, UnknownRouterType
 
 
@@ -117,7 +117,7 @@ class TestUnicodeDictWriter(TestCase):
             rows)
 
 
-class TestRandomUtils(TestCase):
+class TestRandomUtils(GoDjangoTestCase):
 
     def test_extract_auth_from_url_no_auth(self):
         auth, url = extract_auth_from_url('http://go.vumi.org')
@@ -133,3 +133,24 @@ class TestRandomUtils(TestCase):
         auth, url = extract_auth_from_url('http://u@go.vumi.org')
         self.assertEqual(auth, ('u', None))
         self.assertEqual(url, 'http://go.vumi.org')
+
+    def test_sendfile(self):
+        resp = sendfile('/foo')
+        self.assertEqual(resp['X-Accel-Redirect'], '/foo')
+        self.assertEqual(resp['X-Accel-Buffering'], 'yes')
+
+    def test_sendfile_streaming(self):
+        resp = sendfile('/foo', buffering=False)
+        self.assertEqual(resp['X-Accel-Redirect'], '/foo')
+        self.assertEqual(resp['X-Accel-Buffering'], 'no')
+
+    def test_sendfile_debug(self):
+        with self.settings(DEBUG=True):
+            resp = sendfile('/foo')
+            self.assertEqual(resp['X-Accel-Redirect'], '/foo')
+            self.assertEqual(resp.content, '/foo')
+
+        with self.settings(DEBUG=False):
+            resp = sendfile('/foo')
+            self.assertEqual(resp['X-Accel-Redirect'], '/foo')
+            self.assertEqual(resp.content, '')
