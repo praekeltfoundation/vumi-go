@@ -194,7 +194,7 @@ class ShowConversationView(ConversationTemplateView):
         return self.render_to_response(params)
 
 
-class ExportMessageView(ConversationTemplateView):
+class ExportMessageView(ConversationApiView):
     view_name = 'export_messages'
     path_suffix = 'export_messages/'
 
