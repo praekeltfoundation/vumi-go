@@ -222,7 +222,11 @@
       type: Backbone.HasMany,
       key: 'states',
       relatedModel: DialogueStateModel,
-      collectionType: DialogueStateModelCollection
+      collectionType: DialogueStateModelCollection,
+      reverseRelation: {
+        key: 'dialogue',
+        includeInJSON: false
+      }
     }, {
       type: Backbone.HasOne,
       key: 'start_state',
