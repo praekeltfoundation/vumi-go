@@ -10,7 +10,7 @@ from go.base.tests.helpers import GoDjangoTestCase
 import go.base.utils
 from go.base.utils import (
     get_conversation_view_definition, get_router_view_definition,
-    UnicodeDictWriter, extract_auth_from_url)
+    UnicodeDictWriter, extract_auth_from_url, sendfile)
 from go.errors import UnknownConversationType, UnknownRouterType
 
 
@@ -133,3 +133,7 @@ class TestRandomUtils(TestCase):
         auth, url = extract_auth_from_url('http://u@go.vumi.org')
         self.assertEqual(auth, ('u', None))
         self.assertEqual(url, 'http://go.vumi.org')
+
+    def test_sendfile(self):
+        resp = sendfile('/foo')
+        self.assertEqual(resp['X-Accel-Redirect'], '/foo')

@@ -6,7 +6,7 @@ from StringIO import StringIO
 from urlparse import urlparse, urlunparse
 
 from django import forms
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.conf import settings
 
 from go.errors import UnknownConversationType, UnknownRouterType
@@ -29,6 +29,12 @@ def router_or_404(user_api, key):
     if router is None:
         raise Http404("Router not found.")
     return router
+
+
+def sendfile(url):
+    response = HttpResponse()
+    response['X-Accel-Redirect'] = url
+    return response
 
 
 def vumi_api():

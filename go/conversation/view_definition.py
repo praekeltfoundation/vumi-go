@@ -17,7 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.base import message_store_client as ms_client
-from go.base.utils import page_range_window
+from go.base.utils import page_range_window, sendfile
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
@@ -203,15 +203,13 @@ class ExportMessageView(ConversationApiView):
         if direction not in ['inbound', 'outbound']:
             raise Http404()
 
-        response = HttpResponse()
-
         url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
                                                       direction)
 
+        response = sendfile(url)
         if settings.DEBUG:
             response.write(url)
 
-        response['X-Accel-Redirect'] = url
         return response
 
     def post(self, request, conversation):
