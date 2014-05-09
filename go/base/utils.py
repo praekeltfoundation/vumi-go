@@ -35,6 +35,10 @@ def sendfile(url, buffering=True):
     response = HttpResponse()
     response['X-Accel-Redirect'] = url
     response['X-Accel-Buffering'] = 'yes' if buffering else 'no'
+
+    if settings.DEBUG:
+        response.write(url)
+
     return response
 
 
