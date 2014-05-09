@@ -3,5 +3,6 @@
 # docs on http://vumi-go.readthedocs.org/
 Sphinx
 sphinxcontrib-blockdiag>=1.3.1
-protobuf==2.5.0
 -e git+https://github.com/praekelt/vumi.git#egg=vumi
+-e git+https://github.com/praekelt/vxpolls.git#egg=vxpolls
+-e git+https://github.com/praekelt/vumi-wikipedia.git#egg=vumi-wikipedia
