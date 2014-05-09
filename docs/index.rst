@@ -36,7 +36,7 @@ For developers:
 .. toctree::
    :maxdepth: 1
 
-   architecture.rst
+   dev/frontend-architecture.rst
    dev/messaging-architecture.rst
 
 
