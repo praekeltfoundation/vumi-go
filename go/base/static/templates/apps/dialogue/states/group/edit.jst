@@ -1,0 +1,13 @@
+<div class="form-group">
+  <label class="control-label">Choose the contact group</label>
+
+  <select class="contact-group form-control">
+    <% if (model.get('dialogue').get('groups').length) { %>
+    <%   model.get('dialogue').get('groups').each(function(group) { %>
+    <option value="<%= group.get('key') %>"><%= group.get('name') %></option>
+    <%   }); %>
+    <% } else { %>
+    <option value="none" selected>No groups available</option>
+    <% } %>
+  </select>
+</div>

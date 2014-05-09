@@ -143,6 +143,7 @@ tests:
       - 'go/base/static/js/test/apps/dialogue/states/choice.test.js'
       - 'go/base/static/js/test/apps/dialogue/states/freetext.test.js'
       - 'go/base/static/js/test/apps/dialogue/states/end.test.js'
+      - 'go/base/static/js/test/apps/dialogue/states/group.test.js'
       - 'go/base/static/js/test/apps/dialogue/diagram.test.js'
       - 'go/base/static/js/test/apps/dialogue/views.test.js'
       - 'go/base/static/js/test/conversation/models.test.js'

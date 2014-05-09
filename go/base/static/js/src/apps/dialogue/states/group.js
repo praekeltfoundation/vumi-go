@@ -15,7 +15,18 @@
       return {
         jst: 'JST.apps_dialogue_states_group_edit'
       };
-    }
+    },
+
+    events: _.extend({
+      'change .contact-group': function(e) {
+        e.preventDefault();
+        var key = $(e.target).val();
+
+        if (key !== "none") {
+          this.model.set('group', {key: key}, {silent: true});
+        }
+      }
+    }, DialogueStateEditView.prototype.events)
   });
 
   var GroupStatePreviewView = DialogueStatePreviewView.extend({
@@ -39,7 +50,6 @@
 
   _(exports).extend({
     GroupStateView: GroupStateView,
-
     GroupStateEditView: GroupStateEditView,
     GroupStatePreviewView: GroupStatePreviewView
   });
