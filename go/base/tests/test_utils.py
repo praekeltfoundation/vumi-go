@@ -137,3 +137,9 @@ class TestRandomUtils(TestCase):
     def test_sendfile(self):
         resp = sendfile('/foo')
         self.assertEqual(resp['X-Accel-Redirect'], '/foo')
+        self.assertEqual(resp['X-Accel-Buffering'], 'yes')
+
+    def test_sendfile_streaming(self):
+        resp = sendfile('/foo', buffering=False)
+        self.assertEqual(resp['X-Accel-Redirect'], '/foo')
+        self.assertEqual(resp['X-Accel-Buffering'], 'no')

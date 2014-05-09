@@ -570,6 +570,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(
             response['X-Accel-Redirect'],
             '/message_store_exporter/%s/inbound.json' % (conv.batch.key,))
+        self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_download_json_messages_outbound(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -578,6 +579,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(
             response['X-Accel-Redirect'],
             '/message_store_exporter/%s/outbound.json' % (conv.batch.key,))
+        self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)

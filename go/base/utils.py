@@ -31,9 +31,10 @@ def router_or_404(user_api, key):
     return router
 
 
-def sendfile(url):
+def sendfile(url, buffering=True):
     response = HttpResponse()
     response['X-Accel-Redirect'] = url
+    response['X-Accel-Buffering'] = 'yes' if buffering else 'no'
     return response
 
 

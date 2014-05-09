@@ -206,7 +206,7 @@ class ExportMessageView(ConversationApiView):
         url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
                                                       direction)
 
-        response = sendfile(url)
+        response = sendfile(url, buffering=False)
         if settings.DEBUG:
             response.write(url)
 
