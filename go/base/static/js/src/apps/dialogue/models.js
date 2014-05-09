@@ -128,6 +128,11 @@
 
     relations: [{
       type: Backbone.HasOne,
+      key: 'group',
+      relatedModel: GroupModel,
+      includeInJSON: ['key']
+    }, {
+      type: Backbone.HasOne,
       key: 'entry_endpoint',
       relatedModel: DialogueEndpointModel
     }, {
