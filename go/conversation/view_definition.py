@@ -194,6 +194,36 @@ class ShowConversationView(ConversationTemplateView):
         return self.render_to_response(params)
 
 
+class ExportMessageView(ConversationTemplateView):
+    view_name = 'export_messages'
+    path_suffix = 'export_messages/'
+
+    def get(self, request, conversation):
+        direction = request.GET.get('direction', 'inbound')
+        if direction not in ['inbound', 'outbound']:
+            raise Http404()
+
+        response = HttpResponse()
+
+        url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
+                                                      direction)
+
+        if settings.DEBUG:
+            response.write(url)
+
+        response['X-Accel-Redirect'] = url
+        return response
+
+    def post(self, request, conversation):
+        export_conversation_messages_unsorted.delay(
+            request.user_api.user_account_key, conversation.key)
+        messages.info(request, 'Conversation messages CSV file export '
+                                'scheduled. CSV file should arrive in '
+                                'your mailbox shortly.')
+        return self.redirect_to(
+            'message_list', conversation_key=conversation.key)
+
+
 class MessageListView(ConversationTemplateView):
     view_name = 'message_list'
     path_suffix = 'message_list/'
@@ -300,12 +330,6 @@ class MessageListView(ConversationTemplateView):
         )
 
     def post(self, request, conversation):
-        if '_export_conversation_messages' in request.POST:
-            export_conversation_messages_unsorted.delay(
-                request.user_api.user_account_key, conversation.key)
-            messages.info(request, 'Conversation messages CSV file export '
-                                    'scheduled. CSV file should arrive in '
-                                    'your mailbox shortly.')
         if '_send_one_off_reply' in request.POST:
             form = ReplyToMessageForm(request.POST)
             if form.is_valid():
@@ -730,6 +754,7 @@ class ConversationViewDefinitionBase(object):
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
         MessageListView,
+        ExportMessageView,
         EditConversationDetailView,
         EditConversationGroupsView,
         StartConversationView,

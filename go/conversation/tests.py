@@ -544,14 +544,12 @@ class TestConversationViews(BaseConversationViewTestCase):
             '',  # csv ends with a blank line
             ]))
 
-    def test_export_messages(self):
+    def test_export_csv_messages(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msgs = self.msg_helper.add_inbound_to_conv(
             conv, 5, start_date=date(2012, 1, 1), time_multiplier=12)
         self.msg_helper.add_replies_to_conv(conv, msgs)
-        response = self.client.post(self.get_view_url(conv, 'message_list'), {
-            '_export_conversation_messages': True,
-        })
+        response = self.client.post(self.get_view_url(conv, 'export_messages'))
         self.assertRedirects(response, self.get_view_url(conv, 'message_list'))
         [email] = mail.outbox
         self.assertEqual(
@@ -565,6 +563,21 @@ class TestConversationViews(BaseConversationViewTestCase):
         # 1 header, 5 sent, 5 received, 1 trailing newline == 12
         self.assertEqual(12, len(content.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
+
+    def test_download_json_messages_inbound(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get(self.get_view_url(conv, 'export_messages'))
+        self.assertEqual(
+            response['X-Accel-Redirect'],
+            '/message_store_exporter/%s/inbound.json' % (conv.batch.key,))
+
+    def test_download_json_messages_outbound(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get('%s?direction=outbound' % (
+            self.get_view_url(conv, 'export_messages'),))
+        self.assertEqual(
+            response['X-Accel-Redirect'],
+            '/message_store_exporter/%s/outbound.json' % (conv.batch.key,))
 
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
