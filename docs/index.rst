@@ -37,6 +37,7 @@ For developers:
    :maxdepth: 1
 
    architecture.rst
+   dev/messaging-architecture.rst
 
 
 Indices and tables
