@@ -3,4 +3,5 @@
 # docs on http://vumi-go.readthedocs.org/
 Sphinx
 sphinxcontrib-blockdiag
+protobuf==2.5.0
 -e git+https://github.com/praekelt/vumi.git#egg=vumi
