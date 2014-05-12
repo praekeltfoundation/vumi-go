@@ -13,6 +13,19 @@ from go.vumitools.contact.migrations import ContactMigrator
 from go.vumitools.opt_out import OptOutStore
 
 
+DELIVERY_CLASS_ADDR_TYPES = {
+    'sms': 'msisdn',
+    'ussd': 'msisdn',
+    'gtalk': 'gtalk_id',
+    'mxit': 'mxit_id',
+    'wechat': 'wechat_id',
+    'twitter': 'twitter_handle',
+}
+
+
+DEFAULT_DELIVERY_CLASS = 'ussd'
+
+
 class ContactError(Exception):
     """Raised when an error occurs accessing or manipulating a Contact"""
 
@@ -79,19 +92,9 @@ class Contact(Model):
             # FIXME: Find a better way to do get delivery_class and get rid of
             #        this hack.
             return self.msisdn
-        # TODO: delivery classes need to be defined somewhere
-        if delivery_class in ('sms', 'ussd'):
-            return self.msisdn
-        elif delivery_class == 'gtalk':
-            return self.gtalk_id
-        elif delivery_class == 'twitter':
-            return self.twitter_handle
-        elif delivery_class == 'mxit':
-            return self.mxit_id
-        elif delivery_class == 'wechat':
-            return self.wechat_id
-        else:
-            return None
+
+        addr_type = DELIVERY_CLASS_ADDR_TYPES.get(delivery_class)
+        return getattr(self, addr_type) if addr_type is not None else None
 
     def __unicode__(self):
         if self.name and self.surname:
