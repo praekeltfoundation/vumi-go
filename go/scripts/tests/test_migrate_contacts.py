@@ -157,19 +157,20 @@ class TestMigrateContacts(VumiTestCase):
             return ['contact%03s' % i for i in xrange(1000)]
 
         worker.get_contact_keys = generate_contact_keys
-        worker.migrate_contact = lambda user_api, contact_key: None
+        worker.migrate_contact = lambda user_api, contact_key: (
+            not contact_key.endswith('0'))
         yield worker.migrate_contacts_for_account(user.account_key)
         self.assertEqual(worker.stdout.getvalue(), ''.join([
             'Starting migration of 1000 contacts.\n',
-            'Contacts migrated: 100 / 1000\n',
-            'Contacts migrated: 200 / 1000\n',
-            'Contacts migrated: 300 / 1000\n',
-            'Contacts migrated: 400 / 1000\n',
-            'Contacts migrated: 500 / 1000\n',
-            'Contacts migrated: 600 / 1000\n',
-            'Contacts migrated: 700 / 1000\n',
-            'Contacts migrated: 800 / 1000\n',
-            'Contacts migrated: 900 / 1000\n',
-            'Contacts migrated: 1000 / 1000\n',
-            'Finished migrating 1000 contacts.\n',
+            'Contacts migrated: 100 (90) / 1000\n',
+            'Contacts migrated: 200 (180) / 1000\n',
+            'Contacts migrated: 300 (270) / 1000\n',
+            'Contacts migrated: 400 (360) / 1000\n',
+            'Contacts migrated: 500 (450) / 1000\n',
+            'Contacts migrated: 600 (540) / 1000\n',
+            'Contacts migrated: 700 (630) / 1000\n',
+            'Contacts migrated: 800 (720) / 1000\n',
+            'Contacts migrated: 900 (810) / 1000\n',
+            'Contacts migrated: 1000 (900) / 1000\n',
+            'Finished processing 1000 contacts, 900 migrated.\n',
         ]))
