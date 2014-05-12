@@ -2,18 +2,31 @@
 
 """Tests for go.apps.dialogue.vumi_app"""
 
-import pkg_resources
 import os
+import json
+import pkg_resources
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.tests.helpers import find_nodejs_or_skip_test
+from vumi.application.tests.test_sandbox import (
+    ResourceTestCaseBase, DummyAppWorker)
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
-from go.apps.dialogue.vumi_app import DialogueApplication
+from go.apps.dialogue.vumi_app import (
+    DialogueApplication, PollConfigResource)
 from go.apps.dialogue.tests.dummy_polls import simple_poll
 from go.apps.tests.helpers import AppWorkerHelper
+
+
+class DummyDialogueAppWorker(DummyAppWorker):
+    def __init__(self):
+        super(DummyDialogueAppWorker, self).__init__()
+        self.conv = None
+
+    def conversation_for_api(self, api):
+        return self.conv
 
 
 class TestDialogueApplication(VumiTestCase):
@@ -193,3 +206,32 @@ class TestDialogueApplication(VumiTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
+
+
+class TestPollConfigResource(ResourceTestCaseBase):
+    # TODO: Make this resource stuff into a helper in vumi.
+    app_worker_cls = DummyDialogueAppWorker
+    resource_cls = PollConfigResource
+
+    @inlineCallbacks
+    def setUp(self):
+        super(TestPollConfigResource, self).setUp()
+        self.app_helper = self.add_helper(AppWorkerHelper(DialogueApplication))
+        self.app = yield self.app_helper.get_app_worker({})
+        yield self.create_resource({})
+
+    @inlineCallbacks
+    def test_config_delivery_class(self):
+        conv = yield self.app_helper.create_conversation(
+            config={
+                'poll': {
+                    'poll_metadata': {'delivery_class': 'twitter'}
+                }
+            })
+
+        self.app_worker.conv = conv
+
+        reply = yield self.dispatch_command('get', key='config')
+        config = json.loads(reply['value'])
+
+        self.assertEqual(config['delivery_class'], 'twitter')
