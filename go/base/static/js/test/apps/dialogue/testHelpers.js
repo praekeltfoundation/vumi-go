@@ -9,7 +9,10 @@
   var modelData = {
     campaign_id: 'campaign-1',
     conversation_key: 'conversation-1',
-    poll_metadata: {repeatable: false},
+    poll_metadata: {
+      repeatable: false,
+      delivery_class: 'ussd'
+    },
     start_state: {uuid: 'state1'},
     groups: [{
       key: 'group1',
@@ -111,6 +114,14 @@
         .append($('<input>')
           .attr('type', 'checkbox')
           .attr('id', 'repeatable'))
+        .append($('<select>')
+          .attr('id', 'delivery-class')
+            .append($('<option>')
+              .attr('value', 'ussd')
+              .text('Ussd'))
+            .append($('<option>')
+              .attr('value', 'twitter')
+              .text('Twitter')))
         .append($('<button>').attr('id', 'new-state'))
         .append($('<button>').attr('id', 'save'))
         .append($('<div>').attr('id', 'diagram')));
