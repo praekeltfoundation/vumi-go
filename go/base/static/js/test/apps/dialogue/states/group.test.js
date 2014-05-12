@@ -37,6 +37,9 @@ describe("go.apps.dialogue.states.group", function() {
       });
 
       it("should not try change the state's group", function() {
+        diagram.model.set('groups', []);
+        state.edit();
+
         assert.equal(
           state.model.get('group').get('key'),
           'group1');
@@ -66,6 +69,21 @@ describe("go.apps.dialogue.states.group", function() {
         assert.equal(
           state.model.get('group').get('key'),
           'group2');
+      });
+    });
+
+    describe("when the current group is unassigned", function() {
+      it("should update the state's model", function() {
+        assert.equal(
+          state.model.get('group').get('key'),
+          'group1');
+
+        editMode
+          .$('.contact-group')
+          .val('unassigned')
+          .change();
+
+        assert.isNull(state.model.get('group'));
       });
     });
   });

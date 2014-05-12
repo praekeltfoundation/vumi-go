@@ -22,9 +22,12 @@
         e.preventDefault();
         var key = $(e.target).val();
 
-        if (key !== "none") {
+        if (key === 'unassigned') {
+          this.model.set('group', null, {silent: true});
+        } else if (key !== 'none') {
           this.model.set('group', {key: key}, {silent: true});
         }
+
       }
     }, DialogueStateEditView.prototype.events)
   });
