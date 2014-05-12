@@ -1,0 +1,9 @@
+<p class="text">
+Recipients are added to a group:
+<br>
+<% if (!model.get('group')) { %>
+<strong class='contact-group'>No group assigned</strong>
+<% } else { %>
+<strong class='contact-group'><%= model.get('group').get('name') %></strong>
+<% } %>
+</p>
