@@ -62,11 +62,14 @@ class ContactMigrationWorker(Worker):
     def migrate_contacts_for_account(self, user_account_key):
         user_api = self.vumi_api.get_user_api(user_account_key)
         contact_keys = yield self.get_contact_keys(user_api)
+        contact_count = len(contact_keys)
+        self.emit("Starting migration of %s contacts." % (contact_count,))
         for i, contact_key in enumerate(contact_keys):
             yield self.migrate_contact(user_api, contact_key)
             if (i + 1) % 100 == 0:
                 self.emit("Contacts migrated: %s / %s" % (
-                    i + 1, len(contact_keys)))
+                    i + 1, contact_count))
+        self.emit("Finished migrating %s contacts." % (contact_count,))
 
     @inlineCallbacks
     def startWorker(self):
