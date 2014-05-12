@@ -55,6 +55,9 @@ class ContactMigrationWorker(Worker):
             self.emit(
                 "Unable to load contact %s -- ignoring." % (contact_key,),
                 stderr=True)
+        elif not contact.was_migrated:
+            self.emit(
+                "Contact %s already migrated -- ignoring." % (contact_key,))
         else:
             yield contact.save()
 

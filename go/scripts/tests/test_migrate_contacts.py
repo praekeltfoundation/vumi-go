@@ -114,6 +114,21 @@ class TestMigrateContacts(VumiTestCase):
             "Unable to load contact badcontact -- ignoring.\n")
 
     @inlineCallbacks
+    def test_migrate_contact_already_migrated(self):
+        """
+        .migrate_contact() should log a message and continue if the specified
+        contact does not need migration.
+        """
+        worker = yield self.get_worker()
+        user = yield self.vumi_helper.make_user(u"user")
+        self.assertEqual(worker.stdout.getvalue(), "")
+        contact = yield self.make_contact(user, msisdn=u"+0")
+        yield worker.migrate_contact(user.user_api, contact.key)
+        self.assertEqual(
+            worker.stdout.getvalue(),
+            "Contact %s already migrated -- ignoring.\n" % (contact.key,))
+
+    @inlineCallbacks
     def test_migrate_contacts_for_account(self):
         """
         .migrate_contacts_for_account() should migrate all contacts in the
