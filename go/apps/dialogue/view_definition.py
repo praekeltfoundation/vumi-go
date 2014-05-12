@@ -44,8 +44,11 @@ class DialogueEditView(ConversationTemplateView):
         }
         model_data.update(r.json['result']['poll'])
 
+        metadata = model_data.get('poll_metadata', {})
+        delivery_class = metadata.get('delivery_class', DEFAULT_DELIVERY_CLASS)
+
         return self.render_to_response({
-            'default_delivery_class': DEFAULT_DELIVERY_CLASS,
+            'current_delivery_class': delivery_class,
             'delivery_classes': DELIVERY_CLASS_ADDR_TYPES.keys(),
             'conversation': conversation,
             'session_id': request.session.session_key,
