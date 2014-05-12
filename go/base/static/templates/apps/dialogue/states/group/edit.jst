@@ -3,6 +3,7 @@
 
   <select class="contact-group form-control">
     <% if (model.get('dialogue').get('groups').length) { %>
+    <option value="none" selected>(No group)</option>
     <%   model.get('dialogue').get('groups').each(function(group) { %>
     <option value="<%= group.get('key') %>"><%= group.get('name') %></option>
     <%   }); %>
