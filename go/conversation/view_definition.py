@@ -205,7 +205,8 @@ class ExportMessageView(ConversationApiView):
 
         url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
                                                       direction)
-        return sendfile(url, buffering=False)
+        return sendfile(url, buffering=False, filename='%s-%s.json' % (
+            conversation.key, direction))
 
     def post(self, request, conversation):
         export_conversation_messages_unsorted.delay(
