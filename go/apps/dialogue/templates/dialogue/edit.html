@@ -10,9 +10,23 @@
 {% endblock %}
 
 {% block content_actions_right %}
-  <div class="pull-left">
-    <input type="checkbox" id="repeatable">
-    Enable users to submit multiple surveys
+  <div class="pull-left form-inline">
+      <div class="form-group">
+          <input type="checkbox" id="repeatable">
+          <label>Enable users to submit multiple surveys</label>
+      </div>
+
+      <div class="form-group">
+          <select class="form-control">
+              {% for delivery_class in delivery_classes %}
+              <option value="{{ delivery_class }}" {% if delivery_class == default_delivery_class %} selected {% endif %}>
+               {{ delivery_class|title }}
+               </option>
+              {% endfor %}
+          </select>
+
+          <label>Channel type</label>
+      </div>
   </div>
 
   <div class="pull-right">

@@ -7,6 +7,8 @@ from go.api.go_api import client
 from go.api.go_api.client import GoApiError
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, ConversationTemplateView)
+from go.vumitools.contact.models import (
+    DELIVERY_CLASS_ADDR_TYPES, DEFAULT_DELIVERY_CLASS)
 
 
 class DialogueEditView(ConversationTemplateView):
@@ -43,6 +45,8 @@ class DialogueEditView(ConversationTemplateView):
         model_data.update(r.json['result']['poll'])
 
         return self.render_to_response({
+            'default_delivery_class': DEFAULT_DELIVERY_CLASS,
+            'delivery_classes': DELIVERY_CLASS_ADDR_TYPES.keys(),
             'conversation': conversation,
             'session_id': request.session.session_key,
             'model_data': json.dumps(model_data),
