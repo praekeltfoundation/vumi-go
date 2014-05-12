@@ -27,10 +27,13 @@ class DialogueEditView(ConversationTemplateView):
                 "Failed to load dialogue from Go API:"
                 " (%r) %r." % (r.status_code, r.text))
 
+        contact_store = conversation.user_api.contact_store
+        groups = contact_store.list_static_groups()
+
         model_data = {
             'campaign_id': request.user_api.user_account_key,
             'conversation_key': conversation.key,
-            'groups': [g.get_data() for g in conversation.get_groups()],
+            'groups': [g.get_data() for g in groups],
             'urls': {
                 'show': self.get_view_url(
                     'show',

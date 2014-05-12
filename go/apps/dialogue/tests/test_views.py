@@ -117,7 +117,6 @@ class TestDialogueViews(GoDjangoTestCase):
         group1 = yield self.app_helper.create_group(u'group1')
         group2 = yield self.app_helper.create_group(u'group2')
         conversation.add_group(group1)
-        conversation.add_group(group2)
 
         expected = poll.copy()
         expected.update({
