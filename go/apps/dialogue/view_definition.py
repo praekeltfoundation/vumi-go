@@ -30,6 +30,7 @@ class DialogueEditView(ConversationTemplateView):
         model_data = {
             'campaign_id': request.user_api.user_account_key,
             'conversation_key': conversation.key,
+            'groups': [g.get_data() for g in conversation.get_groups()],
             'urls': {
                 'show': self.get_view_url(
                     'show',
