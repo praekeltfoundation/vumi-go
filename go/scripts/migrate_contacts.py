@@ -2,7 +2,7 @@ import sys
 from twisted.python import usage
 from twisted.internet import reactor
 from twisted.internet.defer import (
-    maybeDeferred, DeferredQueue, inlineCallbacks)
+    maybeDeferred, DeferredQueue, inlineCallbacks, returnValue)
 from vumi.service import Worker, WorkerCreator
 from vumi.servicemaker import VumiOptions
 import yaml
@@ -55,21 +55,30 @@ class ContactMigrationWorker(Worker):
             self.emit(
                 "Unable to load contact %s -- ignoring." % (contact_key,),
                 stderr=True)
+        elif not contact.was_migrated:
+            self.emit(
+                "Contact %s already migrated -- ignoring." % (contact_key,))
         else:
             yield contact.save()
+            returnValue(True)
+        returnValue(False)
 
     @inlineCallbacks
     def migrate_contacts_for_account(self, user_account_key):
         user_api = self.vumi_api.get_user_api(user_account_key)
         contact_keys = yield self.get_contact_keys(user_api)
         contact_count = len(contact_keys)
+        migrated_count = 0
         self.emit("Starting migration of %s contacts." % (contact_count,))
         for i, contact_key in enumerate(contact_keys):
-            yield self.migrate_contact(user_api, contact_key)
+            migrated = yield self.migrate_contact(user_api, contact_key)
+            if migrated:
+                migrated_count += 1
             if (i + 1) % 100 == 0:
-                self.emit("Contacts migrated: %s / %s" % (
-                    i + 1, contact_count))
-        self.emit("Finished migrating %s contacts." % (contact_count,))
+                self.emit("Contacts migrated: %s (%s) / %s" % (
+                    i + 1, migrated_count, contact_count))
+        self.emit("Finished processing %s contacts, %s migrated." % (
+            contact_count, migrated_count))
 
     @inlineCallbacks
     def startWorker(self):
