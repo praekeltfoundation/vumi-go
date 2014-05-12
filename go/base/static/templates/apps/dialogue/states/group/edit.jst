@@ -6,8 +6,8 @@
     <option value="unassigned">(No group)</option>
     <%   model.get('dialogue').get('groups').each(function(group) { %>
     <option
-     value="<%= group.get('key') %>"
-    <%     if (group === model.get('group')) { %> 
+     value="<%= group.id %>"
+     <%    if (model.get('group') && group.id === model.get('group').id) { %> 
      selected
     <%     } %>
      ><%= group.get('name') %></option>
