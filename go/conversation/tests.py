@@ -570,6 +570,9 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(
             response['X-Accel-Redirect'],
             '/message_store_exporter/%s/inbound.json' % (conv.batch.key,))
+        self.assertEqual(
+            response['Content-Disposition'],
+            'attachment; filename=%s-inbound.json' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_download_json_messages_outbound(self):
@@ -579,6 +582,9 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(
             response['X-Accel-Redirect'],
             '/message_store_exporter/%s/outbound.json' % (conv.batch.key,))
+        self.assertEqual(
+            response['Content-Disposition'],
+            'attachment; filename=%s-outbound.json' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_message_list_pagination(self):
