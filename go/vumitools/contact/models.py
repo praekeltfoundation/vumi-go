@@ -13,13 +13,31 @@ from go.vumitools.contact.migrations import ContactMigrator
 from go.vumitools.opt_out import OptOutStore
 
 
-DELIVERY_CLASS_ADDR_TYPES = {
-    'sms': 'msisdn',
-    'ussd': 'msisdn',
-    'gtalk': 'gtalk_id',
-    'mxit': 'mxit_id',
-    'wechat': 'wechat_id',
-    'twitter': 'twitter_handle',
+DELIVERY_CLASSES = {
+    'sms': {
+        'field': 'msisdn',
+        'label': 'SMS',
+    },
+    'ussd': {
+        'field': 'msisdn',
+        'label': 'USSD',
+    },
+    'gtalk': {
+        'field': 'gtalk_id',
+        'label': 'Google Talk',
+    },
+    'mxit': {
+        'field': 'mxit_id',
+        'label': 'Mxit',
+    },
+    'wechat': {
+        'field': 'wechat_id',
+        'label': 'WeChat',
+    },
+    'twitter': {
+        'field': 'twitter_handle',
+        'label': 'Twitter',
+    },
 }
 
 
@@ -93,8 +111,11 @@ class Contact(Model):
             #        this hack.
             return self.msisdn
 
-        addr_type = DELIVERY_CLASS_ADDR_TYPES.get(delivery_class)
-        return getattr(self, addr_type) if addr_type is not None else None
+        delivery_class = DELIVERY_CLASSES.get(delivery_class)
+        if delivery_class is not None:
+            return getattr(self, delivery_class['field'])
+
+        return None
 
     def __unicode__(self):
         if self.name and self.surname:

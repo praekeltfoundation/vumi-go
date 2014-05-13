@@ -18,9 +18,9 @@
 
       <div class="form-group">
           <select id="delivery-class" class="form-control">
-              {% for delivery_class in delivery_classes %}
+              {% for delivery_class, label in delivery_classes %}
               <option value="{{ delivery_class }}" {% if delivery_class == current_delivery_class %} selected {% endif %}>
-               {{ delivery_class|title }}
+               {{ label }}
                </option>
               {% endfor %}
           </select>
