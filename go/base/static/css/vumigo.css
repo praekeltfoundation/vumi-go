@@ -381,6 +381,17 @@ button {
 .dialogue .actions .sidebar {
   background: #d9d8d3;
 }
+.dialogue .actions .form-group {
+  padding-right: 15px;
+}
+.dialogue .actions .form-group label {
+  padding-left: 3px;
+  font-weight: normal;
+  margin-bottom: auto;
+}
+.dialogue .actions .form-group select.form-control {
+  width: auto;
+}
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
   opacity: 0.75;

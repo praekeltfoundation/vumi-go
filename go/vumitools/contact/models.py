@@ -13,6 +13,37 @@ from go.vumitools.contact.migrations import ContactMigrator
 from go.vumitools.opt_out import OptOutStore
 
 
+DELIVERY_CLASSES = {
+    'sms': {
+        'field': 'msisdn',
+        'label': 'SMS',
+    },
+    'ussd': {
+        'field': 'msisdn',
+        'label': 'USSD',
+    },
+    'gtalk': {
+        'field': 'gtalk_id',
+        'label': 'Google Talk',
+    },
+    'mxit': {
+        'field': 'mxit_id',
+        'label': 'Mxit',
+    },
+    'wechat': {
+        'field': 'wechat_id',
+        'label': 'WeChat',
+    },
+    'twitter': {
+        'field': 'twitter_handle',
+        'label': 'Twitter',
+    },
+}
+
+
+DEFAULT_DELIVERY_CLASS = 'ussd'
+
+
 class ContactError(Exception):
     """Raised when an error occurs accessing or manipulating a Contact"""
 
@@ -79,19 +110,12 @@ class Contact(Model):
             # FIXME: Find a better way to do get delivery_class and get rid of
             #        this hack.
             return self.msisdn
-        # TODO: delivery classes need to be defined somewhere
-        if delivery_class in ('sms', 'ussd'):
-            return self.msisdn
-        elif delivery_class == 'gtalk':
-            return self.gtalk_id
-        elif delivery_class == 'twitter':
-            return self.twitter_handle
-        elif delivery_class == 'mxit':
-            return self.mxit_id
-        elif delivery_class == 'wechat':
-            return self.wechat_id
-        else:
-            return None
+
+        delivery_class = DELIVERY_CLASSES.get(delivery_class)
+        if delivery_class is not None:
+            return getattr(self, delivery_class['field'])
+
+        return None
 
     def __unicode__(self):
         if self.name and self.surname:
