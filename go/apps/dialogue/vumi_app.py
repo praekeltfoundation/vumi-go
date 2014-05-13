@@ -19,9 +19,18 @@ class PollConfigResource(SandboxResource):
         :returns:
             JSON string containg the configuration dictionary.
         """
+
         config = {
             "name": "poll-%s" % conversation.key
         }
+
+        poll = conversation.config.get("poll", {})
+        poll_metadata = poll.get('poll_metadata', {})
+        delivery_class = poll_metadata.get('delivery_class')
+
+        if delivery_class is not None:
+            config['delivery_class'] = delivery_class
+
         return json.dumps(config)
 
     def _get_poll(self, conversation):

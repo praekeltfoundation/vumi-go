@@ -128,5 +128,15 @@ describe("go.apps.dialogue.views", function() {
         assert(!view.model.get('poll_metadata').get('repeatable'));
       });
     });
+
+    describe("when '#delivery-class' is changed", function() {
+      it("should change the model metadata's 'delivery_class' attribute",
+      function() {
+        var metadata = view.model.get('poll_metadata');
+        assert.equal(metadata.get('delivery_class'), 'ussd');
+        view.$('#delivery-class').val('twitter').change();
+        assert.equal(metadata.get('delivery_class'), 'twitter');
+      });
+    });
   });
 });

@@ -113,6 +113,13 @@ class TestDialogueViews(GoDjangoTestCase):
         self.assertContains(response, u"myconv")
         self.assertContains(response, 'diagram')
 
+        self.assertContains(response, 'USSD')
+        self.assertContains(response, 'SMS')
+        self.assertContains(response, 'Google Talk')
+        self.assertContains(response, 'Mxit')
+        self.assertContains(response, 'WeChat')
+        self.assertContains(response, 'Twitter')
+
         conversation = conv_helper.get_conversation()
         group1 = yield self.app_helper.create_group(u'group1')
         group2 = yield self.app_helper.create_group(u'group2')
