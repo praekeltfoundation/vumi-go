@@ -141,7 +141,7 @@ describe("app", function() {
                             msisdn: '+27123'
                         });
 
-                        assert.equal(contact.extra['message-2'], 'foo');
+                        assert.equal(contact.extra['message-3'], 'foo');
                     })
                     .run();
             });
@@ -172,6 +172,66 @@ describe("app", function() {
                     .setup.user.state('end-1')
                     .start()
                     .check.user.state('end-1')
+                    .run();
+            });
+        });
+
+        describe("when the user enters a group state", function() {
+            it("should add the contact to the given group", function() {
+                return tester
+                    .setup(function(api) {
+                        api.contacts.add({
+                            msisdn: '+27123',
+                            groups: ['group-2']
+                        });
+                    })
+                    .setup.user.addr('+27123')
+                    .setup.user.state('choice-1')
+                    .input('1')
+                    .check(function(api) {
+                        var contact = api.contacts.store[0];
+
+                        assert.deepEqual(contact.groups.sort(), [
+                            'group-1',
+                            'group-2'
+                        ]);
+                    })
+                    .run();
+            });
+
+            it("should not change the contact's groups if none is assigned",
+            function() {
+                return tester
+                    .setup(function(api) {
+                      var state = _.find(api.config.store.poll.states, {
+                        uuid: 'group-1'
+                      });
+
+                      state.group = null;
+                    })
+                    .setup(function(api) {
+                        api.contacts.add({
+                            msisdn: '+27123',
+                            groups: ['group-2']
+                        });
+                    })
+                    .setup.user.addr('+27123')
+                    .setup.user.state('choice-1')
+                    .input('1')
+                    .check(function(api) {
+                        var contact = api.contacts.store[0];
+                        assert.deepEqual(contact.groups.sort(), ['group-2']);
+                    })
+                    .run();
+            });
+
+            it("should redirect to the state linked to the exit endpoint",
+            function() {
+                return tester
+                    .setup.user.state('choice-1')
+                    .input('1')
+                    .check.user.state('freetext-1')
+                    .check.reply('What is your name?')
                     .run();
             });
         });
