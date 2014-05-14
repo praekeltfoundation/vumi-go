@@ -8,7 +8,7 @@ from vumi.worker import BaseWorker
 from vumi.config import ConfigInt, ConfigError
 from vumi.persist.model import Manager
 
-from go.vumitools.api import VumiApi, VumiApiCommand
+from go.vumitools.api import VumiApi, VumiApiCommand, ApiCommandPublisher
 from go.vumitools.app_worker import GoWorkerConfigMixin, GoWorkerMixin
 
 
@@ -68,10 +68,8 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         })
         self.redis = self.vumi_api.redis
 
-        api_routing_config = VumiApiCommand.default_routing_config()
-        api_routing_config.update(config.api_routing or {})
-        self.command_publisher = yield self.publish_to(
-            api_routing_config['routing_key'])
+        self.command_publisher = yield self.start_publisher(
+            ApiCommandPublisher)
 
         self._current_bucket = 0
         self._num_buckets = (
