@@ -139,7 +139,7 @@ class EditRouterView(RouterTemplateView):
                 })
 
     def get(self, request, router):
-        edit_forms = self.make_forms(router)
+        edit_forms = self.make_forms(router, request.user_api)
         return self._render_forms(request, router, edit_forms)
 
     def post(self, request, router):
@@ -150,15 +150,22 @@ class EditRouterView(RouterTemplateView):
         return self.redirect_to(
             self.get_next_view(router), router_key=router.key)
 
-    def make_form(self, key, form, metadata):
-        data = metadata.get(key, {})
+    def extra_form_params(self, key, form, config, user_api):
+        """
+        Override this to provide extra parameters to form construction.
+        """
+        return {}
+
+    def make_form(self, key, form, config, user_api):
+        data = config.get(key, {})
         if hasattr(form, 'initial_from_config'):
             data = form.initial_from_config(data)
-        return form(prefix=key, initial=data)
+        extra = self.extra_form_params(key, form, config, user_api)
+        return form(prefix=key, initial=data, **extra)
 
-    def make_forms(self, router):
+    def make_forms(self, router, user_api):
         config = router.config
-        return [self.make_form(key, edit_form, config)
+        return [self.make_form(key, edit_form, config, user_api)
                 for key, edit_form in self.edit_forms]
 
     def process_form(self, form):
@@ -168,9 +175,11 @@ class EditRouterView(RouterTemplateView):
 
     def process_forms(self, request, router):
         config = router.config
-        edit_forms_with_keys = [
-            (key, edit_form_cls(request.POST, prefix=key))
-            for key, edit_form_cls in self.edit_forms]
+        edit_forms_with_keys = []
+        for key, form in self.edit_forms:
+            extra = self.extra_form_params(key, form, config, request.user_api)
+            edit_forms_with_keys.append(
+                (key, form(request.POST, prefix=key, **extra)))
         edit_forms = [edit_form for _key, edit_form in edit_forms_with_keys]
 
         for key, edit_form in edit_forms_with_keys:

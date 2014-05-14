@@ -70,7 +70,8 @@ class UpdateModels(Migration):
         return True
 
     def migrate(self, user_api, conv):
-        conv.save()
+        if conv.was_migrated:
+            conv.save()
 
 
 class FixBatches(Migration):
