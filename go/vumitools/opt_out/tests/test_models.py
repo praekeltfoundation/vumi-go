@@ -86,24 +86,6 @@ class TestOptOutStore(VumiTestCase):
         self.assertEqual(opt_outs, [])
 
     @inlineCallbacks
-    def test_opt_outs_for_addresses(self):
-        addrs = [("msisdn", str(i)) for i in range(5)]
-        for addr_type, addr in addrs:
-            yield self.opt_out_store.new_opt_out(
-                addr_type, addr, self.msg_helper.make_inbound("inbound"))
-        self.assertEqual(
-            sorted((yield self.opt_out_store.opt_outs_for_addresses(
-                "msisdn", ["0", "2", "3"]))),
-            [self.opt_out_store.opt_out_id("msisdn", str(i))
-             for i in (0, 2, 3)])
-
-    @inlineCallbacks
-    def test_opt_outs_for_addresses_with_no_addresses(self):
-        opt_outs = yield self.opt_out_store.opt_outs_for_addresses(
-            "msisdn", [])
-        self.assertEqual(opt_outs, [])
-
-    @inlineCallbacks
     def test_count(self):
         store = self.opt_out_store
         yield store.new_opt_out(
