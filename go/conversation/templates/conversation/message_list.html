@@ -3,7 +3,13 @@
 
 {% block content_extraclass %}conversations{% endblock %}
 
-{% block content_title %}Messages from {{ inbound_uniques_count }} unique people{% endblock %}
+{% block content_title %}
+  {% if message_direction == "inbound" %}
+    Messages from {{ inbound_uniques_count }} unique people
+  {% else %}
+    Messages to {{ outbound_uniques_count }} unique people
+  {% endif %}
+{% endblock %}
 
 {% block content_actions_right %}
     <div class="pull-left">
@@ -18,7 +24,10 @@
         <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound">Download Received Stats</a>
         <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
         -->
-        <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export</a>
+        <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export CSV via email</a>
+        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}">
+          Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as JSON
+        </a>
     </div>
 
     <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
@@ -136,17 +145,17 @@
                 <a class="close" data-dismiss="modal">×</a>
                 <h3>Schedule CSV Export of Messages</h3>
             </div>
-            <form method="post" action="" class="form-horizontal">
+            <form method="post" action="{% conversation_screen conversation "export_messages" %}" class="form-horizontal">
                 {% csrf_token %}
                 <div class="modal-body">
                     <p><span class="help-block">
-                      The file is potentially quite large and as a result the export 
-                      will be done in the background. When completed the results will 
+                      The file is potentially quite large and as a result the export
+                      will be done in the background. When completed the results will
                       be sent to you as a CSV file attached to an email.
                     </span><br/></p>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" name="_export_conversation_messages" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
+                    <button type="submit" class="btn btn-primary">Schedule Export</button>
                 </div>
             </form>
         </div>

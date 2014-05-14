@@ -4,14 +4,44 @@ from uuid import uuid4
 from datetime import datetime
 
 from twisted.internet.defer import returnValue
-
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
-                                 Dynamic)
+from vumi.persist.fields import (
+    Unicode, ManyToMany, ForeignKey, Timestamp, Dynamic)
 
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact.migrations import ContactMigrator
 from go.vumitools.opt_out import OptOutStore
+
+
+DELIVERY_CLASSES = {
+    'sms': {
+        'field': 'msisdn',
+        'label': 'SMS',
+    },
+    'ussd': {
+        'field': 'msisdn',
+        'label': 'USSD',
+    },
+    'gtalk': {
+        'field': 'gtalk_id',
+        'label': 'Google Talk',
+    },
+    'mxit': {
+        'field': 'mxit_id',
+        'label': 'Mxit',
+    },
+    'wechat': {
+        'field': 'wechat_id',
+        'label': 'WeChat',
+    },
+    'twitter': {
+        'field': 'twitter_handle',
+        'label': 'Twitter',
+    },
+}
+
+
+DEFAULT_DELIVERY_CLASS = 'ussd'
 
 
 class ContactError(Exception):
@@ -44,28 +74,30 @@ class ContactGroup(Model):
 
 
 class Contact(Model):
+    """A contact"""
 
-    VERSION = 1
+    VERSION = 2
     MIGRATOR = ContactMigrator
 
-    """A contact"""
     # key is UUID
     user_account = ForeignKey(UserAccount)
     name = Unicode(max_length=255, null=True)
     surname = Unicode(max_length=255, null=True)
     email_address = Unicode(null=True)  # EmailField?
-    msisdn = Unicode(max_length=255)
     dob = Timestamp(null=True)
-    twitter_handle = Unicode(max_length=100, null=True)
-    facebook_id = Unicode(max_length=100, null=True)
-    bbm_pin = Unicode(max_length=100, null=True)
-    gtalk_id = Unicode(null=True)
-    mxit_id = Unicode(null=True)
-    wechat_id = Unicode(null=True)
     created_at = Timestamp(default=datetime.utcnow)
     groups = ManyToMany(ContactGroup)
     extra = Dynamic(prefix='extras-')
     subscription = Dynamic(prefix='subscription-')
+
+    # Address fields
+    msisdn = Unicode(max_length=255, index=True)
+    twitter_handle = Unicode(max_length=100, null=True, index=True)
+    facebook_id = Unicode(max_length=100, null=True, index=True)
+    bbm_pin = Unicode(max_length=100, null=True, index=True)
+    gtalk_id = Unicode(null=True, index=True)
+    mxit_id = Unicode(null=True, index=True)
+    wechat_id = Unicode(null=True, index=True)
 
     def add_to_group(self, group):
         if isinstance(group, ContactGroup):
@@ -78,19 +110,12 @@ class Contact(Model):
             # FIXME: Find a better way to do get delivery_class and get rid of
             #        this hack.
             return self.msisdn
-        # TODO: delivery classes need to be defined somewhere
-        if delivery_class in ('sms', 'ussd'):
-            return self.msisdn
-        elif delivery_class == 'gtalk':
-            return self.gtalk_id
-        elif delivery_class == 'twitter':
-            return self.twitter_handle
-        elif delivery_class == 'mxit':
-            return self.mxit_id
-        elif delivery_class == 'wechat':
-            return self.wechat_id
-        else:
-            return None
+
+        delivery_class = DELIVERY_CLASSES.get(delivery_class)
+        if delivery_class is not None:
+            return getattr(self, delivery_class['field'])
+
+        return None
 
     def __unicode__(self):
         if self.name and self.surname:
@@ -104,6 +129,18 @@ class Contact(Model):
 
 class ContactStore(PerAccountStore):
     NONSETTABLE_CONTACT_FIELDS = ['$VERSION', 'user_account']
+
+    # These two values control how contacts are found based on address.
+    # If FIND_BY_INDEX is disabled, search will be used instead of index
+    # lookups to find contacts. This will improve performance if contacts have
+    # not yet been migrated to version 2.
+    # If FIND_BY_INDEX_SEARCH_FALLBACK is disabled, the fallback search (used
+    # when the index lookup is enabled and finds nothing) will be disabled.
+    # This avoids unnecessary work if the contacts being sought don't exist,
+    # but will result in false negatives if there are matching contacts that
+    # have not yet been migrated to version 2.
+    FIND_BY_INDEX = True
+    FIND_BY_INDEX_SEARCH_FALLBACK = True
 
     def setup_proxies(self):
         self.contacts = self.manager.proxy(Contact)
@@ -304,32 +341,39 @@ class ContactStore(PerAccountStore):
     def _contact_field_for_addr(self, delivery_class, addr):
         # TODO: change when we have proper address types in vumi
         if delivery_class in ('sms', 'ussd'):
-            return {'msisdn': '+' + addr.lstrip('+')}
+            return ('msisdn', '+' + addr.lstrip('+'))
         elif delivery_class == 'gtalk':
-            return {'gtalk_id': addr.partition('/')[0]}
+            return ('gtalk_id', addr.partition('/')[0])
         elif delivery_class == 'twitter':
-            return {'twitter_handle': addr}
+            return ('twitter_handle', addr)
         elif delivery_class == 'mxit':
-            return {'mxit_id': addr}
+            return ('mxit_id', addr)
         elif delivery_class == 'wechat':
-            return {'wechat_id': addr}
+            return ('wechat_id', addr)
         else:
             raise ContactError(
                 "Unsupported transport_type %r" % delivery_class)
 
     def new_contact_for_addr(self, delivery_class, addr):
-        field = self._contact_field_for_addr(delivery_class, addr)
-        field.setdefault('msisdn', u'unknown')
-        return self.new_contact(**field)
+        field, value = self._contact_field_for_addr(delivery_class, addr)
+        field_dict = {field: value}
+        field_dict.setdefault('msisdn', u'unknown')
+        return self.new_contact(**field_dict)
 
     @Manager.calls_manager
     def contact_for_addr(self, delivery_class, addr, create=True):
         """
         Returns a contact from a delivery class and address, raising a
-        ContactNotFound exception if the contact does not exist.
+        ContactNotFoundError exception if the contact does not exist.
         """
-        field = self._contact_field_for_addr(delivery_class, addr)
-        keys = yield self.contacts.search(**field).get_keys()
+        field, value = self._contact_field_for_addr(delivery_class, addr)
+        keys = None
+        if self.FIND_BY_INDEX:
+            keys = yield self.contacts.index_keys(field, value)
+        if (keys is None) or (self.FIND_BY_INDEX_SEARCH_FALLBACK and not keys):
+            # Either we didn't try an index lookup (keys is None) or fallback
+            # search is enabled and the index lookup found nothing.
+            keys = yield self.contacts.search(**{field: value}).get_keys()
 
         if keys:
             contacts = []
@@ -344,9 +388,10 @@ class ContactStore(PerAccountStore):
 
         if create:
             contact_id = uuid4().get_hex()
-            field.setdefault('msisdn', u'unknown')
+            field_dict = {field: value}
+            field_dict.setdefault('msisdn', u'unknown')
             returnValue(self.contacts(
-                contact_id, user_account=self.user_account_key, **field))
+                contact_id, user_account=self.user_account_key, **field_dict))
 
         raise ContactNotFoundError(
             "Contact with address '%s' for delivery class '%s' not found."

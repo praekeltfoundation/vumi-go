@@ -230,17 +230,24 @@ class VumiUserApi(object):
         for tag in user_account.tags:
             tp_usage[tag[0]] += 1
 
-        allowed_set = set()
+        all_pools = yield self.api.tpm.list_pools()
+        allowed_pools = set()
         for tp_bunch in user_account.tagpools.load_all_bunches():
             for tp in (yield tp_bunch):
                 if (tp.max_keys is None
                         or tp.max_keys > tp_usage[tp.tagpool]):
-                    allowed_set.add(tp.tagpool)
+                    allowed_pools.add(tp.tagpool)
 
-        available_set = yield self.api.tpm.list_pools()
-        pool_names = list(allowed_set & available_set)
+        available_pools = []
+        for pool in all_pools:
+            if pool not in allowed_pools:
+                continue
+            free_tags = yield self.api.tpm.free_tags(pool)
+            if free_tags:
+                available_pools.append(pool)
+
         pool_data = dict([(pool, (yield self.api.tpm.get_metadata(pool)))
-                         for pool in pool_names])
+                          for pool in available_pools])
         returnValue(TagpoolSet(pool_data))
 
     @Manager.calls_manager
@@ -275,10 +282,8 @@ class VumiUserApi(object):
         returnValue(SortedDict([(service_type, service_settings[service_type])
                                 for service_type in sorted(service_settings)]))
 
-    @Manager.calls_manager
     def list_groups(self):
-        returnValue(sorted((yield self.contact_store.list_groups()),
-            key=lambda group: group.name))
+        return self.contact_store.list_groups()
 
     @Manager.calls_manager
     def new_conversation(self, conversation_type, name, description, config,

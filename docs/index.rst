@@ -31,6 +31,14 @@ channels.
    code-examples.rst
    http_api.rst
 
+For developers:
+
+.. toctree::
+   :maxdepth: 1
+
+   architecture.rst
+
+
 Indices and tables
 ==================
 

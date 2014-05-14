@@ -41,10 +41,6 @@ simple_poll = {
             # end specific
             "text": "Thank you for taking our survey",
         },
-        {
-            "uuid": "unknown-1",
-            "type": "unknown-or-garbled",
-        },
     ],
     "connections": [
         {

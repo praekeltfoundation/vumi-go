@@ -45,11 +45,10 @@ class TestMultiSurveyViews(GoDjangoTestCase):
             5, start_date=date(2012, 1, 1), time_multiplier=12)
         conversation = conv_helper.get_conversation()
         conv_helper.add_stored_replies(msgs)
-        conv_url = conv_helper.get_view_url('message_list')
-        response = self.client.post(conv_url, {
-            '_export_conversation_messages': True,
-            })
-        self.assertRedirects(response, conv_url)
+        export_url = conv_helper.get_view_url('export_messages')
+        message_url = conv_helper.get_view_url('message_list')
+        response = self.client.post(export_url)
+        self.assertRedirects(response, message_url)
         [email] = mail.outbox
         django_user = self.app_helper.get_or_create_user().get_django_user()
         self.assertEqual(email.recipients(), [django_user.email])

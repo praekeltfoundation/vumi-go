@@ -309,10 +309,13 @@ class ConversationWrapper(object):
         keys = yield self.mdb.cache.get_inbound_message_keys(
             self.batch.key, start, limit - 1)
 
-        replies = yield self.collect_messages(keys,
-            self.mdb.inbound_messages, include_sensitive, scrubber)
+        replies = yield self.collect_messages(
+            keys, self.mdb.inbound_messages, include_sensitive, scrubber)
 
-        returnValue(replies)
+        # Preserve order
+        returnValue(
+            sorted(replies, key=lambda msg: msg['timestamp'],
+                   reverse=True))
 
     def sent_messages(self, start=0, limit=100, include_sensitive=False,
                       scrubber=None):
@@ -348,10 +351,13 @@ class ConversationWrapper(object):
         keys = yield self.mdb.cache.get_outbound_message_keys(
             self.batch.key, start, limit - 1)
 
-        sent_messages = yield self.collect_messages(keys,
-            self.mdb.outbound_messages, include_sensitive, scrubber)
+        sent_messages = yield self.collect_messages(
+            keys, self.mdb.outbound_messages, include_sensitive, scrubber)
 
-        returnValue(sent_messages)
+        # Preserve order
+        returnValue(
+            sorted(sent_messages, key=lambda msg: msg['timestamp'],
+                   reverse=True))
 
     def find_inbound_messages_matching(self, pattern, flags="i",
                                        key="msg.content", ttl=None,
@@ -543,16 +549,14 @@ class ConversationWrapper(object):
         opt_out_store = OptOutStore(
             self.api.manager, self.user_api.user_account_key)
 
-        addresses = self.get_contacts_addresses(contacts)
-        opt_out_keys = yield opt_out_store.opt_outs_for_addresses(
-            address_type, addresses)
-        opted_out_addrs = set(key.split(':')[1] for key in opt_out_keys)
-
         filtered_contacts = []
         for contact in contacts:
             contact_addr = contact.addr_for(delivery_class)
-            if contact_addr and contact_addr not in opted_out_addrs:
-                filtered_contacts.append(contact)
+            if contact_addr:
+                opt_out = yield opt_out_store.get_opt_out(
+                    address_type, contact_addr)
+                if not opt_out:
+                    filtered_contacts.append(contact)
         returnValue(filtered_contacts)
 
     @Manager.calls_manager

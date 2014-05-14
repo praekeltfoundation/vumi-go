@@ -2,26 +2,38 @@
 
 """Tests for go.apps.dialogue.vumi_app"""
 
-import pkg_resources
 import os
+import json
+import pkg_resources
 
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import SkipTest
 
+from vumi.application.tests.helpers import find_nodejs_or_skip_test
+from vumi.application.tests.test_sandbox import (
+    ResourceTestCaseBase, DummyAppWorker)
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
-from go.apps.dialogue.vumi_app import DialogueApplication
+from go.apps.dialogue.vumi_app import (
+    DialogueApplication, PollConfigResource)
 from go.apps.dialogue.tests.dummy_polls import simple_poll
 from go.apps.tests.helpers import AppWorkerHelper
+
+
+class DummyDialogueAppWorker(DummyAppWorker):
+    def __init__(self):
+        super(DummyDialogueAppWorker, self).__init__()
+        self.conv = None
+
+    def conversation_for_api(self, api):
+        return self.conv
 
 
 class TestDialogueApplication(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        if DialogueApplication.find_nodejs() is None:
-            raise SkipTest("No node.js executable found.")
+        nodejs_executable = find_nodejs_or_skip_test(DialogueApplication)
 
         self.app_helper = self.add_helper(AppWorkerHelper(DialogueApplication))
 
@@ -31,11 +43,15 @@ class TestDialogueApplication(VumiTestCase):
         redis = yield self.app_helper.vumi_helper.get_redis_manager()
         self.kv_redis = redis.sub_manager('kv')
         self.app = yield self.app_helper.get_app_worker({
+            'executable': nodejs_executable,
             'args': [sandboxer_js],
             'timeout': 10,
             'app_context': (
-                "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01')"
-                " return require(m); return null; }, Buffer: Buffer}"
+                "{require: function(m) {"
+                " if (['moment', 'url', 'querystring', 'crypto', 'lodash',"
+                " 'q', 'jed', 'libxmljs', 'zlib', 'vumigo_v01', 'vumigo_v02'"
+                "].indexOf(m) >= 0) return require(m); return null;"
+                " }, Buffer: Buffer}"
             ),
             'env': {
                 'NODE_PATH': node_path,
@@ -71,7 +87,6 @@ class TestDialogueApplication(VumiTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key,
-            delivery_class=conversation.delivery_class,
         )
 
     @inlineCallbacks
@@ -97,22 +112,39 @@ class TestDialogueApplication(VumiTestCase):
     def test_user_message(self):
         conversation = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conversation)
-        yield self.app_helper.make_dispatch_inbound("hello", conv=conversation)
+        with LogCatcher(message='Switched to state:') as lc:
+            yield self.app_helper.make_dispatch_inbound(
+                "hello", conv=conversation)
+            self.assertEqual(lc.messages(),
+                             ['Switched to state: choice-1'])
         [reply] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(reply["content"],
                          "What is your favourite colour?\n1. Red\n2. Blue")
 
     @inlineCallbacks
-    def test_event(self):
+    def test_ack(self):
         conversation = yield self.setup_conversation()
         yield self.app_helper.start_conversation(conversation)
         msg = yield self.app_helper.make_stored_outbound(
             conversation, "foo")
-        with LogCatcher(message="Saw") as lc:
+        with LogCatcher(message="Ignoring") as lc:
             yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
-            self.assertEqual(
-                lc.messages(),
-                ['Saw ack for message %s.' % (msg['message_id'],)])
+        self.assertEqual(
+            lc.messages(),
+            ["Ignoring event for conversation: %s" % (conversation.key,)])
+
+    @inlineCallbacks
+    def test_delivery_report(self):
+        conversation = yield self.setup_conversation()
+        yield self.app_helper.start_conversation(conversation)
+        msg = yield self.app_helper.make_stored_outbound(
+            conversation, "foo")
+        with LogCatcher(message="Ignoring") as lc:
+            yield self.app_helper.make_dispatch_delivery_report(
+                msg, conv=conversation)
+        self.assertEqual(
+            lc.messages(),
+            ["Ignoring event for conversation: %s" % (conversation.key,)])
 
     @inlineCallbacks
     def test_send_message_command(self):
@@ -174,3 +206,32 @@ class TestDialogueApplication(VumiTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
+
+
+class TestPollConfigResource(ResourceTestCaseBase):
+    # TODO: Make this resource stuff into a helper in vumi.
+    app_worker_cls = DummyDialogueAppWorker
+    resource_cls = PollConfigResource
+
+    @inlineCallbacks
+    def setUp(self):
+        super(TestPollConfigResource, self).setUp()
+        self.app_helper = self.add_helper(AppWorkerHelper(DialogueApplication))
+        self.app = yield self.app_helper.get_app_worker({})
+        yield self.create_resource({})
+
+    @inlineCallbacks
+    def test_config_delivery_class(self):
+        conv = yield self.app_helper.create_conversation(
+            config={
+                'poll': {
+                    'poll_metadata': {'delivery_class': 'twitter'}
+                }
+            })
+
+        self.app_worker.conv = conv
+
+        reply = yield self.dispatch_command('get', key='config')
+        config = json.loads(reply['value'])
+
+        self.assertEqual(config['delivery_class'], 'twitter')
