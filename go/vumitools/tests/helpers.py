@@ -7,7 +7,6 @@ from twisted.python.monkey import MonkeyPatcher
 
 from zope.interface import implements
 
-from vumi.blinkenlights.metrics import MetricMessage
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
     generate_proxies, IHelper, maybe_async_return)
@@ -246,12 +245,9 @@ class FakeAmqpConnection(object):
         metrics, self.metrics = self.metrics, []
         return metrics
 
-    def publish_metric(self, metric_name, aggregators, value, timestamp=None):
-        metric_msg = MetricMessage()
-        metric_msg.append((metric_name,
-            tuple(sorted(agg.name for agg in aggregators)),
-            [(timestamp, value)]))
-        return self.publish_metric_message(metric_msg)
+    def get_metric_publisher(self):
+        from go.base.amqp import MetricPublisher
+        return MetricPublisher(self)
 
 
 class VumiApiHelper(object):
