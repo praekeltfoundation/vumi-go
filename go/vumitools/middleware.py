@@ -6,8 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.middleware.message_storing import StoringMiddleware
 from vumi.utils import normalize_msisdn
-from vumi.blinkenlights.metrics import MetricManager, Count, Metric
-from vumi.persist.txredis_manager import TxRedisManager
+from vumi.blinkenlights.metrics import MetricPublisher, Count, Metric
 from vumi.errors import ConfigError
 
 from go.vumitools.api import VumiApi
@@ -128,13 +127,17 @@ class MetricsMiddleware(BaseMiddleware):
     @inlineCallbacks
     def setup_middleware(self):
         self.validate_config()
-        self.redis = yield TxRedisManager.from_config(
-            self.config['redis_manager'])
-        self.metric_manager = yield self.worker.start_publisher(MetricManager,
-            "%s." % (self.manager_name,))
+        self.metric_publisher = yield self.worker.start_publisher(
+            MetricPublisher)
+        self.vumi_api = yield VumiApi.from_config_async(
+            self.config, metric_publisher=self.metric_publisher)
+        self.redis = self.vumi_api.redis
+        self.metric_manager = self.vumi_api.get_metric_manager(
+            self.manager_name)
+        self.metric_manager.start_polling()
 
     def teardown_middleware(self):
-        self.metric_manager.stop()
+        self.metric_manager.stop_polling()
         return self.redis.close_manager()
 
     def get_or_create_metric(self, name, metric_class, *args, **kwargs):
