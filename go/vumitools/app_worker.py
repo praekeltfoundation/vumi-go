@@ -5,7 +5,7 @@ from twisted.internet.defer import (
 from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
-from vumi.blinkenlights.metrics import MetricPublisher, Metric, AVG
+from vumi.blinkenlights.metrics import MetricPublisher, Metric
 from vumi.config import IConfigData, ConfigText, ConfigDict, ConfigField
 from vumi.connectors import IgnoreMessage
 
@@ -275,9 +275,9 @@ class GoWorkerMixin(object):
 
     def publish_account_metric(self, acc_key, store, name, value, agg=None):
         # TODO: Collect the oneshot metrics and then publish all at once?
-        if agg is None:
-            agg = AVG
-        metric = Metric(name, [agg])
+        if agg is not None:
+            agg = [agg]
+        metric = Metric(name, agg)
         metrics = self.get_account_metric_manager(acc_key, store)
         metrics.oneshot(metric, value)
         metrics.publish_metrics()
@@ -290,7 +290,6 @@ class GoWorkerMixin(object):
         conv_type = conv.conversation_type
         conv_def = get_conversation_definition(conv_type, conv)
 
-        # TODO: Switch to real metrics in conv def?
         for metric in conv_def.get_metrics():
             value = yield metric.get_value(user_api)
             metrics.oneshot(metric.metric, value)
