@@ -5,8 +5,7 @@ from twisted.internet.defer import (
 from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
-from vumi.blinkenlights.metrics import (
-    MetricManager, MetricPublisher, Metric, AVG)
+from vumi.blinkenlights.metrics import MetricPublisher, Metric, AVG
 from vumi.config import IConfigData, ConfigText, ConfigDict, ConfigField
 from vumi.connectors import IgnoreMessage
 
@@ -62,7 +61,8 @@ class GoWorkerMixin(object):
             'riak_manager': config.riak_manager,
             'redis_manager': config.redis_manager,
             }
-        d = VumiApi.from_config_async(api_config, self.command_publisher)
+        d = VumiApi.from_config_async(
+            api_config, self.command_publisher, self.metric_publisher)
 
         def cb(vumi_api):
             self.vumi_api = vumi_api
@@ -266,12 +266,12 @@ class GoWorkerMixin(object):
     def get_account_metric_manager(self, account_key, store_name):
         # TODO: Move this to an API.
         prefix = get_account_metric_prefix(account_key, store_name)
-        return MetricManager(prefix, publisher=self.metric_publisher)
+        return self.vumi_api.get_metric_manager(prefix)
 
     def get_conversation_metric_manager(self, conv):
         # TODO: Move this to an API.
         prefix = get_conversation_metric_prefix(conv)
-        return MetricManager(prefix, publisher=self.metric_publisher)
+        return self.vumi_api.get_metric_manager(prefix)
 
     def publish_account_metric(self, acc_key, store, name, value, agg=None):
         # TODO: Collect the oneshot metrics and then publish all at once?

@@ -78,3 +78,7 @@ def get_account_metric_prefix(account_key, store):
 def get_conversation_metric_prefix(conv):
     return "%scampaigns.%s.conversations.%s." % (
         get_go_metrics_prefix(), conv.user_account.key, conv.key)
+
+
+def get_django_metric_prefix():
+    return "%sdjango." % (get_go_metrics_prefix(),)
