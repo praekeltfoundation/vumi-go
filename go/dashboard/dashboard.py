@@ -1,5 +1,7 @@
 from functools import wraps
 
+from vumi.blinkenlights.metrics import Metric
+
 from go.dashboard import client
 from go.vumitools.metrics import (
     get_account_metric_prefix, get_conversation_metric_prefix)
@@ -159,10 +161,10 @@ class ConversationReportsLayout(DashboardLayout):
     def aggregator_from_target(self, target):
         aggregator = target.get('aggregator')
         # FIXME: We don't always get the aggregator in the target. In order to
-        #        handle this, we default to 'avg' if the aggregator is not
-        #        specified.
+        #        handle this, we get the name of the (first) default aggregator
+        #        from Metric if the aggregator is not specified.
         if aggregator is None:
-            aggregator = 'avg'
+            aggregator = Metric.DEFAULT_AGGREGATORS[0].name
         return aggregator
 
     @ensure_handler_fields('name')
