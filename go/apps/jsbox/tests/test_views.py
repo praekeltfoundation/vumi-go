@@ -5,6 +5,7 @@ from go.apps.jsbox.log import LogManager
 from go.apps.jsbox.view_definition import (
     JSBoxReportsView, ConversationReportsView)
 from go.apps.tests.view_helpers import AppViewsHelper
+from go.base.utils import get_conversation_view_definition
 from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.api import VumiApiCommand
 
@@ -238,10 +239,12 @@ class TestJsBoxViews(GoDjangoTestCase):
         conv_helper = self.setup_conversation()
         conversation = conv_helper.get_conversation()
 
-        default_reports_view = ConversationReportsView()
+        view_def = get_conversation_view_definition(
+            conversation.conversation_type)
+        default_reports_view = ConversationReportsView(view_def=view_def)
         default_layout = default_reports_view.build_layout(conversation)
 
-        view = JSBoxReportsView()
+        view = JSBoxReportsView(view_def=view_def)
         layout = view.build_layout(conversation)
 
         self.assertEqual(layout.get_config(), default_layout.get_config())
