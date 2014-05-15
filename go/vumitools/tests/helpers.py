@@ -13,7 +13,8 @@ from vumi.tests.helpers import (
     generate_proxies, IHelper, maybe_async_return)
 
 import go.config
-from go.vumitools.api import VumiApi, VumiApiEvent, VumiApiCommand
+from go.vumitools.api import (
+    VumiApi, VumiApiEvent, VumiApiCommand, ApiCommandPublisher)
 from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.utils import MessageMetadataHelper
 
@@ -345,7 +346,9 @@ class VumiApiHelper(object):
     def setup_async_vumi_api(self):
         worker_helper = self.get_worker_helper()
         amqp_client = worker_helper.get_fake_amqp_client(worker_helper.broker)
-        d = VumiApi.from_config_async(self.mk_config({}), amqp_client)
+        d = amqp_client.start_publisher(ApiCommandPublisher)
+        d.addCallback(lambda cmd_publisher: VumiApi.from_config_async(
+            self.mk_config({}), cmd_publisher))
         return d.addCallback(self.set_vumi_api)
 
     @proxyable
