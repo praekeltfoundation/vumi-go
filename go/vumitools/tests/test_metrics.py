@@ -22,6 +22,22 @@ class TestConversationMetrics(VumiTestCase):
         self.user_helper = yield self.vumi_helper.make_user(u'user')
         self.patch(time, 'time', lambda: 1985)
 
+    def test_get_target_spec(self):
+        metric = ToyConversationMetric(None)
+        self.assertEqual(metric.get_target_spec(), {
+            'metric_type': 'conversation',
+            'name': 'dave',
+            'aggregator': 'avg',
+        })
+
+    def test_get_target_spec_name_override(self):
+        metric = ToyConversationMetric(None, metric_name='greg')
+        self.assertEqual(metric.get_target_spec(), {
+            'metric_type': 'conversation',
+            'name': 'greg',
+            'aggregator': 'avg',
+        })
+
     @inlineCallbacks
     def test_messages_sent_metric_value_retrieval(self):
         conv = yield self.user_helper.create_conversation(u'some_conversation')

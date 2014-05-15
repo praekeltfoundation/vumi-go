@@ -17,6 +17,13 @@ class ConversationMetric(object):
             metric_name = self.METRIC_NAME
         self.metric = Metric(metric_name, [self.AGGREGATOR])
 
+    def get_target_spec(self):
+        return {
+            'metric_type': 'conversation',
+            'name': self.metric.name,
+            'aggregator': self.AGGREGATOR.name,
+        }
+
     def get_value(self, user_api):
         """
         Should be overriden to return the value used when publishing the
