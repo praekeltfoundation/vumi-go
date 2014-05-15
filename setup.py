@@ -19,7 +19,7 @@ setup(
         # installed before us. They're listed first so that we fail fast
         # instead of working through all the other requirements before
         # discovering that they aren't available should that be the case.
-        'Django==1.5.5',
+        'Django==1.5.8',
         'gunicorn==0.15.0',
         'South==0.8.2',
         'psycopg2==2.4',
