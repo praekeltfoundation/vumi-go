@@ -129,11 +129,13 @@ class MetricsMiddleware(BaseMiddleware):
         self.validate_config()
         self.metric_publisher = yield self.worker.start_publisher(
             MetricPublisher)
-        self.vumi_api = yield VumiApi.from_config_async(
+        # We don't keep a reference to this VumiApi around because it doesn't
+        # have a general-purpose configuration. Specifically, it has no Riak
+        # config and its Redis config has a custom prefix.
+        vumi_api = yield VumiApi.from_config_async(
             self.config, metric_publisher=self.metric_publisher)
-        self.redis = self.vumi_api.redis
-        self.metric_manager = self.vumi_api.get_metric_manager(
-            self.manager_name)
+        self.redis = vumi_api.redis
+        self.metric_manager = vumi_api.get_metric_manager(self.manager_name)
         self.metric_manager.start_polling()
 
     def teardown_middleware(self):
