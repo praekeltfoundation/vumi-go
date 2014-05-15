@@ -1,11 +1,8 @@
 from functools import wraps
 
-from vumi.blinkenlights.metrics import Aggregator, AVG
-
 from go.dashboard import client
 from go.vumitools.metrics import (
-    get_account_metric_prefix, get_conversation_metric_prefix,
-    ConversationMetric)
+    get_account_metric_prefix, get_conversation_metric_prefix)
 
 
 def is_collection(obj):
@@ -150,8 +147,8 @@ class DashboardLayout(object):
         return self.entities
 
 
-def get_metric_diamondash_target(prefix, metric_name, agg):
-    return "%s%s.%s" % (prefix, metric_name, agg)
+def get_metric_diamondash_target(prefix, metric_name, aggregator_name):
+    return "%s%s.%s" % (prefix, metric_name, aggregator_name)
 
 
 class ConversationReportsLayout(DashboardLayout):
@@ -159,21 +156,24 @@ class ConversationReportsLayout(DashboardLayout):
         self.conv = conv
         super(ConversationReportsLayout, self).__init__(entities)
 
-    @classmethod
-    def aggregator_from_target(cls, target):
-        agg_name = target.get('aggregator')
-        return Aggregator.from_name(agg_name) if agg_name is not None else AVG
+    def aggregator_from_target(self, target):
+        aggregator = target.get('aggregator')
+        # FIXME: We don't always get the aggregator in the target. In order to
+        #        handle this, we default to 'avg' if the aggregator is not
+        #        specified.
+        if aggregator is None:
+            aggregator = 'avg'
+        return aggregator
 
     @ensure_handler_fields('name')
     def handle_conversation_metric(self, target):
-        metric = ConversationMetric(self.conv, target['name']).metric
         prefix = get_conversation_metric_prefix(self.conv)
         return get_metric_diamondash_target(
-            prefix, metric.name, metric.aggs[0])
+            prefix, target['name'], self.aggregator_from_target(target))
 
     @ensure_handler_fields('store', 'name')
     def handle_account_metric(self, target):
-        agg = self.aggregator_from_target(target)
         prefix = get_account_metric_prefix(
             self.conv.user_account.key, target['store'])
-        return get_metric_diamondash_target(prefix, target['name'], agg.name)
+        return get_metric_diamondash_target(
+            prefix, target['name'], self.aggregator_from_target(target))
