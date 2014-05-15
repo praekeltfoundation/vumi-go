@@ -7,7 +7,6 @@ from twisted.python.monkey import MonkeyPatcher
 
 from zope.interface import implements
 
-from vumi.blinkenlights.metrics import MetricMessage
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
     generate_proxies, IHelper, maybe_async_return)
