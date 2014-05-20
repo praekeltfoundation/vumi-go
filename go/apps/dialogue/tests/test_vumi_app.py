@@ -74,11 +74,26 @@ class TestDialogueApplication(VumiTestCase):
         })
 
     @inlineCallbacks
-    def setup_conversation(self):
-        group = yield self.app_helper.create_group_with_contacts(u'group', 2)
-        config = {"poll": simple_poll}
+    def setup_conversation(self, poll=None):
+        group = yield self.app_helper.create_group(u'group')
+
+        yield self.app_helper.create_contact(
+            msisdn=u'+278312345670',
+            twitter_handle=u'@0',
+            groups=[group],
+            name=u'Contact',
+            surname=u'0')
+
+        yield self.app_helper.create_contact(
+            msisdn=u'+278312345671',
+            twitter_handle=u'@1',
+            groups=[group],
+            name=u'Contact',
+            surname=u'1')
+
+        config = {"poll": poll or simple_poll()}
         conv = yield self.app_helper.create_conversation(
-            config=config, groups=[group], delivery_class=u"sms")
+            config=config, groups=[group])
         returnValue(conv)
 
     def send_send_jsbox_command(self, conversation):
@@ -107,6 +122,27 @@ class TestDialogueApplication(VumiTestCase):
             self.assertEqual(go_metadata["conversation_key"], conv.key)
         self.assertEqual(sorted([m["to_addr"] for m in msgs]),
                          ["+278312345670", "+278312345671"])
+
+    @inlineCallbacks
+    def test_send_dialogue_command_delivery_class(self):
+        poll = simple_poll()
+        poll['poll_metadata']['delivery_class'] = 'twitter'
+        conv = yield self.setup_conversation(poll=poll)
+        yield self.app_helper.start_conversation(conv)
+        with LogCatcher(message='Switched to state:') as lc:
+            yield self.send_send_jsbox_command(conv)
+            self.assertEqual(lc.messages(),
+                             ['Switched to state: choice-1'] * 2)
+        msgs = self.app_helper.get_dispatched_outbound()
+        for msg in msgs:
+            self.assertEqual(msg["content"],
+                             "What is your favourite colour?\n1. Red\n2. Blue")
+            self.assertEqual(msg["in_reply_to"], None)
+            go_metadata = msg["helper_metadata"]["go"]
+            self.assertEqual(go_metadata["conversation_type"], "dialogue")
+            self.assertEqual(go_metadata["conversation_key"], conv.key)
+        self.assertEqual(sorted([m["to_addr"] for m in msgs]),
+                         ["@0", "@1"])
 
     @inlineCallbacks
     def test_user_message(self):
