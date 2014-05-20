@@ -112,7 +112,12 @@ class TestDialogueViews(GoDjangoTestCase):
         group2 = self.app_helper.create_group(u'group2')
         conversation.add_group(group1)
 
-        poll = {"foo": "bar"}
+        poll = {
+            'groups': [{
+                'key': '123',
+                'name': 'foo'
+            }]
+        }
         self.mock_rpc.set_response(result={"poll": poll})
         response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertContains(response, u"myconv")
