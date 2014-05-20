@@ -93,9 +93,9 @@ def get_router_definition(router_type, router=None):
     return router_pkg.definition.RouterDefinition(router)
 
 
-def get_service_definition(service_type, service=None):
+def get_service_definition(service_type, vumi_api, service=None):
     service_pkg = get_service_pkg(service_type, ['definition'])
-    return service_pkg.definition.ServiceComponentDefinition(service)
+    return service_pkg.definition.ServiceComponentDefinition(vumi_api, service)
 
 
 _VUMI_INSTALLED_APPS = {

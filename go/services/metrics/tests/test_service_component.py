@@ -1,6 +1,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.blinkenlights.metrics import Metric
 from vumi.config import ConfigError
 from vumi.tests.helpers import VumiTestCase
 
@@ -40,6 +41,19 @@ class TestMetricsServiceComponent(VumiTestCase):
             self.fail("Expected ConfigError, caught %s" % (e,))
         else:
             self.fail("Expected ConfigError, nothing raised.")
+
+    @inlineCallbacks
+    def test_fire_account_metric(self):
+        service = yield self.service_helper.create_service_component(
+            name=u"myservice", config={u"metrics_prefix": u"foo"})
+        service_api = yield self.service_helper.get_service_component_api(
+            service.key)
+        component = yield service_api.get_service_component_object(service)
+        self.assertEqual(self.service_helper.get_published_metrics(), [])
+        yield component.fire_metric(Metric("bar"), 1)
+        self.assertEqual(self.service_helper.get_published_metrics(), [
+            (u'go.campaigns.test-0-user.stores.foo.bar', 1),
+        ])
 
 
 class TestMetricsServiceComponentAsync(TestMetricsServiceComponent):

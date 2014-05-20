@@ -27,7 +27,8 @@ class ServiceComponentDefinitionBase(object):
     service_component_interfaces = ()
     CONFIG_CLASS = Config
 
-    def __init__(self, service=None):
+    def __init__(self, vumi_api, service=None):
+        self.vumi_api = vumi_api
         self.service = service
 
     def get_config(self):

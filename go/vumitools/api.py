@@ -552,7 +552,7 @@ class VumiServiceComponentApi(object):
         if service is None:
             service = yield self.get_service_component()
         service_def = get_service_definition(
-            service.service_component_type, service)
+            service.service_component_type, self.user_api.api, service)
         returnValue(service_def.get_component())
 
     @Manager.calls_manager
