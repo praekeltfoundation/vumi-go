@@ -107,7 +107,17 @@ class TestDialogueViews(GoDjangoTestCase):
         conv_helper = self.setup_conversation(
             with_group=False, started=False, name=u"myconv")
 
-        poll = {"foo": "bar"}
+        conversation = conv_helper.get_conversation()
+        group1 = self.app_helper.create_group(u'group1')
+        group2 = self.app_helper.create_group(u'group2')
+        conversation.add_group(group1)
+
+        poll = {
+            'groups': [{
+                'key': '123',
+                'name': 'foo'
+            }]
+        }
         self.mock_rpc.set_response(result={"poll": poll})
         response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertContains(response, u"myconv")
@@ -119,11 +129,6 @@ class TestDialogueViews(GoDjangoTestCase):
         self.assertContains(response, 'Mxit')
         self.assertContains(response, 'WeChat')
         self.assertContains(response, 'Twitter')
-
-        conversation = conv_helper.get_conversation()
-        group1 = yield self.app_helper.create_group(u'group1')
-        group2 = yield self.app_helper.create_group(u'group2')
-        conversation.add_group(group1)
 
         expected = poll.copy()
         expected.update({
