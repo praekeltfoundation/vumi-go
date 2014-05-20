@@ -136,7 +136,7 @@ class MetricsMiddleware(BaseMiddleware):
         self.redis = yield TxRedisManager.from_config(
             self.config['redis_manager'])
         self.metric_manager = MetricManager(
-            self.manager_name, publisher=self.metric_publisher)
+            self.manager_name + '.', publisher=self.metric_publisher)
         self.metric_manager.start_polling()
 
     def teardown_middleware(self):
