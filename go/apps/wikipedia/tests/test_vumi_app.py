@@ -8,7 +8,7 @@ from vumi_wikipedia.tests.test_wikipedia_api import (
 
 from go.apps.tests.helpers import AppWorkerHelper
 from go.apps.wikipedia.vumi_app import WikipediaApplication
-from go.vumitools.metrics import ConversationMetric
+from go.vumitools.metrics import get_conversation_metric_prefix
 
 
 class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
@@ -57,10 +57,10 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
 
         metric_names = [name for name, _ in
                         self.app_helper.get_published_metrics(self.app)]
-        self.assertEqual(metric_names, [
-            ConversationMetric.make_name(self.conv, name) for name in [
-                'wikipedia_search_call', 'wikipedia_extract_call',
-                'wikipedia_extract_call']])
+        prefix = get_conversation_metric_prefix(self.conv)
+        self.assertEqual(metric_names, ["%s%s" % (prefix, name)for name in [
+            'wikipedia_search_call', 'wikipedia_extract_call',
+            'wikipedia_extract_call']])
 
     @inlineCallbacks
     def test_conversation_config(self):

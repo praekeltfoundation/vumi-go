@@ -7,6 +7,7 @@ from collections import defaultdict
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vumi.blinkenlights.metrics import MetricManager
 from vumi.errors import VumiError
 from vumi.message import Message
 from vumi.components.tagpool import TagpoolManager
@@ -500,7 +501,7 @@ class VumiRouterApi(object):
 
 
 class VumiApi(object):
-    def __init__(self, manager, redis, sender=None):
+    def __init__(self, manager, redis, sender=None, metric_publisher=None):
         # local import to avoid circular import since
         # go.api.go_api needs to access VumiApi
         from go.api.go_api.session_manager import SessionManager
@@ -517,6 +518,7 @@ class VumiApi(object):
         self.session_manager = SessionManager(
             self.redis.sub_manager('session_manager'))
         self.mapi = sender
+        self.metric_publisher = metric_publisher
 
     @staticmethod
     def _parse_config(config):
@@ -529,18 +531,23 @@ class VumiApi(object):
         riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
-        return cls(manager, redis, SyncMessageSender(amqp_client))
+        sender = SyncMessageSender(amqp_client)
+        metric_publisher = None
+        if amqp_client is not None:
+            metric_publisher = amqp_client.get_metric_publisher()
+        return cls(manager, redis, sender, metric_publisher)
 
     @classmethod
     @inlineCallbacks
-    def from_config_async(cls, config, command_publisher=None):
+    def from_config_async(cls, config, command_publisher=None,
+                          metric_publisher=None):
         # Note: This takes a publisher rather than a client to avoid leaking
         #       AMQP channels by making our own transient publishers.
         riak_config, redis_config = cls._parse_config(config)
         manager = TxRiakManager.from_config(riak_config)
         redis = yield TxRedisManager.from_config(redis_config)
         sender = AsyncMessageSender(command_publisher)
-        returnValue(cls(manager, redis, sender))
+        returnValue(cls(manager, redis, sender, metric_publisher))
 
     @Manager.calls_manager
     def user_exists(self, user_account_key):
@@ -570,6 +577,11 @@ class VumiApi(object):
         """
         return self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
+
+    def get_metric_manager(self, prefix):
+        if self.metric_publisher is None:
+            raise VumiError("No metric publisher available.")
+        return MetricManager(prefix, publisher=self.metric_publisher)
 
 
 class SyncMessageSender(object):
