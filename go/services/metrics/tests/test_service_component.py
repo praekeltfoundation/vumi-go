@@ -1,11 +1,11 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.blinkenlights.metrics import Metric
 from vumi.config import ConfigError
 from vumi.tests.helpers import VumiTestCase
 
-from go.services.metrics.service_component import MetricsStoreServiceComponent
+from go.services.metrics.service_component import (
+    MetricsStoreServiceComponent, MissingMetricError)
 from go.services.tests.helpers import ServiceComponentHelper
 
 
@@ -16,6 +16,9 @@ class TestMetricsServiceComponent(VumiTestCase):
     def setUp(self):
         self.service_helper = yield self.add_helper(
             ServiceComponentHelper(u'metrics', is_sync=self.is_sync))
+
+    def full_metric(self, metric_suffix, account_key="test-0-user"):
+        return u'go.campaigns.%s.%s' % (account_key, metric_suffix)
 
     @inlineCallbacks
     def test_create_component(self):
@@ -43,17 +46,50 @@ class TestMetricsServiceComponent(VumiTestCase):
             self.fail("Expected ConfigError, nothing raised.")
 
     @inlineCallbacks
-    def test_fire_account_metric(self):
+    def test_fire_metric(self):
+        service = yield self.service_helper.create_service_component(
+            name=u"myservice", config={
+                u"metrics_prefix": u"foo",
+                u"metrics": [{u"name": u"bar"}],
+            })
+        service_api = yield self.service_helper.get_service_component_api(
+            service.key)
+        component = yield service_api.get_service_component_object(service)
+        self.assertEqual(self.service_helper.get_published_metrics(), [])
+        component.fire_metric("bar", 1)
+        self.assertEqual(self.service_helper.get_published_metrics(), [
+            (self.full_metric('stores.foo.bar'), 1),
+        ])
+
+    @inlineCallbacks
+    def test_fire_metric_undefined(self):
         service = yield self.service_helper.create_service_component(
             name=u"myservice", config={u"metrics_prefix": u"foo"})
         service_api = yield self.service_helper.get_service_component_api(
             service.key)
         component = yield service_api.get_service_component_object(service)
         self.assertEqual(self.service_helper.get_published_metrics(), [])
-        yield component.fire_metric(Metric("bar"), 1)
-        self.assertEqual(self.service_helper.get_published_metrics(), [
-            (u'go.campaigns.test-0-user.stores.foo.bar', 1),
-        ])
+        self.assertRaises(MissingMetricError, component.fire_metric, "bar", 1)
+        self.assertEqual(self.service_helper.get_published_metrics(), [])
+
+    @inlineCallbacks
+    def test_fire_metric_multiple_aggregators(self):
+        service = yield self.service_helper.create_service_component(
+            name=u"myservice", config={
+                u"metrics_prefix": u"foo",
+                u"metrics": [
+                    {u"name": u"bar", u"aggregators": ['min', 'max']},
+                ],
+            })
+        service_api = yield self.service_helper.get_service_component_api(
+            service.key)
+        component = yield service_api.get_service_component_object(service)
+        self.assertEqual(self.service_helper.get_published_metrics(), [])
+        component.fire_metric("bar", 1)
+        self.assertEqual(
+            self.service_helper.get_published_metrics(aggregators=True), [
+                (self.full_metric(u'stores.foo.bar'), ['max', 'min'], 1),
+            ])
 
 
 class TestMetricsServiceComponentAsync(TestMetricsServiceComponent):

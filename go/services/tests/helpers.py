@@ -64,11 +64,14 @@ class ServiceComponentHelper(object):
     def cleanup(self):
         return self.vumi_helper.cleanup()
 
-    def get_published_metrics(self):
+    def get_published_metrics(self, aggregators=False):
         metrics = []
         worker_helper = self.vumi_helper.get_worker_helper()
         for metric_msg in worker_helper.get_dispatched_metrics():
-            for name, _aggs, data in metric_msg:
+            for name, aggs, data in metric_msg:
                 for _time, value in data:
-                    metrics.append((name, value))
+                    if aggregators:
+                        metrics.append((name, aggs, value))
+                    else:
+                        metrics.append((name, value))
         return metrics
