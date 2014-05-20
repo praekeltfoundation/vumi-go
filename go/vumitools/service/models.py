@@ -8,6 +8,7 @@ from twisted.internet.defer import returnValue
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import Unicode, ForeignKey, Timestamp, Json
 
+from go.config import get_service_types_with_interface
 from go.vumitools.account import UserAccount, PerAccountStore
 
 
@@ -100,13 +101,21 @@ class ServiceComponentStore(PerAccountStore):
         service_component = yield service_component.save()
         returnValue(service_component)
 
-    def list_running_service_components(self):
-        return self.service_components.index_keys(
-            'status', SERVICE_COMPONENT_RUNNING)
-
     def list_active_service_components(self):
         return self.service_components.index_keys(
             'archive_status', SERVICE_COMPONENT_ACTIVE)
+
+    def list_service_components_for_type(self, service_type):
+        return self.service_components.index_keys(
+            'service_component_type', service_type)
+
+    @Manager.calls_manager
+    def list_service_components_for_interface(self, interface_name):
+        all_keys = []
+        for service_type in get_service_types_with_interface(interface_name):
+            keys = yield self.list_service_components_for_type(service_type)
+            all_keys.extend(keys)
+        returnValue(all_keys)
 
     def load_all_bunches(self, keys):
         # Convenience to avoid the extra attribute lookup everywhere.

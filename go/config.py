@@ -98,6 +98,15 @@ def get_service_definition(service_type, vumi_api, service=None):
     return service_pkg.definition.ServiceComponentDefinition(vumi_api, service)
 
 
+def get_service_types_with_interface(interface_name):
+    service_types = []
+    for service_type in configured_service_types():
+        service_def = get_service_definition(service_type, None)
+        if interface_name in service_def.service_component_interfaces:
+            service_types.append(service_type)
+    return service_types
+
+
 _VUMI_INSTALLED_APPS = {
     'go.apps.bulk_message': {
         'namespace': 'bulk_message',

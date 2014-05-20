@@ -107,6 +107,31 @@ class TestServiceStore(VumiTestCase):
             service.key)
         self.assert_models_equal(service, dbservice)
 
+    @inlineCallbacks
+    def test_list_service_components_for_type(self):
+        store = self.service_store
+        foo_service = yield store.new_service_component(
+            u'foo_service', u'name', u'desc', {u'foo': u'bar'})
+        bar_service = yield store.new_service_component(
+            u'bar_service', u'name', u'desc', {u'foo': u'bar'})
+        foo_keys = yield store.list_service_components_for_type(u'foo_service')
+        bar_keys = yield store.list_service_components_for_type(u'bar_service')
+        self.assertEqual([foo_service.key], foo_keys)
+        self.assertEqual([bar_service.key], bar_keys)
+
+    @inlineCallbacks
+    def test_list_service_components_for_interface(self):
+        # TODO: Test multiple service types with the same interface
+        # TODO: Test a service type with multiple interfaces
+        store = self.service_store
+        yield store.new_service_component(
+            u'foo_service', u'name', u'desc', {u'foo': u'bar'})
+        metrics_service = yield store.new_service_component(
+            u'metrics', u'name', u'desc', {u'foo': u'bar'})
+        metrics_keys = yield store.list_service_components_for_interface(
+            u'metrics')
+        self.assertEqual([metrics_service.key], metrics_keys)
+
 
 class TestServiceStoreSync(TestServiceStore):
     sync_persistence = True

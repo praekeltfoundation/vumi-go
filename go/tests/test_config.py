@@ -3,12 +3,14 @@
 from twisted.trial.unittest import TestCase
 
 from go.config import (
-    get_conversation_pkg, get_router_pkg,
-    get_conversation_definition, get_router_definition,
+    get_conversation_pkg, get_router_pkg, get_service_pkg,
+    get_conversation_definition, get_router_definition, get_service_definition,
+    configured_conversations, configured_routers, configured_services,
+    obsolete_conversation_types, obsolete_router_types, obsolete_service_types,
     configured_conversation_types, configured_router_types,
-    configured_conversations, configured_routers,
-    obsolete_conversation_types, obsolete_router_types)
-from go.errors import UnknownConversationType, UnknownRouterType
+    configured_service_types, get_service_types_with_interface)
+from go.errors import (
+    UnknownConversationType, UnknownRouterType, UnknownServiceComponentType)
 
 
 class ConversationDefinitionHelpersTestCase(TestCase):
@@ -51,8 +53,8 @@ class ConversationDefinitionHelpersTestCase(TestCase):
 
 class RouterDefinitionHelpersTestCase(TestCase):
     def test_configured_router_types(self):
-        conv_types = configured_router_types()
-        self.assertEqual(conv_types['keyword'], 'Keyword')
+        router_types = configured_router_types()
+        self.assertEqual(router_types['keyword'], 'Keyword')
 
     def test_configured_routers(self):
         routers = configured_routers()
@@ -63,8 +65,7 @@ class RouterDefinitionHelpersTestCase(TestCase):
 
     def test_obsolete_router_types(self):
         obsolete_types = obsolete_router_types()
-        self.assertEqual(obsolete_types, set([
-        ]))
+        self.assertEqual(obsolete_types, set())
 
     def test_get_router_pkg(self):
         pkg = get_router_pkg('keyword', ['definition'])
@@ -84,3 +85,47 @@ class RouterDefinitionHelpersTestCase(TestCase):
         dummy_router = object()
         router_def = get_router_definition('keyword', dummy_router)
         self.assertTrue(router_def.router is dummy_router)
+
+
+class ServiceComponentDefinitionHelpersTestCase(TestCase):
+    def test_configured_service_types(self):
+        service_types = configured_service_types()
+        self.assertEqual(service_types['metrics'], 'Metrics store')
+
+    def test_configured_services(self):
+        services = configured_services()
+        self.assertEqual(services['go.services.metrics'], {
+            'namespace': 'metrics',
+            'display_name': 'Metrics store',
+        })
+
+    def test_obsolete_service_types(self):
+        obsolete_types = obsolete_service_types()
+        self.assertEqual(obsolete_types, set())
+
+    def test_get_service_pkg(self):
+        pkg = get_service_pkg('metrics', ['definition'])
+        self.assertEqual(pkg.__name__, 'go.services.metrics')
+
+    def test_get_service_pkg_fails(self):
+        self.assertRaises(UnknownServiceComponentType,
+                          get_service_pkg, 'unknown', ['definition'])
+
+    def test_get_service_definition(self):
+        dummy_api = object()
+        service_def = get_service_definition('metrics', dummy_api)
+        from go.services.metrics.definition import ServiceComponentDefinition
+        self.assertTrue(isinstance(service_def, ServiceComponentDefinition))
+        self.assertEqual(service_def.service_component_type, 'metrics')
+
+    def test_get_service_definition_with_service(self):
+        dummy_api = object()
+        dummy_service = object()
+        service_def = get_service_definition(
+            'metrics', dummy_api, dummy_service)
+        self.assertTrue(service_def.service is dummy_service)
+
+    def test_get_service_types_with_interface(self):
+        self.assertEqual(get_service_types_with_interface('foo'), [])
+        self.assertEqual(
+            get_service_types_with_interface('metrics'), ['metrics'])
