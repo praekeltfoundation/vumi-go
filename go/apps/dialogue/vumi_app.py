@@ -2,12 +2,25 @@
 
 import pkg_resources
 import json
-import logging
 
 from vumi.application.sandbox import SandboxResource
-from twisted.internet.defer import inlineCallbacks
 
 from go.apps.jsbox.vumi_app import JsBoxConfig, JsBoxApplication
+
+
+def dialogue_js_config(conv):
+    config = {
+        "name": "poll-%s" % conv.key
+    }
+
+    poll = conv.config.get("poll", {})
+    poll_metadata = poll.get('poll_metadata', {})
+    delivery_class = poll_metadata.get('delivery_class')
+
+    if delivery_class is not None:
+        config['delivery_class'] = delivery_class
+
+    return config
 
 
 class PollConfigResource(SandboxResource):
@@ -19,19 +32,7 @@ class PollConfigResource(SandboxResource):
         :returns:
             JSON string containg the configuration dictionary.
         """
-
-        config = {
-            "name": "poll-%s" % conversation.key
-        }
-
-        poll = conversation.config.get("poll", {})
-        poll_metadata = poll.get('poll_metadata', {})
-        delivery_class = poll_metadata.get('delivery_class')
-
-        if delivery_class is not None:
-            config['delivery_class'] = delivery_class
-
-        return json.dumps(config)
+        return json.dumps(dialogue_js_config(conversation))
 
     def _get_poll(self, conversation):
         """Returns the poll definition from the given dialogue.
@@ -74,3 +75,6 @@ class DialogueApplication(JsBoxApplication):
     CONFIG_CLASS = DialogueConfig
 
     worker_name = 'dialogue_application'
+
+    def get_jsbox_js_config(self, conv):
+        return dialogue_js_config(conv)
