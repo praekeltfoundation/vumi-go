@@ -32,7 +32,8 @@ class DialogueEditView(ConversationTemplateView):
         contact_store = conversation.user_api.contact_store
         groups = contact_store.list_static_groups()
 
-        model_data = {
+        model_data = r.json['result']['poll']
+        model_data.update({
             'campaign_id': request.user_api.user_account_key,
             'conversation_key': conversation.key,
             'groups': [g.get_data() for g in groups],
@@ -41,8 +42,7 @@ class DialogueEditView(ConversationTemplateView):
                     'show',
                     conversation_key=conversation.key)
             }
-        }
-        model_data.update(r.json['result']['poll'])
+        })
 
         metadata = model_data.get('poll_metadata', {})
         delivery_class = metadata.get('delivery_class', DEFAULT_DELIVERY_CLASS)
