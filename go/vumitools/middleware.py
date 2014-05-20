@@ -6,8 +6,10 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.middleware.message_storing import StoringMiddleware
 from vumi.utils import normalize_msisdn
-from vumi.blinkenlights.metrics import MetricPublisher, Count, Metric
+from vumi.blinkenlights.metrics import (
+    MetricPublisher, Count, Metric, MetricManager)
 from vumi.errors import ConfigError
+from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.api import VumiApi
 from go.vumitools.utils import MessageMetadataHelper
@@ -129,13 +131,12 @@ class MetricsMiddleware(BaseMiddleware):
         self.validate_config()
         self.metric_publisher = yield self.worker.start_publisher(
             MetricPublisher)
-        # We don't keep a reference to this VumiApi around because it doesn't
-        # have a general-purpose configuration. Specifically, it has no Riak
-        # config and its Redis config has a custom prefix.
-        vumi_api = yield VumiApi.from_config_async(
-            self.config, metric_publisher=self.metric_publisher)
-        self.redis = vumi_api.redis
-        self.metric_manager = vumi_api.get_metric_manager(self.manager_name)
+        # We don't use a VumiApi here because we don't have a Riak config for
+        # it.
+        self.redis = yield TxRedisManager.from_config(
+            self.config['redis_manager'])
+        self.metric_manager = MetricManager(
+            self.manager_name, publisher=self.metric_publisher)
         self.metric_manager.start_polling()
 
     def teardown_middleware(self):
