@@ -1,3 +1,6 @@
+import cgi
+import json
+
 from go.base.tests.helpers import GoDjangoTestCase
 from go.services.tests.view_helpers import ServiceComponentViewsHelper
 from go.vumitools.api import VumiApiCommand
@@ -76,18 +79,30 @@ class MetricsServiceViewTests(GoDjangoTestCase):
 
     def test_get_edit_config(self):
         svc_helper = self.service_helper.create_service_helper(
-            started=True, config={'metrics_prefix': 'mymetrics'})
+            started=True, config={
+                'metrics_prefix': 'mymetrics',
+                'metrics': [{'name': 'foo'}, {'name': 'bar'}],
+            })
         response = self.client.get(svc_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'mymetrics')
+        metrics_json = json.dumps([{'name': 'foo'}, {'name': 'bar'}])
+        self.assertContains(response, cgi.escape(metrics_json, quote=True))
 
-    def test_edit_service_keyword_config(self):
+    def test_edit_service_config(self):
         svc_helper = self.service_helper.create_service_helper(started=True)
         service = svc_helper.get_service_component()
         self.assertEqual(service.config, {})
         response = self.client.post(svc_helper.get_view_url('edit'), {
             'metrics_prefix': ['mymetrics'],
+            'metrics_json': ['[{"name": "foo"}, {"name": "bar"}]'],
         })
         self.assertRedirects(response, svc_helper.get_view_url('show'))
         service = svc_helper.get_service_component()
-        self.assertEqual(service.config, {u'metrics_prefix': u'mymetrics'})
+        self.assertEqual(service.config, {
+            u'metrics_prefix': u'mymetrics',
+            u'metrics': [
+                {u'name': u'foo'},
+                {u'name': u'bar'},
+            ],
+        })
