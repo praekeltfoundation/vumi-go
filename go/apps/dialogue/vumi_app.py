@@ -2,10 +2,8 @@
 
 import pkg_resources
 import json
-import logging
 
 from vumi.application.sandbox import SandboxResource
-from twisted.internet.defer import inlineCallbacks
 
 from go.apps.jsbox.vumi_app import JsBoxConfig, JsBoxApplication
 
