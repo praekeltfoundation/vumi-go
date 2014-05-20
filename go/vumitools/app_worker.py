@@ -5,13 +5,16 @@ from twisted.internet.defer import (
 from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
-from vumi.blinkenlights.metrics import MetricManager
+from vumi.blinkenlights.metrics import MetricPublisher, Metric
 from vumi.config import IConfigData, ConfigText, ConfigDict, ConfigField
 from vumi.connectors import IgnoreMessage
 
 from go.config import get_conversation_definition
-from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
-from go.vumitools.metrics import AccountMetric
+from go.vumitools.api import (
+    VumiApiCommand, VumiApi, VumiApiEvent, ApiCommandPublisher,
+    ApiEventPublisher)
+from go.vumitools.metrics import (
+    get_account_metric_prefix, get_conversation_metric_prefix)
 from go.vumitools.utils import MessageMetadataHelper
 
 
@@ -44,13 +47,8 @@ class GoWorkerConfigData(object):
 class GoWorkerConfigMixin(object):
     worker_name = ConfigText(
         "Name of this worker.", required=True, static=True)
-    metrics_prefix = ConfigText(
-        "Metric name prefix.", default='go.', static=True)
     riak_manager = ConfigDict("Riak config.", static=True)
     redis_manager = ConfigDict("Redis config.", static=True)
-
-    api_routing = ConfigDict("AMQP config for API commands.", static=True)
-    app_event_routing = ConfigDict("AMQP config for app events.", static=True)
 
 
 class GoWorkerMixin(object):
@@ -63,7 +61,8 @@ class GoWorkerMixin(object):
             'riak_manager': config.riak_manager,
             'redis_manager': config.redis_manager,
             }
-        d = VumiApi.from_config_async(api_config, self._amqp_client)
+        d = VumiApi.from_config_async(
+            api_config, self.command_publisher, self.metric_publisher)
 
         def cb(vumi_api):
             self.vumi_api = vumi_api
@@ -72,22 +71,18 @@ class GoWorkerMixin(object):
         return d.addCallback(cb)
 
     def _go_setup_command_consumer(self, config):
-        api_routing_config = VumiApiCommand.default_routing_config()
-        if config.api_routing:
-            api_routing_config.update(config.api_routing)
         d = self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
-            exchange_name=api_routing_config['exchange'],
-            exchange_type=api_routing_config['exchange_type'],
             message_class=VumiApiCommand, prefetch_count=1)
         return d.addCallback(lambda r: setattr(self, 'control_consumer', r))
 
+    def _go_setup_command_publisher(self, config):
+        d = self.start_publisher(ApiCommandPublisher)
+        return d.addCallback(lambda r: setattr(self, 'command_publisher', r))
+
     def _go_setup_event_publisher(self, config):
-        app_event_routing_config = VumiApiEvent.default_routing_config()
-        if config.app_event_routing:
-            app_event_routing_config.update(config.app_event_routing)
-        d = self.publish_to(app_event_routing_config['routing_key'])
+        d = self.start_publisher(ApiEventPublisher)
         return d.addCallback(lambda r: setattr(self, 'app_event_publisher', r))
 
     @inlineCallbacks
@@ -98,11 +93,11 @@ class GoWorkerMixin(object):
         if config.worker_name is not None:
             self.worker_name = config.worker_name
 
-        self.metrics = yield self.start_publisher(
-            MetricManager, config.metrics_prefix)
+        self.metric_publisher = yield self.start_publisher(MetricPublisher)
 
-        yield self._go_setup_vumi_api(config)
+        yield self._go_setup_command_publisher(config)
         yield self._go_setup_event_publisher(config)
+        yield self._go_setup_vumi_api(config)
         yield self._go_setup_command_consumer(config)
 
     @inlineCallbacks
@@ -113,7 +108,6 @@ class GoWorkerMixin(object):
         if self.control_consumer is not None:
             yield self.control_consumer.stop()
             self.control_consumer = None
-        self.metrics.stop()
 
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
@@ -269,20 +263,38 @@ class GoWorkerMixin(object):
     def publish_app_event(self, event):
         self.app_event_publisher.publish_message(event)
 
+    def get_account_metric_manager(self, account_key, store_name):
+        # TODO: Move this to an API.
+        prefix = get_account_metric_prefix(account_key, store_name)
+        return self.vumi_api.get_metric_manager(prefix)
+
+    def get_conversation_metric_manager(self, conv):
+        # TODO: Move this to an API.
+        prefix = get_conversation_metric_prefix(conv)
+        return self.vumi_api.get_metric_manager(prefix)
+
     def publish_account_metric(self, acc_key, store, name, value, agg=None):
-        metric = AccountMetric(acc_key, store, name, agg)
-        metric.oneshot(self.metrics, value)
+        # TODO: Collect the oneshot metrics and then publish all at once?
+        if agg is not None:
+            agg = [agg]
+        metric = Metric(name, agg)
+        metrics = self.get_account_metric_manager(acc_key, store)
+        metrics.oneshot(metric, value)
+        metrics.publish_metrics()
 
     @inlineCallbacks
     def publish_conversation_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_conversation(conversation_key)
+        metrics = self.get_conversation_metric_manager(conv)
 
         conv_type = conv.conversation_type
         conv_def = get_conversation_definition(conv_type, conv)
 
-        yield gatherResults([
-            m.oneshot(self.metrics, user_api=user_api)
-            for m in conv_def.get_metrics()])
+        for metric in conv_def.get_metrics():
+            value = yield metric.get_value(user_api)
+            metrics.oneshot(metric.metric, value)
+
+        metrics.publish_metrics()
 
     def collect_metrics(self, user_api, conversation_key):
         return self.publish_conversation_metrics(user_api, conversation_key)

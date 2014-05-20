@@ -369,5 +369,3 @@ PIPELINE_JS = {
 }
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
-
-GO_METRICS_PREFIX = 'go.'

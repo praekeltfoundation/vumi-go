@@ -7,13 +7,13 @@ from twisted.python.monkey import MonkeyPatcher
 
 from zope.interface import implements
 
-from vumi.blinkenlights.metrics import MetricMessage
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
     generate_proxies, IHelper, maybe_async_return)
 
 import go.config
-from go.vumitools.api import VumiApi, VumiApiEvent, VumiApiCommand
+from go.vumitools.api import (
+    VumiApi, VumiApiEvent, VumiApiCommand, ApiCommandPublisher)
 from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.utils import MessageMetadataHelper
 
@@ -245,12 +245,9 @@ class FakeAmqpConnection(object):
         metrics, self.metrics = self.metrics, []
         return metrics
 
-    def publish_metric(self, metric_name, aggregators, value, timestamp=None):
-        metric_msg = MetricMessage()
-        metric_msg.append((metric_name,
-            tuple(sorted(agg.name for agg in aggregators)),
-            [(timestamp, value)]))
-        return self.publish_metric_message(metric_msg)
+    def get_metric_publisher(self):
+        from go.base.amqp import MetricPublisher
+        return MetricPublisher(self)
 
 
 class VumiApiHelper(object):
@@ -345,7 +342,9 @@ class VumiApiHelper(object):
     def setup_async_vumi_api(self):
         worker_helper = self.get_worker_helper()
         amqp_client = worker_helper.get_fake_amqp_client(worker_helper.broker)
-        d = VumiApi.from_config_async(self.mk_config({}), amqp_client)
+        d = amqp_client.start_publisher(ApiCommandPublisher)
+        d.addCallback(lambda cmd_publisher: VumiApi.from_config_async(
+            self.mk_config({}), cmd_publisher))
         return d.addCallback(self.set_vumi_api)
 
     @proxyable

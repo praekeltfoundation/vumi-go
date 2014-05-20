@@ -7,8 +7,8 @@ from collections import defaultdict
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vumi.blinkenlights.metrics import MetricManager
 from vumi.errors import VumiError
-from vumi.service import Publisher
 from vumi.message import Message
 from vumi.components.tagpool import TagpoolManager
 from vumi.components.message_store import MessageStore
@@ -17,6 +17,7 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
+from vumi.service import Publisher
 from vumi import log
 
 from go.config import (
@@ -602,7 +603,7 @@ class VumiServiceComponentApi(object):
 
 
 class VumiApi(object):
-    def __init__(self, manager, redis, sender=None):
+    def __init__(self, manager, redis, sender=None, metric_publisher=None):
         # local import to avoid circular import since
         # go.api.go_api needs to access VumiApi
         from go.api.go_api.session_manager import SessionManager
@@ -619,6 +620,7 @@ class VumiApi(object):
         self.session_manager = SessionManager(
             self.redis.sub_manager('session_manager'))
         self.mapi = sender
+        self.metric_publisher = metric_publisher
 
     @staticmethod
     def _parse_config(config):
@@ -631,21 +633,23 @@ class VumiApi(object):
         riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
-        sender = None
+        sender = SyncMessageSender(amqp_client)
+        metric_publisher = None
         if amqp_client is not None:
-            sender = SyncMessageSender(amqp_client)
-        return cls(manager, redis, sender)
+            metric_publisher = amqp_client.get_metric_publisher()
+        return cls(manager, redis, sender, metric_publisher)
 
     @classmethod
     @inlineCallbacks
-    def from_config_async(cls, config, amqp_client=None):
+    def from_config_async(cls, config, command_publisher=None,
+                          metric_publisher=None):
+        # Note: This takes a publisher rather than a client to avoid leaking
+        #       AMQP channels by making our own transient publishers.
         riak_config, redis_config = cls._parse_config(config)
         manager = TxRiakManager.from_config(riak_config)
         redis = yield TxRedisManager.from_config(redis_config)
-        sender = None
-        if amqp_client is not None:
-            sender = AsyncMessageSender(amqp_client)
-        returnValue(cls(manager, redis, sender))
+        sender = AsyncMessageSender(command_publisher)
+        returnValue(cls(manager, redis, sender, metric_publisher))
 
     @Manager.calls_manager
     def user_exists(self, user_account_key):
@@ -673,10 +677,13 @@ class VumiApi(object):
         :param *args: Positional args for command.
         :param **kwargs: Keyword args for command.
         """
-        if self.mapi is None:
-            raise VumiError("No message sender on API object.")
         return self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
+
+    def get_metric_manager(self, prefix):
+        if self.metric_publisher is None:
+            raise VumiError("No metric publisher available.")
+        return MetricManager(prefix, publisher=self.metric_publisher)
 
 
 class SyncMessageSender(object):
@@ -684,43 +691,40 @@ class SyncMessageSender(object):
         self.amqp_client = amqp_client
 
     def send_command(self, command):
+        if self.amqp_client is None:
+            raise VumiError("No command message publisher available.")
         if not self.amqp_client.is_connected():
             self.amqp_client.connect()
         self.amqp_client.publish_command_message(command)
 
 
 class AsyncMessageSender(object):
-    def __init__(self, amqp_client):
-        self.publisher_config = VumiApiCommand.default_routing_config()
-        self.amqp_client = amqp_client
-        self.publisher = None
+    def __init__(self, command_publisher):
+        self.command_publisher = command_publisher
 
-    @inlineCallbacks
     def send_command(self, command):
-        if self.publisher is None:
-            self.publisher = yield self.amqp_client.start_publisher(
-                self.make_publisher())
-        self.publisher.publish_message(command)
+        if self.command_publisher is None:
+            raise VumiError("No command message publisher available.")
+        return self.command_publisher.publish_message(command)
 
-    def make_publisher(self):
-        "Build a Publisher class with the right attributes on it."
-        return type("VumiApiCommandPublisher", (Publisher,),
-                    self.publisher_config.copy())
+
+class ApiCommandPublisher(Publisher):
+    """
+    Publisher for VumiApiCommand messages.
+    """
+    routing_key = "vumi.api"
+    durable = True
+
+
+class ApiEventPublisher(Publisher):
+    """
+    Publisher for VumiApiEvent messages.
+    """
+    routing_key = "vumi.event"
+    durable = True
 
 
 class VumiApiCommand(Message):
-
-    _DEFAULT_ROUTING_CONFIG = {
-        'exchange': 'vumi',
-        'exchange_type': 'direct',
-        'routing_key': 'vumi.api',
-        'durable': True,
-        }
-
-    @classmethod
-    def default_routing_config(cls):
-        return cls._DEFAULT_ROUTING_CONFIG.copy()
-
     @classmethod
     def command(cls, worker_name, command_name, *args, **kwargs):
         return cls(**{
@@ -743,18 +747,6 @@ class VumiApiCommand(Message):
 
 
 class VumiApiEvent(Message):
-
-    _DEFAULT_ROUTING_CONFIG = {
-        'exchange': 'vumi',
-        'exchange_type': 'direct',
-        'routing_key': 'vumi.event',
-        'durable': True,
-        }
-
-    @classmethod
-    def default_routing_config(cls):
-        return cls._DEFAULT_ROUTING_CONFIG.copy()
-
     @classmethod
     def event(cls, account_key, conversation_key, event_type, content):
         return cls(account_key=account_key,

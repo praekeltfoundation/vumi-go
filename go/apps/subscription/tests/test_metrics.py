@@ -37,9 +37,7 @@ class TestSubscriptionMetric(VumiTestCase):
 
     def test_name_construction(self):
         self.assertEqual(
-            self.metric.get_full_name(),
-            "go.campaigns.test-0-user.conversations.%s."
-            "campaign-1.toy-subscription-metric" % self.conv.key)
+            self.metric.metric.name, "campaign-1.toy-subscription-metric")
 
     @inlineCallbacks
     def test_value_retrieval(self):
