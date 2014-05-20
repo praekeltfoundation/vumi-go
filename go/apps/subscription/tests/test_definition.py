@@ -22,36 +22,20 @@ class TestSubscriptionConversationDefinition(GoDjangoTestCase):
     def test_metrics_retrieval(self):
         [m1, m2, m3, m4, m5, m6] = self.conv_def.get_metrics()
 
-        metric_name_prefix = (
-            "go.campaigns.%s.conversations.%s"
-            % (self.conv.user_account.key, self.conv.key))
-
-        self.assertEqual(
-            m1.get_full_name(),
-            '%s.messages_sent' % metric_name_prefix)
+        self.assertEqual(m1.metric.name, 'messages_sent')
         self.assertTrue(isinstance(m1, MessagesSentMetric))
 
-        self.assertEqual(
-            m2.get_full_name(),
-            '%s.messages_received' % metric_name_prefix)
+        self.assertEqual(m2.metric.name, 'messages_received')
         self.assertTrue(isinstance(m2, MessagesReceivedMetric))
 
-        self.assertEqual(
-            m3.get_full_name(),
-            '%s.campaign-1.subscribed' % metric_name_prefix)
+        self.assertEqual(m3.metric.name, 'campaign-1.subscribed')
         self.assertTrue(isinstance(m3, SubscribedMetric))
 
-        self.assertEqual(
-            m4.get_full_name(),
-            '%s.campaign-2.subscribed' % metric_name_prefix)
+        self.assertEqual(m4.metric.name, 'campaign-2.subscribed')
         self.assertTrue(isinstance(m4, SubscribedMetric))
 
-        self.assertEqual(
-            m5.get_full_name(),
-            '%s.campaign-1.unsubscribed' % metric_name_prefix)
+        self.assertEqual(m5.metric.name, 'campaign-1.unsubscribed')
         self.assertTrue(isinstance(m5, UnsubscribedMetric))
 
-        self.assertEqual(
-            m6.get_full_name(),
-            '%s.campaign-2.unsubscribed' % metric_name_prefix)
+        self.assertEqual(m6.metric.name, 'campaign-2.unsubscribed')
         self.assertTrue(isinstance(m6, UnsubscribedMetric))
