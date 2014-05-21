@@ -32,6 +32,6 @@ class MetricsStoreServiceComponent(object):
             self.metric_manager[metric_name].set(value)
         except KeyError:
             raise MissingMetricError(
-                "Unregistered metrig: %s" % (metric_name,))
+                "Unregistered metric: %s" % (metric_name,))
         if publish:
             self.metric_manager.publish_metrics()
