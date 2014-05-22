@@ -43,6 +43,9 @@ class GoWorkerConfigData(object):
             return True
         return self._static_config.has_key(field_name)
 
+    def __contains__(self, field_name):
+        return self.has_key(field_name)
+
 
 class GoWorkerConfigMixin(object):
     worker_name = ConfigText(
