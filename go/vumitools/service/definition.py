@@ -22,6 +22,9 @@ class ServiceComponentConfigData(object):
             return True
         return field_name in self._static_config
 
+    def __contains__(self, field_name):
+        return self.has_key(field_name)
+
 
 class ServiceComponentDefinitionBase(object):
     """
