@@ -54,6 +54,8 @@ class ServiceComponentDefinitionBase(object):
 
     def get_config(self):
         static = get_service_component_config(self.service_component_type)
+        if static is None:
+            static = {}
         return self.CONFIG_CLASS(ServiceComponentConfigData(
             static, self.service.config.copy()))
 
