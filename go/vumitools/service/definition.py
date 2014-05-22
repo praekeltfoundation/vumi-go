@@ -1,5 +1,26 @@
+from vumi.config import IConfigData, Config
+from zope.interface import implements
 
-from vumi.config import Config
+from go.config import get_service_component_config
+
+
+class ServiceComponentConfigData(object):
+    implements(IConfigData)
+    # TODO: Replace this with better config machinery
+
+    def __init__(self, static_config, dynamic_config):
+        self._static_config = static_config
+        self._dynamic_config = dynamic_config
+
+    def get(self, field_name, default):
+        if field_name in self._dynamic_config:
+            return self._dynamic_config[field_name]
+        return self._static_config.get(field_name, default)
+
+    def has_key(self, field_name):
+        if field_name in self._dynamic_config:
+            return True
+        return field_name in self._static_config
 
 
 class ServiceComponentDefinitionBase(object):
@@ -32,7 +53,9 @@ class ServiceComponentDefinitionBase(object):
         self.service = service
 
     def get_config(self):
-        return self.CONFIG_CLASS(self.service.config.copy())
+        static = get_service_component_config(self.service_component_type)
+        return self.CONFIG_CLASS(ServiceComponentConfigData(
+            static, self.service.config.copy()))
 
     def get_component(self):
         if self.service_component_factory is None:

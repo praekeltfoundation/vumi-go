@@ -199,6 +199,19 @@ _VUMI_INSTALLED_SERVICES = {
 _VUMI_OBSOLETE_SERVICES = [
 ]
 
+# TODO: Move this config somewhere more sensible.
+#       This needs better config machinery.
+_VUMI_SERVICE_CONFIGS = {
+    'kvstore.redis': {
+        'key_prefix': 'vumigo.jsbox.kv',
+        'keys_per_user': 10000,
+    },
+}
+
+
+def get_service_component_config(service_type):
+    return _VUMI_SERVICE_CONFIGS.get(service_type, None)
+
 
 def billing_quantization_exponent():
     # This is currently hardcoded in here to avoid pulling a pile of Django

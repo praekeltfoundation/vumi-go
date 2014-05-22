@@ -60,20 +60,15 @@ class TestMetricsServiceComponent(VumiTestCase):
         self.assertEqual(component.keys_per_user_soft, 8)
 
     @inlineCallbacks
-    def test_create_component_invalid_config(self):
+    def test_create_component_default_config(self):
         service = yield self.service_helper.create_service_component(
-            name=u"myservice")
+            name=u"myservice", config={})
         service_api = yield self.service_helper.get_service_component_api(
             service.key)
-        try:
-            yield service_api.get_service_component_object(service)
-        except ConfigError:
-            pass  # Expected failure
-        except Exception as e:
-            self.fail("Expected ConfigError, caught %s: %s" % (
-                type(e).__name__, e))
-        else:
-            self.fail("Expected ConfigError, nothing raised.")
+        component = yield service_api.get_service_component_object(service)
+        # These values come from go.config.
+        self.assertEqual(component.config.key_prefix, 'vumigo.jsbox.kv')
+        self.assertEqual(component.config.keys_per_user, 10000)
 
     @inlineCallbacks
     def test_check_keys_below_limits(self):
