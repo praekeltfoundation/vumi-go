@@ -17,7 +17,7 @@ Conversation Types supporting Dashboards
 The visualization of dashboards is currently only supported by the
 Javascript sandbox conversation type.
 
-The publishing of metrics to a dashboard is supported by the HTTP API
+The publishing of metrics to a dashboard is supported by the :ref:`http_api`
 and the Javascript application conversation types.
 
 Metrics can be shared between conversations if they share the same metrics

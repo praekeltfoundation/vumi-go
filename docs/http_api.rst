@@ -1,3 +1,5 @@
+.. _http_api:
+
 Vumi Go's HTTP API
 ==================
 
