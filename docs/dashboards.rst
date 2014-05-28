@@ -91,8 +91,90 @@ Displays the last value of a given metric together with the last value of
 the same metric for the given time range in history. Makes it easy to
 compare a metric value over a specific period of time.
 
+
+.. code-block:: javascript
+
+    {
+      "type": "diamondash.widgets.lvalue.LValueWidget",
+      "time_range": "1d",
+      "name": "Last Ping Count",
+      "target": {
+        "metric_type": "account",
+        "store": "default",
+        "name": "total_pings",
+        "aggregator": "max"
+      }
+    }
+
 GraphWidget
 ^^^^^^^^^^^
 
 Displays a line graph. Multiple metrics can be rendered on the same graph.
 
+.. code-block:: javascript
+
+    {
+      "type": "diamondash.widgets.graph.GraphWidget",
+      "name": "Ping Counts",
+      "width": 6,
+      "time_range": "1d",
+      "bucket_size": "1h",
+      "metrics": [
+        {
+          "name": "Pings",
+          "target": {
+            "metric_type": "account",
+            "store": "default",
+            "name": "total_pings",
+            "aggregator": "max"
+          }
+        }
+      ]
+    }
+
+
+HistogramWidget
+^^^^^^^^^^^^^^^
+
+Display a histogram of the metrics.
+
+.. code-block:: javascript
+
+    {
+        "type": "diamondash.widgets.histogram.HistogramWidget",
+        "name": "Total Pings (Histogram)",
+        "target": {
+          "metric_type": "account",
+          "store": "default",
+          "name": "total_pings",
+          "aggregator": "max"
+        },
+        "time_range": "1h",
+        "bucket_size": "5m",
+        "width": 6
+    }
+
+
+PieWidget
+^^^^^^^^^
+
+Display a pie chart of metric values.
+
+.. code-block:: javascript
+
+    {
+        "type": "diamondash.widgets.pie.PieWidget",
+        "name": "Total Pings (Pie)",
+        "time_range": "1d",
+        "width": 6,
+        "metrics": [
+          {
+            "target": {
+              "metric_type": "account",
+              "store": "default",
+              "name": "total_pings",
+              "aggregator": "max"
+            }
+          }
+        ]
+    }
