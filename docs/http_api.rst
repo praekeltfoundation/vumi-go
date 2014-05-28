@@ -83,7 +83,7 @@ Publishing Metrics
 You are able to publish metrics to Vumi Go via the HTTP APIs metrics endpoint.
 These metrics are able to be displayed in the Vumi GO UI using the dashboards.
 
-How these dashboards are configured is explained in ...
+How these dashboards are configured is explained in :ref:`dashboards`.
 
 ::
 
@@ -91,7 +91,7 @@ How these dashboards are configured is explained in ...
 
 An example using curl from the commandline:
 
-::
+.. code-block:: bash
 
     $ curl -X PUT \
         --user '<account-key>:<access-token>' \
