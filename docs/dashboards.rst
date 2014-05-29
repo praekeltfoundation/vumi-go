@@ -87,10 +87,9 @@ The following widgets are available:
 LValueWidget
 ^^^^^^^^^^^^
 
-Displays the last value of a given metric together with the last value of
-the same metric for the given time range in history. Makes it easy to
-compare a metric value over a specific period of time.
-
+Displays two values of a metrics, the current value and the value of the
+metric a configurable time ago. The time difference between the two
+values is determined by the ``time_range`` value.
 
 .. code-block:: javascript
 
