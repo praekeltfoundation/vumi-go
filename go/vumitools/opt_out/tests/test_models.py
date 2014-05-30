@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 """Tests for go.vumitools.opt_out.models."""
 
 from datetime import datetime, timedelta
