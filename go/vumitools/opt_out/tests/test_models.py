@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 """Tests for go.vumitools.opt_out.models."""
 
 from datetime import datetime, timedelta
@@ -27,6 +29,10 @@ class TestOptOutStore(VumiTestCase):
     def test_opt_out_id(self):
         self.assertEqual(self.opt_out_store.opt_out_id("msisdn", "+1234"),
                          "msisdn:+1234")
+
+    def test_opt_out_id_with_unicode(self):
+        self.assertEqual(self.opt_out_store.opt_out_id("mxit", u"foö"),
+                         u"mxit:foö".encode('utf-8'))
 
     @inlineCallbacks
     def test_new_opt_out(self):
