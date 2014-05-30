@@ -28,6 +28,10 @@ class TestOptOutStore(VumiTestCase):
         self.assertEqual(self.opt_out_store.opt_out_id("msisdn", "+1234"),
                          "msisdn:+1234")
 
+    def test_opt_out_id_with_unicode(self):
+        self.assertEqual(self.opt_out_store.opt_out_id("mxit", u"foö"),
+                         u"mxit:foö".encode('utf-8'))
+
     @inlineCallbacks
     def test_new_opt_out(self):
         msg = self.msg_helper.make_inbound("STOP")
