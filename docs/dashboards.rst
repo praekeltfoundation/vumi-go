@@ -168,6 +168,7 @@ Display a pie chart of metric values.
         "width": 6,
         "metrics": [
           {
+            "name": "Total Pings",
             "target": {
               "metric_type": "account",
               "store": "default",
