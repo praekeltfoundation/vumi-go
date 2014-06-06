@@ -276,6 +276,7 @@ class TestContactStore(VumiTestCase):
         yield check_contact_for_addr('twitter', u'random', contact)
         yield check_contact_for_addr('mxit', u'mxit', contact)
         yield check_contact_for_addr('wechat', u'wechat', contact)
+        yield check_contact_for_addr('voice', u'+27831234567', contact)
 
     def test_contact_for_addr_for_unsupported_transports(self):
         return self.assertFailure(
@@ -313,3 +314,5 @@ class TestContactStore(VumiTestCase):
         yield check_contact_for_addr('wechat', u'wechat',
                                      wechat_id=u'wechat',
                                      msisdn=u'unknown')
+        yield check_contact_for_addr('voice', u'+27831234567',
+                                     msisdn=u'+27831234567')
