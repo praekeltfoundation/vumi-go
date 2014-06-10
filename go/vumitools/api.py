@@ -401,7 +401,8 @@ class VumiUserApi(object):
             log.error("Tag not allocated to account: %s" % (tag,), e)
         else:
             tag_info = yield self.api.mdb.get_tag_info(tag)
-            del tag_info.metadata['user_account']
+            if 'user_account' in tag_info.metadata:
+                del tag_info.metadata['user_account']
             yield tag_info.save()
             # NOTE: This loads and saves the CurrentTag object a second time.
             #       We should probably refactor the message store to make this

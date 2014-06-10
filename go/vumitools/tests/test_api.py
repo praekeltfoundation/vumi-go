@@ -171,6 +171,20 @@ class TestTxVumiUserApi(VumiTestCase):
         yield self.assert_account_tags([list(tag1), list(tag2)])
 
     @inlineCallbacks
+    def test_release_tag_without_owner(self):
+        [tag] = yield self.vumi_helper.setup_tagpool(u"pool1", [u"1234"])
+        yield self.user_helper.add_tagpool_permission(u"pool1")
+        yield self.user_api.acquire_specific_tag(tag)
+
+        tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
+        del tag_info.metadata['user_account']
+        yield tag_info.save()
+
+        yield self.assert_account_tags([list(tag)])
+        yield self.user_api.release_tag(tag)
+        yield self.assert_account_tags([])
+
+    @inlineCallbacks
     def test_batch_id_for_specific_tag(self):
         [tag] = yield self.vumi_helper.setup_tagpool(u"poolA", [u"tag1"])
         yield self.user_helper.add_tagpool_permission(u"poolA")
