@@ -114,8 +114,8 @@ class TestWizardViews(GoDjangoTestCase):
     def test_post_create_view_specific_tag(self):
         self.user_helper.add_app_permission(u'go.apps.bulk_message')
         self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'], metadata={
-                'user_selects_tag': True,
-            })
+            'user_selects_tag': True,
+        })
         self.user_helper.add_tagpool_permission(u'longcode')
         self.assert_stored_models()
         response = self.client.post(reverse('wizard:create'), {
