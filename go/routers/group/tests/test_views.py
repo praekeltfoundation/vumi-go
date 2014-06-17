@@ -176,3 +176,29 @@ class GroupViewTests(GoDjangoTestCase):
         self.assertEqual(set(router.extra_inbound_endpoints), set())
         self.assertEqual(
             set(router.extra_outbound_endpoints), set(['bar']))
+
+    def test_edit_router_group_config_with_unmodified_extra_forms(self):
+        group = self.router_helper.create_group(u'mygroup')
+        other_group = self.router_helper.create_group(u'othergroup')
+        rtr_helper = self.router_helper.create_router_helper(started=True)
+        router = rtr_helper.get_router()
+        self.assertEqual(router.config, {})
+        response = self.client.post(rtr_helper.get_view_url('edit'), {
+            'rules-TOTAL_FORMS': ['2'],
+            'rules-INITIAL_FORMS': ['1'],
+            'rules-MAX_NUM_FORMS': [''],
+            'rules-0-group': [group.key],
+            'rules-0-endpoint': ['foo'],
+            'rules-0-DELETE': [''],
+            'rules-1-group': [other_group.key],
+            'rules-1-endpoint': [''],
+            'rules-1-DELETE': [''],
+        })
+        self.assertRedirects(response, rtr_helper.get_view_url('show'))
+        router = rtr_helper.get_router()
+        self.assertEqual(router.config, {u'rules': [
+            {'group': group.key, 'endpoint': 'foo'},
+        ]})
+        self.assertEqual(set(router.extra_inbound_endpoints), set())
+        self.assertEqual(
+            set(router.extra_outbound_endpoints), set(['foo']))
