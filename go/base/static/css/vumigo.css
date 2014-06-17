@@ -4,11 +4,11 @@ body {
 }
 a:link,
 button {
-  -webkit-transition: color 0.1s, background 0.1s;
-  -moz-transition: color 0.1s, background 0.1s;
-  -o-transition: color 0.1s, background 0.1s;
-  -ms-transition: color 0.1s, background 0.1s;
-  transition: color 0.1s, background 0.1s;
+  -webkit-transition: color 0s, background 0s;
+  -moz-transition: color 0s, background 0s;
+  -o-transition: color 0s, background 0s;
+  -ms-transition: color 0s, background 0s;
+  transition: color 0s, background 0s;
 }
 .btn.disabled {
   pointer-events: auto;
@@ -600,7 +600,6 @@ button {
 }
 .campaigns.details .configuration {
   margin: 18px 0 0 0;
-  display: none;
 }
 .campaigns.details .configuration ul,
 .campaigns.details .configuration li {
