@@ -18,17 +18,6 @@
 
     <div class="clearfix"></div>
 
-    <div class="col-md-6">
-        <div class="form-group">
-            <label for="id_{{ wizard_form.channel_kind.name }}">
-                {{ wizard_form.channel_kind.label }}
-            </label>
-            {{ wizard_form.channel_kind }}
-        </div>
-    </div>
-
-    <div class="clearfix"></div>
-
     <div class="configuration col-md-12">
         <label>
             How would you like to reach and interact with users?
@@ -65,53 +54,6 @@
                             </optgroup>
                         </select>
                     {% endfor %}
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="box form-group">
-                    <label class-"control-label" for="id_{{ wizard_form.keyword.name }}">
-                        {{ wizard_form.keyword.label }}
-                    </label>
-                    {{ wizard_form.keyword|attr_class:"form-control" }}
-                </div>
-            </div>
-        </fieldset>
-
-        <fieldset class="configuration_existing row boxes">
-            <div class="col-md-4">
-                <div class="box form-group">
-                    <label class="control-label" for="id_{{ router_form.existing_router.name }}">
-                        {{ router_form.existing_router.label }}
-                    </label>
-
-                    {{ router_form.existing_router|attr_class:"form-control" }}
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="box form-group">
-                    <label class="control-label" for="id_{{ router_form.new_keyword.name }}">
-                      {{ router_form.new_keyword.label }}
-                    </label>
-                    {{ router_form.new_keyword|attr_class:"form-control" }}
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="box existing_keywords form-group">
-                    <label>
-                      Your existing keywords
-                    </label>
-
-                    {% for k, v in router_form.router_keywords.items %}
-                    <p data-key="{{ k }}" class="hide">
-                        {% for keyword in v %}
-                        {{ keyword }},
-                        {% endfor %}
-                    </p>
-                    {% endfor %}
-
                 </div>
             </div>
         </fieldset>
