@@ -65,19 +65,13 @@
 {% block ondomready %}
     {{ block.super }}
 
-    $('input[name=channel_kind]').on('change', function() {
-        $('.configuration').show();
-        $('.configuration fieldset').hide();
-        var $el = $('.configuration_' + $(this).attr('value'));
-        $el.show();
-    });
-
     // juggle available channels
     $('select[name=country]').on('change', function() {
         var v = $(this).find(':checked').val();
         $('select[name=channel]').hide();
         $('select[name=channel][data-relation-key="' + v + '"]').show();
     });
+
     // trigger change in order to show the first select box.
     $('select[name=country]').trigger('change');
 
@@ -86,16 +80,4 @@
         // not posted.
         $(this).find('select:hidden').remove();
     });
-
-    // if a channel is already selected then we should show the
-    // configuration view for it.
-    $('input[name=channel_kind]:checked').trigger('change');
-
-    $('select[name=existing_router]').on('change', function() {
-        var v = $(this).find(':checked').val();
-        $('.existing_keywords p').hide();
-        $('.existing_keywords p[data-key=' + v + ']').show();
-    });
-    // trigger change in order to show the first select box.
-    $('select[name=existing_router]').trigger('change');
 {% endblock %}
