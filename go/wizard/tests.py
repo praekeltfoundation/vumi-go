@@ -84,23 +84,6 @@ class TestWizardViews(GoDjangoTestCase):
         self.assertNotContains(response, 'empty:')
         self.assertNotContains(response, 'exhausted:')
 
-    def test_get_create_view_with_existing_routers(self):
-        self.user_helper.add_app_permission(u'go.apps.bulk_message')
-        self.user_helper.add_app_permission(u'go.apps.subscription')
-        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
-        self.user_helper.add_tagpool_permission(u'longcode')
-        self.user_helper.create_router(u"dummy", name=u"non-kw-router")
-        self.user_helper.create_router(u"keyword", name=u"existing-kw-router")
-        response = self.client.get(reverse('wizard:create'))
-        # Check that we have a few conversation types in the response
-        self.assertContains(response, 'bulk_message')
-        self.assertContains(response, 'subscription')
-        self.assertNotContains(response, 'survey')
-        self.assertContains(response, 'existing-kw-router')
-        self.assertNotContains(response, 'non-kw-router')
-        # Check that we have a tagpool/tag in the response
-        self.assertContains(response, 'longcode:')
-
     def test_post_create_view_valid(self):
         self.user_helper.add_app_permission(u'go.apps.bulk_message')
         self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
@@ -109,7 +92,6 @@ class TestWizardViews(GoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
-            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
         })
@@ -132,14 +114,13 @@ class TestWizardViews(GoDjangoTestCase):
     def test_post_create_view_specific_tag(self):
         self.user_helper.add_app_permission(u'go.apps.bulk_message')
         self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'], metadata={
-                'user_selects_tag': True,
-            })
+            'user_selects_tag': True,
+        })
         self.user_helper.add_tagpool_permission(u'longcode')
         self.assert_stored_models()
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
-            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:tag1',
         })
@@ -167,7 +148,6 @@ class TestWizardViews(GoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'jsbox',
             'name': 'My Conversation',
-            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
         })
@@ -186,7 +166,6 @@ class TestWizardViews(GoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'wikipedia',
             'name': 'My Conversation',
-            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
         })
@@ -202,7 +181,6 @@ class TestWizardViews(GoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'foo',
             'name': 'My Conversation',
-            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
         })
@@ -216,7 +194,6 @@ class TestWizardViews(GoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
-            'channel_kind': 'new',
             'country': 'Nowhere',
             'channel': 'longcode:',
         })
@@ -230,143 +207,10 @@ class TestWizardViews(GoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
-            'channel_kind': 'new',
             'country': 'International',
             'channel': 'badpool:',
         })
         self.assert_stored_models()
-        # TODO: Test that we do the right thing with the bad form when we do
-        #       the right thing with the bad form.
-        self.assertEqual(response.status_code, 200)
-
-    def test_post_create_view_with_keyword(self):
-        self.user_helper.add_app_permission(u'go.apps.bulk_message')
-        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
-        self.user_helper.add_tagpool_permission(u'longcode')
-        self.assert_stored_models()
-        response = self.client.post(reverse('wizard:create'), {
-            'conversation_type': 'bulk_message',
-            'name': 'My Conversation',
-            'channel_kind': 'new',
-            'country': 'International',
-            'channel': 'longcode:',
-            'keyword': 'foo',
-        })
-
-        [conv] = self.user_helper.user_api.active_conversations()
-        self.assertEqual('bulk_message', conv.conversation_type)
-        self.assertEqual('My Conversation', conv.name)
-        self.assertRedirects(
-            response, reverse('conversations:conversation', kwargs={
-                'conversation_key': conv.key, 'path_suffix': '',
-            }))
-
-        [router] = self.user_helper.user_api.active_routers()
-        self.assertEqual('keyword', router.router_type)
-        self.assertEqual('Keywords for longcode:tag1', router.name)
-        self.assertEqual(
-            ['keyword_foo'], list(router.extra_outbound_endpoints))
-        self.assertEqual({
-            'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
-        }, router.config)
-        self.assertTrue(router.running() or router.starting())
-
-        [channel] = self.user_helper.user_api.active_channels()
-        self.assertEqual(u'longcode:tag1', channel.key)
-
-        self.assert_routing_table(
-            channel_router=[(channel, router)],
-            router_conv=[(router, 'keyword_foo', conv)])
-
-    def test_post_create_view_with_keyword_default(self):
-        self.user_helper.add_app_permission(u'go.apps.bulk_message')
-        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
-        self.user_helper.add_tagpool_permission(u'longcode')
-        self.assert_stored_models()
-        response = self.client.post(reverse('wizard:create'), {
-            'conversation_type': 'bulk_message',
-            'name': 'My Conversation',
-            'channel_kind': 'new',
-            'country': 'International',
-            'channel': 'longcode:',
-            'keyword': 'default',
-        })
-
-        [conv] = self.user_helper.user_api.active_conversations()
-        self.assertEqual('bulk_message', conv.conversation_type)
-        self.assertEqual('My Conversation', conv.name)
-        self.assertRedirects(
-            response, reverse('conversations:conversation', kwargs={
-                'conversation_key': conv.key, 'path_suffix': '',
-            }))
-
-        [router] = self.user_helper.user_api.active_routers()
-        self.assertEqual('keyword', router.router_type)
-        self.assertEqual('Keywords for longcode:tag1', router.name)
-        self.assertEqual(
-            ['keyword_default'], list(router.extra_outbound_endpoints))
-        self.assertEqual({
-            'keyword_endpoint_mapping': {'default': 'keyword_default'},
-        }, router.config)
-        self.assertTrue(router.running() or router.starting())
-
-        [channel] = self.user_helper.user_api.active_channels()
-        self.assertEqual(u'longcode:tag1', channel.key)
-
-        self.assert_routing_table(
-            channel_router=[(channel, router)],
-            router_conv=[(router, 'keyword_default', conv)])
-
-    def test_post_create_view_with_existing_router(self):
-        self.user_helper.add_app_permission(u'go.apps.bulk_message')
-        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
-        self.user_helper.add_tagpool_permission(u'longcode')
-        existing_router = self.user_helper.create_router(u"keyword")
-        self.assert_stored_models(routers=[existing_router])
-        response = self.client.post(reverse('wizard:create'), {
-            'conversation_type': 'bulk_message',
-            'name': 'My Conversation',
-            'channel_kind': 'existing',
-            'existing_router': existing_router.key,
-            'new_keyword': 'foo',
-        })
-
-        [conv] = self.user_helper.user_api.active_conversations()
-        self.assertEqual('bulk_message', conv.conversation_type)
-        self.assertEqual('My Conversation', conv.name)
-        self.assertRedirects(
-            response, reverse('conversations:conversation', kwargs={
-                'conversation_key': conv.key, 'path_suffix': '',
-            }))
-
-        [router] = self.user_helper.user_api.active_routers()
-        self.assertEqual(existing_router.key, router.key)
-        self.assertEqual(
-            ['keyword_foo'], list(router.extra_outbound_endpoints))
-        self.assertEqual({
-            'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
-        }, router.config)
-
-        self.assert_stored_models(routers=[existing_router], convs=[conv])
-        self.assert_routing_table(router_conv=[(router, 'keyword_foo', conv)])
-
-    def test_post_create_view_with_existing_keyword(self):
-        self.user_helper.add_app_permission(u'go.apps.bulk_message')
-        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
-        self.user_helper.add_tagpool_permission(u'longcode')
-        existing_router = self.user_helper.create_router(u"keyword", config={
-            'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
-        })
-        self.assert_stored_models(routers=[existing_router])
-        response = self.client.post(reverse('wizard:create'), {
-            'conversation_type': 'bulk_message',
-            'name': 'My Conversation',
-            'channel_kind': 'existing',
-            'existing_router': existing_router.key,
-            'new_keyword': 'foo',
-        })
-
-        self.assert_stored_models(routers=[existing_router])
         # TODO: Test that we do the right thing with the bad form when we do
         #       the right thing with the bad form.
         self.assertEqual(response.status_code, 200)
