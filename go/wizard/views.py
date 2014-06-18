@@ -50,7 +50,6 @@ class WizardCreateView(BaseWizardView):
         forms_to_validate = [conv_form, chan_form]
         forms_valid = [form.is_valid() for form in forms_to_validate]
         if not all(forms_valid):
-            # TODO: Better validation.
             logger.info("Validation failed: %s" % (
                 [frm.errors for frm in forms_to_validate],))
             return self._render(request, conversation_form=conv_form,
