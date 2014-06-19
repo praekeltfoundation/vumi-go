@@ -185,12 +185,17 @@ class TestWizardViews(GoDjangoTestCase):
             'channel': 'longcode:',
         })
         self.assert_stored_models()
-        # TODO: Test that we do the right thing with the bad form when we do
-        #       the right thing with the bad form.
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context['conversation_form'].errors, {
+                'conversation_type': [
+                    u'Select a valid choice. foo is not one of the'
+                    u' available choices.']})
 
     def test_post_create_view_invalid_country(self):
         self.user_helper.add_app_permission(u'go.apps.bulk_message')
+        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
+        self.user_helper.add_tagpool_permission(u'longcode')
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
@@ -198,12 +203,17 @@ class TestWizardViews(GoDjangoTestCase):
             'channel': 'longcode:',
         })
         self.assert_stored_models()
-        # TODO: Test that we do the right thing with the bad form when we do
-        #       the right thing with the bad form.
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context['channel_form'].errors, {
+                'country': [
+                    u'Select a valid choice. Nowhere is not one of the'
+                    u' available choices.']})
 
     def test_post_create_view_invalid_channel(self):
         self.user_helper.add_app_permission(u'go.apps.bulk_message')
+        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
+        self.user_helper.add_tagpool_permission(u'longcode')
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
@@ -211,6 +221,9 @@ class TestWizardViews(GoDjangoTestCase):
             'channel': 'badpool:',
         })
         self.assert_stored_models()
-        # TODO: Test that we do the right thing with the bad form when we do
-        #       the right thing with the bad form.
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context['channel_form'].errors, {
+                'channel': [
+                    u'Select a valid choice. badpool: is not one of the'
+                    u' available choices.']})
