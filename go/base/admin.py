@@ -19,6 +19,9 @@ class GoUserAdmin(UserAdmin):
             return []
         return super(GoUserAdmin, self).get_inline_instances(request, obj=obj)
 
+    # loginas form template
+    change_form_template = 'loginas/change_form.html'
+
     # The forms to add and change user instances
     inlines = (UserProfileInline,)
 

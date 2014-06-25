@@ -161,6 +161,7 @@ INSTALLED_APPS = (
     'djcelery',
     'djcelery_email',
     'crispy_forms',
+    'loginas',
     'go.base',
     'go.conversation',
     'go.router',
