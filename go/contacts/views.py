@@ -69,6 +69,7 @@ def groups(request, type=None):
                                          group.key)
             messages.info(request, '%d groups will be deleted '
                                    'shortly.' % len(groups))
+            return redirect(reverse('contacts:groups'))
         elif '_export' in request.POST:
             tasks.export_many_group_contacts.delay(
                 request.user_api.user_account_key,
@@ -76,6 +77,7 @@ def groups(request, type=None):
 
             messages.info(request, 'The export is scheduled and should '
                                    'complete within a few minutes.')
+            return redirect(reverse('contacts:groups'))
     else:
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
@@ -158,7 +160,7 @@ def _static_group(request, contact_store, group):
                           'The export is scheduled and should '
                           'complete within a few minutes.')
             return redirect(_group_url(group.key))
-        if '_remove' in request.POST:
+        elif '_remove' in request.POST:
             contacts = request.POST.getlist('contact')
             for person_key in contacts:
                 contact = contact_store.get_contact_by_key(person_key)
@@ -167,6 +169,7 @@ def _static_group(request, contact_store, group):
             messages.info(
                 request,
                 '%d Contacts removed from group' % len(contacts))
+            return redirect(_group_url(group.key))
         elif '_delete_group_contacts' in request.POST:
             tasks.delete_group_contacts.delay(
                 request.user_api.user_account_key, group.key)
@@ -193,12 +196,12 @@ def _static_group(request, contact_store, group):
                     'We will notify you via email when the import '
                     'has been completed')
 
-                return redirect(_group_url(group.key))
-
             except (ContactParserException,):
                 messages.error(request, 'Something is wrong with the file')
                 _, file_path = utils.get_file_hints_from_session(request)
                 default_storage.delete(file_path)
+
+            return redirect(_group_url(group.key))
 
         else:
             upload_contacts_form = UploadContactsForm(request.POST,
