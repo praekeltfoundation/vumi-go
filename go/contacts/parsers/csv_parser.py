@@ -39,10 +39,24 @@ class CSVFileParser(ContactFileParser):
             for row in reader:
                 # Only process rows that actually have data
                 if any([column for column in row]):
+                    if None in row:
+                        # Any extra fields are stuck in a list with a key of
+                        # `None`. The presence of this key means we have a row
+                        # with too many fields. We don't know how to handle
+                        # this case, so we abort.
+                        raise ContactParserException(
+                            'Invalid row: too many fields.')
+                    if None in row.values():
+                        # Any missing fields are given a value of `None`. Since
+                        # all legitimate field values are strings, this is a
+                        # reliable indicator of a missing field. We don't know
+                        # how to handle this case, so we abort.
+                        raise ContactParserException(
+                            'Invalid row: not enough fields.')
                     # Our Riak client requires unicode for all keys & values
                     # stored.
                     unicoded_row = dict([(key, unicode(value or '', 'utf-8'))
-                                            for key, value in row.items()])
+                                         for key, value in row.items()])
                     yield unicoded_row
         except csv.Error as e:
             raise ContactParserException(e)

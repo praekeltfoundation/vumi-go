@@ -5,6 +5,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
 from go.base.tests.helpers import GoDjangoTestCase
+from go.contacts.parsers import ContactParserException
 from go.contacts.parsers.csv_parser import CSVFileParser
 from go.contacts.parsers.xls_parser import XLSFileParser
 
@@ -102,6 +103,50 @@ class TestCSVParser(ParserTestCase):
                 'surname': 'Surname 3',
                 'name': 'Name 3'},
             ])
+
+    def test_contacts_with_missing_fields(self):
+        csv_file = self.fixture(
+            'sample-contacts-with-headers-and-missing-fields.csv')
+        fp = default_storage.open(csv_file, 'rU')
+        contacts_iter = self.parser.parse_file(fp, zip(
+            ['name', 'surname', 'msisdn'],
+            ['string', 'string', 'msisdn_za']), has_header=True)
+        contacts = []
+        try:
+            for contact in contacts_iter:
+                if contact['name'] == 'Extra rows':
+                    # We don't care about these rows.
+                    continue
+                contacts.append(contact)
+        except ContactParserException as err:
+            self.assertEqual(err.args[0], 'Invalid row: not enough fields.')
+        self.assertEqual(contacts, [{
+            'msisdn': '+27761234561',
+            'surname': 'Surname 1',
+            'name': 'Name 1',
+        }])
+
+    def test_contacts_with_extra_fields(self):
+        csv_file = self.fixture(
+            'sample-contacts-with-headers-and-extra-fields.csv')
+        fp = default_storage.open(csv_file, 'rU')
+        contacts_iter = self.parser.parse_file(fp, zip(
+            ['name', 'surname', 'msisdn'],
+            ['string', 'string', 'msisdn_za']), has_header=True)
+        contacts = []
+        try:
+            for contact in contacts_iter:
+                if contact['name'] == 'Extra rows':
+                    # We don't care about these rows.
+                    continue
+                contacts.append(contact)
+        except ContactParserException as err:
+            self.assertEqual(err.args[0], 'Invalid row: too many fields.')
+        self.assertEqual(contacts, [{
+            'msisdn': '+27761234561',
+            'surname': 'Surname 1',
+            'name': 'Name 1',
+        }])
 
 
 class TestXLSParser(ParserTestCase):
