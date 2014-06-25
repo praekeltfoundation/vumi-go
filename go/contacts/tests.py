@@ -1104,6 +1104,9 @@ class TestSmartGroups(BaseContactsTestCase):
         self.assertRedirects(response, group_url(group.key))
         return group
 
+    def list_group_keys(self):
+        return [group.key for group in self.contact_store.list_groups()]
+
     def add_to_group(self, contact, group):
         contact.add_to_group(group)
         contact.save()
@@ -1114,14 +1117,21 @@ class TestSmartGroups(BaseContactsTestCase):
         self.assertEqual(u'a smart group', group.name)
         self.assertEqual(u'msisdn:\+12*', group.query)
 
+    def test_smart_group_empty_post(self):
+        group = self.mksmart_group('msisdn:\+12*')
+        group_url = reverse('contacts:group', kwargs={'group_key': group.key})
+        response = self.client.post(group_url)
+        self.assertRedirects(response, group_url)
+        self.assertEqual(self.list_group_keys(), [group.key])
+
     def test_smart_group_deletion(self):
         group = self.mksmart_group('msisdn:\+12*')
-        response = self.client.post(
-            reverse('contacts:group', kwargs={'group_key': group.key}),
-            {'_delete_group': 1})
+        self.assertEqual(self.list_group_keys(), [group.key])
+        group_url = reverse('contacts:group', kwargs={'group_key': group.key})
+        response = self.client.post(group_url, {'_delete_group': 1})
         self.assertRedirects(response, reverse('contacts:index'),
                              target_status_code=302)
-        self.assertTrue(group not in self.contact_store.list_groups())
+        self.assertEqual(self.list_group_keys(), [])
 
     def test_smart_group_clearing(self):
         contact = self.mkcontact()

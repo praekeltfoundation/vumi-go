@@ -294,6 +294,10 @@ def _smart_group(request, contact_store, group):
                                      group.key)
             messages.info(request, 'The group will be deleted shortly.')
             return redirect(reverse('contacts:index'))
+        else:
+            # We didn't get any useful POST variables, so just redirect back to
+            # the group page without doing anything.
+            return redirect(_group_url(group.key))
     else:
         smart_group_form = SmartGroupForm({
             'name': group.name,
