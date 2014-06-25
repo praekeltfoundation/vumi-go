@@ -160,7 +160,7 @@ class DjangoVumiApiHelper(object):
             return
 
         user_helper = self.make_user(
-            unicode(instance.email), enable_search=False,
+            unicode(instance.email), enable_search=True,
             django_user_pk=instance.pk)
         base_models.UserProfile.objects.create(
             user=instance, user_account=user_helper.account_key)
