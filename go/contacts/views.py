@@ -209,6 +209,11 @@ def _static_group(request, contact_store, group):
                 utils.store_file_hints_in_session(
                     request, file_name, file_path)
                 return redirect(_group_url(group.key))
+            else:
+                # We didn't get any useful POST variables, so just redirect
+                # back to the group page without doing anything.
+                return redirect(_group_url(group.key))
+
     else:
         group_form = ContactGroupForm({
             'name': group.name,

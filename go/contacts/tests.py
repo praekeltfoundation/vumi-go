@@ -801,6 +801,9 @@ class TestGroups(BaseContactsTestCase):
     def get_latest_contact(self):
         return max(self.get_all_contacts(), key=lambda c: c.created_at)
 
+    def list_group_keys(self):
+        return [group.key for group in self.contact_store.list_groups()]
+
     def test_groups_creation(self):
         response = self.client.post(reverse('contacts:groups'), {
             'name': 'a new group',
@@ -893,6 +896,16 @@ class TestGroups(BaseContactsTestCase):
         self.assertEqual(
             [c2.key],
             self.contact_store.get_contacts_for_group(group))
+
+    def test_group_empty_post(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        self.assertEqual(self.list_group_keys(), [group.key])
+        group_url = reverse('contacts:group', kwargs={'group_key': group.key})
+        response = self.client.post(group_url)
+        self.assertRedirects(response, group_url)
+
+        self.assertEqual(self.list_group_keys(), [group.key])
 
     def test_group_deletion(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
