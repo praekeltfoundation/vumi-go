@@ -20,7 +20,9 @@ class TestLoginAs(GoDjangoTestCase):
             username='user1@example.com')
 
     def test_successful_login_as(self):
-        """ Superusers should be able to use login-as. """
+        """
+        Superusers should be able to use login-as.
+        """
         user_2_pk = self.user_helper_2.get_django_user().pk
         response = self.superuser_client.get(
             reverse('loginas-user-login', kwargs={'user_id': str(user_2_pk)}))
@@ -29,7 +31,9 @@ class TestLoginAs(GoDjangoTestCase):
                          'test-2-user')
 
     def test_failed_login_as(self):
-        """ Ordinary users should not be able to use login-as. """
+        """
+        Ordinary users should not be able to use login-as.
+        """
         user_2_pk = self.user_helper_2.get_django_user().pk
         response = self.user_client_1.get(
             reverse('loginas-user-login', kwargs={'user_id': str(user_2_pk)}))
