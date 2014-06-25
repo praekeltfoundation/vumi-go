@@ -140,9 +140,13 @@ class DjangoVumiApiHelper(object):
 
     @proxyable
     def make_django_user(self, email='user@domain.com', password='password',
-                         first_name="Test", last_name="User"):
-        user = get_user_model().objects.create_user(
-            email=email, password=password)
+                         first_name="Test", last_name="User", superuser=False):
+        if superuser:
+            user = get_user_model().objects.create_superuser(
+                email=email, password=password)
+        else:
+            user = get_user_model().objects.create_user(
+                email=email, password=password)
         user.first_name = first_name
         user.last_name = last_name
         user.save()
