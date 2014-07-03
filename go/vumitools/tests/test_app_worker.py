@@ -194,5 +194,35 @@ class TestGoRouterWorker(VumiTestCase):
         ])
         yield self.assert_status('stopped')
 
+    @inlineCallbacks
     def test_handle_event(self):
-        pass
+        yield self.rtr_helper.start_router(self.router)
+
+        outbound_hops = [
+            [["CONVERSATION:dummy_conv:key", "default"],
+             ["ROUTER:dummy_router:key", "endpoint1"]],
+            [["ROUTER:dummy_router:key", "default"],
+             ["TRANSPORT_TAG:pool:tag", "default"]],
+        ]
+        hops = outbound_hops[-1:]
+
+        ack = yield self.rtr_helper.ri.make_dispatch_ack(
+            router=self.router, hops=hops, outbound_hops=outbound_hops)
+        [next_ack] = yield self.rtr_helper.ro.get_dispatched_events()
+        self.assertEqual(next_ack.get_routing_endpoint(), "endpoint1")
+        self.assertEqual(next_ack['user_message_id'], ack['user_message_id'])
+
+    @inlineCallbacks
+    def test_handle_event_no_next_hop(self):
+        yield self.rtr_helper.start_router(self.router)
+
+        outbound_hops = [
+            [["ROUTER:dummy_router:key", "default"],
+             ["TRANSPORT_TAG:pool:tag", "default"]],
+        ]
+        hops = outbound_hops[-1:]
+
+        yield self.rtr_helper.ri.make_dispatch_ack(
+            router=self.router, hops=hops, outbound_hops=outbound_hops)
+        sent_events = yield self.rtr_helper.ro.get_dispatched_events()
+        self.assertEqual(sent_events, [])
