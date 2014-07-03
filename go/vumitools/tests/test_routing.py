@@ -41,6 +41,12 @@ class TestRoutingMetadata(VumiTestCase):
             [['sc1', 'se1'], ['dc1', 'de1']],
         ], rmeta.get_hops())
 
+    def test_set_hops(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assert_hops(msg, None)
+        rmeta.set_hops([['sc1', 'se1'], ['dc1', 'de1']])
+        self.assert_hops(msg, [['sc1', 'se1'], ['dc1', 'de1']])
+
     def test_get_outbound_hops(self):
         msg, rmeta = self.mk_msg_rmeta()
         self.assert_outbound_hops(msg, None)
