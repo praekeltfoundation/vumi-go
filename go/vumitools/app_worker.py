@@ -444,6 +444,8 @@ class GoRouterMixin(GoWorkerMixin):
 
     @inlineCallbacks
     def process_command_stop(self, user_account_key, router_key):
+        log.info("Stopping router '%s' for user '%s'." % (
+            router_key, user_account_key))
         router = yield self.get_router(user_account_key, router_key)
         if router is None:
             log.warning(
