@@ -553,7 +553,8 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
         # To avoid circular import.
         from go.vumitools.routing import RoutingMetadata
         endpoint = RoutingMetadata(event).next_router_endpoint()
-        self.publish_event(event, endpoint=endpoint)
+        if endpoint is not None:
+            self.publish_event(event, endpoint=endpoint)
 
     def _mkhandler(self, handler_func, connector_name):
         def handler(msg):
