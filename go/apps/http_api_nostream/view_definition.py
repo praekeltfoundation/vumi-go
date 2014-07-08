@@ -14,8 +14,9 @@ class TokenForm(forms.Form):
         help_text='The URL to forward messages to via HTTP POST.',
         required=True)
     push_event_url = forms.CharField(
-        help_text='The URL to forward events to via HTTP POST.',
-        required=True)
+        help_text=('The URL to forward events to via HTTP POST.'
+                   ' (If unset, events will not be forwarded.)'),
+        required=False)
     metric_store = forms.CharField(
         help_text='Which store to publish metrics to.',
         required=False)

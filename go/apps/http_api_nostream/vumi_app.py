@@ -112,7 +112,7 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
 
     def send_event_to_client(self, event, conversation, push_url):
         if push_url is None:
-            log.warning(
+            log.info(
                 "push_event_url not configured for conversation: %s" % (
                     conversation.key))
             return

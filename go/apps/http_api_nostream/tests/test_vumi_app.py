@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 from urlparse import urlparse, urlunparse
 
 from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
@@ -414,7 +415,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         })
         yield self.conversation.save()
 
-        with LogCatcher(message='push_message_url not configured') as lc:
+        msg_prefix = 'push_message_url not configured'
+        with LogCatcher(message=msg_prefix, log_level=logging.WARNING) as lc:
             yield self.app_helper.make_dispatch_inbound(
                 'in 1', message_id='1', conv=self.conversation)
             [url_not_configured_log] = lc.messages()
@@ -488,7 +490,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
-        with LogCatcher(message='push_event_url not configured') as lc:
+        msg_prefix = 'push_event_url not configured'
+        with LogCatcher(message=msg_prefix, log_level=logging.INFO) as lc:
             yield self.app_helper.make_dispatch_ack(
                 msg1, conv=self.conversation)
             [url_not_configured_log] = lc.messages()
