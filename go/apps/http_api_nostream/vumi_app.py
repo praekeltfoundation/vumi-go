@@ -3,7 +3,6 @@ import base64
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
-from twisted.web import http
 from twisted.web.error import SchemeNotSupported
 
 from vumi.config import ConfigInt, ConfigText
@@ -143,7 +142,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 })
             resp = yield http_request_full(
                 url, data=data, headers=headers, timeout=config.timeout)
-            if resp.code != http.OK:
+            if not (200 <= resp.code < 300):
+                # We didn't get a 2xx response.
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, url))
         except SchemeNotSupported:
