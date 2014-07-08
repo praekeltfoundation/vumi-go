@@ -51,6 +51,10 @@ class RoutingMetadata(object):
         hops = self._msg['routing_metadata'].setdefault('go_hops', [])
         return hops
 
+    def set_hops(self, hops):
+        """Set the hops list for the message."""
+        self._msg['routing_metadata']['go_hops'] = hops[:]
+
     def get_outbound_hops(self):
         """Return a reference to the cached outbound hops list.
 

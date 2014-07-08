@@ -15,6 +15,7 @@ import go.config
 from go.vumitools.api import (
     VumiApi, VumiApiEvent, VumiApiCommand, ApiCommandPublisher)
 from go.vumitools.api_worker import EventDispatcher
+from go.vumitools.routing import RoutingMetadata
 from go.vumitools.utils import MessageMetadataHelper
 
 
@@ -83,33 +84,51 @@ class GoMessageHelper(object):
             self.add_router_metadata(msg, router)
 
     @proxyable
-    def make_inbound(self, content, conv=None, router=None, **kw):
+    def _add_go_routing_metadata(self, msg, hops, outbound_hops):
+        rmeta = RoutingMetadata(msg)
+        if hops is not None:
+            rmeta.set_hops(hops)
+        if outbound_hops is not None:
+            rmeta.set_outbound_hops(outbound_hops)
+
+    @proxyable
+    def make_inbound(self, content, conv=None, router=None,
+                     hops=None, outbound_hops=None, **kw):
         msg = self._msg_helper.make_inbound(content, **kw)
         self._add_go_metadata(msg, conv, router)
+        self._add_go_routing_metadata(msg, hops, outbound_hops)
         return msg
 
     @proxyable
-    def make_outbound(self, content, conv=None, router=None, **kw):
+    def make_outbound(self, content, conv=None, router=None,
+                      hops=None, outbound_hops=None, **kw):
         msg = self._msg_helper.make_outbound(content, **kw)
         self._add_go_metadata(msg, conv, router)
+        self._add_go_routing_metadata(msg, hops, outbound_hops)
         return msg
 
     @proxyable
-    def make_ack(self, msg=None, conv=None, router=None, **kw):
+    def make_ack(self, msg=None, conv=None, router=None,
+                 hops=None, outbound_hops=None, **kw):
         ack = self._msg_helper.make_ack(msg, **kw)
         self._add_go_metadata(ack, conv, router)
+        self._add_go_routing_metadata(ack, hops, outbound_hops)
         return ack
 
     @proxyable
-    def make_nack(self, msg=None, conv=None, router=None, **kw):
+    def make_nack(self, msg=None, conv=None, router=None,
+                  hops=None, outbound_hops=None, **kw):
         nack = self._msg_helper.make_nack(msg, **kw)
         self._add_go_metadata(nack, conv, router)
+        self._add_go_routing_metadata(nack, hops, outbound_hops)
         return nack
 
     @proxyable
-    def make_delivery_report(self, msg=None, conv=None, router=None, **kw):
+    def make_delivery_report(self, msg=None, conv=None, router=None,
+                             hops=None, outbound_hops=None, **kw):
         dr = self._msg_helper.make_delivery_report(msg, **kw)
         self._add_go_metadata(dr, conv, router)
+        self._add_go_routing_metadata(dr, hops, outbound_hops)
         return dr
 
     @proxyable

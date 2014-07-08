@@ -444,6 +444,8 @@ class GoRouterMixin(GoWorkerMixin):
 
     @inlineCallbacks
     def process_command_stop(self, user_account_key, router_key):
+        log.info("Stopping router '%s' for user '%s'." % (
+            router_key, user_account_key))
         router = yield self.get_router(user_account_key, router_key)
         if router is None:
             log.warning(
@@ -551,7 +553,8 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
         # To avoid circular import.
         from go.vumitools.routing import RoutingMetadata
         endpoint = RoutingMetadata(event).next_router_endpoint()
-        self.publish_event(event, endpoint=endpoint)
+        if endpoint is not None:
+            self.publish_event(event, endpoint=endpoint)
 
     def _mkhandler(self, handler_func, connector_name):
         def handler(msg):
