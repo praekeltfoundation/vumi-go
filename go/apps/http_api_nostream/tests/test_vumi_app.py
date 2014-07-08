@@ -376,6 +376,30 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         posted_msg = TransportUserMessage.from_json(posted_json)
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
 
+    @inlineCallbacks
+    def test_post_inbound_message_201_response(self):
+        with LogCatcher(message='Got unexpected response code') as lc:
+            msg_d = self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
+            req = yield self.push_calls.get()
+            req.setResponseCode(201)
+            req.finish()
+            yield msg_d
+        self.assertEqual(lc.messages(), [])
+
+    @inlineCallbacks
+    def test_post_inbound_message_500_response(self):
+        with LogCatcher(message='Got unexpected response code') as lc:
+            msg_d = self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
+            req = yield self.push_calls.get()
+            req.setResponseCode(500)
+            req.finish()
+            yield msg_d
+        [warning_log] = lc.messages()
+        self.assertTrue(self.get_message_url() in warning_log)
+        self.assertTrue('500' in warning_log)
+
     def _patch_http_request_full(self, exception_class):
         from go.apps.http_api_nostream import vumi_app
 
