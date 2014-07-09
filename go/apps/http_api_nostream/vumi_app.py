@@ -83,8 +83,10 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning("Cannot find conversation for message: %r" % (
                 message,))
             return
-        push_url = self.get_api_config(conversation, 'push_message_url')
-        yield self.send_message_to_client(message, conversation, push_url)
+        ignore = self.get_api_config(conversation, 'ignore_messages', False)
+        if not ignore:
+            push_url = self.get_api_config(conversation, 'push_message_url')
+            yield self.send_message_to_client(message, conversation, push_url)
 
     def send_message_to_client(self, message, conversation, push_url):
         if push_url is None:
@@ -107,8 +109,10 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
 
         config = yield self.get_message_config(event)
         conversation = config.conversation
-        push_url = self.get_api_config(conversation, 'push_event_url')
-        yield self.send_event_to_client(event, conversation, push_url)
+        ignore = self.get_api_config(conversation, 'ignore_events', False)
+        if not ignore:
+            push_url = self.get_api_config(conversation, 'push_event_url')
+            yield self.send_event_to_client(event, conversation, push_url)
 
     def send_event_to_client(self, event, conversation, push_url):
         if push_url is None:

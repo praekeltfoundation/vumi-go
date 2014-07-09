@@ -43,7 +43,10 @@ class TestHttpApiViews(GoDjangoTestCase):
                 'push_event_url': 'http://events/',
                 'push_message_url': 'http://messages/',
                 'api_tokens': ['token'],
-                'metric_store': 'foo_metric_store'
+                'metric_store': 'foo_metric_store',
+                'ignore_events': False,
+                'ignore_messages': False,
+
             }
         })
 
@@ -64,7 +67,10 @@ class TestHttpApiViews(GoDjangoTestCase):
                 'push_event_url': None,
                 'push_message_url': 'http://messages/',
                 'api_tokens': ['token'],
-                'metric_store': 'foo_metric_store'
+                'metric_store': 'foo_metric_store',
+                'ignore_events': False,
+                'ignore_messages': False,
+
             }
         })
         self.assertEqual(conversation.config, {})
@@ -90,7 +96,10 @@ class TestHttpApiViews(GoDjangoTestCase):
                 'push_event_url': None,
                 'push_message_url': None,
                 'api_tokens': ['token'],
-                'metric_store': 'foo_metric_store'
+                'metric_store': 'foo_metric_store',
+                'ignore_events': False,
+                'ignore_messages': False,
+
             }
         })
         self.assertEqual(conversation.config, {})
