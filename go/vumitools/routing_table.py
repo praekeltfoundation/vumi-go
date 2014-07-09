@@ -234,7 +234,7 @@ class RoutingTable(object):
         self.validate_entry(src_conn, src_endpoint, dst_conn, dst_endpoint)
         connector_dict = self._routing_table.setdefault(str(src_conn), {})
         if src_endpoint in connector_dict:
-            log.warning(
+            log.info(
                 "Replacing routing entry for (%r, %r): was %r, now %r" % (
                     str(src_conn), src_endpoint, connector_dict[src_endpoint],
                     [str(dst_conn), dst_endpoint]))
