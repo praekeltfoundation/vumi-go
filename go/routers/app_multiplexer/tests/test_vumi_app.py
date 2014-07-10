@@ -201,7 +201,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         msg = yield self.router_helper.ri.make_dispatch_inbound(
             'foo', router=router, from_addr='123', session_event='resume')
 
-         # assert that the user received a response
+        # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
         self.assertEqual(msg['content'],
                          'Bad choice.\n1) Try Again')
@@ -229,7 +229,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         msg = yield self.router_helper.ri.make_dispatch_inbound(
             'foo', router=router, from_addr='123', session_event='resume')
 
-         # assert that the user received a response
+        # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
         self.assertEqual(msg['content'],
                          'Bad choice.\n1) Try Again')
@@ -257,7 +257,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         msg = yield self.router_helper.ri.make_dispatch_inbound(
             '1', router=router, from_addr='123', session_event='resume')
 
-         # assert that the user received a response
+        # assert that the user received a response
         [msg] = self.router_helper.ri.get_dispatched_outbound()
         self.assertEqual(msg['content'],
                          'Please select a choice.\n1) Flappy Bird')
