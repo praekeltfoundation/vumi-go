@@ -1027,10 +1027,52 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
             'router_ro', msg, "Eep!", router=("router", "badrouter"))
 
     @inlineCallbacks
-    def test_event_for_unroutable_inbound_reply(self):
+    def test_event_for_unroutable_inbound_reply_on_unowned_tag(self):
         yield self.get_dispatcher()
         msg, ack = yield self.mk_msg_ack(
             tag=('pool1', '1234'), is_reply_to_unroutable=True)
+        yield self.dispatch_event(ack, 'sphex')
+        self.assert_rkeys_used('sphex.event')
+        [orig_ack] = self.get_dispatched_events('sphex')
+        self.assertEqual(ack, orig_ack)
+
+    @inlineCallbacks
+    def test_event_for_unroutable_inbound_reply_on_first_hop(self):
+        yield self.get_dispatcher()
+        msg, ack = yield self.mk_msg_ack(
+            tag=('pool1', '1234'), is_reply_to_unroutable=True,
+            user_account=self.user_account_key,
+            hops=[
+                ['ROUTER:router:router1:INBOUND', 'other'],
+                ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ])
+        yield self.dispatch_event(ack, 'sphex')
+        self.assert_rkeys_used('sphex.event', 'router_ri.event')
+        [event] = self.get_dispatched_events('router_ri')
+        expected = self.with_md(
+            ack, outbound_hops_from=msg, is_reply_to_unroutable=True,
+            router=("router", "router1"), user_account="user-1",
+            tag=('pool1', '1234'), endpoint='other',
+            hops=[
+                ['TRANSPORT_TAG:pool1:1234', 'default'],
+                ['ROUTER:router:router1:INBOUND', 'other'],
+            ])
+        self.assertEqual(expected, event)
+
+    @inlineCallbacks
+    def test_event_for_unroutable_inbound_reply_on_last_hop(self):
+        yield self.get_dispatcher()
+        msg, ack = yield self.mk_msg_ack(
+            tag=('pool1', '1234'), is_reply_to_unroutable=True,
+            user_account=self.user_account_key,
+            hops=[
+                ['ROUTER:router:router1:INBOUND', 'other'],
+                ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ])
+        ack = self.with_md(ack, outbound_hops_from=msg, hops=[
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+            ['ROUTER:router:router1:INBOUND', 'other'],
+        ])
         yield self.dispatch_event(ack, 'sphex')
         self.assert_rkeys_used('sphex.event')
         [orig_ack] = self.get_dispatched_events('sphex')
