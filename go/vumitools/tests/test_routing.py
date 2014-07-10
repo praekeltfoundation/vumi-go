@@ -232,6 +232,48 @@ class TestRoutingMetadata(VumiTestCase):
         rmeta.set_unroutable_reply()
         self.assertEqual(rmeta.get_unroutable_reply(), True)
 
+    def test_unroutable_event_done_not_unroutable(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assertEqual(rmeta.unroutable_event_done(), False)
+
+    def test_unroutable_event_done_no_hops_at_all(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        rmeta.set_unroutable_reply()
+        self.assertEqual(rmeta.unroutable_event_done(), True)
+
+    def test_unroutable_event_done_no_hops(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        rmeta.set_unroutable_reply()
+        self.set_outbound_hops(msg, [["sc1", "se1"], ["dc1", "de1"]])
+        self.assertEqual(rmeta.unroutable_event_done(), False)
+
+    def test_unroutable_event_done_no_outbound_hops(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        rmeta.set_unroutable_reply()
+        self.set_hops(msg, [["sc1", "se1"], ["dc1", "de1"]])
+        self.assertEqual(rmeta.unroutable_event_done(), False)
+
+    def test_unroutable_event_done_hops_mismatched_src(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        rmeta.set_unroutable_reply()
+        self.set_hops(msg, [["sc1", "dc1"], ["sc2", "dc2"]])
+        self.set_outbound_hops(msg, [["dc2", "other"], ["dc1", "sc1"]])
+        self.assertEqual(rmeta.unroutable_event_done(), False)
+
+    def test_unroutable_event_done_hops_mismatched_dst(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        rmeta.set_unroutable_reply()
+        self.set_hops(msg, [["sc1", "dc1"], ["sc2", "dc2"]])
+        self.set_outbound_hops(msg, [["other", "sc2"], ["dc1", "sc1"]])
+        self.assertEqual(rmeta.unroutable_event_done(), False)
+
+    def test_unroutable_event_done_hops_match(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        rmeta.set_unroutable_reply()
+        self.set_hops(msg, [["sc1", "dc1"], ["sc2", "dc2"]])
+        self.set_outbound_hops(msg, [["dc2", "sc2"], ["dc1", "sc1"]])
+        self.assertEqual(rmeta.unroutable_event_done(), True)
+
 
 class RoutingTableDispatcherTestCase(VumiTestCase):
     """Base class for ``AccountRoutingTableDispatcher`` test cases"""
