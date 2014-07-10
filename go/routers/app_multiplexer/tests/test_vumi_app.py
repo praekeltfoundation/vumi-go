@@ -3,6 +3,7 @@ import copy
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.tests.helpers import VumiTestCase
+
 from go.routers.app_multiplexer.vumi_app import ApplicationMultiplexer
 from go.routers.tests.helpers import RouterWorkerHelper
 
