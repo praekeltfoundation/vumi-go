@@ -216,6 +216,22 @@ class TestRoutingMetadata(VumiTestCase):
             [['dc1', 'de1'], ['sc1', 'se1']],
         ], 'se2')
 
+    def assert_unroutable(self, msg, unroutable):
+        self.assertEqual(msg['routing_metadata'].get('is_reply_to_unroutable'),
+                         unroutable)
+
+    def test_set_unroutable_reply(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assert_unroutable(msg, None)
+        rmeta.set_unroutable_reply()
+        self.assert_unroutable(msg, True)
+
+    def test_get_unroutable_reply(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assertEqual(rmeta.get_unroutable_reply(), False)
+        rmeta.set_unroutable_reply()
+        self.assertEqual(rmeta.get_unroutable_reply(), True)
+
 
 class RoutingTableDispatcherTestCase(VumiTestCase):
     """Base class for ``AccountRoutingTableDispatcher`` test cases"""
