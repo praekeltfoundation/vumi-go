@@ -273,7 +273,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
 
     def with_md(self, msg, user_account=None, conv=None, router=None,
                 endpoint=None, tag=None, hops=None, outbound_hops_from=None,
-                is_paid=False):
+                is_paid=False, is_reply_to_unroutable=False):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_helper.get_vumi_api(), msg)
         if user_account is not None:
@@ -301,6 +301,9 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
             rmeta = RoutingMetadata(msg)
             outbound_rmeta = RoutingMetadata(outbound_hops_from)
             rmeta.set_outbound_hops(outbound_rmeta.get_hops())
+        if is_reply_to_unroutable:
+            rmeta = RoutingMetadata(msg)
+            rmeta.set_unroutable_reply()
         return msg
 
     def assert_rkeys_used(self, *rkeys):
@@ -318,12 +321,12 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
 
     def assert_unroutable_reply(self, connector_name, msg,
                                 reply_content, **md):
+        md['is_reply_to_unroutable'] = True
         self.assert_rkeys_used(
             '%s.inbound' % (connector_name,),
             '%s.outbound' % (connector_name,))
 
         [reply] = self.get_dispatched_outbound(connector_name)
-        print reply['helper_metadata']
         self.assert_reply_matches(reply, msg, reply_content, **md)
 
     @inlineCallbacks
@@ -1022,3 +1025,13 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_unroutable_reply(
             'router_ro', msg, "Eep!", router=("router", "badrouter"))
+
+    @inlineCallbacks
+    def test_event_for_unroutable_inbound_reply(self):
+        yield self.get_dispatcher()
+        msg, ack = yield self.mk_msg_ack(
+            tag=('pool1', '1234'), is_reply_to_unroutable=True)
+        yield self.dispatch_event(ack, 'sphex')
+        self.assert_rkeys_used('sphex.event')
+        [orig_ack] = self.get_dispatched_events('sphex')
+        self.assertEqual(ack, orig_ack)
