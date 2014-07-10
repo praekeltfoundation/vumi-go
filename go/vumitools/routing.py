@@ -25,6 +25,19 @@ class InvalidConnectorError(RoutingError):
     """Raised when an invalid connector name is encountered."""
 
 
+class UnownedTagError(RoutingError):
+    """Raised when a message is received on an unowned tag."""
+
+
+class NoTargetError(RoutingError):
+    """
+    Raised when a there is no entry for a source connector in an account
+    routing table.
+    """
+
+REPLYABLE_ERRORS = (UnownedTagError, NoTargetError)
+
+
 class RoutingMetadata(object):
     """Helps manage Vumi Go routing metadata on a message.
 
@@ -303,11 +316,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             tag_info = yield msg_mdh.get_tag_info()
             user_account_key = tag_info.metadata['user_account']
             if user_account_key is None:
-                raise UnroutableMessageError(
+                raise UnownedTagError(
                     "Message received for unowned tag.", msg)
         else:
             raise UnroutableMessageError(
-                "Could not determine user account key", msg)
+                "No user account key or tag on message", msg)
 
         user_api = self.get_user_api(user_account_key)
         routing_table = yield user_api.get_routing_table()
@@ -355,7 +368,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         return router_direction
 
     @inlineCallbacks
-    def set_destination(self, msg, target, direction):
+    def set_destination(self, msg, target, direction, push_hops=True):
         """Parse a target `(str(go_connector), endpoint)` pair and determine
         the corresponding dispatcher connector to publish on. Set any
         appropriate Go helper_metadata required by the destination.
@@ -426,11 +439,12 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " in which destination connector type is valid but"
                 " unknown. Bad connector is: %s" % conn, msg)
 
-        rmeta = RoutingMetadata(msg)
-        rmeta.push_destination(str(conn), target[1])
+        if push_hops:
+            rmeta = RoutingMetadata(msg)
+            rmeta.push_destination(str(conn), target[1])
         returnValue((dst_connector_name, target[1]))
 
-    def acquire_source(self, msg, connector_type, direction):
+    def acquire_source(self, msg, connector_type, direction, push_hops=True):
         """Determine the `str(go_connector)` value that a msg came
         in on by looking at the connector_type and fetching the
         appropriate values from the `msg` helper_metadata.
@@ -485,8 +499,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 % connector_type, msg)
 
         src_conn_str = str(src_conn)
-        rmeta = RoutingMetadata(msg)
-        rmeta.push_source(src_conn_str, msg.get_routing_endpoint())
+        if push_hops:
+            rmeta = RoutingMetadata(msg)
+            rmeta.push_source(src_conn_str, msg.get_routing_endpoint())
         return src_conn_str
 
     @inlineCallbacks
@@ -586,11 +601,21 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         response = tagpool_metadata.get(
             'unroutable_inbound_reply', default_response)
         reply = msg.reply(response, continue_session=False)
+
+        # re-acquire source connector information (hops already pushed)
+        connector_type = self.connector_type(connector_name)
+        src_conn = self.acquire_source(msg, connector_type, self.INBOUND,
+                                       push_hops=False)
+        # send it back from whence it came
+        target = [src_conn, msg.get_routing_endpoint()]
+        # no source hop on reply so don't push destination hop
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            reply, target, self.OUTBOUND, push_hops=False)
         self.publish_outbound(
-            reply, connector_name, msg.get_routing_endpoint())
+            reply, dst_connector_name, dst_endpoint)
 
     def errback_inbound(self, f, msg, connector_name):
-        f.trap(UnroutableMessageError)  # Reraise any other exception types.
+        f.trap(*REPLYABLE_ERRORS)  # Reraise any other exception types.
         return self.handle_unroutable_inbound_message(f, msg, connector_name)
 
     @inlineCallbacks
@@ -631,7 +656,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
-            raise UnroutableMessageError(
+            raise NoTargetError(
                 "No target found for inbound message from %r"
                 % (connector_name,), msg)
 
@@ -681,7 +706,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
-            raise UnroutableMessageError(
+            raise NoTargetError(
                 "No target found for outbound message from '%s': %s" % (
                     connector_name, msg), msg)
 

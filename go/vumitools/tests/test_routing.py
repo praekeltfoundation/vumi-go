@@ -307,6 +307,25 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
         broker = self.vumi_helper.get_worker_helper().broker
         self.assertEqual(set(rkeys), set(broker.dispatched['vumi'].keys()))
 
+    def assert_reply_matches(self, reply, msg, content,
+                             session_event='close', **md):
+        expected = msg.reply(content, session_event=session_event)
+        expected = self.with_md(expected, **md)
+
+        expected["message_id"] = reply["message_id"]
+        expected["timestamp"] = reply["timestamp"]
+        self.assertEqual(reply, expected)
+
+    def assert_unroutable_reply(self, connector_name, msg,
+                                reply_content, **md):
+        self.assert_rkeys_used(
+            '%s.inbound' % (connector_name,),
+            '%s.outbound' % (connector_name,))
+
+        [reply] = self.get_dispatched_outbound(connector_name)
+        print reply['helper_metadata']
+        self.assert_reply_matches(reply, msg, reply_content, **md)
+
     @inlineCallbacks
     def mk_msg_reply(self, **kw):
         "Create and store an outbound message, then create a reply for it."
@@ -322,6 +341,17 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
         yield self.vumi_helper.get_vumi_api().mdb.add_outbound_message(msg)
         ack = self.msg_helper.make_ack(msg)
         returnValue((msg, ack))
+
+    def mk_unroutable_tagpool(self, name, transport_name="sphex",
+                              transport_type="sms", **kw):
+        metadata = {
+            "reply_to_unroutable_inbound": True,
+            "transport_name": transport_name,
+            "transport_type": transport_type,
+        }
+        metadata.update(kw)
+        return self.vumi_helper.get_vumi_api().tpm.set_metadata(
+            name, metadata)
 
     def dispatch_inbound(self, msg, connector_name):
         worker_helper = self.vumi_helper.get_worker_helper(connector_name)
@@ -649,6 +679,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
                 "router": "router_ri",
             },
             "opt_out_connector": "optout",
+            "default_unroutable_inbound_reply": "Eep!",
         })
         return self.vumi_helper.get_worker_helper().get_worker(
             AccountRoutingTableDispatcher, config)
@@ -851,6 +882,17 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
 
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
+    @inlineCallbacks
+    def test_unroutable_inbound_reply_via_billing(self):
+        yield self.mk_unroutable_tagpool(u"pool1")
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "unowned-tag"))
+        yield self.dispatch_inbound(msg, 'billing_dispatcher_ro')
+        self.assert_unroutable_reply(
+            'billing_dispatcher_ro', msg, "Eep!", tag=("pool1", "unowned-tag"))
+
 
 class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
 
@@ -880,24 +922,6 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         })
         return self.vumi_helper.get_worker_helper().get_worker(
             AccountRoutingTableDispatcher, config)
-
-    def assert_reply_matches(self, reply, msg, content,
-                             session_event='close', **md):
-        expected = msg.reply(content, session_event=session_event)
-        expected = self.with_md(expected, **md)
-
-        expected["message_id"] = reply["message_id"]
-        expected["timestamp"] = reply["timestamp"]
-        self.assertEqual(reply, expected)
-
-    def assert_unroutable_reply(self, connector_name, msg,
-                                reply_content, **md):
-        self.assert_rkeys_used(
-            '%s.inbound' % (connector_name,),
-            '%s.outbound' % (connector_name,))
-
-        [reply] = self.get_dispatched_outbound(connector_name)
-        self.assert_reply_matches(reply, msg, reply_content, **md)
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_to_unknown_pool(self):
@@ -942,9 +966,7 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_default_reply(self):
-        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
-            "reply_to_unroutable_inbound": True,
-        })
+        yield self.mk_unroutable_tagpool(u"pool1")
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
@@ -956,9 +978,7 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_default_reply_no_session(self):
-        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
-            "reply_to_unroutable_inbound": True,
-        })
+        yield self.mk_unroutable_tagpool(u"pool1")
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
@@ -969,10 +989,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_custom_reply(self):
-        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
-            "reply_to_unroutable_inbound": True,
-            "unroutable_inbound_reply": "Custom Eep!",
-        })
+        yield self.mk_unroutable_tagpool(
+            u"pool1", unroutable_inbound_reply="Custom Eep!")
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
@@ -996,9 +1014,7 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
 
     @inlineCallbacks
     def test_unroutable_inbound_from_router_default_reply(self):
-        yield self.vumi_helper.get_vumi_api().tpm.set_metadata(u"pool1", {
-            "reply_to_unroutable_inbound": True,
-        })
+        yield self.mk_unroutable_tagpool(u"pool1")
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
