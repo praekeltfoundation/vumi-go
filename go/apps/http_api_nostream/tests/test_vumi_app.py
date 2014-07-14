@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 from urlparse import urlparse, urlunparse
 
 from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
@@ -377,6 +378,19 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
 
     @inlineCallbacks
+    def test_post_inbound_message_ignored(self):
+        self.conversation.config['http_api_nostream'].update({
+            'ignore_messages': True,
+        })
+        yield self.conversation.save()
+
+        yield self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+        self.push_calls.put(None)
+        req = yield self.push_calls.get()
+        self.assertEqual(req, None)
+
+    @inlineCallbacks
     def test_post_inbound_message_201_response(self):
         with LogCatcher(message='Got unexpected response code') as lc:
             msg_d = self.app_helper.make_dispatch_inbound(
@@ -414,7 +428,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         })
         yield self.conversation.save()
 
-        with LogCatcher(message='push_message_url not configured') as lc:
+        msg_prefix = 'push_message_url not configured'
+        with LogCatcher(message=msg_prefix, log_level=logging.WARNING) as lc:
             yield self.app_helper.make_dispatch_inbound(
                 'in 1', message_id='1', conv=self.conversation)
             [url_not_configured_log] = lc.messages()
@@ -479,6 +494,21 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
 
     @inlineCallbacks
+    def test_post_inbound_event_ignored(self):
+        self.conversation.config['http_api_nostream'].update({
+            'ignore_events': True,
+        })
+        yield self.conversation.save()
+
+        msg1 = yield self.app_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+        yield self.app_helper.make_dispatch_ack(
+            msg1, conv=self.conversation)
+        self.push_calls.put(None)
+        req = yield self.push_calls.get()
+        self.assertEqual(req, None)
+
+    @inlineCallbacks
     def test_post_inbound_event_no_url(self):
         self.conversation.config['http_api_nostream'].update({
             'push_event_url': None,
@@ -488,7 +518,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
-        with LogCatcher(message='push_event_url not configured') as lc:
+        msg_prefix = 'push_event_url not configured'
+        with LogCatcher(message=msg_prefix, log_level=logging.INFO) as lc:
             yield self.app_helper.make_dispatch_ack(
                 msg1, conv=self.conversation)
             [url_not_configured_log] = lc.messages()
