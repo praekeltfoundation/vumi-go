@@ -170,7 +170,7 @@ class RoutingMetadata(object):
     def unroutable_event_done(self):
         """
         Return True if the message is an event for an unroutable reply
-        and it's hops are done.
+        and its hops are done.
         """
         if not self.get_unroutable_reply():
             return False
