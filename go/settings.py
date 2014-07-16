@@ -311,8 +311,10 @@ CELERYBEAT_SCHEDULE = {
 
 try:
     from production_settings import *
-except ImportError:
-    pass
+except ImportError as err:
+    # The ImportError might be for something imported by production_settings.
+    if err.args[0] != "No module named production_settings":
+        raise
 
 
 # Compress Less with `lesscpy`
