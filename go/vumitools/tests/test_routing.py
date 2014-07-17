@@ -5,7 +5,7 @@ from vumi.tests.utils import LogCatcher
 
 from go.vumitools.routing import (
     AccountRoutingTableDispatcher, RoutingMetadata, RoutingError,
-    UnroutableMessageError)
+    UnroutableMessageError, NoTargetError)
 from go.vumitools.routing_table import RoutingTable
 from go.vumitools.tests.helpers import VumiApiHelper
 from go.vumitools.utils import MessageMetadataHelper
@@ -652,6 +652,23 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
                          ['TRANSPORT_TAG:pool1:5678', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_outbound_message_with_no_target(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), router=('router', 'router1'),
+            endpoint='not-routed')
+        with LogCatcher() as lc:
+            yield self.dispatch_outbound(msg, 'router_ri')
+            [err] = lc.errors
+        self.assert_rkeys_used('router_ri.outbound')
+        [failure] = self.flushLoggedErrors(NoTargetError)
+        self.assertEqual(err['failure'], failure)
+        self.assertEqual(err['why'], 'Error routing message for router_ri')
+        self.assertTrue(failure.value.args[0].startswith(
+            'No target found for outbound message from \'router_ri\':'
+            ' <Message payload='))
 
     @inlineCallbacks
     def test_event_routing_to_app1(self):
