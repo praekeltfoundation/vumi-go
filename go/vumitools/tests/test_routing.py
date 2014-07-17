@@ -727,6 +727,26 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
     @inlineCallbacks
+    def test_event_whose_outbound_has_hops_but_no_user_account(self):
+        yield self.get_dispatcher()
+        msg, ack = yield self.mk_msg_ack(
+            endpoint='other', tag=('pool1', '5678'),
+            hops=[
+                ['CONVERSATION:app1:conv1', 'other'],
+                ['TRANSPORT_TAG:pool1:5678', 'default'],
+            ])
+        with LogCatcher() as lc:
+            yield self.dispatch_event(ack, 'sphex')
+            [err] = lc.errors
+        self.assert_rkeys_used('sphex.event')
+        [failure] = self.flushLoggedErrors(UnroutableMessageError)
+        self.assertEqual(err['failure'], failure)
+        self.assertEqual(err['why'], 'Error routing message for sphex')
+        self.assertTrue(failure.value.args[0].startswith(
+            'Outbound message for event has no associated user account:'
+            ' <Message payload='))
+
+    @inlineCallbacks
     def test_outbound_message_gets_transport_fields(self):
         yield self.get_dispatcher()
         yield self.vumi_helper.get_vumi_api().tpm.set_metadata("pool1", {
