@@ -1,9 +1,11 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.tests.helpers import VumiTestCase, MessageHelper
+from vumi.tests.utils import LogCatcher
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
+    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError,
+    UnroutableMessageError)
 from go.vumitools.routing_table import RoutingTable
 from go.vumitools.tests.helpers import VumiApiHelper
 from go.vumitools.utils import MessageMetadataHelper
@@ -550,6 +552,20 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
                          ['CONVERSATION:app2:conv2', 'yet-another'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
+
+    @inlineCallbacks
+    def test_inbound_message_with_no_tag_or_account(self):
+        yield self.get_dispatcher()
+        msg = self.msg_helper.make_inbound("foo")
+        with LogCatcher() as lc:
+            yield self.dispatch_inbound(msg, 'sphex')
+            [err] = lc.errors
+        self.assert_rkeys_used('sphex.inbound')
+        [failure] = self.flushLoggedErrors(UnroutableMessageError)
+        self.assertEqual(err['failure'], failure)
+        self.assertEqual(err['why'], 'Error routing message for sphex')
+        self.assertEqual(
+            'No user account key or tag on message', failure.value.args[0])
 
     @inlineCallbacks
     def test_outbound_message_from_optout_to_transport(self):
