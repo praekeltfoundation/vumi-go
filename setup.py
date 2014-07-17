@@ -12,13 +12,9 @@ setup(
     author_email='dev@praekeltfoundation.org',
     packages=find_packages(),
     install_requires=[
-        'vumi>0.4',
+        'vumi>=0.5.0',
         'vxpolls',
         'vumi-wikipedia',
-        # We need dev versions of the three packages above, so they have to be
-        # installed before us. They're listed first so that we fail fast
-        # instead of working through all the other requirements before
-        # discovering that they aren't available should that be the case.
         'Django==1.5.8',
         'gunicorn==0.15.0',
         'South==0.8.2',
