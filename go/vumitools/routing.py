@@ -177,8 +177,12 @@ class RoutingMetadata(object):
         hops = self.get_hops()
         outbound_hops = self.get_outbound_hops()
         if not hops and not outbound_hops:
+            # if hops and outbound hops are both either None or empty, consider
+            # them equal
             return True
         if not hops or not outbound_hops:
+            # if only one of hops or outbound hops are None or empty, consider
+            # them not equal
             return False
         [dst, src] = hops[-1]
         [outbound_src, outbound_dst] = outbound_hops[0]
