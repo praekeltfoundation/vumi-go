@@ -800,7 +800,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         if not msg_unroutable or msg_hops:
             # unroutable replies without hops were never associated with a
-            # user account and so aren't require to have on. All other
+            # user account and so aren't require to have one. All other
             # messages must.
             if not msg_mdh.has_user_account():
                 raise UnroutableMessageError(
