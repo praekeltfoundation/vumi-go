@@ -4,7 +4,6 @@ from django.core.urlresolvers import reverse
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.utils import get_router_view_definition
-from go.vumitools.router.models import ROUTER_ARCHIVED
 
 
 class TestRouterViews(GoDjangoTestCase):
@@ -21,7 +20,7 @@ class TestRouterViews(GoDjangoTestCase):
     def test_index(self):
         router = self.user_helper.create_router(u'keyword')
         archived_router = self.user_helper.create_router(
-            u'keyword', name=u'archived', archive_status=ROUTER_ARCHIVED)
+            u'keyword', name=u'archived', archived=True)
         response = self.client.get(reverse('routers:index'))
         self.assertContains(response, urllib.quote(router.key))
         self.assertNotContains(response, urllib.quote(archived_router.key))

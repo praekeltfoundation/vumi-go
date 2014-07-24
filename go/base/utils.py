@@ -9,10 +9,11 @@ from django import forms
 from django.http import Http404, HttpResponse
 from django.conf import settings
 
-from go.errors import UnknownConversationType, UnknownRouterType
+from go.errors import (
+    UnknownConversationType, UnknownRouterType, UnknownServiceComponentType)
 from go.config import (
-    get_conversation_pkg, get_router_pkg,
-    obsolete_conversation_types, obsolete_router_types)
+    get_conversation_pkg, get_router_pkg, get_service_pkg,
+    obsolete_conversation_types, obsolete_router_types, obsolete_service_types)
 from go.base.amqp import connection
 from go.vumitools.api import VumiApi
 
@@ -29,6 +30,14 @@ def router_or_404(user_api, key):
     if router is None:
         raise Http404("Router not found.")
     return router
+
+
+def service_or_404(user_api, key):
+    service = user_api.service_component_store.get_service_component_by_key(
+        key)
+    if service is None:
+        raise Http404("Service component not found.")
+    return service
 
 
 def sendfile(url, buffering=True, filename=None):
@@ -221,6 +230,28 @@ def get_router_view_definition(router_type, router=None):
     if not hasattr(router_pkg, 'view_definition'):
         return RouterViewDefinitionBase(router_def)
     return router_pkg.view_definition.RouterViewDefinition(router_def)
+
+
+def get_service_view_definition(service_type, service=None):
+    # Scoped import to avoid circular deps.
+    from go.service.view_definition import ServiceComponentViewDefinitionBase
+    try:
+        service_pkg = get_service_pkg(
+            service_type, ['definition', 'view_definition'])
+    except UnknownServiceComponentType:
+        # To handle obsolete services that are still viewable
+        if service_type not in obsolete_service_types():
+            raise
+        from go.vumitools.service.definition import (
+            ServiceComponentDefinitionBase)
+        service_def = ServiceComponentDefinitionBase(service)
+        service_def.service_type = service_type
+        return ServiceComponentViewDefinitionBase(service_def)
+    service_def = service_pkg.definition.ServiceComponentDefinition(service)
+    if not hasattr(service_pkg, 'view_definition'):
+        return ServiceComponentViewDefinitionBase(service_def)
+    return service_pkg.view_definition.ServiceComponentViewDefinition(
+        service_def)
 
 
 def extract_auth_from_url(url):

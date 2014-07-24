@@ -21,14 +21,16 @@ from vumi.service import Publisher
 from vumi import log
 
 from go.config import (
-    configured_conversations,
-    configured_routers)
+    configured_conversations, configured_routers, configured_services,
+    get_service_definition)
+
 from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.router import RouterStore
+from go.vumitools.service import ServiceComponentStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.token_manager import TokenManager
 
@@ -90,16 +92,18 @@ class VumiUserApi(object):
         self.api = api
         self.manager = self.api.manager
         self.user_account_key = user_account_key
-        self.conversation_store = ConversationStore(self.api.manager,
-                                                    self.user_account_key)
-        self.contact_store = ContactStore(self.api.manager,
-                                          self.user_account_key)
-        self.router_store = RouterStore(self.api.manager,
-                                        self.user_account_key)
-        self.channel_store = ChannelStore(self.api.manager,
-                                          self.user_account_key)
-        self.optout_store = OptOutStore(self.api.manager,
-                                        self.user_account_key)
+        self.conversation_store = ConversationStore(
+            self.api.manager, self.user_account_key)
+        self.contact_store = ContactStore(
+            self.api.manager, self.user_account_key)
+        self.router_store = RouterStore(
+            self.api.manager, self.user_account_key)
+        self.channel_store = ChannelStore(
+            self.api.manager, self.user_account_key)
+        self.optout_store = OptOutStore(
+            self.api.manager, self.user_account_key)
+        self.service_component_store = ServiceComponentStore(
+            self.api.manager, self.user_account_key)
 
     def exists(self):
         return self.api.user_exists(self.user_account_key)
@@ -141,6 +145,10 @@ class VumiUserApi(object):
 
     def get_router(self, router_key):
         return self.router_store.get_router_by_key(router_key)
+
+    def get_service_component(self, service_key):
+        return self.service_component_store.get_service_component_by_key(
+            service_key)
 
     @Manager.calls_manager
     def get_channel(self, tag):
@@ -194,6 +202,17 @@ class VumiUserApi(object):
         for routers_bunch in self.router_store.load_all_bunches(keys):
             routers.extend((yield routers_bunch))
         returnValue(routers)
+
+    @Manager.calls_manager
+    def active_service_components(self):
+        store = self.service_component_store
+        keys = yield store.list_active_service_components()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       service_components.
+        services = []
+        for bunch in self.service_component_store.load_all_bunches(keys):
+            services.extend((yield bunch))
+        returnValue(services)
 
     @Manager.calls_manager
     def active_channels(self):
@@ -256,6 +275,14 @@ class VumiUserApi(object):
         returnValue(SortedDict([(router_type, router_settings[router_type])
                                 for router_type in sorted(router_settings)]))
 
+    @Manager.calls_manager
+    def service_component_types(self):
+        # TODO: Permissions.
+        yield None
+        service_settings = configured_services()
+        returnValue(SortedDict([(service_type, service_settings[service_type])
+                                for service_type in sorted(service_settings)]))
+
     def list_groups(self):
         return self.contact_store.list_groups()
 
@@ -278,6 +305,13 @@ class VumiUserApi(object):
         router = yield self.router_store.new_router(
             router_type, name, description, config, batch_id, **fields)
         returnValue(router)
+
+    @Manager.calls_manager
+    def new_service_component(self, service_type, name, description, config,
+                              **fields):
+        service = yield self.service_component_store.new_service_component(
+            service_type, name, description, config, **fields)
+        returnValue(service)
 
     @Manager.calls_manager
     def get_routing_table(self, user_account=None):
@@ -433,6 +467,9 @@ class VumiUserApi(object):
     def get_router_api(self, router_type, router_key):
         return VumiRouterApi(self, router_type, router_key)
 
+    def get_service_component_api(self, service_type, service_key):
+        return VumiServiceComponentApi(self, service_type, service_key)
+
 
 class VumiRouterApi(object):
     def __init__(self, user_api, router_type, router_key):
@@ -497,6 +534,71 @@ class VumiRouterApi(object):
         worker_name = '%s_router' % (self.router_type,)
         kwargs.setdefault('user_account_key', self.user_api.user_account_key)
         kwargs.setdefault('router_key', self.router_key)
+        return self.user_api.api.send_command(
+            worker_name, command, *args, **kwargs)
+
+
+class VumiServiceComponentApi(object):
+    def __init__(self, user_api, service_type, service_key):
+        self.user_api = user_api
+        self.manager = user_api.manager
+        self.service_type = service_type
+        self.service_key = service_key
+
+    def get_service_component(self):
+        return self.user_api.get_service_component(self.service_key)
+
+    @Manager.calls_manager
+    def get_service_component_object(self, service=None):
+        if service is None:
+            service = yield self.get_service_component()
+        service_def = get_service_definition(
+            service.service_component_type, self.user_api.api, service)
+        returnValue(service_def.get_component())
+
+    @Manager.calls_manager
+    def archive_service_component(self, service=None):
+        if service is None:
+            service = yield self.get_service_component()
+        service.set_status_finished()
+        yield service.save()
+
+    @Manager.calls_manager
+    def start_service(self, service=None):
+        """Send the start command to this service's worker.
+
+        The service is then responsible for processing this message as
+        appropriate and handling the state transition.
+        """
+        if service is None:
+            service = yield self.get_service_component()
+        service.set_status_starting()
+        yield service.save()
+        yield self.dispatch_service_command('start')
+
+    @Manager.calls_manager
+    def stop_service(self, service=None):
+        """Send the stop command to this service's worker.
+
+        The service is then responsible for processing this message as
+        appropriate and handling the state transition.
+        """
+        if service is None:
+            service = yield self.get_service_component()
+        service.set_status_stopping()
+        yield service.save()
+        yield self.dispatch_service_command('stop')
+
+    def dispatch_service_command(self, command, *args, **kwargs):
+        """Send a command to this service's worker.
+
+        :type command: str
+        :params command:
+            The name of the command to call
+        """
+        worker_name = '%s_service' % (self.service_type,)
+        kwargs.setdefault('user_account_key', self.user_api.user_account_key)
+        kwargs.setdefault('service_key', self.service_key)
         return self.user_api.api.send_command(
             worker_name, command, *args, **kwargs)
 

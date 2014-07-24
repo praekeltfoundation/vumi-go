@@ -8,3 +8,7 @@ class UnknownConversationType(VumiGoError):
 
 class UnknownRouterType(VumiGoError):
     """Raised when an invalid router type is encountered."""
+
+
+class UnknownServiceComponentType(VumiGoError):
+    """Raised when an invalid service component type is encountered"""

@@ -7,6 +7,7 @@ from twisted.python.monkey import MonkeyPatcher
 
 from zope.interface import implements
 
+from vumi.blinkenlights.metrics import MetricPublisher
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
     generate_proxies, IHelper, maybe_async_return)
@@ -254,7 +255,7 @@ class FakeAmqpConnection(object):
 
     def publish_metric_message(self, metric):
         self.metrics.append(metric)
-        self.publish(metric.to_json(), 'vumi', 'vumi.metrics')
+        self.publish(metric.to_json(), 'vumi.metrics', 'vumi.metrics')
 
     def get_commands(self):
         commands, self.commands = self.commands, []
@@ -317,6 +318,7 @@ class VumiApiHelper(object):
         # We might need an AMQP connection at some point.
         broker = self.get_worker_helper().broker
         broker.exchange_declare('vumi', 'direct')
+        broker.exchange_declare('vumi.metrics', 'direct')
         self.django_amqp_connection = FakeAmqpConnection(broker)
         self.monkey_patch(
             go.base.utils, 'connection', self.django_amqp_connection)
@@ -361,9 +363,12 @@ class VumiApiHelper(object):
     def setup_async_vumi_api(self):
         worker_helper = self.get_worker_helper()
         amqp_client = worker_helper.get_fake_amqp_client(worker_helper.broker)
-        d = amqp_client.start_publisher(ApiCommandPublisher)
-        d.addCallback(lambda cmd_publisher: VumiApi.from_config_async(
-            self.mk_config({}), cmd_publisher))
+        d = gatherResults([
+            amqp_client.start_publisher(ApiCommandPublisher),
+            amqp_client.start_publisher(MetricPublisher),
+        ])
+        d.addCallback(lambda publishers: VumiApi.from_config_async(
+            self.mk_config({}), *publishers))
         return d.addCallback(self.set_vumi_api)
 
     @proxyable
@@ -480,15 +485,31 @@ class UserApiHelper(object):
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @proxyable
-    def create_router(self, router_type, started=False, **kw):
+    def create_router(self, router_type, started=False, archived=False, **kw):
         name = kw.pop('name', u'My Router')
         description = kw.pop('description', u'')
         config = kw.pop('config', {})
         assert isinstance(config, dict)
         if started:
             kw.setdefault('status', u'running')
+        if archived:
+            kw.setdefault('archive_status', u'archived')
         return self.user_api.new_router(
             router_type, name, description, config, **kw)
+
+    @proxyable
+    def create_service_component(self, service_type, started=False,
+                                 archived=False, **kw):
+        name = kw.pop('name', u'My Service Component')
+        description = kw.pop('description', u'')
+        config = kw.pop('config', {})
+        assert isinstance(config, dict)
+        if started:
+            kw.setdefault('status', u'running')
+        if archived:
+            kw.setdefault('archive_status', u'archived')
+        return self.user_api.new_service_component(
+            service_type, name, description, config, **kw)
 
     @proxyable
     def get_conversation(self, conversation_key):
@@ -497,6 +518,10 @@ class UserApiHelper(object):
     @proxyable
     def get_router(self, router_key):
         return self.user_api.get_router(router_key)
+
+    @proxyable
+    def get_service_component(self, service_key):
+        return self.user_api.get_service_component(service_key)
 
 
 class EventHandlerHelper(object):

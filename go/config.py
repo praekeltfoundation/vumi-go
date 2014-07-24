@@ -10,7 +10,8 @@
 
 import copy
 
-from go.errors import UnknownConversationType, UnknownRouterType
+from go.errors import (
+    UnknownConversationType, UnknownRouterType, UnknownServiceComponentType)
 
 
 def configured_conversation_types():
@@ -39,11 +40,23 @@ def obsolete_router_types():
     return set(_VUMI_OBSOLETE_ROUTERS)
 
 
+def configured_service_types():
+    return dict((a['namespace'], a['display_name'])
+                for a in _VUMI_INSTALLED_SERVICES.itervalues())
+
+
+def configured_services():
+    return copy.deepcopy(_VUMI_INSTALLED_SERVICES)
+
+
+def obsolete_service_types():
+    return set(_VUMI_OBSOLETE_SERVICES)
+
+
 def get_conversation_pkg(conversation_type, fromlist):
     for module, data in _VUMI_INSTALLED_APPS.iteritems():
         if data['namespace'] == conversation_type:
-            app_pkg = __import__(module,
-                                 fromlist=fromlist)
+            app_pkg = __import__(module, fromlist=fromlist)
             return app_pkg
     raise UnknownConversationType(
         "Can't find python package for conversation type: %r"
@@ -53,12 +66,21 @@ def get_conversation_pkg(conversation_type, fromlist):
 def get_router_pkg(router_type, fromlist=()):
     for module, data in _VUMI_INSTALLED_ROUTERS.iteritems():
         if data['namespace'] == router_type:
-            router_pkg = __import__(module,
-                                 fromlist=fromlist)
+            router_pkg = __import__(module, fromlist=fromlist)
             return router_pkg
     raise UnknownRouterType(
         "Can't find python package for router type: %r"
         % (router_type,))
+
+
+def get_service_pkg(service_type, fromlist=()):
+    for module, data in _VUMI_INSTALLED_SERVICES.iteritems():
+        if data['namespace'] == service_type:
+            service_pkg = __import__(module, fromlist=fromlist)
+            return service_pkg
+    raise UnknownServiceComponentType(
+        "Can't find python package for service type: %r"
+        % (service_type,))
 
 
 def get_conversation_definition(conversation_type, conv=None):
@@ -69,6 +91,20 @@ def get_conversation_definition(conversation_type, conv=None):
 def get_router_definition(router_type, router=None):
     router_pkg = get_router_pkg(router_type, ['definition'])
     return router_pkg.definition.RouterDefinition(router)
+
+
+def get_service_definition(service_type, vumi_api, service=None):
+    service_pkg = get_service_pkg(service_type, ['definition'])
+    return service_pkg.definition.ServiceComponentDefinition(vumi_api, service)
+
+
+def get_service_types_with_interface(interface_name):
+    service_types = []
+    for service_type in configured_service_types():
+        service_def = get_service_definition(service_type, None)
+        if interface_name in service_def.service_component_interfaces:
+            service_types.append(service_type)
+    return service_types
 
 
 _VUMI_INSTALLED_APPS = {
@@ -148,6 +184,33 @@ _VUMI_INSTALLED_ROUTERS = {
 
 _VUMI_OBSOLETE_ROUTERS = [
 ]
+
+_VUMI_INSTALLED_SERVICES = {
+    'go.services.kvstore.redis': {
+        'namespace': 'kvstore.redis',
+        'display_name': 'Key-value store (Redis)',
+    },
+    'go.services.metrics': {
+        'namespace': 'metrics',
+        'display_name': 'Metrics store',
+    },
+}
+
+_VUMI_OBSOLETE_SERVICES = [
+]
+
+# TODO: Move this config somewhere more sensible.
+#       This needs better config machinery.
+_VUMI_SERVICE_CONFIGS = {
+    'kvstore.redis': {
+        'key_prefix': 'vumigo.jsbox.kv',
+        'keys_per_user': 10000,
+    },
+}
+
+
+def get_service_component_config(service_type):
+    return _VUMI_SERVICE_CONFIGS.get(service_type, None)
 
 
 def billing_quantization_exponent():

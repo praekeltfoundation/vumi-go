@@ -140,6 +140,7 @@ TEMPLATE_DIRS = (
     abspath("channel", "templates"),
     abspath("routing", "templates"),
     abspath("wizard", "templates"),
+    abspath("services", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -170,6 +171,7 @@ INSTALLED_APPS = (
     'go.contacts',
     'go.account',
     'go.billing',
+    'go.service',
 
 
     'vxpolls.djdashboard',
