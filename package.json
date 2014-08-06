@@ -2,7 +2,7 @@
   "name": "vumi-go",
   "version": "0.5.0-dev",
   "scripts": {
-    "install": "./utils/npm-post-install.sh",
+    "install": "./utils/npm-post-install.sh || echo 'skipping post install hook'",
     "blanket": {
       "pattern": "/go/"
     }
