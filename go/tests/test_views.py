@@ -6,6 +6,35 @@ from django.contrib.sites.models import Site
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
+class TestNav(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.superuser_helper = self.vumi_helper.make_django_user(
+            email='superuser@example.com', superuser=True)
+
+    def test_right_nav_dropdown_staff(self):
+        client = self.vumi_helper.get_client('superuser@example.com')
+        response = client.get(reverse('home'), follow=True)
+        self.assertContains(response, '<a href="/admin/">Site Admin</a>')
+        self.assertContains(
+            response, '<a href="/account/details/">Details</a>')
+
+    def test_right_nav_dropdown_authenticated(self):
+        client = self.vumi_helper.get_client()
+        response = client.get(reverse('home'), follow=True)
+        self.assertNotContains(response, '>Site Admin<')
+        self.assertContains(
+            response, '<a href="/account/details/">Details</a>')
+
+    def test_right_nav_dropdown_unauthenticated(self):
+        client = self.vumi_helper.get_client()
+        client.logout()
+        response = client.get(reverse('home'), follow=True)
+        self.assertNotContains(response, '>Site Admin<')
+        self.assertNotContains(response, '>Details<')
+
+
 class TestHelpViews(GoDjangoTestCase):
 
     def setUp(self):
