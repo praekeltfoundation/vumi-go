@@ -31,10 +31,14 @@ def router_or_404(user_api, key):
     return router
 
 
-def sendfile(url, buffering=True):
+def sendfile(url, buffering=True, filename=None):
     response = HttpResponse()
     response['X-Accel-Redirect'] = url
     response['X-Accel-Buffering'] = 'yes' if buffering else 'no'
+
+    if filename is not None:
+        response['Content-Disposition'] = 'attachment; filename=%s' % (
+            filename)
 
     if settings.DEBUG:
         response.write(url)

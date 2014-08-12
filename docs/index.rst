@@ -30,6 +30,7 @@ channels.
    sandbox-resources.rst
    code-examples.rst
    http_api.rst
+   dashboards.rst
 
 For developers:
 

@@ -3,7 +3,6 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi import log
 from vumi.application.sandbox import SandboxResource, SandboxError
 
 from go.vumitools.contact import (
@@ -98,7 +97,6 @@ class ContactsResource(SandboxResource):
                 command['addr'],
                 create=False)
         except (SandboxError, ContactError) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         if contact is None:
@@ -140,7 +138,6 @@ class ContactsResource(SandboxResource):
                 command['addr'])
             created = True
         except (SandboxError, ContactError) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
@@ -199,7 +196,6 @@ class ContactsResource(SandboxResource):
                 command['fields'], *Contact.field_descriptors)
             contact = yield store.update_contact(command['key'], **fields)
         except (SandboxError, ContactError) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
@@ -236,7 +232,6 @@ class ContactsResource(SandboxResource):
 
             yield contact.save()
         except (SandboxError, ContactError) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
@@ -336,7 +331,6 @@ class ContactsResource(SandboxResource):
             contact_store = self._contact_store_for_api(api)
             contact = yield contact_store.new_contact(**fields)
         except (SandboxError, ContactError) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
@@ -413,7 +407,6 @@ class ContactsResource(SandboxResource):
 
             yield contact.save()
         except (SandboxError, ContactError) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
@@ -461,11 +454,7 @@ class ContactsResource(SandboxResource):
             key = command['key']
             contact_store = self._contact_store_for_api(api)
             contact = (yield contact_store.get_contact_by_key(key)).get_data()
-
-        except (ContactNotFoundError,) as e:
-            returnValue(self.reply(command, success=False, reason=unicode(e)))
-        except (ContactError, SandboxError,) as e:
-            log.warning(str(e))
+        except (ContactNotFoundError, ContactError, SandboxError,) as e:
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
@@ -532,14 +521,12 @@ class ContactsResource(SandboxResource):
                 keys = keys[:max_keys]
 
         except (SandboxError,) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
         except (Exception,) as e:
             # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
             #       a MapReduce error.
             if 'MapReduce' not in str(e):
                 raise
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
@@ -597,14 +584,12 @@ class GroupsResource(SandboxResource):
                 groups.extend((yield group_bunch))
 
         except (SandboxError,) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
         except (Exception,) as e:
             # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
             #       a MapReduce error.
             if 'MapReduce' not in str(e):
                 raise
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
@@ -642,7 +627,6 @@ class GroupsResource(SandboxResource):
             contact_store = self._contact_store_for_api(api)
             group = yield contact_store.get_group(command['key'])
         except (SandboxError,) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         if group is None:
@@ -688,14 +672,12 @@ class GroupsResource(SandboxResource):
             keys = yield contact_store.groups.search(
                 name=command['name']).get_keys()
         except (SandboxError,) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
         except (Exception,) as e:
             # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
             #       a MapReduce error.
             if 'MapReduce' not in str(e):
                 raise
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         if not keys:
@@ -743,14 +725,12 @@ class GroupsResource(SandboxResource):
             keys = yield contact_store.groups.search(
                 name=command['name']).get_keys()
         except (SandboxError,) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
         except (Exception,) as e:
             # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
             #       a MapReduce error.
             if 'MapReduce' not in str(e):
                 raise
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         if not keys:
@@ -804,7 +784,6 @@ class GroupsResource(SandboxResource):
             contact_store = self._contact_store_for_api(api)
             group = yield contact_store.get_group(command['key'])
         except (SandboxError,) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         if group is None:
@@ -851,7 +830,6 @@ class GroupsResource(SandboxResource):
             contact_store = self._contact_store_for_api(api)
             group = yield contact_store.get_group(command['key'])
         except (SandboxError,) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         member_count = yield contact_store.count_contacts_for_group(group)
@@ -885,7 +863,6 @@ class GroupsResource(SandboxResource):
             contact_store = self._contact_store_for_api(api)
             groups = yield contact_store.list_groups()
         except (SandboxError,) as e:
-            log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(

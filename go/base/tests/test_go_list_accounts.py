@@ -42,3 +42,26 @@ class TestGoListAccountsCommand(GoDjangoTestCase):
         self.assertEqual(self.command.stderr.getvalue(),
             'No accounts found.\n')
         self.assertEqual(self.command.stdout.getvalue(), '')
+
+    def test_show_pools(self):
+        self.vumi_helper.setup_tagpool(u"pool-1", [])
+        self.user_helper.add_tagpool_permission(u"pool-1")
+
+        self.command.handle(**{'show-pools': True})
+        self.assertEqual(self.command.stdout.getvalue().splitlines(), [
+            "0. Test User <user@domain.com> [test-0-user]",
+            "  Pools:",
+            "    u'pool-1' (max-keys: None)",
+        ])
+
+    def test_show_tags(self):
+        self.vumi_helper.setup_tagpool(u"pool-1", [u"tag-1"])
+        self.user_helper.add_tagpool_permission(u"pool-1")
+        self.user_helper.user_api.acquire_specific_tag((u"pool-1", u"tag-1"))
+
+        self.command.handle(**{'show-tags': True})
+        self.assertEqual(self.command.stdout.getvalue().splitlines(), [
+            "0. Test User <user@domain.com> [test-0-user]",
+            "  Tags:",
+            "    (u'pool-1', u'tag-1')",
+        ])

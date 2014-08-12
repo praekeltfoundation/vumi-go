@@ -85,11 +85,9 @@ class ApplicationMultiplexer(GoRouterWorker):
         return d
 
     def session_manager(self, config):
-        return SessionManager.from_redis_config(
-            config.redis_manager,
-            key_prefix=':'.join((self.worker_name, config.router.key)),
-            max_session_length=config.session_expiry
-        )
+        key_prefix = ':'.join((self.worker_name, config.router.key))
+        redis = self.redis.sub_manager(key_prefix)
+        return SessionManager(redis, max_session_length=config.session_expiry)
 
     def target_endpoints(self, config):
         """

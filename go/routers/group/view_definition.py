@@ -13,8 +13,9 @@ class BaseRoutingEntryFormSet(forms.formsets.BaseFormSet):
 
     def __init__(self, *args, **kwargs):
         groups = kwargs.pop('groups', [])
-        self._group_choices = [(group.key, group.name) for group in groups
-                               if not group.is_smart_group()]
+        self._group_choices = [('', '')] + [
+            (group.key, group.name) for group in groups
+            if not group.is_smart_group()]
         super(BaseRoutingEntryFormSet, self).__init__(*args, **kwargs)
 
     @staticmethod

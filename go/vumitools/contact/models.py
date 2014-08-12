@@ -13,12 +13,61 @@ from go.vumitools.contact.migrations import ContactMigrator
 from go.vumitools.opt_out import OptOutStore
 
 
+DELIVERY_CLASSES = {
+    'sms': {
+        'field': 'msisdn',
+        'label': 'SMS',
+    },
+    'ussd': {
+        'field': 'msisdn',
+        'label': 'USSD',
+    },
+    'gtalk': {
+        'field': 'gtalk_id',
+        'label': 'Google Talk',
+    },
+    'mxit': {
+        'field': 'mxit_id',
+        'label': 'Mxit',
+    },
+    'wechat': {
+        'field': 'wechat_id',
+        'label': 'WeChat',
+    },
+    'twitter': {
+        'field': 'twitter_handle',
+        'label': 'Twitter',
+    },
+    'voice': {
+        'field': 'msisdn',
+        'label': 'Voice',
+    },
+}
+
+
+DEFAULT_DELIVERY_CLASS = 'ussd'
+
+
 class ContactError(Exception):
     """Raised when an error occurs accessing or manipulating a Contact"""
 
 
 class ContactNotFoundError(ContactError):
     """Raised when a contact is not found"""
+
+
+def contact_field_for_addr(delivery_class, addr):
+    # TODO: change when we have proper address types in vumi
+    delivery_class_dict = DELIVERY_CLASSES.get(delivery_class, None)
+    if delivery_class_dict is None:
+        raise ContactError("Unsupported transport_type %r" % delivery_class)
+
+    contact_field = delivery_class_dict['field']
+    if contact_field == 'msisdn':
+        addr = '+' + addr.lstrip('+')
+    elif contact_field == 'gtalk':
+        addr = addr.partition('/')[0]
+    return (contact_field, addr)
 
 
 class ContactGroup(Model):
@@ -79,19 +128,12 @@ class Contact(Model):
             # FIXME: Find a better way to do get delivery_class and get rid of
             #        this hack.
             return self.msisdn
-        # TODO: delivery classes need to be defined somewhere
-        if delivery_class in ('sms', 'ussd'):
-            return self.msisdn
-        elif delivery_class == 'gtalk':
-            return self.gtalk_id
-        elif delivery_class == 'twitter':
-            return self.twitter_handle
-        elif delivery_class == 'mxit':
-            return self.mxit_id
-        elif delivery_class == 'wechat':
-            return self.wechat_id
-        else:
-            return None
+
+        delivery_class = DELIVERY_CLASSES.get(delivery_class)
+        if delivery_class is not None:
+            return getattr(self, delivery_class['field'])
+
+        return None
 
     def __unicode__(self):
         if self.name and self.surname:
@@ -306,32 +348,12 @@ class ContactStore(PerAccountStore):
         opt_out = yield opt_out_store.get_opt_out('msisdn', contact.msisdn)
         returnValue(opt_out)
 
-    _SUPPORTED_DELIVERY_CLASSES = set([
-        'sms', 'ussd', 'gtalk', 'twitter', 'mxit', 'wechat',
-    ])
-
     def delivery_class_supported(self, delivery_class):
         """Return True if the delivery class is supported."""
-        return delivery_class in self._SUPPORTED_DELIVERY_CLASSES
-
-    def _contact_field_for_addr(self, delivery_class, addr):
-        # TODO: change when we have proper address types in vumi
-        if delivery_class in ('sms', 'ussd'):
-            return ('msisdn', '+' + addr.lstrip('+'))
-        elif delivery_class == 'gtalk':
-            return ('gtalk_id', addr.partition('/')[0])
-        elif delivery_class == 'twitter':
-            return ('twitter_handle', addr)
-        elif delivery_class == 'mxit':
-            return ('mxit_id', addr)
-        elif delivery_class == 'wechat':
-            return ('wechat_id', addr)
-        else:
-            raise ContactError(
-                "Unsupported transport_type %r" % delivery_class)
+        return delivery_class in DELIVERY_CLASSES
 
     def new_contact_for_addr(self, delivery_class, addr):
-        field, value = self._contact_field_for_addr(delivery_class, addr)
+        field, value = contact_field_for_addr(delivery_class, addr)
         field_dict = {field: value}
         field_dict.setdefault('msisdn', u'unknown')
         return self.new_contact(**field_dict)
@@ -342,7 +364,7 @@ class ContactStore(PerAccountStore):
         Returns a contact from a delivery class and address, raising a
         ContactNotFoundError exception if the contact does not exist.
         """
-        field, value = self._contact_field_for_addr(delivery_class, addr)
+        field, value = contact_field_for_addr(delivery_class, addr)
         keys = None
         if self.FIND_BY_INDEX:
             keys = yield self.contacts.index_keys(field, value)

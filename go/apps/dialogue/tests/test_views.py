@@ -104,20 +104,40 @@ class TestDialogueViews(GoDjangoTestCase):
                             conv_helper.get_action_view_url('send_jsbox'))
 
     def test_edit(self):
-        conv_helper = self.setup_conversation(started=False, name=u"myconv")
-        poll = {"foo": "bar"}
+        conv_helper = self.setup_conversation(
+            with_group=False, started=False, name=u"myconv")
+
+        conversation = conv_helper.get_conversation()
+        group1 = self.app_helper.create_group(u'group1')
+        group2 = self.app_helper.create_group(u'group2')
+        conversation.add_group(group1)
+
+        poll = {
+            'groups': [{
+                'key': '123',
+                'name': 'foo'
+            }]
+        }
         self.mock_rpc.set_response(result={"poll": poll})
         response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertContains(response, u"myconv")
         self.assertContains(response, 'diagram')
 
-        conversation = conv_helper.get_conversation()
+        self.assertContains(response, 'USSD')
+        self.assertContains(response, 'SMS')
+        self.assertContains(response, 'Google Talk')
+        self.assertContains(response, 'Mxit')
+        self.assertContains(response, 'WeChat')
+        self.assertContains(response, 'Twitter')
+
         expected = poll.copy()
-        expected["campaign_id"] = conversation.user_account.key
-        expected["conversation_key"] = conversation.key
-        expected["urls"] = {
-            "show": conv_helper.get_view_url('show'),
-        }
+        expected.update({
+            'campaign_id': conversation.user_account.key,
+            'conversation_key': conversation.key,
+            'urls': {"show": conv_helper.get_view_url('show')},
+            'groups': [group1.get_data(), group2.get_data()]
+        })
+
         model_data = response.context["model_data"]
         self.assertEqual(json.loads(model_data), expected)
 

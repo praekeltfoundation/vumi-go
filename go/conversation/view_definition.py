@@ -205,7 +205,8 @@ class ExportMessageView(ConversationApiView):
 
         url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
                                                       direction)
-        return sendfile(url, buffering=False)
+        return sendfile(url, buffering=False, filename='%s-%s.json' % (
+            conversation.key, direction))
 
     def post(self, request, conversation):
         export_conversation_messages_unsorted.delay(
@@ -645,22 +646,17 @@ class ConversationReportsView(ConversationTemplateView):
         Override to specialise dashboard building.
         """
 
+        metrics = self.view_def.get_metrics()
         return ConversationReportsLayout(conversation, [{
             'type': 'diamondash.widgets.lvalue.LValueWidget',
             'time_range': '1d',
             'name': 'Messages Sent (24h)',
-            'target': {
-                'metric_type': 'conversation',
-                'name': 'messages_sent',
-            }
+            'target': metrics.get('messages_sent').get_target_spec(),
         }, {
             'type': 'diamondash.widgets.lvalue.LValueWidget',
             'time_range': '1d',
             'name': 'Messages Received (24h)',
-            'target': {
-                'metric_type': 'conversation',
-                'name': 'messages_received',
-            }
+            'target': metrics.get('messages_received').get_target_spec(),
         }, 'new_row', {
             'type': 'diamondash.widgets.graph.GraphWidget',
             'name': 'Messages Sent and Received (24h)',
@@ -669,16 +665,10 @@ class ConversationReportsView(ConversationTemplateView):
             'bucket_size': '15m',
             'metrics': [{
                 'name': 'Messages Sent',
-                'target': {
-                    'metric_type': 'conversation',
-                    'name': 'messages_sent',
-                }
+                'target': metrics.get('messages_sent').get_target_spec(),
             }, {
                 'name': 'Messages Received',
-                'target': {
-                    'metric_type': 'conversation',
-                    'name': 'messages_received',
-                }
+                'target': metrics.get('messages_received').get_target_spec(),
             }]
         }, {
             'type': 'diamondash.widgets.graph.GraphWidget',
@@ -688,16 +678,10 @@ class ConversationReportsView(ConversationTemplateView):
             'bucket_size': '1d',
             'metrics': [{
                 'name': 'Messages Sent',
-                'target': {
-                    'metric_type': 'conversation',
-                    'name': 'messages_sent',
-                },
+                'target': metrics.get('messages_sent').get_target_spec(),
             }, {
                 'name': 'Messages Received',
-                'target': {
-                    'metric_type': 'conversation',
-                    'name': 'messages_received',
-                }
+                'target': metrics.get('messages_received').get_target_spec(),
             }]
         }])
 

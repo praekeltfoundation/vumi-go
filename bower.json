@@ -19,7 +19,7 @@
     "backbone-relational": "0.8.6",
     "bootstrap": "3.0.0",
     "bootbox": "~4.0.0",
-    "diamondash": "~0.3.1"
+    "diamondash": "~0.4"
   },
   "devDependencies": {
     "chai": "~1.7.2",
@@ -33,7 +33,7 @@
       "fonts": "dist/fonts/*"
     },
     "jquery-simulate": {
-        "js": "jquery.simulate.js"
+      "js": "jquery.simulate.js"
     },
     "jquery-ui": {
       "js": "ui/jquery-ui.js"
@@ -43,7 +43,7 @@
       "css": "diamondash/public/css/diamondash.css"
     },
     "backbone.babysitter": {
-        "js": "lib/*.js"
+      "js": "lib/*.js"
     },
     "*": {
       "js": [
@@ -67,6 +67,7 @@
     }
   },
   "resolutions": {
-    "jquery": "1.9.1"
+    "jquery": "1.9.1",
+    "underscore": ">=1.5.0"
   }
 }

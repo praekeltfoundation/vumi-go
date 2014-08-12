@@ -436,7 +436,7 @@ class TestStreamingHTTPWorker(VumiTestCase):
 
         self.assertEqual(response.code, http.OK)
 
-        prefix = "campaigns.test-0-user.stores.metric_store"
+        prefix = "go.campaigns.test-0-user.stores.metric_store"
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
@@ -547,6 +547,42 @@ class TestStreamingHTTPWorker(VumiTestCase):
 
         posted_msg = TransportUserMessage.from_json(posted_json_data)
         self.assertEqual(posted_msg['message_id'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_post_inbound_message_201_response(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        self.conversation.config['http_api'].update({
+            'push_message_url': self.mock_push_server.url,
+        })
+        yield self.conversation.save()
+
+        with LogCatcher(message='Got unexpected response code') as lc:
+            msg_d = self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
+            req = yield self.push_calls.get()
+            req.setResponseCode(201)
+            req.finish()
+            yield msg_d
+        self.assertEqual(lc.messages(), [])
+
+    @inlineCallbacks
+    def test_post_inbound_message_500_response(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        self.conversation.config['http_api'].update({
+            'push_message_url': self.mock_push_server.url,
+        })
+        yield self.conversation.save()
+
+        with LogCatcher(message='Got unexpected response code') as lc:
+            msg_d = self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
+            req = yield self.push_calls.get()
+            req.setResponseCode(500)
+            req.finish()
+            yield msg_d
+        [warning_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in warning_log)
+        self.assertTrue('500' in warning_log)
 
     @inlineCallbacks
     def test_post_inbound_event(self):

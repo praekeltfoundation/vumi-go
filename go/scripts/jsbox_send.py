@@ -8,6 +8,7 @@ from vumi.service import Worker, WorkerCreator
 from vumi.servicemaker import VumiOptions
 import yaml
 
+from go.apps.dialogue.vumi_app import dialogue_js_config
 from go.apps.jsbox.outbound import mk_inbound_push_trigger
 from go.apps.jsbox.utils import jsbox_js_config
 from go.vumitools.api import VumiApi
@@ -96,7 +97,11 @@ class JsBoxSendWorker(Worker):
     stdout = sys.stdout
     stderr = sys.stderr
 
-    SUPPORTED_APPS = ('jsbox', 'dialogue')
+    JSBOX_CONFIG = {
+        'jsbox': lambda conv: jsbox_js_config(conv.config),
+        'dialogue': dialogue_js_config,
+    }
+    SUPPORTED_APPS = tuple(JSBOX_CONFIG.keys())
     SEND_DELAY = 0.01  # No more than 100 msgs/second to the queue.
 
     def send_inbound_push_trigger(self, to_addr, conversation):
@@ -109,7 +114,7 @@ class JsBoxSendWorker(Worker):
     def send_jsbox(self, user_account_key, conversation_key, hz=60,
                    addr_exclude_path=None):
         conv = yield self.get_conversation(user_account_key, conversation_key)
-        delivery_class = jsbox_js_config(conv.config).get('delivery_class')
+        delivery_class = self.get_delivery_class(conv)
         excluded_addrs = self.get_excluded_addrs(addr_exclude_path)
         to_addrs = yield self.get_contact_addrs_for_conv(
             conv, delivery_class, excluded_addrs)
@@ -119,6 +124,11 @@ class JsBoxSendWorker(Worker):
             if (i + 1) % 100 == 0:
                 self.emit("Messages sent: %s / %s" % (i + 1, len(to_addrs)))
             yield ticker.tick()
+
+    def get_delivery_class(self, conv):
+        config_loader = self.JSBOX_CONFIG[conv.conversation_type]
+        config = config_loader(conv)
+        return config.get('delivery_class')
 
     def get_excluded_addrs(self, addr_exclude_path):
         if addr_exclude_path is None:

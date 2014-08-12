@@ -171,6 +171,20 @@ class TestTxVumiUserApi(VumiTestCase):
         yield self.assert_account_tags([list(tag1), list(tag2)])
 
     @inlineCallbacks
+    def test_release_tag_without_owner(self):
+        [tag] = yield self.vumi_helper.setup_tagpool(u"pool1", [u"1234"])
+        yield self.user_helper.add_tagpool_permission(u"pool1")
+        yield self.user_api.acquire_specific_tag(tag)
+
+        tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
+        del tag_info.metadata['user_account']
+        yield tag_info.save()
+
+        yield self.assert_account_tags([list(tag)])
+        yield self.user_api.release_tag(tag)
+        yield self.assert_account_tags([])
+
+    @inlineCallbacks
     def test_batch_id_for_specific_tag(self):
         [tag] = yield self.vumi_helper.setup_tagpool(u"poolA", [u"tag1"])
         yield self.user_helper.add_tagpool_permission(u"poolA")
@@ -467,26 +481,29 @@ class TestVumiRouterApi(TestTxVumiRouterApi):
 
 
 class TestVumiApiCommand(VumiTestCase):
-    def test_default_routing_config(self):
-        cfg = VumiApiCommand.default_routing_config()
-        self.assertEqual(cfg, {
-            'exchange': 'vumi',
-            'exchange_type': 'direct',
-            'routing_key': 'vumi.api',
-            'durable': True,
-            })
+    def test_command(self):
+        cmd = VumiApiCommand.command(
+            'worker', 'my_cmd', 'arg1', 'arg2', kw1=1, kw2=2)
+        self.assertEqual(cmd['worker_name'], 'worker')
+        self.assertEqual(cmd['command'], 'my_cmd')
+        self.assertEqual(cmd['args'], ['arg1', 'arg2'])
+        self.assertEqual(cmd['kwargs'], {'kw1': 1, 'kw2': 2})
+
+    def test_conversation_command(self):
+        cmd = VumiApiCommand.conversation_command(
+            'worker', 'my_cmd', 'me', 'conv', 'arg1', 'arg2', kw1=1, kw2=2)
+        self.assertEqual(cmd['worker_name'], 'worker')
+        self.assertEqual(cmd['command'], 'my_cmd')
+        self.assertEqual(cmd['args'], ['arg1', 'arg2'])
+        self.assertEqual(cmd['kwargs'], {
+            'user_account_key': 'me',
+            'conversation_key': 'conv',
+            'kw1': 1,
+            'kw2': 2,
+        })
 
 
 class TestVumiApiEvent(VumiTestCase):
-    def test_default_routing_config(self):
-        cfg = VumiApiEvent.default_routing_config()
-        self.assertEqual(cfg, {
-            'exchange': 'vumi',
-            'exchange_type': 'direct',
-            'routing_key': 'vumi.event',
-            'durable': True,
-            })
-
     def test_event(self):
         event = VumiApiEvent.event(
             'me', 'my_conv', 'my_event', {"foo": "bar"})

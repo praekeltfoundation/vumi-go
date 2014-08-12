@@ -5,7 +5,7 @@ python:
 node_js:
   - "0.10"
 env:
-  - VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres
+  - VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
 services:
   - riak
   - postgresql

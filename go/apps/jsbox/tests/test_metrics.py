@@ -4,7 +4,6 @@ import mock
 
 from vumi.application.sandbox import SandboxCommand
 from vumi.tests.helpers import VumiTestCase
-from vumi.tests.utils import LogCatcher
 
 from go.apps.jsbox.metrics import (
     MetricEvent, MetricEventError, MetricsResource)
@@ -120,9 +119,7 @@ class TestMetricsResource(VumiTestCase):
         self.check_publish('default', 'foo', 1.5, self.SUM)
 
     def _test_error(self, cmd, expected_error):
-        with LogCatcher() as lc:
-            reply = self.resource.handle_fire(self.dummy_api, cmd)
-            self.assertEqual(lc.messages(), [expected_error])
+        reply = self.resource.handle_fire(self.dummy_api, cmd)
         self.check_reply(reply, cmd, False)
         self.assertEqual(reply['reason'], expected_error)
         self.check_not_published()

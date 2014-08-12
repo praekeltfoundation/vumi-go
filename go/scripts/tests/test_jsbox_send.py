@@ -45,7 +45,7 @@ class TestJsBoxSendOptions(VumiTestCase):
             self.mk_opts, ["--hz", "foo"])
 
 
-class TestTickjer(VumiTestCase):
+class TestTicker(VumiTestCase):
     def setUp(self):
         self.override_ticker_clock()
 
@@ -131,6 +131,37 @@ class TestJsBoxSend(VumiTestCase):
             self.user_helper.account_key, conv.key), ScriptError)
         self.assertEqual(
             str(failure), "Unsupported conversation type: bulk_send")
+
+    @inlineCallbacks
+    def test_get_delivery_class_jsbox(self):
+        conv = yield self.user_helper.create_conversation(
+            u'jsbox',
+            config={
+                'jsbox_app_config': {
+                    'config': {
+                        'key': 'config',
+                        'value': json.dumps({
+                            'delivery_class': 'twitter',
+                        })
+                    },
+                },
+            })
+        worker = yield self.get_worker()
+        self.assertEqual(worker.get_delivery_class(conv), 'twitter')
+
+    @inlineCallbacks
+    def test_get_delivery_class_dialogue(self):
+        conv = yield self.user_helper.create_conversation(
+            u'dialogue',
+            config={
+                'poll': {
+                    'poll_metadata': {
+                        'delivery_class': 'mxit',
+                    },
+                },
+            })
+        worker = yield self.get_worker()
+        self.assertEqual(worker.get_delivery_class(conv), 'mxit')
 
     @inlineCallbacks
     def test_get_conversation_missing(self):

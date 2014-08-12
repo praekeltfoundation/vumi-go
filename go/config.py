@@ -155,3 +155,10 @@ def billing_quantization_exponent():
     # stuff into `go.vumitools.billing_worker` through `go.billing.settings`.
     from decimal import Decimal
     return Decimal('.000001')
+
+
+GO_METRICS_PREFIX = 'go.'
+
+
+def get_go_metrics_prefix():
+    return GO_METRICS_PREFIX

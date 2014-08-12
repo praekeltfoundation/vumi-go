@@ -5,10 +5,12 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.tests.helpers import VumiTestCase
+from vumi.tests.utils import LogCatcher
 
 from go.apps.tests.helpers import AppWorkerHelper
+from go.routers.tests.helpers import RouterWorkerHelper
 from go.vumitools import app_worker
-from go.vumitools.app_worker import GoApplicationWorker
+from go.vumitools.app_worker import GoApplicationWorker, GoRouterWorker
 from go.vumitools.metrics import ConversationMetric
 from go.vumitools.conversation.definition import ConversationDefinitionBase
 
@@ -53,7 +55,6 @@ class DummyApplication(GoApplicationWorker):
 
 
 class TestGoApplicationWorker(VumiTestCase):
-    application_class = DummyApplication
 
     @inlineCallbacks
     def setUp(self):
@@ -107,7 +108,7 @@ class TestGoApplicationWorker(VumiTestCase):
             conversation_key=self.conv.key,
             user_account_key=self.conv.user_account.key)
 
-        prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
+        prefix = "go.campaigns.test-0-user.conversations.%s" % self.conv.key
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
@@ -124,7 +125,7 @@ class TestGoApplicationWorker(VumiTestCase):
         yield self.app.publish_conversation_metrics(
             user_helper.user_api, self.conv.key)
 
-        prefix = "campaigns.test-0-user.conversations.%s" % self.conv.key
+        prefix = "go.campaigns.test-0-user.conversations.%s" % self.conv.key
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
@@ -141,7 +142,87 @@ class TestGoApplicationWorker(VumiTestCase):
 
         self.assertEqual(
             self.app_helper.get_published_metrics(self.app),
-            [("campaigns.test-0-user.stores.some-store.some-metric", 42)])
+            [("go.campaigns.test-0-user.stores.some-store.some-metric", 42)])
 
     def test_control_queue_prefetch(self):
         self.assertEqual(self.app.control_consumer.prefetch_count, 1)
+
+
+class DummyRouter(GoRouterWorker):
+    worker_name = 'dummy_router'
+
+
+class TestGoRouterWorker(VumiTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        self.rtr_helper = self.add_helper(RouterWorkerHelper(DummyRouter))
+
+        self.patch(
+            app_worker,
+            'get_conversation_definition',
+            lambda conv_type, conv: DummyConversationDefinition(conv))
+
+        self.rtr_worker = yield self.rtr_helper.get_router_worker({})
+        self.router = yield self.rtr_helper.create_router()
+
+    @inlineCallbacks
+    def assert_status(self, status):
+        router = yield self.rtr_helper.get_router(self.router.key)
+        self.assertEqual(router.status, status)
+
+    @inlineCallbacks
+    def test_start(self):
+        yield self.assert_status('stopped')
+        lc = LogCatcher()
+        with lc:
+            yield self.rtr_helper.start_router(self.router)
+        self.assertEqual(lc.messages(), [
+            u"Starting router '%s' for user 'test-0-user'." % self.router.key,
+        ])
+        yield self.assert_status('running')
+
+    @inlineCallbacks
+    def test_stop(self):
+        yield self.rtr_helper.start_router(self.router)
+        yield self.assert_status('running')
+        lc = LogCatcher()
+        with lc:
+            yield self.rtr_helper.stop_router(self.router)
+        self.assertEqual(lc.messages(), [
+            u"Stopping router '%s' for user 'test-0-user'." % self.router.key,
+        ])
+        yield self.assert_status('stopped')
+
+    @inlineCallbacks
+    def test_handle_event(self):
+        yield self.rtr_helper.start_router(self.router)
+
+        outbound_hops = [
+            [["CONVERSATION:dummy_conv:key", "default"],
+             ["ROUTER:dummy_router:key", "endpoint1"]],
+            [["ROUTER:dummy_router:key", "default"],
+             ["TRANSPORT_TAG:pool:tag", "default"]],
+        ]
+        hops = outbound_hops[-1:]
+
+        ack = yield self.rtr_helper.ri.make_dispatch_ack(
+            router=self.router, hops=hops, outbound_hops=outbound_hops)
+        [next_ack] = yield self.rtr_helper.ro.get_dispatched_events()
+        self.assertEqual(next_ack.get_routing_endpoint(), "endpoint1")
+        self.assertEqual(next_ack['user_message_id'], ack['user_message_id'])
+
+    @inlineCallbacks
+    def test_handle_event_no_next_hop(self):
+        yield self.rtr_helper.start_router(self.router)
+
+        outbound_hops = [
+            [["ROUTER:dummy_router:key", "default"],
+             ["TRANSPORT_TAG:pool:tag", "default"]],
+        ]
+        hops = outbound_hops[-1:]
+
+        yield self.rtr_helper.ri.make_dispatch_ack(
+            router=self.router, hops=hops, outbound_hops=outbound_hops)
+        sent_events = yield self.rtr_helper.ro.get_dispatched_events()
+        self.assertEqual(sent_events, [])
