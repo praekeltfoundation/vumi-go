@@ -73,15 +73,15 @@ Vumi Go Messaging Architecture
 
    // edges
 
-   cellphone -> cellphone_network [class="other"];
-   cellphone -> mxit [class="other"];
-   tablet -> twitter [class="other"];
-   tablet -> gchat [class="other"];
+   cellphone <-> cellphone_network [class="other"];
+   cellphone <-> mxit [class="other"];
+   tablet <-> twitter [class="other"];
+   tablet <-> gchat [class="other"];
 
-   cellphone_network -> sms_transport [class="other"];
-   mxit -> mxit_transport [class="other"];
-   twitter -> twitter_transport [class="other"];
-   gchat -> gchat_transport [class="other"];
+   cellphone_network <-> sms_transport [class="other"];
+   mxit <-> mxit_transport [class="other"];
+   twitter <-> twitter_transport [class="other"];
+   gchat <-> gchat_transport [class="other"];
 
    sms_transport <-> rtd [class="rabbit"];
    mxit_transport <-> rtd [class="rabbit"];
