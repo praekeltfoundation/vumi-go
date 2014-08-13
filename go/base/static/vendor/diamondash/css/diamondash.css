@@ -69,35 +69,35 @@
 .diamondash.dashboard .widget .widget-head h4 {
   padding: 4px;
 }
-.diamondash .graph .chart *,
-.diamondash .graph .axis * {
+.diamondash .axis * {
   pointer-events: none;
 }
-.diamondash .graph .axis path,
-.diamondash .graph .axis line {
+.diamondash .axis path,
+.diamondash .axis line {
   fill: none;
   stroke: #000;
   shape-rendering: crispEdges;
 }
-.diamondash .graph .axis text {
+.diamondash .axis text {
   font-family: sans-serif;
   font-size: 11px;
 }
-.diamondash .graph .axis g {
+.diamondash .axis g {
   -webkit-transition: fill-opacity 250ms linear;
   -moz-transition: fill-opacity 250ms linear;
   -o-transition: fill-opacity 250ms linear;
   transition: fill-opacity 250ms linear;
 }
-.diamondash .graph .metric-line {
-  fill: none;
-  stroke-width: 1.5px;
-  pointer-events: none;
+.diamondash .hover-marker line {
+  stroke: #555;
 }
-.diamondash .graph .legend {
+.diamondash .hover-marker text {
+  fill: #555;
+}
+.diamondash .legend {
   text-align: left;
 }
-.diamondash .graph .legend .legend-item .swatch {
+.diamondash .legend .legend-item .swatch {
   display: inline-block;
   vertical-align: middle;
   width: 14px;
@@ -105,11 +105,19 @@
   margin: 0 4px;
   border-radius: 4px;
 }
-.diamondash .graph .legend .legend-item .value {
+.diamondash .legend .legend-item .title {
   font-weight: bold;
 }
-.diamondash .graph .legend.hover .legend-item .value {
-  color: #555;
+.diamondash .legend.hover .legend-item .value {
+  color: #5e5e5e;
+}
+.diamondash .graph .chart * {
+  pointer-events: none;
+}
+.diamondash .graph .metric-line {
+  fill: none;
+  stroke-width: 1.5px;
+  pointer-events: none;
 }
 .diamondash .graph .dot,
 .diamondash .graph .hover-dot {
@@ -122,11 +130,25 @@
   fill: none;
   stroke-width: 1.5px;
 }
-.diamondash .graph .hover-marker line {
-  stroke: #555;
+.diamondash .histogram .bar {
+  -webkit-transition: fill-opacity 550ms ease;
+  -moz-transition: fill-opacity 550ms ease;
+  -o-transition: fill-opacity 550ms ease;
+  transition: fill-opacity 550ms ease;
 }
-.diamondash .graph .hover-marker text {
-  fill: #555;
+.diamondash .histogram .value {
+  fill: #eee;
+  text-anchor: middle;
+}
+.diamondash .histogram .not-hover.bar {
+  fill-opacity: 0.5;
+}
+.diamondash .histogram .hover.bar {
+  fill-opacity: 0.9;
+}
+.diamondash .histogram .hover.bar .value {
+  fill-opacity: 1;
+  fill: #333;
 }
 .diamondash .lvalue .widget-body {
   padding: 0;
@@ -166,6 +188,20 @@
 }
 .diamondash .lvalue .change span {
   display: block;
+}
+.diamondash .pie .chart {
+  margin-left: auto;
+  margin-right: auto;
+  width: 65%;
+  max-width: 400px;
+}
+.diamondash .pie .chart,
+.diamondash .pie .legend {
+  margin-top: 15px;
+}
+.diamondash .pie .arc {
+  stroke: #eee;
+  stroke-width: 2px;
 }
 .diamondash .text-widget-text {
   margin: 0 auto;

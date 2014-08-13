@@ -1,11 +1,11 @@
 # -*- test-case-name: go.apps.wikipedia.tests.test_vumi_app -*-
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.blinkenlights.metrics import Metric
 from vumi_wikipedia.wikipedia import WikipediaWorker, TimerWrapper
 
 from go.vumitools.app_worker import (
     GoApplicationMixin, GoApplicationConfigMixin)
-from go.vumitools.metrics import ConversationMetric
 
 
 class WikipediaConfig(WikipediaWorker.CONFIG_CLASS, GoApplicationConfigMixin):
@@ -21,7 +21,7 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
 
     def _setup_metrics(self, metrics_prefix):
         # We don't want to use the underlying app's metrics.
-        pass
+        self.metrics = None
 
     @inlineCallbacks
     def setup_application(self):
@@ -38,9 +38,10 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         pass
 
     def get_timer_metric(self, config, metric_name):
-        metric = ConversationMetric(config.conversation, metric_name)
+        metrics = self.get_conversation_metric_manager(config.conversation)
+        metric = Metric(metric_name)
         # TODO: Make this less horrible.
-        metric.set = lambda value: metric.oneshot(self.metrics, value)
+        metric.set = lambda value: fire_oneshot_metric(metrics, metric, value)
         return TimerWrapper(metric)
 
     def get_config(self, msg):
@@ -52,3 +53,8 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         return self.send_to(
             msg['from_addr'], sms_content, transport_type='sms',
             endpoint='sms_content', helper_metadata=helper_metadata)
+
+
+def fire_oneshot_metric(metrics, metric, value):
+    metrics.oneshot(metric, value)
+    metrics.publish_metrics()

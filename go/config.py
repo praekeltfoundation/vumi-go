@@ -136,6 +136,10 @@ _VUMI_INSTALLED_ROUTERS = {
         'namespace': 'keyword',
         'display_name': 'Keyword',
     },
+    'go.routers.group': {
+        'namespace': 'group',
+        'display_name': 'Group',
+    },
     'go.routers.app_multiplexer': {
         'namespace': 'app_multiplexer',
         'display_name': 'Application Multiplexer',
@@ -151,3 +155,10 @@ def billing_quantization_exponent():
     # stuff into `go.vumitools.billing_worker` through `go.billing.settings`.
     from decimal import Decimal
     return Decimal('.000001')
+
+
+GO_METRICS_PREFIX = 'go.'
+
+
+def get_go_metrics_prefix():
+    return GO_METRICS_PREFIX

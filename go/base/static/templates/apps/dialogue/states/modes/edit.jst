@@ -1,5 +1,5 @@
 <div class='titlebar'>  
-  Name the question:
+  Name the screen:
   <button class='close remove'>&times;</button>
 </div>
 
@@ -17,12 +17,18 @@
 
 <div class="main">
   <div class="form-group">
-    <label class="control-label section-header">Choose the type of question</label>
+    <label class="control-label section-header">Choose the type of screen</label>
 
     <select class="type form-control">
-      <option value="choice">Recipients select one option from a list</option>
-      <option value="freetext">Recipients can reply with their own text</option>
-      <option value="end">Recipients are shown text and the session ends</option>
+      <optgroup label="Questions">
+        <option value="choice">Recipients select one option from a list</option>
+        <option value="freetext">Recipients can reply with their own text</option>
+        <option value="end">Recipients are shown text and the session ends</option>
+      </optgroup>
+
+      <optgroup label="Actions">
+        <option value="group">Recipients are added to a contact group</option>
+      </optgroup>
     </select>
   </div>
 
@@ -35,7 +41,7 @@
       <% if (model.get('store_on_contact')) { %>
       checked="checked"
       <% } %>>
-      Display this question in search results
+      Display this screen in search results
     </label>
   </div>
   <% } %>

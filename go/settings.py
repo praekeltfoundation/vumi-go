@@ -160,6 +160,7 @@ INSTALLED_APPS = (
     'djcelery',
     'djcelery_email',
     'crispy_forms',
+    'loginas',
     'go.base',
     'go.conversation',
     'go.router',
@@ -309,8 +310,10 @@ CELERYBEAT_SCHEDULE = {
 
 try:
     from production_settings import *
-except ImportError:
-    pass
+except ImportError as err:
+    # The ImportError might be for something imported by production_settings.
+    if err.args[0] != "No module named production_settings":
+        raise
 
 
 # Compress Less with `lesscpy`
@@ -366,5 +369,3 @@ PIPELINE_JS = {
 }
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
-
-GO_METRICS_PREFIX = 'go.'

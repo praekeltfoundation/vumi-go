@@ -25,7 +25,14 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.todo',
+    'sphinxcontrib.blockdiag',
+]
+
+blockdiag_fontpath = "_static/dejavu/DejaVuSans-Bold.ttf"
+blockdiag_antialias = "true"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -41,7 +48,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Vumi Go'
-copyright = u'2013, Praekelt Foundation and individual contributors'
+copyright = u'2013-2014, Praekelt Foundation and individual contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -180,7 +187,10 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-#'preamble': '',
+    'preamble': u'''
+        \\usepackage{newunicodechar}
+        \\newunicodechar{☢}{~}
+    ''',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

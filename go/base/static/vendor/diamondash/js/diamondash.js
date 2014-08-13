@@ -1,6 +1,6 @@
 this["JST"] = this["JST"] || {};
 
-this["JST"]["diamondash/widgets/graph/legend.jst"] = function(obj) {
+this["JST"]["diamondash/widgets/chart/jst/legend.jst"] = function(obj) {
 obj || (obj = {});
 var __t, __p = '', __e = _.escape, __j = Array.prototype.join;
 function print() { __p += __j.call(arguments, '') }
@@ -12,7 +12,7 @@ __p += '\n    <div class="legend-item col-md-6" data-metric-id="' +
 '">\n      <span class="swatch"></span>\n      <span class="title">' +
 ((__t = ( m.get('title') )) == null ? '' : __t) +
 '</span>\n      <span class="value">' +
-((__t = ( self.valueOf(m.get('id'), x) )) == null ? '' : __t) +
+((__t = ( self.valueOf(m.get('id')) )) == null ? '' : __t) +
 '</span>\n    </div>\n  ';
  }); ;
 __p += '\n</div>\n';
@@ -36,6 +36,16 @@ __p += '<h1 class="last"></h1>\n<div class="' +
 '</span>\n  <span class="to">to ' +
 ((__t = ( to )) == null ? '' : __t) +
 '<span>\n</div>\n';
+
+}
+return __p
+};
+
+this["JST"]["diamondash/widgets/pie/layout.jst"] = function(obj) {
+obj || (obj = {});
+var __t, __p = '', __e = _.escape;
+with (obj) {
+__p += '<div class="chart"></div>\n<div class="legend"></div>\n';
 
 }
 return __p
@@ -172,6 +182,21 @@ diamondash.utils = function() {
     return ensureDefined(d3.max.apply(null, arguments));
   }
 
+  // adapted from http://erlycoder.com/49/javascript-hash-functions-to-
+  // convert-string-into-integer-hash-
+  function hash(str) {
+    var result = 0;
+    var c;
+
+    for (i = 0; i < str.length; i++) {
+        c = str.charCodeAt(i);
+        result = ((result << 5) - result) + c;
+        result = result & result;
+    }
+
+    return result;
+  }
+
   return {
     functor: functor,
     objectByName: objectByName,
@@ -183,7 +208,8 @@ diamondash.utils = function() {
     basicAuth: basicAuth,
     ensureDefined: ensureDefined,
     min: min,
-    max: max
+    max: max,
+    hash: hash
   };
 }.call(this);
 
@@ -193,29 +219,10 @@ diamondash.components = function() {
 }.call(this);
 
 diamondash.components.structures = function() {
-  var utils = diamondash.utils;
-
   function Extendable() {}
   Extendable.extend = Backbone.Model.extend;
 
   var Eventable = Extendable.extend(Backbone.Events);
-
-  var ColorMaker = Extendable.extend({
-    constructor: function(options) {
-      options = _({}).defaults(options, this.defaults);
-      this.colors = options.scale.domain(d3.range(0, options.n));
-      this.i = 0;
-    },
-
-    defaults: {
-      scale: d3.scale.category10(),
-      n: 10
-    },
-
-    next: function() {
-      return this.colors(this.i++);
-    }
-  });
 
   Registry = Eventable.extend({
     constructor: function(items) {
@@ -331,7 +338,6 @@ diamondash.components.structures = function() {
     Extendable: Extendable,
     Eventable: Eventable,
     Registry: Registry,
-    ColorMaker: ColorMaker,
     ViewSet: ViewSet,
     SubviewSet: SubviewSet
   };
@@ -442,6 +448,11 @@ diamondash.widgets.widget = function() {
   var WidgetView = Backbone.View.extend({
     id: function() {
       return this.model.id;
+    },
+
+    constructor: function() {
+      WidgetView.__super__.constructor.apply(this, arguments);
+      this.listenTo(this.model, 'sync', this.render);
     }
   });
 
@@ -503,7 +514,6 @@ diamondash.widgets.chart = function() {
 diamondash.widgets.chart.models = function() {
   var widgets = diamondash.widgets,
       dynamic = diamondash.widgets.dynamic,
-      structures = diamondash.components.structures,
       utils = diamondash.utils;
 
   var ChartMetricModel = Backbone.RelationalModel.extend({
@@ -567,23 +577,7 @@ diamondash.widgets.chart.models = function() {
     }
   });
 
-  var ChartMetricCollection = Backbone.Collection.extend({
-    colorOptions: {
-      n: 10,
-      scale: d3.scale.category10()
-    },
-
-    initialize: function() {
-      this.colors = new structures.ColorMaker(this.colorOptions);
-      utils.bindEvents(this.bindings, this);
-    },
-
-    bindings: {
-      'add': function(metric) {
-        metric.set('color', this.colors.next());
-      }
-    }
-  });
+  var ChartMetricCollection = Backbone.Collection.extend({});
 
   var ChartModel = dynamic.DynamicWidgetModel.extend({
     relations: [{
@@ -641,9 +635,9 @@ diamondash.widgets.chart.models = function() {
 
 diamondash.widgets.chart.views = function() {
   var structures = diamondash.components.structures,
-      utils = diamondash.utils,
       widgets = diamondash.widgets,
-      widget = diamondash.widgets.widget;
+      widget = diamondash.widgets.widget,
+      utils = diamondash.utils;
 
   var components = {};
 
@@ -664,33 +658,36 @@ diamondash.widgets.chart.views = function() {
     return target;
   };
 
-  var ChartDimensions = structures.Extendable.extend({
-    height: 0,
-    width: 0,
-
-    margin: {
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0
-    },
-
-    constructor: function(options) {
-      this.set(options);
-    },
-
-    set: function(options) {
-      options = options || {};
-
-      if ('height' in options) { this.height = options.height; }
-      if ('width' in options) { this.width = options.width; }
-
-      if (options.margin) {
-        this.margin = _({}).defaults(options.margin, this.margin);
+  var ChartDimensions = Backbone.Model.extend({
+    defaults: {
+      height: 0,
+      width: 0,
+      margin: {
+        left: 8,
+        right: 8,
+        top: 8,
+        bottom: 8
+      },
+      offset: {
+        x: 0,
+        y: 0
       }
+    },
 
-      this.innerWidth = this.width - this.margin.left - this.margin.right;
-      this.innerHeight = this.height - this.margin.top - this.margin.bottom;
+    height: function() {
+      return this.get('height');
+    },
+
+    width: function() {
+      return this.get('width');
+    },
+
+    offset: function() {
+      return this.get('offset');
+    },
+
+    margin: function() {
+      return this.get('margin');
     }
   });
 
@@ -724,6 +721,7 @@ diamondash.widgets.chart.views = function() {
     },
 
     _translation: function() {
+      var margin = this.chart.dims.margin();
       var p;
 
       if (this.orient == 'top') {
@@ -733,11 +731,15 @@ diamondash.widgets.chart.views = function() {
         return "translate(" + this.height + ", 0)";
       }
       else if (this.orient == 'right') {
-        p = this.chart.dimensions.width - this.height;
+        p = this.chart.dims.width() - this.height;
         return "translate(" + p + ", 0)";
       }
 
-      p = this.chart.dimensions.height - this.height;
+      p = this.chart.dims.height();
+      p = p - (margin.bottom + margin.top + this.height);
+
+      // fixes z-fighting in Chromium Version 32.0.1700.77 (linux)
+      p = p + 0.1;
       return "translate(0, " + p + ")";
     },
 
@@ -747,9 +749,7 @@ diamondash.widgets.chart.views = function() {
     }(),
 
     tickCount: function() {
-      var width = this.chart.dimensions.width;
-      var count = Math.floor(width / this.markerWidth);
-
+      var count = Math.floor(this.chart.dims.width() / this.markerWidth);
       return Math.max(0, count);
     },
 
@@ -778,15 +778,88 @@ diamondash.widgets.chart.views = function() {
     }
   });
 
+  var XYChartHoverMarker = structures.Eventable.extend({
+    collisionDistance: 60,
+
+    constructor: function(options) {
+      this.chart = options.chart;
+
+      if ('collisionsDistance' in options) {
+        this.collisionDistance = options.collisionDistance;
+      }
+
+      utils.bindEvents(this.bindings, this);
+    },
+
+    collision: function(position, tick) {
+      var d = Math.abs(position.svg.x - this.chart.fx(tick));
+      return d < this.collisionDistance;
+    },
+
+    show: function(position) {
+      var marker = this.chart.axis.line
+        .selectAll('.hover-marker')
+        .data([null]);
+
+      marker.enter().append('g')
+        .attr('class', 'hover-marker')
+        .call(components.marker)
+        .transition()
+          .select('text')
+          .attr('fill-opacity', 1);
+
+      marker
+        .attr('transform', "translate(" + position.svg.x + ", 0)")
+        .select('text').text(this.chart.axis.format(position.x));
+
+      var self = this;
+      this.chart.axis.line
+        .selectAll('g')
+        .style('fill-opacity', function(tick) {
+          return self.collision(position, tick)
+            ? 0
+            : 1;
+        });
+
+      return this;
+    },
+
+    hide: function() {
+      this.chart.canvas
+        .selectAll('.hover-marker')
+        .remove();
+
+      this.chart.axis.line
+        .selectAll('g')
+        .style('fill-opacity', 1);
+
+      return this;
+    },
+
+    bindings: {
+      'hover chart': function(position) {
+        if (position.x !== null) {
+          this.show(position);
+        }
+      },
+
+      'unhover chart': function() {
+        this.hide();
+      }
+    }
+  });
+
+
   var ChartView = widget.WidgetView.extend({
     className: 'chart',
 
     initialize: function(options) {
       options = options || {};
-      this.dimensions = new ChartDimensions(options.dimensions);
+      this.dims = options.dims || new ChartDimensions();
 
       this.svg = d3.select(this.el).append('svg');
-      this.canvas = this.svg.append('g');
+      this.canvas = this.svg.append('g')
+        .attr('class', 'canvas');
 
       var self = this;
       this.overlay = this.canvas.append('rect')
@@ -794,24 +867,184 @@ diamondash.widgets.chart.views = function() {
         .attr('fill-opacity', 0)
         .on('mousemove', function() { self.trigger('mousemove', this); })
         .on('mouseout', function() { self.trigger('mouseout', this); });
+
+      this.refreshDims();
+
+      this.dims.on('change', function() {
+        this.refreshDims();
+      }, this);
+    },
+
+    color: function() {
+      var color = d3.scale.category20();
+      return function(metric) {
+        return color(utils.hash(metric.get('name')) % metric.collection.size());
+      };
+    }(),
+
+    refreshDims: function() {
+      var offset = this.dims.offset();
+      var margin = this.dims.margin();
+      var tX = margin.left + offset.x;
+      var tY = margin.top + offset.y;
+
+      this.canvas.attr(
+        'transform',
+        'translate(' + tX + ',' + tY + ')'); 
+
+      this.svg
+        .attr('width', this.dims.width())
+        .attr('height', this.dims.height());
+
+      this.overlay
+        .attr('width', this.dims.width())
+        .attr('height', this.dims.height());
+    }
+  });
+
+  var ChartLegendView = Backbone.View.extend({
+    className: 'legend',
+
+    jst: JST['diamondash/widgets/chart/jst/legend.jst'],
+
+    initialize: function(options) {
+      this.chart = options.chart;
+      this.model = this.chart.model;
+      this.x = null;
+      utils.bindEvents(this.bindings, this);
+    },
+
+    valueOf: function(metricId) {
+      var metric = this.model.get('metrics').get(metricId);
+      var v = this.x === null
+        ? metric.lastValue()
+        : metric.valueAt(this.x);
+
+        v = v === null
+          ? this.model.get('default_value')
+          : v;
+
+        return this.format(v);
+    },
+
+    format: d3.format(",f"),
+
+    render: function() {
+      var self = this;
+      var metrics = this.model.get('metrics');
+      this.$el.html(this.jst({self: this}));
+
+      this.$('.legend-item').each(function() {
+        var $el = $(this),
+            id = $el.attr('data-metric-id');
+
+        $el
+          .find('.swatch')
+          .css('background-color', self.chart.color(metrics.get(id)));
+      });
+
+      return this;
+    },
+
+    bindings: {
+      'hover chart': function(position) {
+        this.$el.addClass('hover');
+        this.x = position.x;
+        return this.render();
+      },
+
+      'unhover chart': function() {
+        this.$el.removeClass('hover');
+        this.x = null;
+        return this.render();
+      }
+    }
+  });
+
+
+  var XYChartView = ChartView.extend({
+    height: 214,
+    axisHeight: 24,
+
+    initialize: function() {
+      XYChartView.__super__.initialize.call(this, {
+        dims: new ChartDimensions({height: this.height})
+      });
+
+      var fx = d3.time.scale();
+      fx.accessor = function(d) { return fx(d.x); };
+      this.fx = fx;
+
+      var fy = d3.scale.linear();
+      fy.accessor = function(d) { return fy(d.y); };
+      this.fy = fy;
+
+      this.axis = new ChartAxisView({
+        chart: this,
+        scale: this.fx,
+        height: this.axisHeight
+      });
+
+      this.hoverMarker = new XYChartHoverMarker({chart: this});
+      utils.bindEvents(XYChartView.prototype.bindings, this);
+    },
+
+    bindings: {
+      'mousemove': function(target) {
+        var mouse = d3.mouse(target);
+
+        this.trigger('hover', this.positionOf({
+          x: mouse[0],
+          y: mouse[1]
+        }));
+      },
+
+      'mouseout': function() {
+        this.trigger('unhover');
+      }
     },
 
     render: function() {
-      this.svg
-        .attr('width', this.dimensions.width)
-        .attr('height', this.dimensions.height);
+      this.dims.set('width', this.$el.width());
+      var margin = this.dims.margin();
+      var width = this.dims.width() - margin.left - margin.right;
+      var height = this.dims.height() - margin.top - margin.bottom;
 
-      this.canvas
-        .attr('transform', 'translate('
-          + this.dimensions.margin.left
-          + ','
-          + this.dimensions.margin.top + ')');
+      var maxY = height - this.axisHeight;
+      this.fy.range([maxY, 0]);
+      this.fx.range([0, width]);
 
-      this.overlay
-        .attr('width', this.dimensions.width)
-        .attr('height', this.dimensions.height);
+      var domain = this.model.domain();
+      this.fx.domain(domain);
+      this.fy.domain(this.model.range());
 
-      return this;
+      var step = this.model.get('bucket_size');
+      this.axis.render(domain[0], domain[1], step);
+    },
+
+    positionOf: function(coords) {
+      var position = {svg: {}};
+
+      position.svg.x = coords.x;
+      position.svg.y = coords.y;
+
+      var min = this.model.xMin();
+      if (min === null) {
+        position.x = null;
+      }
+      else {
+        // convert the svg x value to the corresponding time value, then snap
+        // it to the closest timestep
+        position.x = utils.snap(
+          this.fx.invert(position.svg.x),
+          min,
+          this.model.get('bucket_size'));
+
+        // shift the svg x value to correspond to the snapped time value
+        position.svg.x = this.fx(position.x);
+      }
+
+      return position;
     }
   });
 
@@ -821,7 +1054,10 @@ diamondash.widgets.chart.views = function() {
     components: components,
     ChartAxisView: ChartAxisView,
     ChartView: ChartView,
-    ChartDimensions: ChartDimensions
+    XYChartHoverMarker: XYChartHoverMarker,
+    XYChartView: XYChartView,
+    ChartDimensions: ChartDimensions,
+    ChartLegendView: ChartLegendView
   };
 }.call(this);
 
@@ -854,133 +1090,6 @@ diamondash.widgets.graph.views = function() {
       structures = diamondash.components.structures,
       chart = diamondash.widgets.chart;
 
-  var GraphLegendView = Backbone.View.extend({
-    className: 'legend',
-
-    jst: JST['diamondash/widgets/graph/legend.jst'],
-
-    initialize: function(options) {
-      this.graph = options.graph;
-      this.model = this.graph.model;
-      utils.bindEvents(this.bindings, this);
-    },
-
-    valueOf: function(metricId, x) {
-      var metric = this.model.get('metrics').get(metricId);
-      var v = typeof x == 'undefined'
-        ? metric.lastValue()
-        : metric.valueAt(x);
-
-        return v === null
-          ? this.model.get('default_value')
-          : v;
-    },
-
-    format: d3.format(",f"),
-
-    render: function(x) {
-      this.$el.html(this.jst({
-        self: this,
-        x: x
-      }));
-
-      var metrics = this.model.get('metrics');
-      this.$('.legend-item').each(function() {
-        var $el = $(this),
-            id = $el.attr('data-metric-id');
-
-        $el
-          .find('.swatch')
-          .css('background-color', metrics.get(id).get('color'));
-      });
-
-      return this;
-    },
-
-    bindings: {
-      'hover graph': function(position) {
-        this.$el.addClass('hover');
-        return this.render(position.x);
-      },
-
-      'unhover graph': function() {
-        this.$el.removeClass('hover');
-        return this.render();
-      }
-    }
-  });
-
-  var GraphHoverMarker = structures.Eventable.extend({
-    collisionDistance: 60,
-
-    constructor: function(options) {
-      this.graph = options.graph;
-
-      if ('collisionsDistance' in options) {
-        this.collisionDistance = options.collisionDistance;
-      }
-
-      utils.bindEvents(this.bindings, this);
-    },
-
-    collision: function(position, tick) {
-      var d = Math.abs(position.svg.x - this.graph.fx(tick));
-      return d < this.collisionDistance;
-    },
-
-    show: function(position) {
-      var marker = this.graph.axis.line
-        .selectAll('.hover-marker')
-        .data([null]);
-
-      marker.enter().append('g')
-        .attr('class', 'hover-marker')
-        .call(chart.views.components.marker)
-        .transition()
-          .select('text')
-          .attr('fill-opacity', 1);
-
-      marker
-        .attr('transform', "translate(" + position.svg.x + ", 0)")
-        .select('text').text(this.graph.axis.format(position.x));
-
-      var self = this;
-      this.graph.axis.line
-        .selectAll('g')
-        .style('fill-opacity', function(tick) {
-          return self.collision(position, tick)
-            ? 0
-            : 1;
-        });
-
-      return this;
-    },
-
-    hide: function() {
-      this.graph.canvas
-        .selectAll('.hover-marker')
-        .remove();
-
-      this.graph.axis.line
-        .selectAll('g')
-        .style('fill-opacity', 1);
-
-      return this;
-    },
-
-    bindings: {
-      'hover graph': function(position) {
-        if (position.x !== null) {
-          this.show(position);
-        }
-      },
-
-      'unhover graph': function() {
-        this.hide();
-      }
-    }
-  });
-
   var GraphDots = structures.Eventable.extend({
     size: 3,
     hoverSize: 4,
@@ -993,6 +1102,8 @@ diamondash.widgets.graph.views = function() {
     },
 
     render: function() {
+      var self = this;
+
       var metricDots = this.graph.canvas
         .selectAll('.metric-dots')
         .data(this.graph.model.get('metrics').models);
@@ -1000,7 +1111,7 @@ diamondash.widgets.graph.views = function() {
       metricDots.enter().append('g')
         .attr('class', 'metric-dots')
         .attr('data-metric-id', function(d) { return d.get('id'); })
-        .style('fill', function(d) { return d.get('color'); });
+        .style('fill', function(d) { return self.graph.color(d); });
 
       metricDots.exit().remove();
 
@@ -1023,6 +1134,8 @@ diamondash.widgets.graph.views = function() {
 
     bindings: {
       'hover graph': function(position) {
+        var self = this;
+
         var data = this.graph.model
           .get('metrics')
           .map(function(metric) {
@@ -1043,7 +1156,7 @@ diamondash.widgets.graph.views = function() {
           .attr('class', 'hover-dot')
           .attr('r', 0)
           .style('stroke', function(d) {
-            return d.metric.get('color');
+            return self.graph.color(d.metric);
           })
           .transition()
             .attr('r', this.hoverSize);
@@ -1070,6 +1183,8 @@ diamondash.widgets.graph.views = function() {
     },
 
     render: function() {
+      var self = this;
+
       this.line.interpolate(this.graph.model.get('smooth')
         ? 'monotone'
         : 'linear');
@@ -1081,9 +1196,8 @@ diamondash.widgets.graph.views = function() {
       line.enter().append('path')
         .attr('class', 'metric-line')
         .attr('data-metric-id', function(d) { return d.get('id'); })
-        .style('stroke', function(d) { return d.get('color'); });
+        .style('stroke', function(d) { return self.graph.color(d); });
 
-      var self = this;
       line.attr('d', function(d) {
         return self.line(d.get('datapoints'));
       });
@@ -1092,75 +1206,24 @@ diamondash.widgets.graph.views = function() {
     }
   });
 
-  var GraphView = chart.views.ChartView.extend({
+  var GraphView = chart.views.XYChartView.extend({
     height: 214,
     axisHeight: 24,
 
-    margin: {
-      top: 4,
-      right: 4,
-      left: 4,
-      bottom: 0
-    },
-
-    id: function() {
-      return this.model.id;
-    },
-
     initialize: function() {
-      GraphView.__super__.initialize.call(this, {
-        dimensions: new chart.views.ChartDimensions({
-          height: this.height,
-          margin: this.margin
-        })
-      });
-
-      var fx = d3.time.scale();
-      fx.accessor = function(d) { return fx(d.x); };
-      this.fx = fx;
-
-      var fy = d3.scale.linear();
-      fy.accessor = function(d) { return fy(d.y); };
-      this.fy = fy;
-
+      GraphView.__super__.initialize.call(this);
+      this.legend = new chart.views.ChartLegendView({chart: this});
       this.lines = new GraphLines({graph: this});
-
-      this.axis = new chart.views.ChartAxisView({
-        chart: this,
-        scale: this.fx,
-        height: this.axisHeight
-      });
-
-      this.hoverMarker = new GraphHoverMarker({graph: this});
-      this.legend = new GraphLegendView({graph: this});
       this.dots = new GraphDots({graph: this});
-
-      utils.bindEvents(this.bindings, this);
-    },
-
-    resetScales: function() {
-      var maxY = this.dimensions.innerHeight - this.axisHeight;
-      this.fy.range([maxY, 0]);
-      this.fx.range([0, this.dimensions.innerWidth]);
     },
 
     render: function() {
-      this.dimensions.set({width: this.$el.width()});
       GraphView.__super__.render.call(this);
-      this.resetScales();
-
-      var domain = this.model.domain();
-      this.fx.domain(domain);
-      this.fy.domain(this.model.range());
-
       this.lines.render();
 
       if (this.model.get('dotted')) {
         this.dots.render();
       }
-
-      var step = this.model.get('bucket_size');
-      this.axis.render(domain[0], domain[1], step);
 
       this.legend.render();
 
@@ -1169,50 +1232,6 @@ diamondash.widgets.graph.views = function() {
         .append(this.legend.$el);
 
       return this;
-    },
-
-    positionOf: function(coords) {
-      var position = {svg: {}};
-
-      position.svg.x = coords.x;
-      position.svg.y = coords.y;
-
-      var min = this.model.xMin();
-      if (min === null) {
-        position.x = null;
-      }
-      else {
-        // convert the svg x value to the corresponding time value, then snap
-        // it to the closest timestep
-        position.x = utils.snap(
-          this.fx.invert(position.svg.x),
-          min,
-          this.model.get('bucket_size'));
-
-        // shift the svg x value to correspond to the snapped time value
-        position.svg.x = this.fx(position.x);
-      }
-
-      return position;
-    },
-
-    bindings: {
-      'mousemove': function(target) {
-        var mouse = d3.mouse(target);
-
-        this.trigger('hover', this.positionOf({
-          x: mouse[0],
-          y: mouse[1]
-        }));
-      },
-
-      'mouseout': function() {
-        this.trigger('unhover');
-      },
-
-      'sync model': function() {
-        this.render();
-      }
     }
   });
 
@@ -1221,10 +1240,276 @@ diamondash.widgets.graph.views = function() {
   return {
     GraphLines: GraphLines,
     GraphDots: GraphDots,
-    GraphLegendView: GraphLegendView,
-    GraphHoverMarker: GraphHoverMarker,
-
     GraphView: GraphView
+  };
+}.call(this);
+
+diamondash.widgets.histogram = function() {
+  return {
+  };
+}.call(this);
+
+diamondash.widgets.histogram.models = function() {
+  var widgets = diamondash.widgets,
+      chart = diamondash.widgets.chart;
+
+  var HistogramModel = chart.models.ChartModel.extend({
+    range: function() {
+      return [0, this.yMax()];
+    }
+  });
+
+  widgets.registry.models.add('histogram', HistogramModel);
+
+  return {
+    HistogramModel: HistogramModel
+  };
+}.call(this);
+
+diamondash.widgets.histogram.views = function() {
+  var utils = diamondash.utils,
+      chart = diamondash.widgets.chart,
+      widgets = diamondash.widgets;
+
+  var HistogramView = chart.views.XYChartView.extend({
+    height: 278,
+    topMargin: 14,
+    barPadding: 2,
+    format: {
+      short: d3.format(".2s"),
+      long: d3.format(",f")
+    },
+
+    initialize: function() {
+      HistogramView.__super__.initialize.call(this);
+      this.dims.set('margin', _.extend(this.dims.get('margin'), {
+        top: this.topMargin
+      }));
+      utils.bindEvents(this.bindings, this);
+    },
+
+    draw: function() {
+      var self = this;
+      var metric = this.model.get('metrics').at(0);
+      var bucketSize = this.model.get('bucket_size');
+      var maxY = this.fy.range()[0];
+      var barWidth = this.fx(bucketSize) - this.fx(0) - this.barPadding;
+
+      function data(d) {
+        return [d];
+      }
+
+      function key(d) {
+        return d.x;
+      }
+
+      var bar = this.canvas.selectAll('.bar')
+        .data(metric.get('datapoints').slice(1), key);
+
+      bar.enter().append('g')
+        .attr('class', 'bar');
+
+      bar.exit().remove();
+
+      bar.attr('transform', function(d) {
+        var x = self.fx(d.x - bucketSize);
+        var y = self.fy(d.y);
+        return "translate(" + x + "," + y + ")";
+      });
+
+      var rect = bar.selectAll('rect').data(data, key);
+      rect.enter().append('rect');
+
+      rect
+        .style('fill', this.color(metric))
+        .style('pointer-events', 'none')
+        .attr('width', barWidth)
+        .attr('height', function(d) {
+          return maxY - self.fy(d.y);
+        });
+
+      var text = bar.selectAll('.value')
+        .data(data, key);
+
+      text.enter().append('text')
+        .attr('class', 'value')
+        .attr("dy", ".75em");
+
+      text
+        .attr("x", barWidth / 2)
+        .attr("y", 6)
+        .text(function(d) {
+          return self.format.short(d.y);
+        });
+
+      this.svg.selectAll('.hover.bar .value')
+        .attr("y", -15)
+        .text(function(d) {
+          return self.format.long(d.y);
+        });
+    },
+
+    render: function() {
+      HistogramView.__super__.render.call(this);
+      this.draw();
+      this.$el.append($(this.svg.node()));
+      return this;
+    },
+
+    bindings: {
+      'hover': function(position) {
+        var bucketSize = this.model.get('bucket_size');
+
+        function match(d) {
+          return d.x === (position.x + bucketSize);
+        }
+
+        this.svg.selectAll('.bar')
+          .sort(function(d) {
+            return match(d)
+              ? 1
+              : 0;
+          })
+          .attr('class', function(d) {
+            return match(d)
+              ? 'hover bar'
+              : 'not-hover bar';
+          });
+
+        this.draw();
+      },
+
+      'unhover': function() {
+        this.svg.selectAll('.bar')
+          .attr('class', 'bar');
+
+        this.draw();
+      }
+    }
+  });
+
+  widgets.registry.views.add('histogram', HistogramView);
+
+  return {
+    HistogramView: HistogramView
+  };
+}.call(this);
+
+diamondash.widgets.pie = function() {
+  return {
+  };
+}.call(this);
+
+diamondash.widgets.pie.models = function() {
+  var widgets = diamondash.widgets,
+      chart = diamondash.widgets.chart;
+
+  var PieModel = chart.models.ChartModel.extend({
+  });
+
+  widgets.registry.models.add('pie', PieModel);
+
+  return {
+    PieModel: PieModel
+  };
+}.call(this);
+
+diamondash.widgets.pie.views = function() {
+  var chart = diamondash.widgets.chart,
+      widgets = diamondash.widgets;
+
+  var PieDimensions = chart.views.ChartDimensions.extend({
+    innerWidth: function() {
+      var margin = this.margin();
+      return this.width() - margin.left - margin.right;
+    },
+
+    height: function() {
+      return this.width();
+    },
+
+    radius: function() {
+      return this.innerWidth() / 2;
+    },
+
+    offset: function() {
+      var radius = this.radius();
+
+      return {
+        x: radius,
+        y: radius
+      };
+    }
+  });
+
+  var PieView = chart.views.ChartView.extend({
+    jst: JST['diamondash/widgets/pie/layout.jst'],
+
+    initialize: function() {
+      PieView.__super__.initialize.call(this, {
+        dims: new PieDimensions()
+      });
+
+      this.arc = d3.svg.arc();
+
+      this.pie = d3.layout.pie().value(function(d) {
+        return d.lastValue();
+      });
+
+      this.legend = new chart.views.ChartLegendView({chart: this});
+    },
+
+    refreshChartDims: function() {
+      var $chart = this.$('.chart');
+      var width = $chart.width();
+      $chart.height(width);
+      this.dims.set({width: width});
+    },
+
+    renderChart: function() {
+      var self = this;
+
+      var metrics = this.model
+        .get('metrics')
+        .filter(function(m) {
+          return m.lastValue() > 0;
+        });
+
+      this.arc
+        .outerRadius(this.dims.radius())
+        .innerRadius(0);
+
+      var arc = this.canvas.selectAll('.arc')
+        .data(this.pie(metrics), function(d) {
+          return d.data.id;
+        });
+
+      arc.enter().append('path')
+        .attr('class', 'arc')
+        .style('fill', function(d) {
+          return self.color(d.data);
+        });
+
+      arc.attr('d', this.arc);
+      arc.exit().remove();
+
+      this.$('.chart').html(this.svg.node());
+    },
+
+    render: function() {
+      this.$el.html(this.jst());
+      this.refreshChartDims();
+      this.renderChart();
+      this.legend.setElement(this.$('.legend'));
+      this.legend.render();
+    }
+  });
+
+  widgets.registry.views.add('pie', PieView);
+
+  return {
+    PieView: PieView,
+    PieDimensions: PieDimensions
   };
 }.call(this);
 
@@ -1299,8 +1584,6 @@ diamondash.widgets.lvalue = function() {
     jst: JST['diamondash/widgets/lvalue/lvalue.jst'],
    
     initialize: function(options) {
-      this.listenTo(this.model, 'change', this.render);
-
       this.last = new LastValueView({
         widget: this,
         model: this.model
@@ -1371,7 +1654,6 @@ diamondash.dashboard = function() {
   var structures = diamondash.components.structures,
       models = diamondash.models,
       widgets = diamondash.widgets,
-      widget = diamondash.widgets.widget,
       dynamic = diamondash.widgets.dynamic;
 
   var DashboardRowModel = models.Model.extend({

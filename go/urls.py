@@ -53,6 +53,10 @@ urlpatterns += patterns('django.contrib.flatpages.views',
     url(r'^help/$', 'flatpage', {'url': '/help/'}, name='help'),
 )
 
+urlpatterns += patterns('loginas.views',
+    url(r"^login/user/(?P<user_id>.+)/$", "user_login", name="loginas-user-login"),
+)
+
 # HAProxy health check
 urlpatterns += patterns('',
     url(r'^health/$', health, name='health'),

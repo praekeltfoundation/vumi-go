@@ -22,7 +22,8 @@ class OptOutStore(PerAccountStore):
         self.opt_outs = self.manager.proxy(OptOut)
 
     def opt_out_id(self, addr_type, addr_value):
-        return "%s:%s" % (addr_type, addr_value)
+        # this returns a Riak key which must be a binary string
+        return (u"%s:%s" % (addr_type, addr_value)).encode('utf-8')
 
     @Manager.calls_manager
     def new_opt_out(self, addr_type, addr_value, message):
@@ -51,16 +52,6 @@ class OptOutStore(PerAccountStore):
 
     def list_opt_outs(self):
         return self.list_keys(self.opt_outs)
-
-    @Manager.calls_manager
-    def opt_outs_for_addresses(self, addr_type, addresses):
-        if not addresses:
-            returnValue([])
-        keys = ["%s:%s" % (addr_type, address) for address in addresses]
-        mr = self.manager.mr_from_keys(self.opt_outs, keys)
-        mr.filter_not_found()
-        opt_out_keys = yield mr.get_keys()
-        returnValue(opt_out_keys)
 
     def count(self):
         return self.opt_outs.index_lookup(

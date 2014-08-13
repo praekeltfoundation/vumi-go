@@ -2,19 +2,20 @@
   "name": "vumi-go",
   "version": "0.5.0-dev",
   "scripts": {
-    "install": "./utils/npm-post-install.sh",
+    "install": "./utils/npm-post-install.sh || echo 'skipping post install hook'",
     "blanket": {
       "pattern": "/go/"
     }
   },
   "dependencies": {
-    "q": "~0.9.7",
+    "go-jsbox-location": "^0.1.1",
     "jed": "~0.5.4",
     "libxmljs": "~0.8.1",
-    "vumigo_v01": "~0.1.22",
-    "vumigo_v02": "~0.2",
     "lodash": "~2.4.1",
-    "moment": "~2.5.1"
+    "moment": "~2.6",
+    "q": "~0.9.7",
+    "vumigo_v01": "~0.1.22",
+    "vumigo_v02": "~0.2"
   },
   "devDependencies": {
     "js-yaml": "~2.1.0",
@@ -24,9 +25,9 @@
     "bower": "~1.2.6",
     "grunt-cli": "~0.1.9",
     "yuglify": "0.1.4",
-    "karma": "~0.10.2",
+    "karma": "~0.12.8",
     "karma-mocha": "~0.1.0",
-    "grunt-karma": "~0.6.2",
+    "grunt-karma": "~0.8.3",
     "karma-phantomjs-launcher": "~0.1.0",
     "grunt-bower-task": "~0.3.2",
     "grunt-exec": "~0.4.2",

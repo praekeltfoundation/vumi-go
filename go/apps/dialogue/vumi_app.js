@@ -20,15 +20,6 @@ var DialogueApp = App.extend(function(self) {
         poll_metadata: {repeatable: false}
     };
 
-    self.events = {
-        'im inbound_event': function (event) {
-            var ev = event.event;
-            return event.im.log.info(
-                "Saw " + ev.event_type + " for message " +
-                ev.sent_message_id + ".");
-        }
-    };
-
     self.init = function() {
         return Q
             .all([self.get_poll(), self.im.contacts.for_user()])
@@ -55,7 +46,9 @@ var DialogueApp = App.extend(function(self) {
                 "Unknown dialogue state type: '" + desc.type + "'");
         }
 
-        return self.states.add(type(desc));
+        return self.states.add(desc.uuid, function() {
+            return type(desc);
+        });
     };
 
     self.next = function(endpoint) {
@@ -122,6 +115,16 @@ var DialogueApp = App.extend(function(self) {
             next: self.poll.poll_metadata.repeatable
                 ? 'states:start'
                 : null
+        });
+    };
+
+    self.types.group = function(desc) {
+        if (desc.group) {
+          self.contact.groups.push(desc.group.key);
+        }
+
+        return self.im.contacts.save(self.contact).then(function() {
+            return self.states.create(self.next(desc.exit_endpoint));
         });
     };
 

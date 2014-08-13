@@ -3,13 +3,16 @@
 // Models for dialogue screen.
 
 (function(exports) {
+  var Model = go.components.models.Model;
+
   var stateMachine = go.components.stateMachine,
       EndpointModel = stateMachine.EndpointModel,
       ConnectionModel = stateMachine.ConnectionModel,
-      StateModel = stateMachine.StateModel,
-      StateMachineModel = stateMachine.StateMachineModel;
+      StateModel = stateMachine.StateModel;
 
-  var Model = go.components.models.Model;
+  var contacts = go.contacts.models,
+      GroupModel = contacts.GroupModel,
+      GroupCollection = contacts.GroupCollection;
 
   var DialogueEndpointModel = EndpointModel.extend({
     defaults: function() { return {uuid: uuid.v4()}; }
@@ -36,7 +39,8 @@
       dummy: 'go.apps.dialogue.models.DummyStateModel',
       choice: 'go.apps.dialogue.models.ChoiceStateModel',
       freetext: 'go.apps.dialogue.models.FreeTextStateModel',
-      end: 'go.apps.dialogue.models.EndStateModel'
+      end: 'go.apps.dialogue.models.EndStateModel',
+      group: 'go.apps.dialogue.models.GroupStateModel'
     },
 
     defaults: function() {
@@ -119,6 +123,33 @@
     }
   });
 
+  var GroupStateModel = DialogueStateModel.extend({
+    storableOnContact: false,
+
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'group',
+      relatedModel: GroupModel,
+      includeInJSON: ['key']
+    }, {
+      type: Backbone.HasOne,
+      key: 'entry_endpoint',
+      relatedModel: DialogueEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'exit_endpoint',
+      relatedModel: DialogueEndpointModel
+    }],
+
+    defaults: function() {
+      return _({
+        group: null,
+        entry_endpoint: {},
+        exit_endpoint: {}
+      }).defaults(GroupStateModel.__super__.defaults.call(this));
+    }
+  });
+
   var EndStateModel = DialogueStateModel.extend({
     storableOnContact: false,
 
@@ -179,6 +210,11 @@
       key: 'urls',
       relatedModel: Model
     }, {
+      type: Backbone.HasMany,
+      key: 'groups',
+      relatedModel: GroupModel,
+      collectionType: GroupCollection
+    }, {
       type: Backbone.HasOne,
       key: 'poll_metadata',
       relatedModel: DialogueMetadataModel
@@ -186,7 +222,11 @@
       type: Backbone.HasMany,
       key: 'states',
       relatedModel: DialogueStateModel,
-      collectionType: DialogueStateModelCollection
+      collectionType: DialogueStateModelCollection,
+      reverseRelation: {
+        key: 'dialogue',
+        includeInJSON: false
+      }
     }, {
       type: Backbone.HasOne,
       key: 'start_state',
@@ -202,6 +242,7 @@
     defaults: {
       states: [],
       urls: {},
+      groups: [],
       connections: [],
       poll_metadata: {}
     }
@@ -218,6 +259,7 @@
     DummyStateModel: DummyStateModel,
     ChoiceStateModel: ChoiceStateModel,
     FreeTextStateModel: FreeTextStateModel,
-    EndStateModel: EndStateModel
+    EndStateModel: EndStateModel,
+    GroupStateModel: GroupStateModel
   });
 })(go.apps.dialogue.models = {});

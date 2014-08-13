@@ -37,9 +37,12 @@
     render: function() {
       this.diagram.render();
 
-      this.$('#repeatable').prop(
-        'checked',
-        this.model.get('poll_metadata').get('repeatable'));
+      var metadata = this.model.get('poll_metadata');
+      this.$('#repeatable').prop('checked', metadata.get('repeatable'));
+
+      if (metadata.get('delivery_class')) {
+        this.$('#delivery-class').val(metadata.get('delivery_class'));
+      }
     },
 
     events: {
@@ -51,6 +54,12 @@
         this.model
           .get('poll_metadata')
           .set('repeatable', $(e.target).prop('checked'));
+      },
+
+      'change #delivery-class': function(e) {
+        this.model
+          .get('poll_metadata')
+          .set('delivery_class', $(e.target).val());
       },
     }
   });

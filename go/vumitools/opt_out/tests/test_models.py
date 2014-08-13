@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 """Tests for go.vumitools.opt_out.models."""
 
 from datetime import datetime, timedelta
@@ -27,6 +29,10 @@ class TestOptOutStore(VumiTestCase):
     def test_opt_out_id(self):
         self.assertEqual(self.opt_out_store.opt_out_id("msisdn", "+1234"),
                          "msisdn:+1234")
+
+    def test_opt_out_id_with_unicode(self):
+        self.assertEqual(self.opt_out_store.opt_out_id("mxit", u"foö"),
+                         u"mxit:foö".encode('utf-8'))
 
     @inlineCallbacks
     def test_new_opt_out(self):
@@ -83,24 +89,6 @@ class TestOptOutStore(VumiTestCase):
     @inlineCallbacks
     def test_list_opt_outs_empty(self):
         opt_outs = yield self.opt_out_store.list_opt_outs()
-        self.assertEqual(opt_outs, [])
-
-    @inlineCallbacks
-    def test_opt_outs_for_addresses(self):
-        addrs = [("msisdn", str(i)) for i in range(5)]
-        for addr_type, addr in addrs:
-            yield self.opt_out_store.new_opt_out(
-                addr_type, addr, self.msg_helper.make_inbound("inbound"))
-        self.assertEqual(
-            sorted((yield self.opt_out_store.opt_outs_for_addresses(
-                "msisdn", ["0", "2", "3"]))),
-            [self.opt_out_store.opt_out_id("msisdn", str(i))
-             for i in (0, 2, 3)])
-
-    @inlineCallbacks
-    def test_opt_outs_for_addresses_with_no_addresses(self):
-        opt_outs = yield self.opt_out_store.opt_outs_for_addresses(
-            "msisdn", [])
         self.assertEqual(opt_outs, [])
 
     @inlineCallbacks

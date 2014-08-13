@@ -278,7 +278,8 @@ class TestContacts(BaseContactsTestCase):
         self.assertRedirects(response, group_url(group.key))
         self.assertEqual(len(group.backlinks.contacts()), 0)
 
-        self.specify_columns(group.key)
+        response = self.specify_columns(group.key)
+        self.assertRedirects(response, group_url(group.key))
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
@@ -294,7 +295,8 @@ class TestContacts(BaseContactsTestCase):
         self.assertRedirects(response, group_url(group.key))
         group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 0)
-        self.specify_columns(group.key)
+        response = self.specify_columns(group.key)
+        self.assertRedirects(response, group_url(group.key))
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
@@ -309,7 +311,8 @@ class TestContacts(BaseContactsTestCase):
         })
         self.assertRedirects(response, group_url(group.key))
 
-        self.specify_columns(group.key)
+        response = self.specify_columns(group.key)
+        self.assertRedirects(response, group_url(group.key))
         group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(len(mail.outbox), 1)
@@ -328,7 +331,7 @@ class TestContacts(BaseContactsTestCase):
         })
         self.assertRedirects(response, group_url(group.key))
 
-        self.specify_columns(group.key, columns={
+        response = self.specify_columns(group.key, columns={
             'column-0': 'msisdn',
             'column-1': 'area',
             'column-2': 'nairobi_1',
@@ -346,6 +349,7 @@ class TestContacts(BaseContactsTestCase):
             'normalize-6': '',
             'normalize-7': '',
         })
+        self.assertRedirects(response, group_url(group.key))
         group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 2)
         self.assertEqual(len(mail.outbox), 1)
@@ -364,10 +368,11 @@ class TestContacts(BaseContactsTestCase):
         })
         self.assertRedirects(response, group_url(group.key))
 
-        self.specify_columns(group.key, columns={
+        response = self.specify_columns(group.key, columns={
             'column-0': 'msisdn',
             'normalize-0': '',
         })
+        self.assertRedirects(response, group_url(group.key))
 
         group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 2)
@@ -433,6 +438,7 @@ class TestContacts(BaseContactsTestCase):
             contact.save()
             # what we're going to update
             contact_data.append({
+                u'created_at': '2014-01-0%d' % (i + 1,),
                 u'key': contact.key,
                 u'name': u'name %s' % (i,),
                 u'surname': u'surname %s' % (i,),
@@ -442,7 +448,7 @@ class TestContacts(BaseContactsTestCase):
             })
 
         csv = self.create_csv(
-            ['key', 'name', 'surname', 'msisdn',
+            ['key', 'created_at', 'name', 'surname', 'msisdn',
              'litmus_overwrite', 'litmus_new'],
             contact_data)
 
@@ -452,15 +458,23 @@ class TestContacts(BaseContactsTestCase):
         })
 
         self.assertRedirects(response, group_url(group.key))
-        self.specify_columns(group.key, columns={
+        response = self.specify_columns(group.key, columns={
             'column-0': 'key',
-            'column-1': 'name',
-            'column-2': 'surname',
-            'column-3': 'msisdn',
-            'column-4': 'litmus_overwrite',
-            'column-5': 'litmus_new',
-            'normalize-3': 'msisdn_za',
+            'column-1': 'created_at',
+            'column-2': 'name',
+            'column-3': 'surname',
+            'column-4': 'msisdn',
+            'column-5': 'litmus_overwrite',
+            'column-6': 'litmus_new',
+            'normalize-0': '',
+            'normalize-1': '',
+            'normalize-2': '',
+            'normalize-3': '',
+            'normalize-4': 'msisdn_za',
+            'normalize-5': '',
+            'normalize-6': '',
         }, import_rule='upload_is_truth')
+        self.assertRedirects(response, group_url(group.key))
 
         group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
@@ -475,6 +489,11 @@ class TestContacts(BaseContactsTestCase):
             self.contact_store.get_contact_by_key(contact['key'])
             for contact in contact_data]
         self.assertEqual(
+            set([contact.created_at for contact in updated_contacts]),
+            set([datetime(2014, 1, 1),
+                 datetime(2014, 1, 2),
+                 datetime(2014, 1, 3)]))
+        self.assertEqual(
             set([contact.name for contact in updated_contacts]),
             set(['name 0', 'name 1', 'name 2']))
         self.assertEqual(
@@ -484,6 +503,7 @@ class TestContacts(BaseContactsTestCase):
         self.assertEqual(
             set([contact.msisdn for contact in updated_contacts]),
             set(['+2711111110', '+2711111111', '+2711111112']))
+
         # check the litmus
         self.assertEqual(
             set([contact.extra['litmus_stay']
@@ -505,6 +525,11 @@ class TestContacts(BaseContactsTestCase):
                  for contact in updated_contacts]),
             set(['the-subscription']))
 
+        for contact in updated_contacts:
+            self.assertEqual(
+                set(contact.extra.keys()),
+                set(['litmus_stay', 'litmus_new', 'litmus_overwrite']))
+
         os.unlink(csv.name)
 
     def test_import_existing_is_truth(self):
@@ -520,11 +545,13 @@ class TestContacts(BaseContactsTestCase):
             # Litmus to ensure we don't butcher stuff
             contact.extra['litmus_stay'] = u'red'
             contact.subscription['sub'] = u'the-subscription'
+            contact.created_at = datetime(2014, 1, i + 1)
             contact.dob = datetime(2014, 1, 2)
             contact.add_to_group(group2)
             contact.save()
             # what we're going to update
             contact_data.append({
+                u'created_at': datetime(1970, 1, 1),
                 u'key': contact.key,
                 u'name': u'name %s' % (i,),
                 u'surname': u'surname %s' % (i,),
@@ -534,7 +561,7 @@ class TestContacts(BaseContactsTestCase):
             })
 
         csv = self.create_csv(
-            ['key', 'name', 'surname', 'msisdn',
+            ['key', 'created_at', 'name', 'surname', 'msisdn',
              'litmus_stay', 'litmus_new'],
             contact_data)
 
@@ -544,15 +571,23 @@ class TestContacts(BaseContactsTestCase):
         })
 
         self.assertRedirects(response, group_url(group1.key))
-        self.specify_columns(group1.key, columns={
+        response = self.specify_columns(group1.key, columns={
             'column-0': 'key',
-            'column-1': 'name',
-            'column-2': 'surname',
-            'column-3': 'msisdn',
-            'column-4': 'litmus_stay',
-            'column-5': 'litmus_new',
-            'normalize-3': 'msisdn_za',
+            'column-1': 'created_at',
+            'column-2': 'name',
+            'column-3': 'surname',
+            'column-4': 'msisdn',
+            'column-5': 'litmus_stay',
+            'column-6': 'litmus_new',
+            'normalize-0': '',
+            'normalize-1': '',
+            'normalize-2': '',
+            'normalize-3': '',
+            'normalize-4': 'msisdn_za',
+            'normalize-5': '',
+            'normalize-6': '',
         }, import_rule='existing_is_truth')
+        self.assertRedirects(response, group_url(group1.key))
 
         group = self.contact_store.get_group(group1.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
@@ -566,6 +601,11 @@ class TestContacts(BaseContactsTestCase):
         updated_contacts = [
             self.contact_store.get_contact_by_key(contact['key'])
             for contact in contact_data]
+        self.assertEqual(
+            set([contact.created_at for contact in updated_contacts]),
+            set([datetime(2014, 1, 1),
+                 datetime(2014, 1, 2),
+                 datetime(2014, 1, 3)]))
         self.assertEqual(
             set([contact.name for contact in updated_contacts]),
             set(['foo']))
@@ -596,6 +636,11 @@ class TestContacts(BaseContactsTestCase):
                  for contact in updated_contacts]),
             set(['the-subscription']))
 
+        for contact in updated_contacts:
+            self.assertEqual(
+                set(contact.extra.keys()),
+                set(['litmus_stay', 'litmus_new']))
+
         groups = []
         for contact in updated_contacts:
             groups.extend(contact.groups.keys())
@@ -619,7 +664,8 @@ class TestContacts(BaseContactsTestCase):
         group = newest(self.contact_store.list_groups())
         self.assertEqual(group.name, new_group_name)
         self.assertRedirects(response, group_url(group.key))
-        self.specify_columns(group_key=group.key)
+        response = self.specify_columns(group_key=group.key)
+        self.assertRedirects(response, group_url(group.key))
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
@@ -801,6 +847,9 @@ class TestGroups(BaseContactsTestCase):
     def get_latest_contact(self):
         return max(self.get_all_contacts(), key=lambda c: c.created_at)
 
+    def list_group_keys(self):
+        return [group.key for group in self.contact_store.list_groups()]
+
     def test_groups_creation(self):
         response = self.client.post(reverse('contacts:groups'), {
             'name': 'a new group',
@@ -873,10 +922,11 @@ class TestGroups(BaseContactsTestCase):
 
         # Delete the groups
         groups_url = reverse('contacts:groups')
-        self.client.post(groups_url, {
+        response = self.client.post(groups_url, {
             'group': [group_1.key, group_2.key],
             '_delete': True,
         })
+        self.assertRedirects(response, groups_url)
         self.assertEqual(self.contact_store.list_groups(), [])
 
     def test_removing_contacts_from_group(self):
@@ -885,14 +935,25 @@ class TestGroups(BaseContactsTestCase):
         c2 = self.mkcontact(groups=[group])
 
         group_url = reverse('contacts:group', kwargs={'group_key': group.key})
-        self.client.post(group_url, {
+        response = self.client.post(group_url, {
             '_remove': True,
             'contact': [c1.key]
         })
+        self.assertRedirects(response, group_url)
 
         self.assertEqual(
             [c2.key],
             self.contact_store.get_contacts_for_group(group))
+
+    def test_group_empty_post(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        self.assertEqual(self.list_group_keys(), [group.key])
+        group_url = reverse('contacts:group', kwargs={'group_key': group.key})
+        response = self.client.post(group_url)
+        self.assertRedirects(response, group_url)
+
+        self.assertEqual(self.list_group_keys(), [group.key])
 
     def test_group_deletion(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
@@ -1104,6 +1165,9 @@ class TestSmartGroups(BaseContactsTestCase):
         self.assertRedirects(response, group_url(group.key))
         return group
 
+    def list_group_keys(self):
+        return [group.key for group in self.contact_store.list_groups()]
+
     def add_to_group(self, contact, group):
         contact.add_to_group(group)
         contact.save()
@@ -1114,14 +1178,21 @@ class TestSmartGroups(BaseContactsTestCase):
         self.assertEqual(u'a smart group', group.name)
         self.assertEqual(u'msisdn:\+12*', group.query)
 
+    def test_smart_group_empty_post(self):
+        group = self.mksmart_group('msisdn:\+12*')
+        group_url = reverse('contacts:group', kwargs={'group_key': group.key})
+        response = self.client.post(group_url)
+        self.assertRedirects(response, group_url)
+        self.assertEqual(self.list_group_keys(), [group.key])
+
     def test_smart_group_deletion(self):
         group = self.mksmart_group('msisdn:\+12*')
-        response = self.client.post(
-            reverse('contacts:group', kwargs={'group_key': group.key}),
-            {'_delete_group': 1})
+        self.assertEqual(self.list_group_keys(), [group.key])
+        group_url = reverse('contacts:group', kwargs={'group_key': group.key})
+        response = self.client.post(group_url, {'_delete_group': 1})
         self.assertRedirects(response, reverse('contacts:index'),
                              target_status_code=302)
-        self.assertTrue(group not in self.contact_store.list_groups())
+        self.assertEqual(self.list_group_keys(), [])
 
     def test_smart_group_clearing(self):
         contact = self.mkcontact()
