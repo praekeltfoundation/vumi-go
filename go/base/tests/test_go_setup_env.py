@@ -5,6 +5,7 @@ from StringIO import StringIO
 from ConfigParser import ConfigParser
 
 from django.contrib.auth import authenticate
+from django.core.management.base import CommandError
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.management.commands import go_setup_env
@@ -339,6 +340,31 @@ class TestGoSetupEnv(GoDjangoTestCase):
         self.assertEqual(config['worker_names'],
             ['app1_application', 'app2_application', 'router1_router'])
 
+    def test_create_go_api_worker_config(self):
+        fake_file = FakeFile()
+        self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.go_api_endpoint = 'tcp:interface=127.0.0.1:port=8001'
+        self.command.create_go_api_worker_config()
+        fake_file.seek(0)
+        config = yaml.safe_load(fake_file)
+        self.assertEqual(config['worker_name'],
+            'go_api_worker')
+        self.assertEqual(config['web_path'],
+            '/api/v1/go/api')
+
+    def test_create_message_store_api_worker_config(self):
+        fake_file = FakeFile()
+        self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.message_store_api_port = 8002
+        self.command.create_message_store_api_worker_config()
+        fake_file.seek(0)
+        config = yaml.safe_load(fake_file)
+        self.assertEqual(config['worker_name'],
+            'message_store_api_worker')
+        self.assertEqual(config['web_path'],
+            '/api/v1')
+        self.assertEqual(config['web_port'], 8002)
+
     def test_create_webui_supervisord_conf(self):
         fake_file = FakeFile()
         self.command.open_file = Mock(side_effect=[fake_file])
@@ -368,6 +394,29 @@ class TestGoSetupEnv(GoDjangoTestCase):
             set(user_api.applications().keys()),
             set(['go.apps.bulk_message', 'go.apps.surveys']))
 
+    def test_setup_account_no_tagpool(self):
+        """
+        If the user we're creating needs a missing tagpool, raise CommandError.
+        """
+        account_info = self.read_yaml(self.account_1_file)
+        self.assertRaises(
+            CommandError, self.command.setup_account, account_info['account'])
+
+    def test_setup_account_user_exists(self):
+        """
+        If the user we're creating exists, print a warning and skip.
+        """
+        self.command.setup_tagpools(self.tagpool_file.name)
+        account_info = self.read_yaml(self.account_1_file)
+        user = self.command.setup_account(account_info['account'])
+        self.assertNotEqual(user, None)
+        self.assertEqual(self.command.stderr.getvalue(), '')
+        new_user = self.command.setup_account(account_info['account'])
+        self.assertEqual(new_user, None)
+        self.assertEqual(
+            self.command.stderr.getvalue(),
+            u'User user1@go.com already exists. Skipping.\n')
+
     def test_setup_account_objects(self):
         self.command.setup_tagpools(self.tagpool_file.name)
         self.command.setup_account_objects(self.account_1_file.name)
@@ -385,6 +434,22 @@ class TestGoSetupEnv(GoDjangoTestCase):
         assert_keys(['conv1', 'conv2'], user_api.active_conversations())
         assert_keys(['group1'], user_api.list_groups())
         self.assertNotEqual(user_api.get_routing_table(), {})
+
+    def test_setup_account_objects_user_exists(self):
+        """
+        If the user we're setting up exists, print a warning and skip.
+        """
+        self.command.setup_tagpools(self.tagpool_file.name)
+        self.command.setup_account_objects(self.account_1_file.name)
+
+        user = authenticate(username='user1@go.com', password='foo')
+        self.assertNotEqual(user, None)
+        self.assertEqual(self.command.stderr.getvalue(), '')
+        self.command.setup_channels = None  # To raise an exception if called.
+        self.command.setup_account_objects(self.account_1_file.name)
+        self.assertEqual(
+            self.command.stderr.getvalue(),
+            u'User user1@go.com already exists. Skipping.\n')
 
     def test_setup_channels(self):
         self.command.setup_tagpools(self.tagpool_file.name)
@@ -426,6 +491,21 @@ class TestGoSetupEnv(GoDjangoTestCase):
             'Conversation conv2 created'
             in self.command.stdout.getvalue())
 
+    def test_setup_conversations_conv_exists(self):
+        """
+        If a conversation we're creating exists, print a warning and skip.
+        """
+        self.command.setup_tagpools(self.tagpool_file.name)
+        account_info = self.read_yaml(self.account_1_file)
+        user = self.command.setup_account(account_info['account'])
+        self.command.setup_conversations(user, account_info['conversations'])
+
+        self.assertEqual(self.command.stderr.getvalue(), '')
+        self.command.setup_conversations(user, account_info['conversations'])
+        self.assertEqual(self.command.stderr.getvalue(), (
+            u'Conversation conv1 already exists. Skipping.\n'
+            u'Conversation conv2 already exists. Skipping.\n'))
+
     def test_setup_routers(self):
         self.command.setup_tagpools(self.tagpool_file.name)
         account_info = self.read_yaml(self.account_1_file)
@@ -447,6 +527,22 @@ class TestGoSetupEnv(GoDjangoTestCase):
         self.assertTrue(
             'Router router1 created'
             in self.command.stdout.getvalue())
+
+    def test_setup_routers_router_exists(self):
+        """
+        If a router we're creating exists, print a warning and skip.
+        """
+        self.command.setup_tagpools(self.tagpool_file.name)
+        account_info = self.read_yaml(self.account_1_file)
+        user = self.command.setup_account(account_info['account'])
+
+        self.command.setup_routers(user, account_info['routers'])
+
+        self.assertEqual(self.command.stderr.getvalue(), '')
+        self.command.setup_routers(user, account_info['routers'])
+        self.assertEqual(
+            self.command.stderr.getvalue(),
+            u'Router router1 already exists. Skipping.\n')
 
     def test_setup_contact_groups(self):
         self.command.setup_tagpools(self.tagpool_file.name)

@@ -4,7 +4,6 @@ describe("go.apps.dialogue.models", function() {
 
   var testHelpers = go.testHelpers,
       response = testHelpers.rpc.response,
-      errorResponse = testHelpers.rpc.errorResponse,
       assertRequest = testHelpers.rpc.assertRequest;
 
   afterEach(function() {

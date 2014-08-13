@@ -1,8 +1,8 @@
 # -*- test-case-name: go.apps.http_api_nostream.tests.test_vumi_app -*-
+import base64
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
-from twisted.web import http
 from twisted.web.error import SchemeNotSupported
 
 from vumi.config import ConfigInt, ConfigText
@@ -12,6 +12,7 @@ from vumi import log
 
 from go.apps.http_api_nostream.auth import AuthorizedResource
 from go.apps.http_api_nostream.resource import ConversationResource
+from go.base.utils import extract_auth_from_url
 from go.vumitools.app_worker import GoApplicationWorker
 
 
@@ -51,7 +52,6 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         self.web_path = config.web_path
         self.web_port = config.web_port
         self.health_path = config.health_path
-        self.metrics_prefix = config.metrics_prefix
 
         # Set these to empty dictionaries because we're not interested
         # in using any of the helper functions at this point.
@@ -83,8 +83,10 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning("Cannot find conversation for message: %r" % (
                 message,))
             return
-        push_url = self.get_api_config(conversation, 'push_message_url')
-        yield self.send_message_to_client(message, conversation, push_url)
+        ignore = self.get_api_config(conversation, 'ignore_messages', False)
+        if not ignore:
+            push_url = self.get_api_config(conversation, 'push_message_url')
+            yield self.send_message_to_client(message, conversation, push_url)
 
     def send_message_to_client(self, message, conversation, push_url):
         if push_url is None:
@@ -107,12 +109,14 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
 
         config = yield self.get_message_config(event)
         conversation = config.conversation
-        push_url = self.get_api_config(conversation, 'push_event_url')
-        yield self.send_event_to_client(event, conversation, push_url)
+        ignore = self.get_api_config(conversation, 'ignore_events', False)
+        if not ignore:
+            push_url = self.get_api_config(conversation, 'push_event_url')
+            yield self.send_event_to_client(event, conversation, push_url)
 
     def send_event_to_client(self, event, conversation, push_url):
         if push_url is None:
-            log.warning(
+            log.info(
                 "push_event_url not configured for conversation: %s" % (
                     conversation.key))
             return
@@ -123,11 +127,27 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         config = self.get_static_config()
         data = vumi_message.to_json().encode('utf-8')
         try:
+            auth, url = extract_auth_from_url(url.encode('utf-8'))
+            headers = {
+                'Content-Type': 'application/json; charset=utf-8',
+            }
+            if auth is not None:
+                username, password = auth
+
+                if username is None:
+                    username = ''
+
+                if password is None:
+                    password = ''
+
+                headers.update({
+                    'Authorization': 'Basic %s' % (
+                        base64.b64encode('%s:%s' % (username, password)),)
+                })
             resp = yield http_request_full(
-                url.encode('utf-8'), data=data, headers={
-                    'Content-Type': 'application/json; charset=utf-8',
-                }, timeout=config.timeout)
-            if resp.code != http.OK:
+                url, data=data, headers=headers, timeout=config.timeout)
+            if not (200 <= resp.code < 300):
+                # We didn't get a 2xx response.
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, url))
         except SchemeNotSupported:

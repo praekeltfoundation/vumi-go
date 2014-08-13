@@ -114,6 +114,18 @@ class TestConversationWrapper(VumiTestCase):
             len((yield self.conv.received_messages_in_cache(5, 10))), 0)
 
     @inlineCallbacks
+    def test_received_messages_preserve_ordering(self):
+        yield self.conv.start()
+        stored_messages = yield self.msg_helper.add_inbound_to_conv(
+            self.conv, 5, start_date=datetime.now())
+        sorted_stored_messages = sorted(
+            stored_messages, key=lambda msg: msg['timestamp'], reverse=True)
+        cached_messages = yield self.conv.received_messages_in_cache()
+        self.assertEqual(
+            [msg['message_id'] for msg in sorted_stored_messages],
+            [msg['message_id'] for msg in cached_messages])
+
+    @inlineCallbacks
     def test_received_messages_include_sensitive(self):
         yield self.conv.start()
         yield self.msg_helper.make_stored_inbound(
@@ -161,6 +173,18 @@ class TestConversationWrapper(VumiTestCase):
             len((yield self.conv.sent_messages_in_cache(2, 4))), 2)
         self.assertEqual(
             len((yield self.conv.sent_messages_in_cache(5, 10))), 0)
+
+    @inlineCallbacks
+    def test_sent_messages_preserve_ordering(self):
+        yield self.conv.start()
+        stored_messages = yield self.msg_helper.add_outbound_to_conv(
+            self.conv, 5, start_date=datetime.now())
+        sorted_stored_messages = sorted(
+            stored_messages, key=lambda msg: msg['timestamp'], reverse=True)
+        cached_messages = yield self.conv.sent_messages_in_cache()
+        self.assertEqual(
+            [msg['message_id'] for msg in sorted_stored_messages],
+            [msg['message_id'] for msg in cached_messages])
 
     @inlineCallbacks
     def test_sent_messages_include_sensitive(self):

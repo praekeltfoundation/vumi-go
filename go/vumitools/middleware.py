@@ -6,9 +6,10 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.middleware.message_storing import StoringMiddleware
 from vumi.utils import normalize_msisdn
-from vumi.blinkenlights.metrics import MetricManager, Count, Metric
-from vumi.persist.txredis_manager import TxRedisManager
+from vumi.blinkenlights.metrics import (
+    MetricPublisher, Count, Metric, MetricManager)
 from vumi.errors import ConfigError
+from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.api import VumiApi
 from go.vumitools.utils import MessageMetadataHelper
@@ -22,13 +23,16 @@ class NormalizeMsisdnMiddleware(TransportMiddleware):
 
     def handle_inbound(self, message, endpoint):
         from_addr = normalize_msisdn(message.get('from_addr'),
-                        country_code=self.country_code)
+                                     country_code=self.country_code)
         message['from_addr'] = from_addr
         return message
 
     def handle_outbound(self, message, endpoint):
+        to_addr = normalize_msisdn(message.get('to_addr'),
+                                   country_code=self.country_code)
         if self.strip_plus:
-            message['to_addr'] = message['to_addr'].lstrip('+')
+            to_addr = to_addr.lstrip('+')
+        message['to_addr'] = to_addr
         return message
 
 
@@ -125,13 +129,18 @@ class MetricsMiddleware(BaseMiddleware):
     @inlineCallbacks
     def setup_middleware(self):
         self.validate_config()
+        self.metric_publisher = yield self.worker.start_publisher(
+            MetricPublisher)
+        # We don't use a VumiApi here because we don't have a Riak config for
+        # it.
         self.redis = yield TxRedisManager.from_config(
             self.config['redis_manager'])
-        self.metric_manager = yield self.worker.start_publisher(MetricManager,
-            "%s." % (self.manager_name,))
+        self.metric_manager = MetricManager(
+            self.manager_name + '.', publisher=self.metric_publisher)
+        self.metric_manager.start_polling()
 
     def teardown_middleware(self):
-        self.metric_manager.stop()
+        self.metric_manager.stop_polling()
         return self.redis.close_manager()
 
     def get_or_create_metric(self, name, metric_class, *args, **kwargs):

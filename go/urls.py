@@ -1,4 +1,4 @@
-from django.conf.urls.defaults import patterns, include, url
+from django.conf.urls import patterns, include, url
 from django.contrib import admin
 from django.http import HttpResponse
 from django.views.generic import RedirectView
@@ -51,6 +51,10 @@ urlpatterns = patterns(
 urlpatterns += patterns('django.contrib.flatpages.views',
     url(r'^credits/$', 'flatpage', {'url': '/credits/'}, name='credits'),
     url(r'^help/$', 'flatpage', {'url': '/help/'}, name='help'),
+)
+
+urlpatterns += patterns('loginas.views',
+    url(r"^login/user/(?P<user_id>.+)/$", "user_login", name="loginas-user-login"),
 )
 
 # HAProxy health check

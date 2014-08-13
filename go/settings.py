@@ -153,7 +153,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.flatpages',
-    'django.contrib.markup',
     'django.contrib.humanize',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
@@ -161,10 +160,10 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'south',
     'gunicorn',
-    'django_nose',
     'djcelery',
     'djcelery_email',
     'crispy_forms',
+    'loginas',
     'go.base',
     'go.conversation',
     'go.router',
@@ -216,6 +215,10 @@ LOGGING = {
         },
     },
     'handlers': {
+        'sentry': {
+            'level': 'ERROR',
+            'class': 'raven.contrib.django.handlers.SentryHandler',
+        },
         'mail_admins': {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
@@ -234,13 +237,12 @@ LOGGING = {
         },
     },
     'root': {
-        'handlers': ['mail_admins'],
+        'handlers': ['sentry'],
         'level': 'ERROR',
     },
 }
 
 
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
 SOUTH_MIGRATION_MODULES = {
@@ -285,7 +287,7 @@ VXPOLLS_PREFIX = 'vxpolls'
 # Set this to enable Google Analytics
 GOOGLE_ANALYTICS_UA = None
 
-MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
+MESSAGE_STORE_API_URL = 'http://localhost:8002/api/v1/'
 GO_API_URL = 'http://localhost:8001/api/v1/go/api'
 GO_BILLING_API_URL = 'http://localhost:9090/'
 
@@ -311,8 +313,10 @@ CELERYBEAT_SCHEDULE = {
 
 try:
     from production_settings import *
-except ImportError:
-    pass
+except ImportError as err:
+    # The ImportError might be for something imported by production_settings.
+    if err.args[0] != "No module named production_settings":
+        raise
 
 
 # Compress Less with `lesscpy`
@@ -368,5 +372,3 @@ PIPELINE_JS = {
 }
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
-
-GO_METRICS_PREFIX = 'go.'

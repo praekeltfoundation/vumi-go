@@ -6,7 +6,47 @@
 from twisted.internet.defer import inlineCallbacks, returnValue, succeed
 
 from vumi.application.sandbox import SandboxResource
+from vumi.message import TransportUserMessage
 from vumi import log
+
+
+INBOUND_PUSH_TRIGGER = "inbound_push_trigger"
+
+
+def mk_inbound_push_trigger(to_addr, conversation):
+    """
+    Construct a dummy inbound message used to trigger a push of
+    a new message from a sandbox application.
+    """
+    msg_options = {
+        'transport_name': None,
+        'transport_type': None,
+        'helper_metadata': {},
+        # mark this message as special so that it can be idenitified
+        # if it accidentally ends up elsewhere.
+        INBOUND_PUSH_TRIGGER: True,
+    }
+    conversation.set_go_helper_metadata(msg_options['helper_metadata'])
+
+    # We reverse the to_addr & from_addr since we're faking input
+    # from the client to start the survey.
+
+    # This generates a fake message id that is then used in the
+    # in_reply_to field of the outbound message. We filter these
+    # replies out and convert them into sends in the outbound
+    # resource below
+
+    msg = TransportUserMessage(from_addr=to_addr, to_addr=None,
+                               content=None, **msg_options)
+    return msg
+
+
+def is_inbound_push_trigger(msg):
+    """
+    Returns true if a message is a dummy inbound push trigger
+    created by :func:`mk_inbound_push_trigger`.
+    """
+    return bool(msg.get(INBOUND_PUSH_TRIGGER, False))
 
 
 class GoOutboundResource(SandboxResource):
@@ -48,8 +88,15 @@ class GoOutboundResource(SandboxResource):
         helper_metadata = conv.set_go_helper_metadata(
             orig_msg['helper_metadata'])
 
-        d = reply_func(orig_msg, content, continue_session=continue_session,
-                       helper_metadata=helper_metadata)
+        # convert replies to push triggers into ordinary sends
+        if is_inbound_push_trigger(orig_msg):
+            d = self.app_worker.send_to(orig_msg["from_addr"], content,
+                                        helper_metadata=helper_metadata)
+        else:
+            d = reply_func(orig_msg, content,
+                           continue_session=continue_session,
+                           helper_metadata=helper_metadata)
+
         d.addCallback(lambda r: self.reply(command, success=True))
         d.addErrback(lambda f: self._mkfail(command,
                                             unicode(f.getErrorMessage())))
@@ -162,3 +209,63 @@ class GoOutboundResource(SandboxResource):
             to_addr, content, endpoint=endpoint, **msg_options)
 
         returnValue(self.reply(command, success=True))
+
+    def handle_send_to_endpoint(self, api, command):
+        """
+        Sends a message to a specified endpoint.
+
+        Command fields:
+            - ``content``: The body of the reply message.
+            - ``to_addr``: The address of the recipient (e.g. an MSISDN).
+            - ``endpoint``: The name of the endpoint to send the message via.
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+              ``false``.
+
+        Example:
+
+        .. code-block:: javascript
+
+            api.request(
+                'outbound.send_to_endpoint',
+                {content: 'Welcome!', to_addr: '+27831234567',
+                 endpoint: 'sms'},
+                function(reply) { api.log_info('Message sent: ' +
+                                               reply.success); });
+        """
+        if not 'content' in command:
+            return self._mkfaild(
+                command, reason=u"'content' must be given in sends.")
+        if not isinstance(command['content'], (unicode, type(None))):
+            return self._mkfaild(
+                command, reason=u"'content' must be unicode or null.")
+        if not isinstance(command.get('endpoint'), unicode):
+            return self._mkfaild(
+                command, reason=u"'endpoint' must be given in sends.")
+        if not isinstance(command.get('to_addr'), unicode):
+            return self._mkfaild(
+                command, reason=u"'to_addr' must be given in sends.")
+
+        endpoint = command['endpoint']
+        content = command['content']
+        to_addr = command['to_addr']
+
+        conv = self.app_worker.conversation_for_api(api)
+        if endpoint not in conv.extra_endpoints:
+            return self._mkfaild(
+                command, reason="Endpoint %r not configured" % (endpoint,))
+
+        msg_options = {}
+        self.app_worker.add_conv_to_msg_options(conv, msg_options)
+
+        log.info("Sending outbound message to %r via endpoint %r, content: %r"
+                 % (to_addr, endpoint, content))
+
+        d = self.app_worker.send_to(
+            to_addr, content, endpoint=endpoint, **msg_options)
+
+        d.addCallback(lambda r: self.reply(command, success=True))
+        d.addErrback(lambda f: self._mkfail(command,
+                                            unicode(f.getErrorMessage())))
+        return d

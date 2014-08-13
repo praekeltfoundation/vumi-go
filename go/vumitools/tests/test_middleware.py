@@ -80,11 +80,17 @@ class TestNormalizeMisdnMiddleware(VumiTestCase):
             'country_code': '256',
         })
 
-    def test_normalization(self):
+    def test_inbound_normalization(self):
         msg = self.mw_helper.make_inbound(
             "foo", to_addr='8007', from_addr='256123456789')
         msg = self.mw.handle_inbound(msg, 'dummy_endpoint')
         self.assertEqual(msg['from_addr'], '+256123456789')
+
+    def test_outbound_normalization(self):
+        msg = self.mw_helper.make_outbound(
+            "foo", to_addr='0123456789', from_addr='8007')
+        msg = self.mw.handle_outbound(msg, 'dummy_endpoint')
+        self.assertEqual(msg['to_addr'], '+256123456789')
 
 
 class TestOptOutMiddleware(VumiTestCase):

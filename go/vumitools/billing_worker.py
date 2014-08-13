@@ -12,8 +12,7 @@ from vumi.utils import http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 
-from go.billing.api import BillingError
-from go.billing.utils import JSONEncoder, JSONDecoder
+from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 
 
 class BillingApi(object):
@@ -44,14 +43,16 @@ class BillingApi(object):
         result = json.loads(response.delivered_body, cls=JSONDecoder)
         returnValue(result)
 
-    def create_transaction(self, account_number, tag_pool_name,
-                           tag_name, message_direction):
+    def create_transaction(self, account_number, message_id, tag_pool_name,
+                           tag_name, message_direction, session_created):
         """Create a new transaction for the given ``account_number``"""
         data = {
             'account_number': account_number,
+            'message_id': message_id,
             'tag_pool_name': tag_pool_name,
             'tag_name': tag_name,
-            'message_direction': message_direction
+            'message_direction': message_direction,
+            'session_created': session_created,
         }
         return self._call_api("/transactions", data=data, method='POST')
 
@@ -117,18 +118,26 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         """Create a transaction for the given inbound message"""
         self.validate_metadata(msg)
         msg_mdh = self.get_metadata_helper(msg)
+        session_created = msg['session_event'] == 'new'
         yield self.billing_api.create_transaction(
-            msg_mdh.get_account_key(), msg_mdh.tag[0], msg_mdh.tag[1],
-            self.MESSAGE_DIRECTION_INBOUND)
+            account_number=msg_mdh.get_account_key(),
+            message_id=msg['message_id'],
+            tag_pool_name=msg_mdh.tag[0], tag_name=msg_mdh.tag[1],
+            message_direction=self.MESSAGE_DIRECTION_INBOUND,
+            session_created=session_created)
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
         """Create a transaction for the given outbound message"""
         self.validate_metadata(msg)
         msg_mdh = self.get_metadata_helper(msg)
+        session_created = msg['session_event'] == 'new'
         yield self.billing_api.create_transaction(
-            msg_mdh.get_account_key(), msg_mdh.tag[0], msg_mdh.tag[1],
-            self.MESSAGE_DIRECTION_OUTBOUND)
+            account_number=msg_mdh.get_account_key(),
+            message_id=msg['message_id'],
+            tag_pool_name=msg_mdh.tag[0], tag_name=msg_mdh.tag[1],
+            message_direction=self.MESSAGE_DIRECTION_OUTBOUND,
+            session_created=session_created)
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):

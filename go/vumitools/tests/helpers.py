@@ -7,14 +7,15 @@ from twisted.python.monkey import MonkeyPatcher
 
 from zope.interface import implements
 
-from vumi.blinkenlights.metrics import MetricMessage
 from vumi.tests.helpers import (
     WorkerHelper, MessageHelper, PersistenceHelper, maybe_async, proxyable,
     generate_proxies, IHelper, maybe_async_return)
 
 import go.config
-from go.vumitools.api import VumiApi, VumiApiEvent, VumiApiCommand
+from go.vumitools.api import (
+    VumiApi, VumiApiEvent, VumiApiCommand, ApiCommandPublisher)
 from go.vumitools.api_worker import EventDispatcher
+from go.vumitools.routing import RoutingMetadata
 from go.vumitools.utils import MessageMetadataHelper
 
 
@@ -83,33 +84,51 @@ class GoMessageHelper(object):
             self.add_router_metadata(msg, router)
 
     @proxyable
-    def make_inbound(self, content, conv=None, router=None, **kw):
+    def _add_go_routing_metadata(self, msg, hops, outbound_hops):
+        rmeta = RoutingMetadata(msg)
+        if hops is not None:
+            rmeta.set_hops(hops)
+        if outbound_hops is not None:
+            rmeta.set_outbound_hops(outbound_hops)
+
+    @proxyable
+    def make_inbound(self, content, conv=None, router=None,
+                     hops=None, outbound_hops=None, **kw):
         msg = self._msg_helper.make_inbound(content, **kw)
         self._add_go_metadata(msg, conv, router)
+        self._add_go_routing_metadata(msg, hops, outbound_hops)
         return msg
 
     @proxyable
-    def make_outbound(self, content, conv=None, router=None, **kw):
+    def make_outbound(self, content, conv=None, router=None,
+                      hops=None, outbound_hops=None, **kw):
         msg = self._msg_helper.make_outbound(content, **kw)
         self._add_go_metadata(msg, conv, router)
+        self._add_go_routing_metadata(msg, hops, outbound_hops)
         return msg
 
     @proxyable
-    def make_ack(self, msg=None, conv=None, router=None, **kw):
+    def make_ack(self, msg=None, conv=None, router=None,
+                 hops=None, outbound_hops=None, **kw):
         ack = self._msg_helper.make_ack(msg, **kw)
         self._add_go_metadata(ack, conv, router)
+        self._add_go_routing_metadata(ack, hops, outbound_hops)
         return ack
 
     @proxyable
-    def make_nack(self, msg=None, conv=None, router=None, **kw):
+    def make_nack(self, msg=None, conv=None, router=None,
+                  hops=None, outbound_hops=None, **kw):
         nack = self._msg_helper.make_nack(msg, **kw)
         self._add_go_metadata(nack, conv, router)
+        self._add_go_routing_metadata(nack, hops, outbound_hops)
         return nack
 
     @proxyable
-    def make_delivery_report(self, msg=None, conv=None, router=None, **kw):
+    def make_delivery_report(self, msg=None, conv=None, router=None,
+                             hops=None, outbound_hops=None, **kw):
         dr = self._msg_helper.make_delivery_report(msg, **kw)
         self._add_go_metadata(dr, conv, router)
+        self._add_go_routing_metadata(dr, hops, outbound_hops)
         return dr
 
     @proxyable
@@ -245,12 +264,9 @@ class FakeAmqpConnection(object):
         metrics, self.metrics = self.metrics, []
         return metrics
 
-    def publish_metric(self, metric_name, aggregators, value, timestamp=None):
-        metric_msg = MetricMessage()
-        metric_msg.append((metric_name,
-            tuple(sorted(agg.name for agg in aggregators)),
-            [(timestamp, value)]))
-        return self.publish_metric_message(metric_msg)
+    def get_metric_publisher(self):
+        from go.base.amqp import MetricPublisher
+        return MetricPublisher(self)
 
 
 class VumiApiHelper(object):
@@ -345,13 +361,17 @@ class VumiApiHelper(object):
     def setup_async_vumi_api(self):
         worker_helper = self.get_worker_helper()
         amqp_client = worker_helper.get_fake_amqp_client(worker_helper.broker)
-        d = VumiApi.from_config_async(self.mk_config({}), amqp_client)
+        d = amqp_client.start_publisher(ApiCommandPublisher)
+        d.addCallback(lambda cmd_publisher: VumiApi.from_config_async(
+            self.mk_config({}), cmd_publisher))
         return d.addCallback(self.set_vumi_api)
 
     @proxyable
     @maybe_async
     def make_user(self, username, enable_search=True, django_user_pk=None):
-        key = u"test-%s-user" % (len(self._user_helpers),)
+        # NOTE: We use bytes instead of unicode here because that's what the
+        #       real new_user gives us.
+        key = "test-%s-user" % (len(self._user_helpers),)
         user = self.get_vumi_api().account_store.users(key, username=username)
         yield user.save()
         user_helper = UserApiHelper(self, key, django_user_pk=django_user_pk)

@@ -6,9 +6,8 @@
 import re
 
 from vumi.application.sandbox import SandboxResource
-from vumi import log
 
-from vumi.blinkenlights.metrics import SUM, AVG, MIN, MAX
+from vumi.blinkenlights.metrics import SUM, AVG, MIN, MAX, LAST
 
 
 class MetricEventError(Exception):
@@ -22,6 +21,7 @@ class MetricEvent(object):
         'avg': AVG,
         'min': MIN,
         'max': MAX,
+        'last': LAST
     }
 
     NAME_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9._]{,100}$")
@@ -88,7 +88,6 @@ class MetricsResource(SandboxResource):
         try:
             ev = MetricEvent.from_command(command)
         except MetricEventError, e:
-            log.warning(str(e))
             return self.reply(command, success=False, reason=unicode(e))
         self._publish_event(api, ev)
         return self.reply(command, success=True)

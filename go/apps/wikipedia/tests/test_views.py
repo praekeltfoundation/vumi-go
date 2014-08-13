@@ -32,7 +32,7 @@ class TestWikipediaViews(GoDjangoTestCase):
         self.assertEqual(conversation.description, '')
         self.assertEqual(conversation.config, {})
         self.assertEqual(list(conversation.extra_endpoints), [u'sms_content'])
-        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        self.assertRedirects(response, conv_helper.get_view_url('edit'))
 
     def test_show_stopped(self):
         conv_helper = self.app_helper.create_conversation_helper(
@@ -45,3 +45,37 @@ class TestWikipediaViews(GoDjangoTestCase):
             name=u"myconv", started=True)
         response = self.client.get(conv_helper.get_view_url('show'))
         self.assertContains(response, u"<h1>myconv</h1>")
+
+    def test_edit_set_all_fields(self):
+        conv_helper = self.app_helper.create_conversation_helper()
+        conversation = conv_helper.get_conversation()
+        self.assertEqual(conversation.config, {})
+        response = self.client.post(conv_helper.get_view_url('edit'), {
+            'api_url': 'http://wikipedia/api.php',
+            'include_url_in_sms': True,
+            'mobi_url_host': 'http://mobi/',
+            'shortening_api_url': 'http://wtxt.io/api/',
+        }, follow=True)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        reloaded_conv = conv_helper.get_conversation()
+        self.assertEqual(reloaded_conv.config, {
+            'api_url': 'http://wikipedia/api.php',
+            'include_url_in_sms': True,
+            'mobi_url_host': 'http://mobi/',
+            'shortening_api_url': 'http://wtxt.io/api/',
+        })
+
+    def test_edit_set_no_fields(self):
+        conv_helper = self.app_helper.create_conversation_helper()
+        conversation = conv_helper.get_conversation()
+        self.assertEqual(conversation.config, {})
+        response = self.client.post(conv_helper.get_view_url('edit'), {
+            'api_url': '',
+            'mobi_url_host': '',
+            'shortening_api_url': '',
+        }, follow=True)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+        reloaded_conv = conv_helper.get_conversation()
+        self.assertEqual(reloaded_conv.config, {
+            'include_url_in_sms': False,
+        })

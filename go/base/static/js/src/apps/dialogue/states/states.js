@@ -192,7 +192,7 @@
     },
 
     onStoreOnContact: function(e) {
-      this.model.set('store_on_contact', this.$('.store-on-contact').prop(':checked'));
+      this.model.set('store_on_contact', this.$('.store-on-contact').prop('checked'));
     },
 
     // Keep a backup to restore the model for when the user cancels the edit
@@ -250,7 +250,8 @@
       dummy: 'go.apps.dialogue.states.dummy.DummyStateView',
       choice: 'go.apps.dialogue.states.choice.ChoiceStateView',
       freetext: 'go.apps.dialogue.states.freetext.FreeTextStateView',
-      end: 'go.apps.dialogue.states.end.EndStateView'
+      end: 'go.apps.dialogue.states.end.EndStateView',
+      group: 'go.apps.dialogue.states.group.GroupStateView'
     },
 
     events: {

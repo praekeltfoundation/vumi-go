@@ -85,12 +85,11 @@ def new_channel(request):
                 request.user_api.get_channel((pool, tag)))
             return redirect(
                 view_def.get_view_url('show', channel_key=channel_key))
-        else:
-            raise ValueError(repr('Error: %s' % (form.errors,)))
+    else:
+        form = NewChannelForm(request.user_api)
 
-    new_channel_form = NewChannelForm(request.user_api)
     return render(request, 'channel/new.html', {
-        'new_channel_form': new_channel_form,
+        'new_channel_form': form,
     })
 
 

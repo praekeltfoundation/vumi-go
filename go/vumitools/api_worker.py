@@ -9,7 +9,9 @@ from vumi.application import ApplicationWorker
 from vumi.utils import load_class_by_string
 from vumi import log
 
-from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
+from go.vumitools.api import (
+    VumiApi, VumiApiCommand, VumiApiEvent, ApiCommandPublisher,
+    ApiEventPublisher)
 
 
 # TODO: None of these should be ApplicationWorker subclasses.
@@ -23,8 +25,6 @@ class CommandDispatcher(ApplicationWorker):
 
     Configuration parameters:
 
-    :param dict api_routing:
-        Dictionary describing where to consume API commands.
     :param list worker_names:
         A list of known worker names that we can forward
         VumiApiCommands to.
@@ -33,8 +33,6 @@ class CommandDispatcher(ApplicationWorker):
     # TODO: Make this not an ApplicationWorker.
 
     def validate_config(self):
-        self.api_routing_config = VumiApiCommand.default_routing_config()
-        self.api_routing_config.update(self.config.get('api_routing', {}))
         self.api_consumer = None
         self.worker_names = self.config.get('worker_names', [])
 
@@ -47,10 +45,7 @@ class CommandDispatcher(ApplicationWorker):
             self.worker_publishers[worker_name] = worker_publisher
 
         self.api_consumer = yield self.consume(
-            self.api_routing_config['routing_key'],
-            self.consume_control_command,
-            exchange_name=self.api_routing_config['exchange'],
-            exchange_type=self.api_routing_config['exchange_type'],
+            ApiCommandPublisher.routing_key, self.consume_control_command,
             message_class=VumiApiCommand)
 
     @inlineCallbacks
@@ -83,8 +78,6 @@ class EventDispatcher(ApplicationWorker):
 
     Configuration parameters:
 
-    :param dict api_routing:
-        Dictionary describing where to consume API commands.
     :param dict event_handlers:
         A mapping from handler name to fully-qualified class name.
     """
@@ -92,8 +85,6 @@ class EventDispatcher(ApplicationWorker):
     # TODO: Make this not an ApplicationWorker.
 
     def validate_config(self):
-        self.api_routing_config = VumiApiEvent.default_routing_config()
-        self.api_routing_config.update(self.config.get('api_routing', {}))
         self.api_event_consumer = None
         self.handler_config = self.config.get('event_handlers', {})
         self.account_handler_configs = self.config.get(
@@ -103,9 +94,10 @@ class EventDispatcher(ApplicationWorker):
     def setup_application(self):
         self.handlers = {}
 
-        self.api_command_publisher = yield self.publish_to('vumi.api')
+        self.api_command_publisher = yield self.start_publisher(
+            ApiCommandPublisher)
         self.vumi_api = yield VumiApi.from_config_async(
-            self.config, self._amqp_client)
+            self.config, self.api_command_publisher)
         self.account_config = {}
 
         for name, handler_class in self.handler_config.items():
@@ -114,10 +106,7 @@ class EventDispatcher(ApplicationWorker):
             yield self.handlers[name].setup_handler()
 
         self.api_event_consumer = yield self.consume(
-            self.api_routing_config['routing_key'],
-            self.consume_api_event,
-            exchange_name=self.api_routing_config['exchange'],
-            exchange_type=self.api_routing_config['exchange_type'],
+            ApiEventPublisher.routing_key, self.consume_api_event,
             message_class=VumiApiEvent)
 
     @inlineCallbacks

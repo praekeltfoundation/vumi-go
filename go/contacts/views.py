@@ -16,6 +16,9 @@ from go.contacts.forms import (
     ContactForm, ContactGroupForm, UploadContactsForm, SmartGroupForm,
     SelectContactGroupForm)
 from go.contacts import tasks, utils
+from go.contacts.import_handlers import (
+    handle_import_new_contacts, handle_import_existing_is_truth,
+    handle_import_upload_is_truth)
 from go.contacts.parsers import ContactFileParser, ContactParserException
 from go.contacts.parsers.base import FieldNormalizer
 from go.vumitools.contact import ContactError
@@ -66,6 +69,7 @@ def groups(request, type=None):
                                          group.key)
             messages.info(request, '%d groups will be deleted '
                                    'shortly.' % len(groups))
+            return redirect(reverse('contacts:groups'))
         elif '_export' in request.POST:
             tasks.export_many_group_contacts.delay(
                 request.user_api.user_account_key,
@@ -73,6 +77,7 @@ def groups(request, type=None):
 
             messages.info(request, 'The export is scheduled and should '
                                    'complete within a few minutes.')
+            return redirect(reverse('contacts:groups'))
     else:
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
@@ -155,7 +160,7 @@ def _static_group(request, contact_store, group):
                           'The export is scheduled and should '
                           'complete within a few minutes.')
             return redirect(_group_url(group.key))
-        if '_remove' in request.POST:
+        elif '_remove' in request.POST:
             contacts = request.POST.getlist('contact')
             for person_key in contacts:
                 contact = contact_store.get_contact_by_key(person_key)
@@ -164,6 +169,7 @@ def _static_group(request, contact_store, group):
             messages.info(
                 request,
                 '%d Contacts removed from group' % len(contacts))
+            return redirect(_group_url(group.key))
         elif '_delete_group_contacts' in request.POST:
             tasks.delete_group_contacts.delay(
                 request.user_api.user_account_key, group.key)
@@ -177,36 +183,25 @@ def _static_group(request, contact_store, group):
             return redirect(reverse('contacts:index'))
         elif '_complete_contact_upload' in request.POST:
             try:
-                file_name, file_path = utils.get_file_hints_from_session(
-                    request)
-                file_type, parser = ContactFileParser.get_parser(file_name)
-                has_header, _, sample_row = parser.guess_headers_and_row(
-                    file_path)
+                import_rule = request.POST.get('import_rule')
+                import_handler = {
+                    'existing_is_truth': handle_import_existing_is_truth,
+                    'upload_is_truth': handle_import_upload_is_truth,
+                }.get(import_rule, handle_import_new_contacts)
 
-                # Grab the selected field names from the submitted form
-                # by looping over the expect n number of `column-n` keys being
-                # posted
-                field_names = [request.POST.get('column-%s' % i) for i in
-                               range(len(sample_row))]
-                normalizers = [request.POST.get('normalize-%s' % i, '')
-                               for i in range(len(sample_row))]
-                fields = zip(field_names, normalizers)
-
-                tasks.import_contacts_file.delay(
-                    request.user_api.user_account_key, group.key, file_name,
-                    file_path, fields, has_header)
-
+                import_handler(request, group)
                 messages.info(
-                    request, 'The contacts are being imported. '
-                             'We will notify you via email when the import '
-                             'has been completed')
-
-                utils.clear_file_hints_from_session(request)
-                return redirect(_group_url(group.key))
+                    request,
+                    'The contacts are being imported. '
+                    'We will notify you via email when the import '
+                    'has been completed')
 
             except (ContactParserException,):
                 messages.error(request, 'Something is wrong with the file')
+                _, file_path = utils.get_file_hints_from_session(request)
                 default_storage.delete(file_path)
+
+            return redirect(_group_url(group.key))
 
         else:
             upload_contacts_form = UploadContactsForm(request.POST,
@@ -217,6 +212,11 @@ def _static_group(request, contact_store, group):
                 utils.store_file_hints_in_session(
                     request, file_name, file_path)
                 return redirect(_group_url(group.key))
+            else:
+                # We didn't get any useful POST variables, so just redirect
+                # back to the group page without doing anything.
+                return redirect(_group_url(group.key))
+
     else:
         group_form = ContactGroupForm({
             'name': group.name,
@@ -240,6 +240,10 @@ def _static_group(request, contact_store, group):
                 'contact_data_headers': headers,
                 'field_normalizer': FieldNormalizer(),
                 'contact_data_row': row,
+                # NOTE: Only if we have a key (contact UUID) value in the
+                #       row we can look at updating contacts instead of
+                #       only writing new ones.
+                'can_update_contacts': 'key' in row,
             })
         except (ValueError, ContactParserException):
             messages.error(request, 'Something is wrong with the file')
@@ -298,6 +302,10 @@ def _smart_group(request, contact_store, group):
                                      group.key)
             messages.info(request, 'The group will be deleted shortly.')
             return redirect(reverse('contacts:index'))
+        else:
+            # We didn't get any useful POST variables, so just redirect back to
+            # the group page without doing anything.
+            return redirect(_group_url(group.key))
     else:
         smart_group_form = SmartGroupForm({
             'name': group.name,
@@ -347,7 +355,11 @@ def _people(request):
             tasks.export_contacts.delay(
                 request.user_api.user_account_key,
                 request.POST.getlist('contact'))
-
+            messages.info(request, 'The export is scheduled and should '
+                                   'complete within a few minutes.')
+        elif '_export_all' in request.POST:
+            tasks.export_all_contacts.delay(
+                request.user_api.user_account_key)
             messages.info(request, 'The export is scheduled and should '
                                    'complete within a few minutes.')
         else:
@@ -454,6 +466,8 @@ def person(request, person_key):
             'facebook_id': contact.facebook_id,
             'bbm_pin': contact.bbm_pin,
             'gtalk_id': contact.gtalk_id,
+            'mxit_id': contact.mxit_id,
+            'wechat_id': contact.wechat_id,
             'dob': contact.dob,
             'groups': contact.groups.keys(),
         })

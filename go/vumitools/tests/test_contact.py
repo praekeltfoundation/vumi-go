@@ -240,12 +240,18 @@ class TestContactStore(VumiTestCase):
         yield check_new_contact_for_addr('sms', u'+27831234567',
                                          msisdn=u'+27831234567')
         yield check_new_contact_for_addr('ussd', u'+27831234567',
-                                          msisdn=u'+27831234567')
+                                         msisdn=u'+27831234567')
         yield check_new_contact_for_addr('gtalk', u'random@gmail.com',
-                                          gtalk_id=u'random@gmail.com',
-                                          msisdn=u'unknown')
+                                         gtalk_id=u'random@gmail.com',
+                                         msisdn=u'unknown')
         yield check_new_contact_for_addr('twitter', u'random',
                                          twitter_handle=u'random',
+                                         msisdn=u'unknown')
+        yield check_new_contact_for_addr('mxit', u'mxit',
+                                         mxit_id=u'mxit',
+                                         msisdn=u'unknown')
+        yield check_new_contact_for_addr('wechat', u'wechat',
+                                         wechat_id=u'wechat',
                                          msisdn=u'unknown')
 
     @inlineCallbacks
@@ -260,12 +266,17 @@ class TestContactStore(VumiTestCase):
             surname=u'Person',
             msisdn=u'+27831234567',
             gtalk_id=u'random@gmail.com',
-            twitter_handle=u'random')
+            twitter_handle=u'random',
+            mxit_id=u'mxit',
+            wechat_id=u'wechat')
 
         yield check_contact_for_addr('sms', u'+27831234567', contact)
         yield check_contact_for_addr('ussd', u'+27831234567', contact)
         yield check_contact_for_addr('gtalk', u'random@gmail.com', contact)
         yield check_contact_for_addr('twitter', u'random', contact)
+        yield check_contact_for_addr('mxit', u'mxit', contact)
+        yield check_contact_for_addr('wechat', u'wechat', contact)
+        yield check_contact_for_addr('voice', u'+27831234567', contact)
 
     def test_contact_for_addr_for_unsupported_transports(self):
         return self.assertFailure(
@@ -297,3 +308,11 @@ class TestContactStore(VumiTestCase):
         yield check_contact_for_addr('twitter', u'random',
                                      twitter_handle=u'random',
                                      msisdn=u'unknown')
+        yield check_contact_for_addr('mxit', u'mxit',
+                                     mxit_id=u'mxit',
+                                     msisdn=u'unknown')
+        yield check_contact_for_addr('wechat', u'wechat',
+                                     wechat_id=u'wechat',
+                                     msisdn=u'unknown')
+        yield check_contact_for_addr('voice', u'+27831234567',
+                                     msisdn=u'+27831234567')

@@ -1,5 +1,5 @@
 from django.core import urlresolvers
-from django.conf.urls.defaults import patterns
+from django.conf.urls import patterns
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.forms.models import modelformset_factory
@@ -87,28 +87,28 @@ class AccountAdmin(admin.ModelAdmin):
 
 class MessageCostAdmin(admin.ModelAdmin):
     list_display = ('id', 'account', 'tag_pool', 'message_direction',
-                    'message_cost', 'markup_percent', 'credit_cost')
+                    'message_cost', 'session_cost', 'markup_percent',
+                    'message_credit_cost', 'session_credit_cost')
 
     search_fields = ('tag_pool__name', 'account__account_number')
     list_filter = ('tag_pool', 'message_direction')
     form = MessageCostForm
 
-    def credit_amount(self, obj):
-        return obj.credit_cost
-
 
 class TransactionAdmin(admin.ModelAdmin):
     list_display = ('id', 'account_number', 'tag_pool_name', 'tag_name',
-                    'message_direction', 'message_cost', 'markup_percent',
-                    'credit_factor', 'credit_amount', 'status', 'created',
-                    'last_modified')
+                    'message_id', 'message_direction', 'message_cost',
+                    'session_created', 'session_cost',
+                    'markup_percent', 'credit_factor', 'credit_amount',
+                    'status', 'created', 'last_modified')
 
     search_fields = ('account__account_number', 'tag_pool_name', 'tag_name')
     list_filter = ('message_direction', 'status', 'created', 'last_modified')
     readonly_fields = ('account_number', 'tag_pool_name', 'tag_name',
-                       'message_direction', 'message_cost', 'markup_percent',
-                       'credit_factor', 'credit_amount', 'status', 'created',
-                       'last_modified')
+                       'message_id', 'message_direction', 'message_cost',
+                       'session_created', 'session_cost',
+                       'markup_percent', 'credit_factor', 'credit_amount',
+                       'status', 'created', 'last_modified')
 
     def has_add_permission(self, request):
         return False

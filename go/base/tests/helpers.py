@@ -140,9 +140,13 @@ class DjangoVumiApiHelper(object):
 
     @proxyable
     def make_django_user(self, email='user@domain.com', password='password',
-                         first_name="Test", last_name="User"):
-        user = get_user_model().objects.create_user(
-            email=email, password=password)
+                         first_name="Test", last_name="User", superuser=False):
+        if superuser:
+            user = get_user_model().objects.create_superuser(
+                email=email, password=password)
+        else:
+            user = get_user_model().objects.create_user(
+                email=email, password=password)
         user.first_name = first_name
         user.last_name = last_name
         user.save()
@@ -160,13 +164,13 @@ class DjangoVumiApiHelper(object):
             return
 
         user_helper = self.make_user(
-            unicode(instance.email), enable_search=False,
+            unicode(instance.email), enable_search=True,
             django_user_pk=instance.pk)
         base_models.UserProfile.objects.create(
             user=instance, user_account=user_helper.account_key)
 
 
-class GoAccountCommandTestCase(GoDjangoTestCase):
+class GoCommandTestCase(GoDjangoTestCase):
     """TestCase subclass for testing management commands.
 
     This isn't a helper because everything it does requires asserting, which
@@ -177,6 +181,7 @@ class GoAccountCommandTestCase(GoDjangoTestCase):
         self.command_class = command_class
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
+        self.user_email = self.user_helper.get_django_user().email
         self.command = self.command_class()
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
@@ -194,9 +199,7 @@ class GoAccountCommandTestCase(GoDjangoTestCase):
                 opt_dest in opt_dests,
                 "Option key '%s' has no command line option" % (opt_dest,))
         # Call the command handler
-        email_address = self.user_helper.get_django_user().email
-        return self.command.handle(
-            email_address=email_address, command=command, **options)
+        return self.command.handle(command=command, **options)
 
     def assert_command_error(self, regexp, *command, **options):
         self.assertRaisesRegexp(
@@ -205,3 +208,17 @@ class GoAccountCommandTestCase(GoDjangoTestCase):
     def assert_command_output(self, expected_output, *command, **options):
         self.call_command(*command, **options)
         self.assertEqual(expected_output, self.command.stdout.getvalue())
+
+
+class GoAccountCommandTestCase(GoCommandTestCase):
+    """TestCase subclass for testing management commands that require accounts.
+
+    This isn't a helper because everything it does requires asserting, which
+    requires a TestCase object to call assertion methods on.
+    """
+
+    def call_command(self, *command, **options):
+        if 'email_address' not in options:
+            options['email_address'] = self.user_email
+        return super(GoAccountCommandTestCase, self).call_command(
+            *command, **options)

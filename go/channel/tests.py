@@ -50,6 +50,19 @@ class TestChannelViews(GoDjangoTestCase):
         self.assertContains(response, 'International')
         self.assertContains(response, 'longcode:')
 
+    def test_get_new_channel_empty_or_exhausted_tagpool(self):
+        self.vumi_helper.setup_tagpool(u'empty', [])
+        self.vumi_helper.setup_tagpool(u'exhausted', [u'tag1'])
+        self.user_helper.add_tagpool_permission(u'empty')
+        self.user_helper.add_tagpool_permission(u'exhausted')
+        tag = self.user_helper.user_api.acquire_tag(u'exhausted')
+        self.assert_active_channel_tags([tag])
+        response = self.client.get(reverse('channels:new_channel'))
+        self.assertContains(response, 'International')
+        self.assertContains(response, 'longcode:')
+        self.assertNotContains(response, 'empty:')
+        self.assertNotContains(response, 'exhausted:')
+
     def test_post_new_channel(self):
         self.assert_active_channel_tags([])
         response = self.client.post(reverse('channels:new_channel'), {
@@ -58,6 +71,22 @@ class TestChannelViews(GoDjangoTestCase):
         channel_key = u'%s:%s' % tag
         self.assertRedirects(response, self.get_view_url('show', channel_key))
         self.assert_active_channel_tags([tag])
+
+    def test_post_new_channel_no_country(self):
+        self.assert_active_channel_tags([])
+        response = self.client.post(reverse('channels:new_channel'), {
+            'channel': 'longcode:'})
+        self.assertContains(response, '<li>country<ul class="errorlist">'
+                            '<li>This field is required.</li></ul></li>')
+        self.assert_active_channel_tags([])
+
+    def test_post_new_channel_no_channel(self):
+        self.assert_active_channel_tags([])
+        response = self.client.post(reverse('channels:new_channel'), {
+            'country': 'International'})
+        self.assertContains(response, '<li>channel<ul class="errorlist">'
+                            '<li>This field is required.</li></ul></li>')
+        self.assert_active_channel_tags([])
 
     def test_show_channel_missing(self):
         response = self.client.get(self.get_view_url('show', u'foo:bar'))

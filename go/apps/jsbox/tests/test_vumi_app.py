@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
+import json
 import pkg_resources
 
 import mock
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import SkipTest
 
 from vumi.application.sandbox import JsSandbox, SandboxCommand
+from vumi.application.tests.helpers import find_nodejs_or_skip_test
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
@@ -16,31 +17,8 @@ from go.apps.tests.helpers import AppWorkerHelper
 
 
 class TestJsBoxApplication(VumiTestCase):
-
-    @inlineCallbacks
-    def setUp(self):
-        if JsSandbox.find_nodejs() is None:
-            raise SkipTest("No node.js executable found.")
-
-        sandboxer_js = pkg_resources.resource_filename('vumi.application',
-                                                       'sandboxer.js')
-        self.app_helper = self.add_helper(AppWorkerHelper(JsBoxApplication))
-        self.app = yield self.app_helper.get_app_worker({
-            'args': [sandboxer_js],
-            'timeout': 10,
-        })
-
-    def setup_conversation(self, config=None):
-        return self.app_helper.create_conversation(config=(config or {}))
-
-    def set_conversation_tag(self, msg, conversation):
-        # TOOD: Move into AppWorkerTestCase once it's working
-        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
-        TaggingMiddleware.add_tag_to_msg(msg, tag)
-        return msg
-
-    def mk_conv_config(self, method):
-        app_js = """
+    APPS = {
+        'success': """
             api.%(method)s = function(command) {
                 this.log_info("From command: inbound-message",
                     function (reply) {
@@ -49,12 +27,55 @@ class TestJsBoxApplication(VumiTestCase):
                     }
                 );
             }
-        """ % {'method': method}
+        """,
+
+        'cmd': """
+            api.%(method)s = function(command) {
+                this.log_info(JSON.stringify(command));
+                this.done();
+            }
+        """
+    }
+
+    @inlineCallbacks
+    def setUp(self):
+        nodejs_executable = find_nodejs_or_skip_test(JsSandbox)
+        sandboxer_js = pkg_resources.resource_filename('vumi.application',
+                                                       'sandboxer.js')
+        self.app_helper = self.add_helper(AppWorkerHelper(JsBoxApplication))
+        self.app = yield self.app_helper.get_app_worker({
+            'executable': nodejs_executable,
+            'args': [sandboxer_js],
+            'timeout': 10,
+        })
+
+    def setup_conversation(self, config=None, **kw):
+        return self.app_helper.create_conversation(
+            config=(config or {}), **kw)
+
+    def set_conversation_tag(self, msg, conversation):
+        # TOOD: Move into AppWorkerTestCase once it's working
+        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
+        TaggingMiddleware.add_tag_to_msg(msg, tag)
+        return msg
+
+    def mk_conv_config(self, app=None, delivery_class=None, **js_config):
+        if delivery_class is not None:
+            js_config['delivery_class'] = delivery_class
+
+        if app is None:
+            app = self.APPS['success'] % {'method': 'on_inbound_message'}
+
         config = {
-            'jsbox': {
-                'javascript': app_js,
+            'jsbox': {'javascript': app},
+            'jsbox_app_config': {
+                'config': {
+                    'key': 'config',
+                    'value': json.dumps(js_config)
+                }
             },
         }
+
         return config
 
     def mk_dummy_api(self, conversation):
@@ -71,12 +92,101 @@ class TestJsBoxApplication(VumiTestCase):
                             "(key: u'%s')." % conversation.key
                             in lc.messages())
 
+    def send_send_jsbox_command(self, conversation):
+        return self.app_helper.dispatch_command(
+            "send_jsbox",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=conversation.batch.key)
+
+    @inlineCallbacks
+    def test_send_jsbox_command(self):
+        group = yield self.app_helper.create_group(u'group')
+        contact1 = yield self.app_helper.create_contact(
+            msisdn=u'+271',
+            name=u'a',
+            surname=u'a',
+            groups=[group])
+        contact2 = yield self.app_helper.create_contact(
+            msisdn=u'+272',
+            name=u'b',
+            surname=u'b',
+            groups=[group])
+
+        config = self.mk_conv_config(
+            app=self.APPS['cmd'] % {'method': 'on_inbound_message'})
+        conv = yield self.setup_conversation(config=config, groups=[group])
+        yield self.app_helper.start_conversation(conv)
+
+        with LogCatcher(message='msg') as lc:
+            yield self.send_send_jsbox_command(conv)
+            [msg1, msg2] = sorted(
+                [json.loads(m).get('msg') for m in lc.messages()],
+                key=lambda msg: msg['from_addr'])
+
+        self.assertEqual(msg1['from_addr'], contact1.msisdn)
+        self.assertEqual(msg2['from_addr'], contact2.msisdn)
+
+        msgs = self.app_helper.get_dispatched_outbound()
+        self.assertEqual(msgs, [])
+
+    @inlineCallbacks
+    def test_send_jsbox_command_configured_delivery_class(self):
+        group = yield self.app_helper.create_group(u'group')
+        contact1 = yield self.app_helper.create_contact(
+            msisdn=u'+271',
+            twitter_handle=u'@a',
+            name=u'a',
+            surname=u'a',
+            groups=[group])
+        contact2 = yield self.app_helper.create_contact(
+            msisdn=u'+272',
+            twitter_handle=u'@b',
+            name=u'b',
+            surname=u'b',
+            groups=[group])
+
+        config = self.mk_conv_config(
+            app=self.APPS['cmd'] % {'method': 'on_inbound_message'},
+            delivery_class='twitter')
+        conv = yield self.setup_conversation(config=config, groups=[group])
+        yield self.app_helper.start_conversation(conv)
+
+        with LogCatcher(message='msg') as lc:
+            yield self.send_send_jsbox_command(conv)
+            [msg1, msg2] = sorted(
+                [json.loads(m).get('msg') for m in lc.messages()],
+                key=lambda msg: msg['from_addr'])
+
+        self.assertEqual(msg1['from_addr'], contact1.twitter_handle)
+        self.assertEqual(msg2['from_addr'], contact2.twitter_handle)
+
+    @inlineCallbacks
+    def test_send_jsbox_command_bad_config(self):
+        group = yield self.app_helper.create_group(u'group')
+
+        config = self.mk_conv_config(
+            app=self.APPS['cmd'] % {'method': 'on_inbound_message'},
+            delivery_class='twitter')
+        config['jsbox_app_config']['config']['value'] = 'bad'
+
+        conv = yield self.setup_conversation(config=config, groups=[group])
+        yield self.app_helper.start_conversation(conv)
+
+        with LogCatcher() as lc:
+            yield self.send_send_jsbox_command(conv)
+
+            self.assertTrue(any(
+                "Bad jsbox js config: bad" in
+                e['message'][0] for e in lc.errors))
+
     @inlineCallbacks
     def test_user_message(self):
-        conv = yield self.setup_conversation(
-            config=self.mk_conv_config('on_inbound_message'))
+        conv = yield self.setup_conversation(config=self.mk_conv_config())
         yield self.app_helper.start_conversation(conv)
-        yield self.app_helper.make_dispatch_inbound("inbound", conv=conv)
+        with LogCatcher(message="Log successful") as lc:
+            yield self.app_helper.make_dispatch_inbound("inbound", conv=conv)
+        self.assertEqual(lc.messages(), ["Log successful: true"])
 
     @inlineCallbacks
     def test_user_message_no_javascript(self):
@@ -90,7 +200,7 @@ class TestJsBoxApplication(VumiTestCase):
     @inlineCallbacks
     def test_user_message_sandbox_id(self):
         conversation = yield self.setup_conversation(
-            config=self.mk_conv_config('on_inbound_message'))
+            config=self.mk_conv_config())
         yield self.app_helper.start_conversation(conversation)
         msg = self.app_helper.make_inbound("inbound", conv=conversation)
         config = yield self.app.get_config(msg)
@@ -110,15 +220,38 @@ class TestJsBoxApplication(VumiTestCase):
         check_inference_for('ussd', 'ussd')
         check_inference_for('twitter', 'twitter')
         check_inference_for('xmpp', 'gtalk')
+        check_inference_for('wechat', 'wechat')
+        check_inference_for('mxit', 'mxit')
 
     @inlineCallbacks
-    def test_event(self):
+    def test_event_not_in_sandbox(self):
+        app = self.APPS['success'] % {'method': 'on_inbound_event'}
         conversation = yield self.setup_conversation(
-            config=self.mk_conv_config('on_inbound_event'))
+            config=self.mk_conv_config(app=app))
         yield self.app_helper.start_conversation(conversation)
         msg = yield self.app_helper.make_stored_outbound(
             conversation, "outbound")
-        yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
+        with LogCatcher() as lc:
+            yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
+        self.assertFalse("Log successful: true" in lc.messages())
+        self.assertTrue(
+            "Ignoring event for conversation: %s" % (conversation.key,)
+            in lc.messages())
+
+    @inlineCallbacks
+    def test_event_in_sandbox(self):
+        app = self.APPS['success'] % {'method': 'on_inbound_event'}
+        conversation = yield self.setup_conversation(
+            config=self.mk_conv_config(app=app, process_events=True))
+        yield self.app_helper.start_conversation(conversation)
+        msg = yield self.app_helper.make_stored_outbound(
+            conversation, "outbound")
+        with LogCatcher() as lc:
+            yield self.app_helper.make_dispatch_ack(msg, conv=conversation)
+        self.assertTrue("Log successful: true" in lc.messages())
+        self.assertFalse(
+            "Ignoring event for conversation: %s" % (conversation.key,)
+            in lc.messages())
 
     @inlineCallbacks
     def test_conversation_for_api(self):

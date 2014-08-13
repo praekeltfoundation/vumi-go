@@ -18,10 +18,17 @@ def diamondash_api_proxy(request):
     """
     api = client.get_diamondash_api()
     _, url = request.path.split('/diamondash/api', 1)
-    response = api.raw_request(request.method, url, content=request.body)
 
     # TODO for the case of snapshot requests, ensure the widgets requested are
     # allowed for the given account
+
+    try:
+        response = api.raw_request(request.method, url, content=request.body)
+    except client.DiamondashApiError as err:
+        response = {
+            'content': err.content,
+            'code': err.code,
+        }
 
     return HttpResponse(
         response['content'],

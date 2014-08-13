@@ -7,8 +7,14 @@ from django.forms.models import BaseModelFormSet
 
 from go.vumitools.api import VumiApi
 
-from go.billing import settings as app_settings
 from go.billing.models import Account, TagPool, MessageCost, Transaction
+
+
+def cost_rounded_to_zero(a, context):
+    """
+    Return ``True`` if ``a`` was rouned to zero (and ``False`` otherwise).
+    """
+    return bool(context.flags[Inexact] and a == Decimal('0.0'))
 
 
 class MessageCostForm(ModelForm):
@@ -17,24 +23,43 @@ class MessageCostForm(ModelForm):
         model = MessageCost
 
     def clean(self):
-        """Make sure the resulting credit cost does not underflow to zero"""
+        """
+        Check that:
+
+        * the resulting message credit cost does not underflow to zero.
+        * the resulting session credit cost does not underflow to zero.
+        * that if the tag pool is not set, neither is the account (
+          this is because our message cost lookup currently ignore
+          such message costs)
+        """
         cleaned_data = super(MessageCostForm, self).clean()
         message_cost = cleaned_data.get('message_cost')
+        session_cost = cleaned_data.get('session_cost')
         markup_percent = cleaned_data.get('markup_percent')
+
         if message_cost and markup_percent:
-            markup_amount = (message_cost
-                             * markup_percent / Decimal('100.0'))
-
-            resulting_price = message_cost + markup_amount
-            credit_cost = resulting_price * Decimal(
-                app_settings.CREDIT_CONVERSION_FACTOR)
-
             context = Context()
-            credit_cost = credit_cost.quantize(
-                app_settings.QUANTIZATION_EXPONENT, context=context)
+            credit_cost = MessageCost.calculate_message_credit_cost(
+                message_cost, markup_percent, context=context)
+            if cost_rounded_to_zero(credit_cost, context):
+                raise forms.ValidationError(
+                    "The resulting cost per message (in credits) was rounded"
+                    " to 0.")
 
-            if context.flags[Inexact] and credit_cost == Decimal('0.0'):
-                raise forms.ValidationError("The resulting credit cost is 0.")
+        if session_cost and markup_percent:
+            context = Context()
+            session_credit_cost = MessageCost.calculate_session_credit_cost(
+                session_cost, markup_percent, context=context)
+            if cost_rounded_to_zero(session_credit_cost, context):
+                raise forms.ValidationError(
+                    "The resulting cost per session (in credits) was rounded"
+                    " to 0.")
+
+        if not cleaned_data.get("tag_pool") and cleaned_data.get("account"):
+            raise forms.ValidationError(
+                "Message costs with an empty tag pool value and a non-empty"
+                " account value are not currently supported by the billing"
+                " API's message cost look up.")
 
         return cleaned_data
 

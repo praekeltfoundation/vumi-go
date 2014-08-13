@@ -134,6 +134,8 @@ class FieldNormalizer(object):
 class ContactFileParser(object):
 
     DEFAULT_HEADERS = {
+        'key': 'UUID',
+        'created_at': 'Creation Date',
         'name': 'Name',
         'surname': 'Surname',
         'bbm_pin': 'BBM Pin',
@@ -143,6 +145,8 @@ class ContactFileParser(object):
         'facebook_id': 'Facebook ID',
         'twitter_handle': 'Twitter handle',
         'email_address': 'Email address',
+        'mxit_id': 'Mxit ID',
+        'wechat_id': 'WeChat ID',
     }
 
     ENCODING = 'utf-8'
@@ -162,7 +166,7 @@ class ContactFileParser(object):
         at the row being a row with column headers and not column values.
         """
         column_set = set([column.lower().strip() for column in columns])
-        hint_set = set(['phone', 'contact', 'msisdn', 'number'])
+        hint_set = set(['phone', 'contact', 'msisdn', 'number', 'key'])
         return hint_set.intersection(column_set)
 
     @classmethod

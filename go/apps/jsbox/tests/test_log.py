@@ -142,7 +142,9 @@ class TestGoLoggingResource(ResourceTestCaseBase, LogCheckerMixin):
         with LogCatcher(log_level=logging.INFO) as lc:
             reply = yield self.dispatch_command('info', msg=u'Info message')
             msgs = lc.messages()
-        self.assertEqual(msgs, ['Info message'])
+        self.assertEqual(msgs, [
+            '[Account: campaign-1, Conversation: conv-1] Info message',
+        ])
         self.check_reply(reply)
         logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
         self.check_logs(logs, [

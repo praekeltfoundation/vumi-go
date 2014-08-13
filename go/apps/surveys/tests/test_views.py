@@ -118,6 +118,23 @@ class TestSurveysViews(GoDjangoTestCase):
         self.assertContains(
             response, conv_helper.get_action_view_url('send_survey'))
 
+    def test_edit_get(self):
+        conv_helper = self.app_helper.create_conversation_helper()
+        response = self.client.get(conv_helper.get_view_url('edit'))
+        # poll_form
+        self.assertContains(response, "repeatable")
+        self.assertContains(response, "Can contacts interact repeatedly?")
+        self.assertContains(response, "case_sensitive")
+        self.assertContains(response,
+                            "Are the valid responses for each question case"
+                            " sensitive?")
+        # question forms
+        self.assertContains(response, "Question 1:")
+        self.assertContains(response, "questions-TOTAL_FORMS")
+        # completed survey forms
+        self.assertContains(response, "Closing Response 1:")
+        self.assertContains(response, "completed_response-TOTAL_FORMS")
+
     def test_edit(self):
         conv_helper = self.app_helper.create_conversation_helper()
         response = self.client.post(conv_helper.get_view_url('edit'), {

@@ -174,9 +174,12 @@ class AppWorkerHelper(object):
         yield self.dispatch_commands_to_app()
 
     def get_published_metrics(self, worker):
-        return [
-            (metric.name, value)
-            for metric, ((time, value),) in worker.metrics._oneshot_msgs]
+        metrics = []
+        for metric_msg in self.worker_helper.get_dispatched_metrics():
+            for name, _aggs, data in metric_msg:
+                for _time, value in data:
+                    metrics.append((name, value))
+        return metrics
 
     def get_dispatched_app_events(self):
         return self.worker_helper.get_dispatched('vumi', 'event', VumiApiEvent)

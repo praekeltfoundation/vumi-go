@@ -99,8 +99,8 @@
                 {% csrf_token %}
                 <div class="modal-body">
                     <p><span class="help-block">
-                      The file is potentially quite large and as a result the export 
-                      will be done in the background. When completed the results will 
+                      The file is potentially quite large and as a result the export
+                      will be done in the background. When completed the results will
                       be sent to you as a CSV file attached to an email.
                     </span><br/></p>
                 </div>
@@ -111,6 +111,30 @@
         </div>
     </div>
 </div><!--/expContactFrm-->
+
+<div class="modal fade" id="expAllContactsFrm">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a class="close" data-dismiss="modal">×</a>
+                <h3>Schedule CSV Export of all Contacts</h3>
+            </div>
+            <form method="post" action="" class="form-horizontal">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p><span class="help-block">
+                      The file is potentially quite large and as a result the export
+                      will be done in the background. When completed the results will
+                      be sent to you as a CSV file attached to an email.
+                    </span><br/></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="_export_all" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div><!--/expAllContactsFrm-->
 
 {% if contact_data_headers and contact_data_row %}
 <div class="modal fade" id="recMatchFrm">
@@ -147,6 +171,28 @@
                               </tr>
                             {% endfor %}
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">
+                                    {% if can_update_contacts %}
+                                        <h4>The file includes contact UUIDs.</h4>
+                                        <p>
+                                            Please specify what you would like to do:
+                                        </p>
+                                        <input type="radio" name="import_rule" value="existing_is_truth" checked="checked">
+                                            Treat existing contacts as the Truth and augment with the uploaded file's contact data. <br/>
+                                        <input type="radio" name="import_rule" value="upload_is_truth">
+                                            Treat the uploaded file's contacts as the Truth and augment with existing contacts. <br/>
+                                    {% else %}
+                                        <h4>The file does not include contact UUIDs.</h4>
+                                        <p>
+                                            New contacts will be created during import, duplicates may happen if a contact
+                                            defined in the uploaded file already exists in the contact database.
+                                        </p>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tfoot>
                       </table>
                     </fieldset>
                 </div>
