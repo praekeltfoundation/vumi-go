@@ -31,7 +31,7 @@ setup(
         'raven>=2.0,<3.0',
         'django-debug-toolbar==0.9.4',
         'kombu>=2.5,<3.0',
-        'librabbitmq==1.0.1',
+        'librabbitmq==1.5.1',
         'hiredis==0.1.4',
         'django-pipeline==1.3.6',
         'txpostgres==1.1.0',
