@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vumi-go",
-    version="0.5.0",
+    version="0.5.1a",
     url='http://github.com/praekelt/vumi-go',
     license='BSD',
     description="Vumi Go",
