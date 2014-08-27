@@ -16,6 +16,9 @@ class Command(BaseGoCommand):
         make_option(
             '--email-address', dest='email_address',
             help="Act on the given user's batches."),
+        make_option('--batch-keys-file',
+                    dest='batch_keys_file',
+                    help='Act on all batches listed in this file.'),
         make_option('--conversation-key',
                     dest='conversation_key',
                     help='Act on the given conversation.'),
@@ -38,6 +41,14 @@ class Command(BaseGoCommand):
             return [self.mk_user_api(self.options["email_address"])]
         return self.mk_all_user_apis()
 
+    def _apply_to_batches(self, func, batches, dry_run):
+        for batch_id in sorted(batches):
+            self.stdout.write("  Performing %s on batch %s ...\n" % (
+                func.__name__, batch_id))
+            if not dry_run:
+                func(batch_id)
+        self.stdout.write("done.\n")
+
     def _get_batches(self, user_api):
         batches = set()
         if self.options.get('conversation_key'):
@@ -51,32 +62,38 @@ class Command(BaseGoCommand):
                 conv.batch.key for conv in user_api.finished_conversations())
         return list(batches)
 
-    def _apply_to_batches(self, func, dry_run=None):
-        if dry_run is None:
-            dry_run = self.options.get('dry_run')
+    def _apply_to_batches_from_file(self, func, dry_run):
+        batch_keys_file = self.options.get('batch_keys_file')
+        if batch_keys_file:
+            with open(batch_keys_file, 'r') as keys_file:
+                batches = [key for key in keys_file.readlines() if key]
+            self.stdout.write("Processing file %s ...\n" % (batch_keys_file))
+            self._apply_to_batches(func, batches, dry_run)
 
+    def _apply_to_accounts(self, func, dry_run):
         for user, user_api in self._get_user_apis():
             batches = self._get_batches(user_api)
             if not batches:
                 continue
             self.stdout.write(
                 "Processing account %s ...\n" % user_details_as_string(user))
-            for batch_id in sorted(batches):
-                self.stdout.write(
-                    "  Performing %s on batch %s ...\n"
-                    % (func.__name__, batch_id))
-                if not dry_run:
-                    func(user_api, batch_id)
-            self.stdout.write("done.\n")
+            self._apply_to_batches(func, batches, dry_run)
+
+    def _apply_command(self, func, dry_run=None):
+        if dry_run is None:
+            dry_run = self.options.get('dry_run')
+
+        self._apply_to_batches_from_file(func, dry_run)
+        self._apply_to_accounts(func, dry_run)
 
     def handle_command_reconcile(self, *args, **options):
-        def reconcile(user_api, batch_id):
-            user_api.api.mdb.reconcile_cache(batch_id)
+        def reconcile(batch_id):
+            self.mk_vumi_api().mdb.reconcile_cache(batch_id)
 
-        self._apply_to_batches(reconcile)
+        self._apply_command(reconcile)
 
     def handle_command_switch_to_counters(self, *args, **options):
-        def switch_to_counters(user_api, batch_id):
-            user_api.api.mdb.cache.switch_to_counters(batch_id)
+        def switch_to_counters(batch_id):
+            self.mk_vumi_api().mdb.cache.switch_to_counters(batch_id)
 
-        self._apply_to_batches(switch_to_counters)
+        self._apply_command(switch_to_counters)

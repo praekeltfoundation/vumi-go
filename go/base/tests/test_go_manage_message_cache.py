@@ -1,5 +1,14 @@
+from tempfile import NamedTemporaryFile
+
 from go.base.management.commands import go_manage_message_cache
 from go.base.tests.helpers import GoCommandTestCase
+
+
+def make_batch_keys_file(batch_keys):
+    batch_keys_file = NamedTemporaryFile()
+    batch_keys_file.write('\n'.join(batch_keys))
+    batch_keys_file.flush()
+    return batch_keys_file
 
 
 class TestGoManageMessageCache(GoCommandTestCase):
@@ -119,6 +128,47 @@ class TestGoManageMessageCache(GoCommandTestCase):
         self.assert_command_output(
             expected_output, 'reconcile',
             archived_conversations=True)
+        self.assert_batches_reconciled(batch_ids)
+
+    def test_reconcile_conversation_in_batches_from_file(self):
+        conv = self.user_helper.create_conversation(u"http_api")
+        self.clear_batches([conv.batch.key])
+        batch_keys_file = make_batch_keys_file([conv.batch.key])
+        expected_output = "\n".join([
+            u'Processing file %s ...' % (batch_keys_file.name,),
+            u'  Performing reconcile on'
+            u' batch %s ...' % conv.batch.key,
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'reconcile', batch_keys_file=batch_keys_file.name)
+        self.assert_batches_reconciled([conv.batch.key])
+
+    def test_reconcile_conversation_in_batches_from_file_and_account(self):
+        conv1 = self.user_helper.create_conversation(u"http_api")
+        conv2 = self.user_helper.create_conversation(u"http_api")
+        batch_ids = sorted([conv1.batch.key, conv2.batch.key])
+        self.clear_batches(batch_ids)
+        batch_keys_file = make_batch_keys_file([conv1.batch.key])
+        expected_output = "\n".join([
+            u'Processing file %s ...' % (batch_keys_file.name,),
+            u'  Performing reconcile on'
+            u' batch %s ...' % conv1.batch.key,
+            u'done.',
+            u'Processing account Test User'
+            u' <user@domain.com> [test-0-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % batch_ids[0],
+            u'  Performing reconcile on'
+            u' batch %s ...' % batch_ids[1],
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'reconcile',
+            email_address=self.user_email, active_conversations=True,
+            batch_keys_file=batch_keys_file.name)
         self.assert_batches_reconciled(batch_ids)
 
     def test_switch_to_counters(self):
