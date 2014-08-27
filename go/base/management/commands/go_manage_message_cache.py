@@ -30,6 +30,17 @@ class Command(BaseGoCommand):
                     dest='archived_conversations',
                     action='store_true', default=False,
                     help='Act on all archived conversations.'),
+        make_option('--router-key',
+                    dest='router_key',
+                    help='Act on the given router.'),
+        make_option('--active-routers',
+                    dest='active_routers',
+                    action='store_true', default=False,
+                    help='Act on all active routers.'),
+        make_option('--archived-routers',
+                    dest='archived_routers',
+                    action='store_true', default=False,
+                    help='Act on all archived routers.'),
         make_option('--dry-run',
                     dest='dry_run',
                     action='store_true', default=False,
@@ -60,6 +71,15 @@ class Command(BaseGoCommand):
         if self.options.get('archived_conversations'):
             batches.update(
                 conv.batch.key for conv in user_api.finished_conversations())
+        if self.options.get('router_key'):
+            conv = user_api.get_router(self.options['router_key'])
+            batches.add(conv.batch.key)
+        if self.options.get('active_routers'):
+            batches.update(
+                conv.batch.key for conv in user_api.active_routers())
+        if self.options.get('archived_routers'):
+            batches.update(
+                conv.batch.key for conv in user_api.archived_routers())
         return list(batches)
 
     def _apply_to_batches_from_file(self, func, dry_run):

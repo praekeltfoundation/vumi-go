@@ -130,7 +130,93 @@ class TestGoManageMessageCache(GoCommandTestCase):
             archived_conversations=True)
         self.assert_batches_reconciled(batch_ids)
 
-    def test_reconcile_conversation_in_batches_from_file(self):
+    def test_reconcile_router(self):
+        rtr = self.user_helper.create_router(u"dummy")
+        self.clear_batches([rtr.batch.key])
+        expected_output = "\n".join([
+            u'Processing account Test User'
+            u' <user@domain.com> [test-0-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % rtr.batch.key,
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'reconcile',
+            email_address=self.user_email, router_key=rtr.key)
+        self.assert_batches_reconciled([rtr.batch.key])
+
+    def test_reconcile_active_routers_in_account(self):
+        rtr1 = self.user_helper.create_router(u"dummy")
+        rtr2 = self.user_helper.create_router(u"dummy")
+        batch_ids = sorted([rtr1.batch.key, rtr2.batch.key])
+        self.clear_batches(batch_ids)
+        expected_output = "\n".join([
+            u'Processing account Test User'
+            u' <user@domain.com> [test-0-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % batch_ids[0],
+            u'  Performing reconcile on'
+            u' batch %s ...' % batch_ids[1],
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'reconcile',
+            email_address=self.user_email, active_routers=True)
+        self.assert_batches_reconciled(batch_ids)
+
+    def test_reconcile_active_routers_in_all_accounts(self):
+        user1 = self.vumi_helper.make_django_user("user1")
+        user2 = self.vumi_helper.make_django_user("user2")
+        rtr1 = user1.create_router(u"dummy")
+        rtr2 = user2.create_router(u"dummy")
+        batch_ids = [rtr1.batch.key, rtr2.batch.key]
+        self.clear_batches(batch_ids)
+        expected_output = "\n".join([
+            u'Processing account Test User <user1> [test-1-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % rtr1.batch.key,
+            u'done.',
+            u'Processing account Test User <user2> [test-2-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % rtr2.batch.key,
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'reconcile',
+            active_routers=True)
+        self.assert_batches_reconciled(batch_ids)
+
+    def test_reconcile_archived_routers_in_all_accounts(self):
+        user1 = self.vumi_helper.make_django_user("user1")
+        user2 = self.vumi_helper.make_django_user("user2")
+        rtr1 = user1.create_router(u"dummy")
+        rtr1.set_status_finished()
+        rtr1.save()
+        rtr2 = user2.create_router(u"dummy")
+        rtr2.set_status_finished()
+        rtr2.save()
+        batch_ids = [rtr1.batch.key, rtr2.batch.key]
+        self.clear_batches(batch_ids)
+        expected_output = "\n".join([
+            u'Processing account Test User <user1> [test-1-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % rtr1.batch.key,
+            u'done.',
+            u'Processing account Test User <user2> [test-2-user] ...',
+            u'  Performing reconcile on'
+            u' batch %s ...' % rtr2.batch.key,
+            u'done.',
+            u''
+        ])
+        self.assert_command_output(
+            expected_output, 'reconcile',
+            archived_routers=True)
+        self.assert_batches_reconciled(batch_ids)
+
+    def test_reconcile_batches_from_file(self):
         conv = self.user_helper.create_conversation(u"http_api")
         self.clear_batches([conv.batch.key])
         batch_keys_file = make_batch_keys_file([conv.batch.key])
@@ -145,7 +231,7 @@ class TestGoManageMessageCache(GoCommandTestCase):
             expected_output, 'reconcile', batch_keys_file=batch_keys_file.name)
         self.assert_batches_reconciled([conv.batch.key])
 
-    def test_reconcile_conversation_in_batches_from_file_and_account(self):
+    def test_reconcile_batches_from_file_and_conversations_in_account(self):
         conv1 = self.user_helper.create_conversation(u"http_api")
         conv2 = self.user_helper.create_conversation(u"http_api")
         batch_ids = sorted([conv1.batch.key, conv2.batch.key])

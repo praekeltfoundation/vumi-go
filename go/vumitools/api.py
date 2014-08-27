@@ -157,7 +157,7 @@ class VumiUserApi(object):
         conversations = []
         for bunch in conv_store.conversations.load_all_bunches(keys):
             conversations.extend((yield bunch))
-        returnValue([c for c in conversations if c.ended()])
+        returnValue([c for c in conversations if c.archived()])
 
     @Manager.calls_manager
     def active_conversations(self):
@@ -194,6 +194,15 @@ class VumiUserApi(object):
         for routers_bunch in self.router_store.load_all_bunches(keys):
             routers.extend((yield routers_bunch))
         returnValue(routers)
+
+    @Manager.calls_manager
+    def archived_routers(self):
+        conv_store = self.router_store
+        keys = yield conv_store.list_routers()
+        routers = []
+        for bunch in conv_store.routers.load_all_bunches(keys):
+            routers.extend((yield bunch))
+        returnValue([r for r in routers if r.archived()])
 
     @Manager.calls_manager
     def active_channels(self):
