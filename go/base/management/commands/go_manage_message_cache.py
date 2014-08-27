@@ -85,8 +85,12 @@ class Command(BaseGoCommand):
     def _apply_to_batches_from_file(self, func, dry_run):
         batch_keys_file = self.options.get('batch_keys_file')
         if batch_keys_file:
+            batches = []
             with open(batch_keys_file, 'r') as keys_file:
-                batches = [key for key in keys_file.readlines() if key]
+                for line in keys_file:
+                    key = line.strip()
+                    if key:
+                        batches.append(key)
             self.stdout.write("Processing file %s ...\n" % (batch_keys_file))
             self._apply_to_batches(func, batches, dry_run)
 
