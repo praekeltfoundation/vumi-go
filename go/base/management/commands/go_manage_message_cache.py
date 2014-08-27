@@ -70,7 +70,7 @@ class Command(BaseGoCommand):
                 conv.batch.key for conv in user_api.active_conversations())
         if self.options.get('archived_conversations'):
             batches.update(
-                conv.batch.key for conv in user_api.finished_conversations())
+                conv.batch.key for conv in user_api.archived_conversations())
         if self.options.get('router_key'):
             conv = user_api.get_router(self.options['router_key'])
             batches.add(conv.batch.key)

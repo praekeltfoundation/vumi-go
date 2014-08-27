@@ -151,7 +151,7 @@ class VumiUserApi(object):
         returnValue(channel)
 
     @Manager.calls_manager
-    def finished_conversations(self):
+    def archived_conversations(self):
         conv_store = self.conversation_store
         keys = yield conv_store.list_conversations()
         conversations = []
