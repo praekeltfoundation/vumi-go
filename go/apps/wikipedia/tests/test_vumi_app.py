@@ -69,6 +69,7 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
             'include_url_in_sms': True,
             'mobi_url_host': 'http://mobi/',
             'shortening_api_url': 'http://wtxt.io/',
+            'transliterate_unicode': True,
         })
         msg = self.app_helper.make_inbound(None, conv=self.conv)
         config = yield self.app.get_config(msg)
@@ -76,3 +77,4 @@ class TestWikipediaApplication(VumiTestCase, FakeHTTPTestCaseMixin):
         self.assertEqual(config.include_url_in_sms, True)
         self.assertEqual(config.mobi_url_host, 'http://mobi/')
         self.assertEqual(config.shortening_api_url.geturl(), 'http://wtxt.io/')
+        self.assertEqual(config.transliterate_unicode, True)
