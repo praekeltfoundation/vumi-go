@@ -30,8 +30,10 @@ class TestContact(VumiTestCase):
         index_name = '%s_bin' % (field,)
         index_values = []
         for index in model_obj._riak_object.get_indexes():
-            if index.get_field() == index_name:
-                index_values.append(index.get_value())
+            if not isinstance(index, tuple):
+                index = (index.get_field(), index.get_value())
+            if index[0] == index_name:
+                index_values.append(index[1])
         if value is None:
             self.assertEqual([], index_values)
         else:

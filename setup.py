@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vumi-go",
-    version="0.5.0-dev",
+    version="0.5.1a",
     url='http://github.com/praekelt/vumi-go',
     license='BSD',
     description="Vumi Go",
@@ -31,7 +31,7 @@ setup(
         'raven>=2.0,<3.0',
         'django-debug-toolbar==0.9.4',
         'kombu>=2.5,<3.0',
-        'librabbitmq==1.0.1',
+        'librabbitmq==1.5.1',
         'hiredis==0.1.4',
         'django-pipeline==1.3.6',
         'txpostgres==1.1.0',

@@ -30,7 +30,7 @@ def index(request):
 
     get_conversations = {
         'running': user_api.running_conversations,
-        'finished': user_api.finished_conversations,
+        'finished': user_api.archived_conversations,
         'draft': user_api.draft_conversations,
     }.get(conversation_status, user_api.active_conversations)
 
