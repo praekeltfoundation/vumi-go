@@ -12,6 +12,7 @@ from django.core import mail
 from django.core.files.storage import default_storage
 from django.core.urlresolvers import reverse
 from django.utils.html import escape
+from django.contrib.messages import get_messages
 
 from go.contacts.parsers.base import FieldNormalizer
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
@@ -245,7 +246,8 @@ class TestContacts(BaseContactsTestCase):
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
-    def specify_columns(self, group_key, columns=None, import_rule=None):
+    def specify_columns(self, group_key, columns=None, import_rule=None,
+                        follow=False):
         group_url = reverse('contacts:group', kwargs={
             'group_key': group_key,
         })
@@ -262,7 +264,7 @@ class TestContacts(BaseContactsTestCase):
             defaults.update(columns)
         if import_rule is not None:
             defaults['import_rule'] = import_rule
-        return self.client.post(group_url, defaults)
+        return self.client.post(group_url, defaults, follow=follow)
 
     def test_contact_upload_into_new_group(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
@@ -438,7 +440,7 @@ class TestContacts(BaseContactsTestCase):
             contact.save()
             # what we're going to update
             contact_data.append({
-                u'created_at': '2014-01-0%d' % (i + 1,),
+                u'created_at': '2014-01-0%dT00:00:00' % (i + 1,),
                 u'key': contact.key,
                 u'name': u'name %s' % (i,),
                 u'surname': u'surname %s' % (i,),
@@ -773,12 +775,50 @@ class TestContacts(BaseContactsTestCase):
             'normalize-0': '',
             'normalize-1': '',
             'normalize-2': '',
-        })
+        }, follow=True)
+        self.assertRedirects(response, group_url(group.key))
+
+        messages = [(m.tags, m.message) for m in response.context['messages']]
+        self.assertEqual(messages, [
+            ("error", "Something is wrong with the file"),
+        ])
+
         group = newest(self.contact_store.list_groups())
         contacts = group.backlinks.contacts()
         self.assertEqual(len(contacts), 0)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertTrue('went wrong' in mail.outbox[0].subject)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_contact_parsing_failure_no_msisdn_field(self):
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                        'fixtures', 'sample-contacts.csv'))
+        response = self.client.post(reverse('contacts:people'), {
+            'name': 'broken contacts group',
+            'file': csv_file,
+        }, follow=True)
+        group = newest(self.contact_store.list_groups())
+        self.assertRedirects(response, group_url(group.key))
+
+        # Here we don't specify an msisdn field, so that we explode in
+        # the next bit.
+        response = self.specify_columns(group_key=group.key, columns={
+            'column-0': 'name',
+            'column-1': 'surname',
+            'column-2': 'accidental_extra',
+            'normalize-0': '',
+            'normalize-1': '',
+            'normalize-2': '',
+        }, follow=True)
+        self.assertRedirects(response, group_url(group.key))
+
+        messages = [(m.tags, m.message) for m in response.context['messages']]
+        self.assertEqual(messages, [
+            ("error", "Please specify a Contact Number field."),
+        ])
+
+        group = newest(self.contact_store.list_groups())
+        contacts = group.backlinks.contacts()
+        self.assertEqual(len(contacts), 0)
+        self.assertEqual(len(mail.outbox), 0)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_normalization(self):
