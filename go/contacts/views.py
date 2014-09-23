@@ -18,7 +18,7 @@ from go.contacts.forms import (
 from go.contacts import tasks, utils
 from go.contacts.import_handlers import (
     handle_import_new_contacts, handle_import_existing_is_truth,
-    handle_import_upload_is_truth)
+    handle_import_upload_is_truth, ContactImportException)
 from go.contacts.parsers import ContactFileParser, ContactParserException
 from go.contacts.parsers.base import FieldNormalizer
 from go.vumitools.contact import ContactError
@@ -196,10 +196,15 @@ def _static_group(request, contact_store, group):
                     'We will notify you via email when the import '
                     'has been completed')
 
-            except (ContactParserException,):
-                messages.error(request, 'Something is wrong with the file')
+            except (ContactParserException, ContactImportException), e:
+                if isinstance(e, ContactImportException):
+                    error_msg = str(e)
+                else:
+                    error_msg = 'Something is wrong with the file'
+                messages.error(request, error_msg)
                 _, file_path = utils.get_file_hints_from_session(request)
                 default_storage.delete(file_path)
+                utils.clear_file_hints_from_session(request)
 
             return redirect(_group_url(group.key))
 
