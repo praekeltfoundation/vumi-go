@@ -12,7 +12,6 @@ from django.core import mail
 from django.core.files.storage import default_storage
 from django.core.urlresolvers import reverse
 from django.utils.html import escape
-from django.contrib.messages import get_messages
 
 from go.contacts.parsers.base import FieldNormalizer
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
