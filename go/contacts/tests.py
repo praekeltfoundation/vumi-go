@@ -652,6 +652,68 @@ class TestContacts(BaseContactsTestCase):
 
         os.unlink(csv.name)
 
+    def test_import_existing_is_truth_fail_on_empty_key(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        # create existing contacts that'll be updated.
+        contact_data = []
+        contacts = []
+        for i in range(3):
+            # the original contact
+            contact = self.mkcontact(
+                name='foo', surname='bar', msisdn='270000000')
+            # what we're going to update
+            contacts.append(contact)
+            contact_data.append({
+                u'key': contact.key,
+                u'twitter_handle': u'tweetor%d' % (i,),
+            })
+
+        # add a bad key
+        contact_data[1]['key'] = ''
+
+        csv = self.create_csv(['key', 'twitter_handle'], contact_data)
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv,
+        })
+
+        self.assertRedirects(response, group_url(group.key))
+        response = self.specify_columns(group.key, columns={
+            'column-0': 'key',
+            'column-1': 'twitter_handle',
+            'normalize-0': '',
+            'normalize-1': '',
+        }, import_rule='existing_is_truth')
+        self.assertRedirects(response, group_url(group.key))
+
+        [email] = mail.outbox
+
+        self.assertEqual('Contact import completed.', email.subject)
+        self.assertTrue(
+            "We've successfully imported 2 of your contact(s)" in email.body)
+        self.assertTrue(
+            "Unfortunately there were also 1 errors. These are listed below:"
+            in email.body)
+        self.assertTrue(
+            "row 2: No key provided" in email.body)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+        new_contact = self.contact_store.get_contact_by_key(contacts[0].key)
+        self.assertEqual(new_contact.twitter_handle, 'tweetor0')
+        self.assertEqual(new_contact.groups.keys(), [group.key])
+
+        new_contact = self.contact_store.get_contact_by_key(contacts[1].key)
+        self.assertEqual(new_contact.twitter_handle, None)
+        self.assertEqual(new_contact.groups.keys(), [])
+
+        new_contact = self.contact_store.get_contact_by_key(contacts[2].key)
+        self.assertEqual(new_contact.twitter_handle, 'tweetor2')
+        self.assertEqual(new_contact.groups.keys(), [group.key])
+
+        os.unlink(csv.name)
+
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         new_group_name = u'Testing a ünicode grøüp'
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',

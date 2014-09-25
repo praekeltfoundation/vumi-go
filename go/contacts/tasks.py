@@ -327,7 +327,7 @@ def import_and_update_contacts(contact_mangler, account_key, group_key,
     errors = []
     counter = 0
 
-    for contact_dictionary in contact_dictionaries:
+    for idx, contact_dictionary in enumerate(contact_dictionaries):
         try:
             key = contact_dictionary.pop('key')
             contact = contact_store.get_contact_by_key(key)
@@ -335,7 +335,7 @@ def import_and_update_contacts(contact_mangler, account_key, group_key,
             contact_store.update_contact(key, **contact_dictionary)
             counter += 1
         except KeyError, e:
-            errors.append((key, 'No key provided'))
+            errors.append(('row %d' % (idx + 1,), 'No key provided'))
         except ContactNotFoundError, e:
             errors.append((key, str(e)))
         except Exception, e:
