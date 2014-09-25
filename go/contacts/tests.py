@@ -766,26 +766,24 @@ class TestContacts(BaseContactsTestCase):
         # We only get one column here.
         self.assertContains(response, 'column-0')
         self.assertNotContains(response, 'column-1')
-        # Pretend we got all three so we can explode again in the next bit.
+        # Now we follow the response and check that we fail sensibly by
+        # reporting that we don't have the expected fields.
         response = self.specify_columns(group_key=group.key, columns={
             'column-0': 'name',
-            'column-1': 'surname',
-            'column-2': 'msisdn',
             'normalize-0': '',
-            'normalize-1': '',
-            'normalize-2': '',
         }, follow=True)
         self.assertRedirects(response, group_url(group.key))
 
         messages = [(m.tags, m.message) for m in response.context['messages']]
         self.assertEqual(messages, [
-            ("error", "Something is wrong with the file"),
+            ("error", "Please specify a Contact Number field."),
         ])
 
         group = newest(self.contact_store.list_groups())
         contacts = group.backlinks.contacts()
         self.assertEqual(len(contacts), 0)
         self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_parsing_failure_no_msisdn_field(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
