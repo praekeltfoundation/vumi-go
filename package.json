@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "go-jsbox-location": "^0.1.1",
-    "go-jsbox-ona": "^0.0.1",
+    "go-jsbox-ona": "^0.0.2",
     "go-jsbox-metrics-helper": "^0.1.0",
     "jed": "~0.5.4",
     "libxmljs": "~0.8.1",
