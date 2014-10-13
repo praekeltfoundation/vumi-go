@@ -51,7 +51,8 @@ standard applications and Telnet transports emulating a USSD and SMS
 connection.
 
 If this is your first time bootstrapping the dev environment, you'll also need
-to create the RabbitMQ vhost used by the local dev environment::
+to create the RabbitMQ vhost used by the local dev environment (you may need to
+put ``sudo`` on the front of these commands)::
 
     (ve)$ rabbitmqctl add_vhost /develop
     (ve)$ rabbitmqctl set_permissions -p /develop vumi '.*' '.*' '.*'
