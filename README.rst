@@ -50,15 +50,35 @@ This will generate all the necessary config files for running a set of
 standard applications and Telnet transports emulating a USSD and SMS
 connection.
 
-To start some sample conversations such as Wikipedia execute the
-following command::
+If this is your first time bootstrapping the dev environment, you'll also need
+to create the RabbitMQ vhost used by the local dev environment (you may need to
+put ``sudo`` on the front of these commands)::
 
-    (ve)$ ./setup_env/build/go_startup_env.sh
+    (ve)$ rabbitmqctl add_vhost /develop
+    (ve)$ rabbitmqctl set_permissions -p /develop vumi '.*' '.*' '.*'
+
+You'll also need to provide some extra Django config. Create a
+``production_settings.py`` file in ``/path/to/repo/go/`` (next to the existing
+``settings.py`` file) containing that following::
+
+    from go.base import amqp
+
+    amqp.connect('librabbitmq://vumi:vumi@localhost//develop')
+
+    SECRET_KEY = 'hello'
 
 Next start everything using Supervisord_::
 
     (ve)$ supervisord -c setup_env/build/go_supervisord.conf
+
+You can manage the running processes with the following command::
+
     (ve)$ supervisorctl -c setup_env/build/go_supervisord.conf
+
+With everything running, complete the setup by running the generated setup
+script::
+
+    (ve)$ ./setup_env/build/go_startup_env.sh
 
 Now you should be able to login to the Vumi UI at http://localhost:8000 using
 the account details as specified in `setup_env/accounts.yaml`.
