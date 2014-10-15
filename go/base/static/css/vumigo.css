@@ -843,3 +843,8 @@ table tbody.loading td {
   padding: 6px;
   font-size: 16px;
 }
+
+.logs-sandbox,
+.logs-sandbox td {
+  word-break: break-all;
+}
