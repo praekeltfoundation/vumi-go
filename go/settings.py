@@ -282,7 +282,7 @@ VXPOLLS_REDIS_CONFIG = {
 VXPOLLS_PREFIX = 'vxpolls'
 
 # Set this to enable Google Analytics
-GOOGLE_ANALYTICS_UA = 'UA-36658813-1'
+GOOGLE_ANALYTICS_UA = None
 
 MESSAGE_STORE_API_URL = 'http://localhost:8002/api/v1/'
 GO_API_URL = 'http://localhost:8001/api/v1/go/api'

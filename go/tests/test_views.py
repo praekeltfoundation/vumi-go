@@ -79,5 +79,5 @@ class TestApp(GoDjangoTestCase):
     def test_google_analytics(self):
         client = self.vumi_helper.get_client('superuser@example.com')
         response = client.get(reverse('home'), follow=True)
-        self.assertContains(response, 'UA-36658813-1')
+        self.assertContains(response, 'TEST-GA-UA')
         self.assertContains(response, 'analytics.js')
