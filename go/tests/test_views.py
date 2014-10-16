@@ -70,3 +70,14 @@ class TestHelpViews(GoDjangoTestCase):
         self.assertNotContains(response, 'Contacts')
         self.assertNotContains(response, 'Account')
         self.assertNotContains(response, 'credits')
+
+
+class TestApp(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+
+    def test_google_analytics(self):
+        client = self.vumi_helper.get_client('superuser@example.com')
+        response = client.get(reverse('home'), follow=True)
+        self.assertContains(response, 'TEST-GA-UA')
+        self.assertContains(response, 'analytics.js')
