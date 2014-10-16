@@ -43,7 +43,7 @@ DATABASES = {
 
 INTERNAL_IPS = (
     '127.0.0.1',
-    )
+)
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -273,7 +273,7 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 VUMI_API_CONFIG = {
     'redis_manager': {'key_prefix': 'vumigo', 'db': 1},
     'riak_manager': {'bucket_prefix': 'vumigo.'},
-    }
+}
 
 VXPOLLS_REDIS_CONFIG = {
     'key_prefix': 'vumigo',
