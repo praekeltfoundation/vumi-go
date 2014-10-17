@@ -81,3 +81,8 @@ class TestApp(GoDjangoTestCase):
         response = client.get(reverse('home'), follow=True)
         self.assertContains(response, 'TEST-GA-UA')
         self.assertContains(response, 'analytics.js')
+
+    # TODO: test ARIA role presence
+    # role="contentinfo" on every page
+    # role="banner", role="navigation" on every app page
+    # role="search" on every search form
