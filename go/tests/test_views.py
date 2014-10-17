@@ -75,14 +75,19 @@ class TestHelpViews(GoDjangoTestCase):
 class TestApp(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
 
     def test_google_analytics(self):
-        client = self.vumi_helper.get_client('superuser@example.com')
-        response = client.get(reverse('home'), follow=True)
+        response = self.client.get(reverse('home'), follow=True)
         self.assertContains(response, 'TEST-GA-UA')
         self.assertContains(response, 'analytics.js')
 
-    # TODO: test ARIA role presence
-    # role="contentinfo" on every page
-    # role="banner", role="navigation" on every app page
-    # role="search" on every search form
+    def test_aria_footer(self):
+        response = self.client.get(reverse('home'), follow=True)
+        self.assertContains(response, 'role="contentinfo"')
+
+    def test_aria_banner_and_nav(self):
+        response = self.client.get(reverse('home'), follow=True)
+        self.assertContains(response, 'role="banner"')
+        self.assertContains(response, 'role="navigation"')
