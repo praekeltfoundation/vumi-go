@@ -83,6 +83,8 @@ class TestApp(GoDjangoTestCase):
         self.assertContains(response, 'TEST-GA-UA')
         self.assertContains(response, 'analytics.js')
 
+    # TODO: remove once #1029 is done
+
     def test_aria_footer(self):
         response = self.client.get(reverse('home'), follow=True)
         self.assertContains(response, 'role="contentinfo"')
