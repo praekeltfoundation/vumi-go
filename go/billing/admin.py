@@ -7,11 +7,10 @@ from django.utils.translation import ugettext_lazy as _
 from django.contrib import admin
 from django.contrib import messages
 
-from go.billing.models import TagPool, Account, MessageCost, Transaction
-from go.billing.forms import (CreditLoadForm,
-                              BaseCreditLoadFormSet,
-                              MessageCostForm,
-                              TagPoolForm)
+from go.billing.models import (
+    TagPool, Account, MessageCost, Transaction, Statement)
+from go.billing.forms import (
+    CreditLoadForm, BaseCreditLoadFormSet, MessageCostForm, TagPoolForm)
 
 
 class TagPoolAdmin(admin.ModelAdmin):
@@ -121,3 +120,4 @@ admin.site.register(TagPool, TagPoolAdmin)
 admin.site.register(Account, AccountAdmin)
 admin.site.register(MessageCost, MessageCostAdmin)
 admin.site.register(Transaction, TransactionAdmin)
+admin.site.register(Statement)
