@@ -25,8 +25,11 @@
         <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
         -->
         <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export CSV via email</a>
-        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}">
+        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}&format=json">
           Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as JSON
+        </a>
+        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}&format=csv">
+          Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as CSV
         </a>
     </div>
 
