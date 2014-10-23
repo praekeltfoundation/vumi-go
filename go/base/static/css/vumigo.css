@@ -14,8 +14,6 @@ button {
   pointer-events: auto;
 }
 .main-container {
-  min-width: 650px;
-  max-width: none;
   padding: 5px 25px;
 }
 .footer {
@@ -351,24 +349,25 @@ button {
 }
 .registration {
   color: #c1c1c1;
-  min-width: 0;
-  width: 720px;
+  max-width: 50em;
   text-align: center;
   margin: 0 auto;
 }
 .registration .logo-large {
-  margin: 1em 0 2em 0;
+  margin: 1em auto 2em auto;
 }
-.registration .registration-content {
-  display: inline-block;
+
+.registration-content {
   text-align: left;
-  margin: 0 auto;
-  min-width: 420px;
+  max-width: 20em;
+  margin: 0 auto 2em auto;
 }
-.registration.login .registration-content {
-  min-width: 0;
-  width: 280px;
+
+.registration label {
+  display: block;
+  font-weight: normal;
 }
+
 .confirm .details table th:first-child {
   width: 100px;
 }
@@ -847,4 +846,8 @@ table tbody.loading td {
 .logs-sandbox,
 .logs-sandbox td {
   word-break: break-all;
+}
+
+img {
+  max-width: 100%;
 }
