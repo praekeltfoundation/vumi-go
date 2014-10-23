@@ -4,7 +4,7 @@ var path = require('path');
 module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-bower-task');
   grunt.loadNpmTasks('grunt-contrib-jst');
-  grunt.loadNpmTasks('grunt-mocha-test');
+  grunt.loadNpmTasks('grunt-mocha-cli');
   grunt.loadNpmTasks('grunt-mocha-cov');
   grunt.loadNpmTasks('grunt-karma');
   grunt.loadNpmTasks('grunt-exec');
@@ -20,10 +20,10 @@ module.exports = function (grunt) {
         }
       }
     },
-    mochaTest: {
+    mochacli: {
       jsbox_apps: {
-        src: ['<%= paths.tests.jsbox_apps.spec %>'],
-        reporter: 'dot',
+        options: {reporter: 'dot'},
+        src: ['<%= paths.tests.jsbox_apps.spec %>']
       },
     },
     mochacov: {
@@ -78,7 +78,7 @@ module.exports = function (grunt) {
   });
 
   grunt.registerTask('test:jsbox_apps', [
-    'mochaTest:jsbox_apps',
+    'mochacli:jsbox_apps',
     'mochacov:jsbox_apps'
   ]);
 
