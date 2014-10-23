@@ -5,13 +5,15 @@
 {% block content %}
 <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo-large">
 
-<div class="registration-content row">
-    {% block registration_content %}
-    {% endblock %}
-</div>
+<div class="registration-content clearfix">
+	<div class="registration-sign-in">
+	    {% block registration_content %}
+	    {% endblock %}
+	</div>
 
-<div class="registration-content row">
-    {% block registration_form %}
-    {% endblock %}
+	<div class="registration-register">
+	    {% block registration_form %}
+	    {% endblock %}
+	</div>
 </div>
 {% endblock %}
