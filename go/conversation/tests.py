@@ -575,6 +575,18 @@ class TestConversationViews(BaseConversationViewTestCase):
             'attachment; filename=%s-inbound.json' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
+    def test_download_csv_messages_inbound(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get("%s?format=csv" % (
+            self.get_view_url(conv, 'export_messages')))
+        self.assertEqual(
+            response['X-Accel-Redirect'],
+            '/message_store_exporter/%s/inbound.csv' % (conv.batch.key,))
+        self.assertEqual(
+            response['Content-Disposition'],
+            'attachment; filename=%s-inbound.csv' % (conv.key,))
+        self.assertEqual(response['X-Accel-Buffering'], 'no')
+
     def test_download_json_messages_outbound(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         response = self.client.get('%s?direction=outbound' % (
@@ -585,6 +597,18 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(
             response['Content-Disposition'],
             'attachment; filename=%s-outbound.json' % (conv.key,))
+        self.assertEqual(response['X-Accel-Buffering'], 'no')
+
+    def test_download_csv_messages_outbound(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get('%s?direction=outbound&format=csv' % (
+            self.get_view_url(conv, 'export_messages'),))
+        self.assertEqual(
+            response['X-Accel-Redirect'],
+            '/message_store_exporter/%s/outbound.csv' % (conv.batch.key,))
+        self.assertEqual(
+            response['Content-Disposition'],
+            'attachment; filename=%s-outbound.csv' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_message_list_pagination(self):
