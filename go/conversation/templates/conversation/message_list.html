@@ -30,7 +30,7 @@
         </a>
     </div>
 
-    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
+    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right" role="search">
         <input type="hidden" name="direction" value="{{message_direction}}">
 
         <div class="form-group">
@@ -44,7 +44,7 @@
 {% block content_main %}
 
     <div class="row">
-        <div class="col-md-3 sidebar">
+        <div class="col-md-3 sidebar" role="navigation">
 
             <ul class="nav nav-list">
                 <li>
@@ -92,7 +92,10 @@
                     {% with conversation.get_progress_status as status %}
                       <div class="well">
                         <table class="table table-condensed">
-                        <caption><h3>Outbound message statistics</h3></caption>
+                        <caption>
+                          <h3>Outbound message statistics</h3>
+                          <p>Sorry, we're having trouble tracking message statistics at the moment, but we are working on it.<br />That means the <strong>statistics might be out of date.</strong></p>
+                        </caption>
                         <thead>
                           <th></th><th>Count</th><th>Percentage</th>
                         </thead>
