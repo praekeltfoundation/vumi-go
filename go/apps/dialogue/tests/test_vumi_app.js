@@ -1,4 +1,3 @@
-require('mocha-as-promised')();
 var assert = require('assert');
 
 var _ = require('lodash');
