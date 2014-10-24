@@ -203,10 +203,14 @@ class ExportMessageView(ConversationApiView):
         if direction not in ['inbound', 'outbound']:
             raise Http404()
 
-        url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
-                                                      direction)
-        return sendfile(url, buffering=False, filename='%s-%s.json' % (
-            conversation.key, direction))
+        export_format = request.GET.get('format', 'json')
+        if export_format not in ['csv', 'json']:
+            raise Http404()
+
+        url = '/message_store_exporter/%s/%s.%s' % (
+            conversation.batch.key, direction, export_format)
+        return sendfile(url, buffering=False, filename='%s-%s.%s' % (
+            conversation.key, direction, export_format))
 
     def post(self, request, conversation):
         export_conversation_messages_unsorted.delay(
