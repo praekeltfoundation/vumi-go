@@ -611,6 +611,18 @@ class TestConversationViews(BaseConversationViewTestCase):
             'attachment; filename=%s-outbound.csv' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
+    def test_download_messages_unknown_direction_404(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get('%s?direction=unknown&format=json' % (
+            self.get_view_url(conv, 'export_messages'),))
+        self.assertEqual(response.status_code, 404)
+
+    def test_download_messages_unknown_format_404(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get('%s?direction=outbound&format=unknown' % (
+            self.get_view_url(conv, 'export_messages'),))
+        self.assertEqual(response.status_code, 404)
+
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         # Create 21 inbound messages, since we have 20 messages per page it
