@@ -37,7 +37,8 @@ setup(
         'txpostgres==1.1.0',
         'django-crispy-forms==1.4.0',
         'django-loginas==0.1.3',
-	'xhtml2pdf>=0.0.6',
+        'reportlab==2.7',
+        'xhtml2pdf>=0.0.6',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
