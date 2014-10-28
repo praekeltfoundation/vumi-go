@@ -21,6 +21,14 @@ class ConversationDefinitionBase(object):
         MessagesSentMetric,
         MessagesReceivedMetric)
 
+    @classmethod
+    def get_default_config(cls, name, description):
+        """
+        Override to provide conversation type-specific defaults for a
+        conversation config.
+        """
+        return {}
+
     # set to an sub-class of go.api.go_api.action_dispatcher
     # .ConversationActionDispatcher to provide API methods
     api_dispatcher_cls = None

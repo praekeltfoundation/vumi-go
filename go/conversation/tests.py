@@ -102,6 +102,17 @@ class ComplexEditViewDefinition(ConversationViewDefinitionBase):
     edit_view = ComplexEditView
 
 
+class DefaultConfigConversationDefinition(ConversationDefinitionBase):
+    conversation_type = 'default_config'
+    conversation_display_name = 'Default Config Conversation'
+
+    def get_default_config(self, name, description):
+        return {
+            'name': name,
+            'description': description,
+        }
+
+
 DUMMY_CONVERSATION_DEFS = {
     'dummy': (
         DummyConversationDefinition, ConversationViewDefinitionBase),
@@ -113,6 +124,8 @@ DUMMY_CONVERSATION_DEFS = {
         SimpleEditConversationDefinition, SimpleEditViewDefinition),
     'complex_edit': (
         ComplexEditConversationDefinition, ComplexEditViewDefinition),
+    'default_config': (
+        DefaultConfigConversationDefinition, ConversationViewDefinitionBase),
 }
 
 
@@ -307,6 +320,20 @@ class TestNewConversationView(BaseConversationViewTestCase):
         self.assertEqual(conv.name, 'new conv')
         self.assertEqual(conv.conversation_type, 'extra_endpoints')
         self.assertEqual(list(conv.extra_endpoints), [u'extra'])
+
+    def test_post_new_conversation_default_config(self):
+        self.user_helper.add_app_permission(u'gotest.default_config')
+        conv_data = {
+            'name': 'new conv',
+            'description': 'a new conversation',
+            'conversation_type': 'default_config',
+        }
+        self.client.post(reverse('conversations:new_conversation'), conv_data)
+        [conv] = self.user_helper.user_api.active_conversations()
+        self.assertEqual(conv.config, {
+            'name': 'new conv',
+            'description': 'a new conversation'
+        })
 
 
 class TestConversationViews(BaseConversationViewTestCase):
