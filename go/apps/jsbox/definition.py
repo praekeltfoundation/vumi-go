@@ -44,7 +44,7 @@ class ConversationDefinition(ConversationDefinitionBase):
             'jsbox_app_config': {
                 'config': {
                     'key': 'config',
-                    'value': json.dumps({'name': 'conv-name'})
+                    'value': json.dumps({'name': name})
                 }
             }
         }
