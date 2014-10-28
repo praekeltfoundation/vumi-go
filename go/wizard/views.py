@@ -52,6 +52,7 @@ class WizardCreateView(BaseWizardView):
         if not all(forms_valid):
             logger.info("Validation failed: %s" % (
                 [frm.errors for frm in forms_to_validate],))
+            print frm.errors
             return self._render(request, conversation_form=conv_form,
                                 channel_form=chan_form)
 
@@ -82,10 +83,14 @@ class WizardCreateView(BaseWizardView):
     def _create_conversation(self, request, conv_data):
         conversation_type = conv_data['conversation_type']
 
+        name = conv_data['name']
+        description = conv_data['description']
         view_def = get_conversation_view_definition(conversation_type)
+        config = view_def._conv_def.get_default_config(name, description)
+
         conversation = request.user_api.new_conversation(
-            conversation_type, name=conv_data['name'],
-            description=conv_data['description'], config={},
+            conversation_type, name=name,
+            description=description, config=config,
             extra_endpoints=list(view_def.extra_static_endpoints),
         )
         return view_def, conversation
