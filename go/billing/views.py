@@ -39,19 +39,19 @@ def statement_view(request, statement_id=None):
 # resources
 def link_callback(uri, rel):
     # use short variable names
-    sUrl = settings.STATIC_URL    # Typically /static/
-    sRoot = settings.STATIC_ROOT  # Typically /home/userX/project_static/
-    mUrl = settings.MEDIA_URL     # Typically /static/media/
-    mRoot = settings.MEDIA_ROOT   # Typically /home/userX/project_static/media/
+    static_url = settings.STATIC_URL
+    static_root = settings.STATIC_ROOT
+    media_url = settings.MEDIA_URL
+    media_root = settings.MEDIA_ROOT
 
     # convert URIs to absolute system paths
-    if uri.startswith(mUrl):
-        path = os.path.join(mRoot, uri.replace(mUrl, ""))
-    elif uri.startswith(sUrl):
-        path = os.path.join(sRoot, uri.replace(sUrl, ""))
+    if uri.startswith(media_url):
+        path = os.path.join(media_root, uri.replace(media_url, ""))
+    elif uri.startswith(static_url):
+        path = os.path.join(static_root, uri.replace(static_url, ""))
 
     # make sure that file exists
     if not os.path.isfile(path):
             raise Exception(
-                'media URI must start with %s or %s' % (sUrl, mUrl))
+                'media URI must start with %s or %s' % (static_url, media_url))
     return path
