@@ -52,7 +52,6 @@ class WizardCreateView(BaseWizardView):
         if not all(forms_valid):
             logger.info("Validation failed: %s" % (
                 [frm.errors for frm in forms_to_validate],))
-            print frm.errors
             return self._render(request, conversation_form=conv_form,
                                 channel_form=chan_form)
 
