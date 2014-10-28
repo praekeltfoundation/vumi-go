@@ -18,3 +18,9 @@ class TestConversationDefinition(VumiTestCase):
                 }
             }
         })
+
+    def test_default_config_name_slugifying(self):
+        config = ConversationDefinition.get_default_config(
+            'SoMe CoNv NaMe', 'conv-description')
+        app_config = json.loads(config['jsbox_app_config']['config']['value'])
+        self.assertEqual(app_config['name'], 'some-conv-name')

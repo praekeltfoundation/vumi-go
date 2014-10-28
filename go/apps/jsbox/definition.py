@@ -1,4 +1,5 @@
 import json
+from django.template.defaultfilters import slugify
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.apps.jsbox.utils import jsbox_js_config
@@ -40,11 +41,11 @@ class ConversationDefinition(ConversationDefinitionBase):
 
     @classmethod
     def get_default_config(cls, name, description):
-        return { 
+        return {
             'jsbox_app_config': {
                 'config': {
                     'key': 'config',
-                    'value': json.dumps({'name': name})
+                    'value': json.dumps({'name': slugify(name)})
                 }
             }
         }
