@@ -1,1 +1,16 @@
-hello
+<table>
+    <tr>
+        <td>Tag Pool Name</td>
+        <td>Tag Name</td>
+        <td>Message Direction</td>
+        <td>Total Cost</td>
+    </tr>
+    {% for line in item_list %}
+    <tr>
+        <td>{{ line.tag_pool_name }}</td>
+        <td>{{ line.tag_name }}</td>
+        <td>{{ line.message_direction }}</td>
+        <td>{{ line.total_cost }}</td>
+    </tr>
+    {% endfor %}
+</table>
