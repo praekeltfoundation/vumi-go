@@ -1,10 +1,10 @@
 <table>
-    <tr>
-        <td>Tag Pool Name</td>
-        <td>Tag Name</td>
-        <td>Message Direction</td>
-        <td>Total Cost</td>
-    </tr>
+    <thead>
+        <th scope="col">Tag Pool Name</th>
+        <th scope="col">Tag Name</th>
+        <th scope="col">Message Direction</th>
+        <th scope="col">Total Cost</th>
+    </thead>
     {% for line in item_list %}
     <tr>
         <td>{{ line.tag_pool_name }}</td>
