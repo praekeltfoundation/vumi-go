@@ -58,7 +58,8 @@ describe("app", function() {
                     .check.reply([
                         "What is your favourite colour?",
                         "1. Red",
-                        "2. Blue"
+                        "2. Blue",
+                        "3. Green"
                     ].join('\n'))
                     .run();
             });
@@ -229,6 +230,51 @@ describe("app", function() {
                 return tester
                     .setup.user.state('choice-1')
                     .input('1')
+                    .check.user.state('freetext-1')
+                    .check.reply('What is your name?')
+                    .run();
+            });
+        });
+
+        describe("when the user enters a send state", function() {
+            it("should send a message over the given channel", function() {
+                return tester
+                    .setup.config.app({
+                        endpoints: {some_endpoint: {delivery_class: 'twitter'}}
+                    })
+                    .setup(function(api) {
+                        api.contacts.add({
+                            msisdn: '+27123',
+                            twitter_handle: '@me'
+                        });
+                    })
+                    .setup.user.addr('+27123')
+                    .setup.user.state('choice-1')
+                    .input('3')
+                    .check(function(api) {
+                        assert.equal(api.outbound.store.length, 2);
+
+                        var msg = api.outbound.store[0];
+                        assert.equal(msg.to_addr, '@me');
+                        assert.equal(msg.content, "Hello over other endpoint");
+                    })
+                    .run();
+            });
+
+            it("should redirect to the state linked to the exit endpoint",
+            function() {
+                return tester
+                    .setup.config.app({
+                        endpoints: {some_endpoint: {delivery_class: 'twitter'}}
+                    })
+                    .setup(function(api) {
+                        api.contacts.add({
+                            msisdn: '+27123',
+                            twitter_handle: '@me'
+                        });
+                    })
+                    .setup.user.state('choice-1')
+                    .input('3')
                     .check.user.state('freetext-1')
                     .check.reply('What is your name?')
                     .run();

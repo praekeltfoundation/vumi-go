@@ -128,6 +128,18 @@ var DialogueApp = App.extend(function(self) {
         });
     };
 
+    self.types.send = function(desc) {
+        return self
+            .im.outbound.send({
+                to: self.contact,
+                content: desc.text,
+                endpoint: desc.endpoint
+            })
+            .then(function() {
+                return self.states.create(self.next(desc.exit_endpoint));
+            });
+    };
+
     self.states.add('states:start', function() {
         return self.states.create(self.poll.start_state.uuid);
     });
