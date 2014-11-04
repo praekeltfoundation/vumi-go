@@ -1,0 +1,16 @@
+<table>
+    <thead>
+        <th scope="col">Tag Pool Name</th>
+        <th scope="col">Tag Name</th>
+        <th scope="col">Message Direction</th>
+        <th scope="col">Total Cost</th>
+    </thead>
+    {% for line in item_list %}
+    <tr>
+        <td>{{ line.tag_pool_name }}</td>
+        <td>{{ line.tag_name }}</td>
+        <td>{{ line.message_direction }}</td>
+        <td>{{ line.total_cost }}</td>
+    </tr>
+    {% endfor %}
+</table>

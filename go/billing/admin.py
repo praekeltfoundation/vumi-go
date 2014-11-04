@@ -4,6 +4,7 @@ from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.forms.models import modelformset_factory
 from django.utils.translation import ugettext_lazy as _
+from django.utils.html import format_html
 from django.contrib import admin
 from django.contrib import messages
 
@@ -116,8 +117,18 @@ class TransactionAdmin(admin.ModelAdmin):
         return False
 
 
+class StatementAdmin(admin.ModelAdmin):
+    list_display = ('account', 'title', 'type', 'from_date', 'to_date',
+                    'created', 'view_pdf')
+
+    def view_pdf(self, obj):
+        return format_html('<a href="{0}">pdf</a>', urlresolvers.reverse(
+            'pdf_statement', kwargs={'statement_id': obj.id}))
+    view_pdf.short_description = "PDF"
+
+
 admin.site.register(TagPool, TagPoolAdmin)
 admin.site.register(Account, AccountAdmin)
 admin.site.register(MessageCost, MessageCostAdmin)
 admin.site.register(Transaction, TransactionAdmin)
-admin.site.register(Statement)
+admin.site.register(Statement, StatementAdmin)
