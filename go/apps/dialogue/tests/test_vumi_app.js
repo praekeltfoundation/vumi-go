@@ -240,7 +240,7 @@ describe("app", function() {
             it("should send a message over the given channel", function() {
                 return tester
                     .setup.config.app({
-                        endpoints: {some_endpoint: {delivery_class: 'twitter'}}
+                        endpoints: {twitter_channel_type: {delivery_class: 'twitter'}}
                     })
                     .setup(function(api) {
                         api.contacts.add({
@@ -265,7 +265,7 @@ describe("app", function() {
             function() {
                 return tester
                     .setup.config.app({
-                        endpoints: {some_endpoint: {delivery_class: 'twitter'}}
+                        endpoints: {twitter_channel_type: {delivery_class: 'twitter'}}
                     })
                     .setup(function(api) {
                         api.contacts.add({

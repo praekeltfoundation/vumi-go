@@ -33,11 +33,10 @@ var simple_poll = {
         uuid: "send-1",
         name: "Message 3",
         type: "send",
-        endpoint: "some_endpoint",
-        delivery_class: "twitter",
+        text: "Hello over other endpoint",
+        channel_type: "twitter_channel_type",
         entry_endpoint: {uuid: "endpoint-6"},
-        exit_endpoint: {uuid: "endpoint-7"},
-        text: "Hello over other endpoint"
+        exit_endpoint: {uuid: "endpoint-7"}
     },
     {
         uuid: "freetext-1",

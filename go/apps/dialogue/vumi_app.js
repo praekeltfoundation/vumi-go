@@ -133,7 +133,7 @@ var DialogueApp = App.extend(function(self) {
             .im.outbound.send({
                 to: self.contact,
                 content: desc.text,
-                endpoint: desc.endpoint
+                endpoint: desc.channel_type
             })
             .then(function() {
                 return self.states.create(self.next(desc.exit_endpoint));
