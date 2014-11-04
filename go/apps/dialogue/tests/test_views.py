@@ -104,6 +104,44 @@ class TestDialogueViews(GoDjangoTestCase):
                             conv_helper.get_action_view_url('send_jsbox'))
 
     def test_edit(self):
+        conv_helper = self.setup_conversation(name=u"myconv")
+        self.mock_rpc.set_response(result={"poll": {}})
+        response = self.client.get(conv_helper.get_view_url('edit'))
+
+        self.assertContains(response, u"myconv")
+        self.assertContains(response, 'diagram')
+
+    def test_edit_channel_types(self):
+        conv_helper = self.setup_conversation()
+        self.mock_rpc.set_response(result={"poll": {}})
+        response = self.client.get(conv_helper.get_view_url('edit'))
+
+        self.assertContains(response, 'USSD')
+        self.assertContains(response, 'SMS')
+        self.assertContains(response, 'Google Talk')
+        self.assertContains(response, 'Mxit')
+        self.assertContains(response, 'WeChat')
+        self.assertContains(response, 'Twitter')
+
+    def test_edit_model_data(self):
+        conv_helper = self.setup_conversation()
+        conversation = conv_helper.get_conversation()
+
+        poll = {}
+        self.mock_rpc.set_response(result={"poll": poll})
+        response = self.client.get(conv_helper.get_view_url('edit'))
+
+        expected = poll.copy()
+        expected.update({
+            'campaign_id': conversation.user_account.key,
+            'conversation_key': conversation.key,
+            'urls': {"show": conv_helper.get_view_url('show')}
+        })
+
+        model_data = response.context["model_data"]
+        self.assertEqual(json.loads(model_data), expected)
+
+    def test_edit_model_data_groups(self):
         conv_helper = self.setup_conversation(
             with_group=False, started=False, name=u"myconv")
 
@@ -118,25 +156,12 @@ class TestDialogueViews(GoDjangoTestCase):
                 'name': 'foo'
             }]
         }
+
         self.mock_rpc.set_response(result={"poll": poll})
         response = self.client.get(conv_helper.get_view_url('edit'))
-        self.assertContains(response, u"myconv")
-        self.assertContains(response, 'diagram')
-
-        self.assertContains(response, 'USSD')
-        self.assertContains(response, 'SMS')
-        self.assertContains(response, 'Google Talk')
-        self.assertContains(response, 'Mxit')
-        self.assertContains(response, 'WeChat')
-        self.assertContains(response, 'Twitter')
 
         expected = poll.copy()
-        expected.update({
-            'campaign_id': conversation.user_account.key,
-            'conversation_key': conversation.key,
-            'urls': {"show": conv_helper.get_view_url('show')},
-            'groups': [group1.get_data(), group2.get_data()]
-        })
+        expected.update({'groups': [group1.get_data(), group2.get_data()]})
 
         model_data = response.context["model_data"]
         self.assertEqual(json.loads(model_data), expected)
