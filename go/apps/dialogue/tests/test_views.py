@@ -4,6 +4,7 @@ from go.api.go_api.tests.utils import MockRpc
 from go.apps.tests.view_helpers import AppViewsHelper
 from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.contact.models import DELIVERY_CLASSES
 
 
 class TestDialogueViews(GoDjangoTestCase):
@@ -116,12 +117,8 @@ class TestDialogueViews(GoDjangoTestCase):
         self.mock_rpc.set_response(result={"poll": {}})
         response = self.client.get(conv_helper.get_view_url('edit'))
 
-        self.assertContains(response, 'USSD')
-        self.assertContains(response, 'SMS')
-        self.assertContains(response, 'Google Talk')
-        self.assertContains(response, 'Mxit')
-        self.assertContains(response, 'WeChat')
-        self.assertContains(response, 'Twitter')
+        for d in DELIVERY_CLASSES.itervalues():
+            self.assertContains(response, d['label'])
 
     def test_edit_model_data(self):
         conv_helper = self.setup_conversation()
@@ -162,6 +159,24 @@ class TestDialogueViews(GoDjangoTestCase):
 
         expected = poll.copy()
         expected.update({'groups': [group1.get_data(), group2.get_data()]})
+
+        model_data = response.context["model_data"]
+        self.assertEqual(json.loads(model_data), expected)
+
+    def test_edit_model_data_channel_types(self):
+        conv_helper = self.setup_conversation()
+
+        poll = {}
+        self.mock_rpc.set_response(result={"poll": poll})
+        response = self.client.get(conv_helper.get_view_url('edit'))
+
+        expected = poll.copy()
+        expected.update({
+            'channel_types': [{
+                'name': name,
+                'label': d['label']
+            } for name, d in DELIVERY_CLASSES.iteritems()]
+        })
 
         model_data = response.context["model_data"]
         self.assertEqual(json.loads(model_data), expected)
