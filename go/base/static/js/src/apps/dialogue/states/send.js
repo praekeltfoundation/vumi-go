@@ -12,21 +12,20 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var SendStateEditView = DialogueStateEditView.extend({
+    bodyOptions:{
+        jst: 'JST.apps_dialogue_states_send_edit'
+    },
+
     data: function() {
       var type = this.model.get('channel_type');
       var d = SendStateEditView.__super__.data.call(this);
+      d.text = this.model.get('text');
 
       d.typeName = null;
       if (type) { d.typeName = type.get('name'); }
       d.types = this.model.get('dialogue').get('channel_types');
 
       return d;
-    },
-
-    bodyOptions: function() {
-      return {
-        jst: 'JST.apps_dialogue_states_send_edit'
-      };
     },
 
     events: _.extend({
@@ -38,26 +37,28 @@
         } else if (name !== 'none') {
           this.model.set('channel_type', {name: name}, {silent: true});
         }
+      },
 
+      'change .send-text': function(e) {
+        this.model.set('text', $(e.target).val(), {silent: true});
       }
     }, DialogueStateEditView.prototype.events)
   });
 
   var SendStatePreviewView = DialogueStatePreviewView.extend({
+    bodyOptions: {
+        jst: 'JST.apps_dialogue_states_send_preview'
+    },
+
     data: function() {
       var type = this.model.get('channel_type');
       var d = SendStatePreviewView.__super__.data.call(this);
+      d.text = this.model.get('text');
 
       d.typeLabel = null;
       if (type) { d.typeLabel = type.get('label'); }
 
       return d;
-    },
-
-    bodyOptions: function() {
-      return {
-        jst: 'JST.apps_dialogue_states_send_preview'
-      };
     }
   });
 

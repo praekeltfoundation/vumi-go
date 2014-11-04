@@ -28,7 +28,7 @@ describe("go.apps.dialogue.states.send", function() {
       channel_type: 'sms',
       entry_endpoint: {uuid: 'endpoint-a'},
       exit_endpoint: {uuid: 'endpoint-b'},
-      text: 'Hello over other channel'
+      text: 'Hello over SMS'
     }]);
 
     state = diagram.states.get('foo');
@@ -104,6 +104,23 @@ describe("go.apps.dialogue.states.send", function() {
         assert.isNull(state.model.get('channel_type'));
       });
     });
+
+    describe("when the current text changes", function() {
+      it("should update the state's model", function() {
+        assert.equal(
+          state.model.get('text'),
+          'Hello over SMS');
+
+        editMode
+          .$('.send-text')
+          .text('Sulking Sandwich')
+          .change();
+
+        assert.equal(
+          state.model.get('text'),
+          'Sulking Sandwich');
+      });
+    });
   });
 
   describe(".SendStatePreviewView", function() {
@@ -129,6 +146,14 @@ describe("go.apps.dialogue.states.send", function() {
       assert.equal(
         previewMode.$('.channel-type').text(),
         'No channel type assigned');
+    });
+
+    it("should show the current text", function() {
+      state.preview();
+
+      assert.equal(
+        previewMode.$('.send-text').text(),
+        'Hello over SMS');
     });
   });
 });
