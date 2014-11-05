@@ -11,7 +11,7 @@ from go.apps.jsbox.vumi_app import JsBoxConfig, JsBoxApplication
 def determine_endpoints(poll):
     names = set(
         s['channel_type']
-        for s in poll['states'] if s['type'] == 'send')
+        for s in poll.get('states', []) if s['type'] == 'send')
 
     types = poll.get('channel_types', [])
     return [t['label'] for t in types if t['name'] in names]
