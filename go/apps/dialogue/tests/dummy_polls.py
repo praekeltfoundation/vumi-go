@@ -4,7 +4,9 @@ def simple_poll():
         "start_state": {"uuid": "choice-1"},
         "poll_metadata": {
             "repeatable": True,
+            'delivery_class': 'ussd'
         },
+        'channel_types': [],
         "states": [
             {
                 # these are common to all state types
