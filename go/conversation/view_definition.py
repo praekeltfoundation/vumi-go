@@ -769,11 +769,7 @@ class ConversationViewDefinitionBase(object):
         return self._conv_def.extra_static_endpoints
 
     def get_endpoints(self, config):
-        endpoints = list(self.extra_static_endpoints)
-        for endpoint in self._conv_def.configured_endpoints(config):
-            if (endpoint != 'default') and (endpoint not in endpoints):
-                endpoints.append(endpoint)
-        return endpoints
+        return self._conv_def.get_endpoints(config)
 
     @property
     def is_editable(self):

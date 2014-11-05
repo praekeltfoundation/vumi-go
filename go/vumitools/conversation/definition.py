@@ -21,6 +21,13 @@ class ConversationDefinitionBase(object):
         MessagesSentMetric,
         MessagesReceivedMetric)
 
+    # set to an sub-class of go.api.go_api.action_dispatcher
+    # .ConversationActionDispatcher to provide API methods
+    api_dispatcher_cls = None
+
+    def __init__(self, conv=None):
+        self.conv = conv
+
     @classmethod
     def get_default_config(cls, name, description):
         """
@@ -28,13 +35,6 @@ class ConversationDefinitionBase(object):
         conversation config.
         """
         return {}
-
-    # set to an sub-class of go.api.go_api.action_dispatcher
-    # .ConversationActionDispatcher to provide API methods
-    api_dispatcher_cls = None
-
-    def __init__(self, conv=None):
-        self.conv = conv
 
     def get_actions(self):
         return [action(self.conv) for action in self.actions]
@@ -46,6 +46,15 @@ class ConversationDefinitionBase(object):
 
     def configured_endpoints(self, config):
         return []
+
+    def get_endpoints(self, config):
+        endpoints = list(self.extra_static_endpoints)
+
+        for endpoint in self.configured_endpoints(config):
+            if (endpoint != 'default') and (endpoint not in endpoints):
+                endpoints.append(endpoint)
+
+        return endpoints
 
     def is_config_valid(self):
         raise NotImplementedError()
