@@ -468,9 +468,8 @@ class EditConversationView(ConversationTemplateView):
                 config = self.process_form(edit_form)
             else:
                 config[key] = self.process_form(edit_form)
-        conversation.set_config(config)
-        conversation.c.extra_endpoints = self.view_def.get_endpoints(config)
 
+        self.view_def._conv_def.update_config(request.user_api, config)
         conversation.save()
 
 
