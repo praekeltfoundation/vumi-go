@@ -13,8 +13,13 @@ from go.base.models import UserProfile
 class TagPool(models.Model):
     """Tag pool definition"""
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
+    name = models.CharField(
+        max_length=100, unique=True,
+        help_text=_("The name of the tagpool."))
+
+    description = models.TextField(
+        blank=True,
+        help_text=_("A description of the tagpool."))
 
     def __unicode__(self):
         return self.name
@@ -23,19 +28,35 @@ class TagPool(models.Model):
 class Account(models.Model):
     """Represents a user account"""
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    account_number = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-    credit_balance = models.DecimalField(max_digits=20, decimal_places=6,
-                                         default=Decimal('0.0'))
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        help_text=_("The user the billing account belongs to."))
+
+    account_number = models.CharField(
+        max_length=100, unique=True,
+        help_text=_("The account number associated with the user the account"
+                    " belongs to."))
+
+    description = models.TextField(
+        blank=True,
+        help_text=_("A description of this account."))
+
+    credit_balance = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The current credit balance."))
 
     alert_threshold = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("Low-credits notification will be sent when the "
-                    "credit balance reaches the alert threshold percentage"))
+                    "credit balance reaches the alert threshold percentage "
+                    "of the balance after the last credit purchase."))
 
     alert_credit_balance = models.DecimalField(
-        max_digits=20, decimal_places=6, default=Decimal('0.0'))
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("Low-credits notification will be sent when the credit "
+                    "balance goes below this value. This value is updated to "
+                    "(alert_threshold * current balance) when credits are "
+                    "loaded."))
 
     def __unicode__(self):
         return u"{0} ({1})".format(self.account_number, self.user.email)
@@ -176,10 +197,24 @@ class Transaction(models.Model):
         (STATUS_REVERSED, STATUS_REVERSED),
     )
 
-    account_number = models.CharField(max_length=100)
-    tag_pool_name = models.CharField(max_length=100, blank=True)
-    tag_name = models.CharField(max_length=100, blank=True)
-    message_direction = models.CharField(max_length=20, blank=True)
+    account_number = models.CharField(
+        max_length=100,
+        help_text=_("Account number the transaction is associated with."))
+
+    tag_pool_name = models.CharField(
+        max_length=100, blank=True,
+        help_text=_("The tag pool of the message being billed (or null if "
+                    "there is no associated message)."))
+
+    tag_name = models.CharField(
+        max_length=100, blank=True,
+        help_text=_("The tag of the message being billed (or null if "
+                    "there is no associated message)."))
+
+    message_direction = models.CharField(
+        max_length=20, blank=True,
+        help_text=_("The direction of the message being billed (or null if "
+                    "there is no associated message)."))
 
     message_id = models.CharField(
         max_length=64, null=True, blank=True,
@@ -192,7 +227,10 @@ class Transaction(models.Model):
         help_text=_("The message cost (in cents) used to calculate"
                     " credit_amount."))
 
-    session_created = models.NullBooleanField(blank=True, null=True)
+    session_created = models.NullBooleanField(
+        blank=True, null=True,
+        help_text=_("Whether the message being billed started a new session ("
+                    "or null if there is no associated message)."))
 
     session_cost = models.DecimalField(
         null=True,
@@ -200,20 +238,32 @@ class Transaction(models.Model):
         help_text=_("The session cost (in cents) used to calculate"
                     " credit_amount."))
 
-    markup_percent = models.DecimalField(max_digits=10, decimal_places=2,
-                                         blank=True, null=True)
+    markup_percent = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True,
+        help_text=_("The markup percentage used to calculate credit_amount."))
 
-    credit_factor = models.DecimalField(max_digits=10, decimal_places=2,
-                                        blank=True, null=True)
+    credit_factor = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True,
+        help_text=_("The credit conversion factor's value when this "
+                    "transaction was created."))
 
-    credit_amount = models.DecimalField(max_digits=20, decimal_places=6,
-                                        default=Decimal('0.0'))
+    credit_amount = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The number of credits this transaction adds or "
+                    "subtracts."))
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES,
-                              default=STATUS_PENDING)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,
+        help_text=_("The status of this transaction. One of pending, "
+                    "completed, failed or reversed."))
 
-    created = models.DateTimeField(auto_now_add=True)
-    last_modified = models.DateTimeField(auto_now=True)
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When this transaction was created."))
+
+    last_modified = models.DateTimeField(
+        auto_now=True,
+        help_text=_("When this transaction was last modified"))
 
     def __unicode__(self):
         return unicode(self.pk)
@@ -227,12 +277,30 @@ class Statement(models.Model):
         (TYPE_MONTHLY, TYPE_MONTHLY),
     )
 
-    account = models.ForeignKey(Account)
-    title = models.CharField(max_length=255)
-    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
-    from_date = models.DateField()
-    to_date = models.DateField()
-    created = models.DateTimeField(auto_now_add=True)
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the statment is for."))
+
+    title = models.CharField(
+        max_length=255,
+        help_text=_("Title of the statement."))
+
+    type = models.CharField(
+        max_length=40, choices=TYPE_CHOICES,
+        help_text=_("Type of statement. Currently the only type is "
+                    "'Monthly'."))
+
+    from_date = models.DateField(
+        help_text=_("The start of the date range covered by this statement "
+                    "(inclusive)."))
+
+    to_date = models.DateField(
+        help_text=_("The end of the date range covered by this statement "
+                    "(inclusive)"))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When this statement was created."))
 
     def __unicode__(self):
         return u"%s for %s" % (self.title, self.account)
@@ -241,13 +309,28 @@ class Statement(models.Model):
 class LineItem(models.Model):
     """A line item of a statement"""
 
-    statement = models.ForeignKey(Statement)
-    tag_pool_name = models.CharField(max_length=100, blank=True, default='')
-    tag_name = models.CharField(max_length=100, blank=True, default='')
-    message_direction = models.CharField(max_length=20, blank=True,
-                                         default='')
+    statement = models.ForeignKey(
+        Statement,
+        help_text=_("The statement this line item is from."))
 
-    total_cost = models.IntegerField(default=0)
+    tag_pool_name = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text=_("Name of the tag pool this line item is for (or null if "
+                    "there is no associated tag pool)."))
+
+    tag_name = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text=_("Name of the tag this line item is for (or null if "
+                    "there is no associated tag)."))
+
+    message_direction = models.CharField(
+        max_length=20, blank=True, default='',
+        help_text=_("Direction of the messages this line item is for (or null "
+                    "if there are no associated messages)."))
+
+    total_cost = models.IntegerField(
+        default=0,
+        help_text=_("Total cost in credits of this line item."))
 
     def __unicode__(self):
         return u"%s line item" % (self.statement.title,)
