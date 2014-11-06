@@ -30,6 +30,14 @@
                         <a href="{% conversation_screen conversation %}">
                             {{ conversation.name }}
                         </a>
+                        <ul class="list-unstyled">
+                          <li><span class="label label-primary">{{ conversation.conversation_type }}</span></li>
+                          {% for channel in conversation.get_channels %}
+                          <li><span class="label label-info">{{ channel.name }}</span></li>
+                          {% empty %}
+                          <li><span class="label label-danger">No channels</span></li>
+                          {% endfor %}
+                        </ul>
                     </td>
                     <td class="status {{ conversation.get_status }}">{{ conversation.get_status }}</td>
                     <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
