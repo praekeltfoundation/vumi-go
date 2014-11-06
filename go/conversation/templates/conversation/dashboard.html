@@ -31,7 +31,7 @@
                             {{ conversation.name }}
                         </a>
                         <ul class="list-unstyled">
-                          <li><span class="label label-primary">{{ conversation.conversation_type }}</span></li>
+                          <li><span class="label label-primary">{{ conversation.conversation_type_display_name }}</span></li>
                           {% for channel in conversation.get_channels %}
                           <li><span class="label label-info">{{ channel.name }}</span></li>
                           {% empty %}
