@@ -131,7 +131,7 @@ class TestCreditLoadForm(GoDjangoTestCase):
         return formset
 
     def test_load_credits(self):
-        self.account.alert_threshold = 10.0
+        self.account.alert_threshold = Decimal('10.0')
         self.account.save()
 
         formset = self.mk_formset()
