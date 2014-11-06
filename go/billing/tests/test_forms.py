@@ -138,19 +138,19 @@ class TestCreditLoadForm(GoDjangoTestCase):
         self.assertTrue(formset.is_valid())
         [form] = list(formset)
 
-        self.assertEqual(self.account.credit_balance, 0.0)
-        self.assertEqual(self.account.alert_credit_balance, 0.0)
+        self.assertEqual(self.account.credit_balance, Decimal('0.0'))
+        self.assertEqual(self.account.alert_credit_balance, Decimal('0.0'))
 
         form.load_credits()
 
         account = Account.objects.get(user=self.user)
-        self.assertEqual(account.credit_balance, 10.0)
-        self.assertEqual(account.alert_credit_balance, 1.0)
+        self.assertEqual(account.credit_balance, Decimal('10.0'))
+        self.assertEqual(account.alert_credit_balance, Decimal('1.0'))
 
         [transaction] = Transaction.objects.filter(
             account_number=self.account.account_number).all()
         self.assertEqual(transaction.status, Transaction.STATUS_COMPLETED)
-        self.assertEqual(transaction.credit_amount, 10.0)
+        self.assertEqual(transaction.credit_amount, Decimal('10.0'))
 
 
 class TestTagPoolForm(GoDjangoTestCase):
