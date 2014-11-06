@@ -503,3 +503,13 @@ class TestConversationWrapper(VumiTestCase):
             'conversation_type': self.conv.conversation_type,
             'conversation_key': self.conv.key,
         }})
+
+    @inlineCallbacks
+    def test_conversation_type_display_name(self):
+        conv = yield self.user_helper.create_conversation(u'static_reply')
+        self.assertEqual(
+            conv.conversation_type_display_name, 'Static Reply')
+
+    def test_conversation_type_display_name_fallback(self):
+        self.assertEqual(
+            self.conv.conversation_type_display_name, u'dummy')
