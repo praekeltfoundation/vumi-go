@@ -122,7 +122,14 @@ class LineItemInline(admin.TabularInline):
 
     readonly_fields = (
         'statement', 'tag_pool_name', 'tag_name', 'message_direction',
+        'total_cost', 'statement',
     )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class StatementAdmin(admin.ModelAdmin):

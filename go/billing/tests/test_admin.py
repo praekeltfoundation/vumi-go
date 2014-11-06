@@ -5,7 +5,7 @@ from django.core.urlresolvers import reverse
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import Account
 
-from .helpers import mk_statement
+from .helpers import mk_statement, mk_transaction
 
 
 class TestStatementAdmin(GoDjangoTestCase):
@@ -37,6 +37,7 @@ class TestStatementAdmin(GoDjangoTestCase):
             response, '<a href="/billing/statement/%s">pdf</a>' % statement.id)
 
     def test_statement_admin_view(self):
+        mk_transaction(self.account)
         statement = mk_statement(self.account)
         client = self.vumi_helper.get_client()
         client.login()
@@ -48,3 +49,4 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, "Tag pool name")
         self.assertContains(response, "Tag name")
         self.assertContains(response, "Message direction")
+        self.assertContains(response, "Monthly Statement line item")
