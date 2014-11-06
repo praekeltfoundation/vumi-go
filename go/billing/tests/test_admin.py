@@ -35,3 +35,16 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, "1 statement")
         self.assertContains(
             response, '<a href="/billing/statement/%s">pdf</a>' % statement.id)
+
+    def test_statement_admin_view(self):
+        statement = mk_statement(self.account)
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_statement_change', args=[statement.id]))
+        self.assertContains(response, "Monthly Statement for")
+        self.assertContains(response, "Account:")
+        # check that line items have been inlined
+        self.assertContains(response, "Tag pool name")
+        self.assertContains(response, "Tag name")
+        self.assertContains(response, "Message direction")
