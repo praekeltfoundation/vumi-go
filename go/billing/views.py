@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.template import RequestContext, loader
 from xhtml2pdf import pisa
@@ -16,8 +16,11 @@ def statement_view(request, statement_id=None):
     """Send a PDF version of the statement with the given
        ``statement_id`` to the user's browser.
     """
-    statement = get_object_or_404(
-        Statement, pk=statement_id, account__user=request.user)
+    statement = get_object_or_404(Statement, pk=statement_id)
+
+    if not (request.user.is_staff or
+            statement.account.user == request.user):
+        raise Http404
 
     response = HttpResponse(mimetype='application/pdf')
     filename = "%s (%s).pdf" % (statement.title,
