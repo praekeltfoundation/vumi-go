@@ -49,7 +49,7 @@ class TestConversationDefinitionBase(VumiTestCase):
         dfn.update_config(self.user_api, {'endpoints': ['bar', 'baz']})
         self.assertEqual(self.conv.extra_endpoints, ['bar', 'baz'])
 
-    def test_update_config_detach_old_endpoints(self):
+    def test_update_config_detach_removed_endpoints(self):
         user_account = self.user_api.get_user_account()
         rt = user_account.routing_table
         self.conv.set_config({'endpoints': ['foo', 'bar', 'baz']})

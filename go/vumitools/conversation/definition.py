@@ -2,22 +2,13 @@ from go.vumitools.metrics import (
     ConversationMetricSet, MessagesSentMetric, MessagesReceivedMetric)
 
 
-def detach_endpoint(rt, conn, endpoint):
-    src = rt.lookup_source(conn, endpoint)
-
-    if src is not None:
-        rt.remove_entry(*src)
-
-    rt.remove_entry(conn, endpoint)
-
-
 def detach_removed_endpoints(conv, user_api, old, new):
     conn = conv.get_connector()
     user_account = user_api.get_user_account()
     rt = user_account.routing_table
 
     for endpoint in set(old) - set(new):
-        detach_endpoint(rt, conn, endpoint)
+        rt.remove_endpoint(conn, endpoint)
 
     rt.validate_all_entries()
     user_account.save()
