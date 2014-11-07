@@ -72,7 +72,7 @@ class ConversationDefinitionBase(object):
         endpoints = self.get_endpoints(config)
 
         self.conv.set_config(config)
-        self.conv.extra_endpoints = endpoints
+        self.conv.c.extra_endpoints = endpoints
 
         return detach_removed_endpoints(
             self.conv, user_account, old_endpoints, endpoints)
