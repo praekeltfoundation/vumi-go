@@ -189,6 +189,7 @@ class TestConversationsDashboardView(BaseConversationViewTestCase):
         myconv = self.user_helper.create_conversation(u'dummy', name=u'myconv')
         response = self.client.get(reverse('conversations:index'))
         self.assertContains(response, u'myconv')
+        self.assertContains(response, u'Dummy Conversation')
 
         self.assertContains(response, self.get_view_url(myconv, 'show'))
         self.assertContains(response, self.get_view_url(

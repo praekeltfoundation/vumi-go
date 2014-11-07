@@ -11,6 +11,7 @@ from vumi.persist.model import Manager
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import MessageMetadataDictHelper, MessageMetadataHelper
+from go.config import configured_conversation_types
 
 
 class ConversationWrapper(object):
@@ -497,6 +498,11 @@ class ConversationWrapper(object):
     def worker_name(self):
         # TODO better way of working out worker_name
         return '%s_application' % (self.conversation_type,)
+
+    @property
+    def conversation_type_display_name(self):
+        conv_types = configured_conversation_types()
+        return conv_types.get(self.conversation_type, self.conversation_type)
 
     def dispatch_command(self, command, *args, **kwargs):
         """
