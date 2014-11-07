@@ -91,7 +91,7 @@ class CreditLoadForm(ModelForm):
         # Update the selected account's credit balance
         account.credit_balance += transaction.credit_amount
         account.alert_credit_balance = account.credit_balance * \
-            account.alert_threshold / Decimal(100.0)
+            account.alert_threshold / Decimal('100.0')
 
         account.save()
 
