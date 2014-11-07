@@ -469,7 +469,8 @@ class EditConversationView(ConversationTemplateView):
             else:
                 config[key] = self.process_form(edit_form)
 
-        self.view_def._conv_def.update_config(request.user_api, config)
+        user_account = request.user_api.get_user_account()
+        self.view_def._conv_def.update_config(user_account, config)
         conversation.save()
 
 
