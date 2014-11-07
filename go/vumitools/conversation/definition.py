@@ -2,16 +2,15 @@ from go.vumitools.metrics import (
     ConversationMetricSet, MessagesSentMetric, MessagesReceivedMetric)
 
 
-def detach_removed_endpoints(conv, user_api, old, new):
+def detach_removed_endpoints(conv, user_account, old, new):
     conn = conv.get_connector()
-    user_account = user_api.get_user_account()
     rt = user_account.routing_table
 
     for endpoint in set(old) - set(new):
         rt.remove_endpoint(conn, endpoint)
 
     rt.validate_all_entries()
-    user_account.save()
+    return user_account.save()
 
 
 class ConversationDefinitionBase(object):
@@ -68,13 +67,15 @@ class ConversationDefinitionBase(object):
 
         return endpoints
 
-    def update_config(self, user_api, config):
+    def update_config(self, user_account, config):
         old_endpoints = self.get_endpoints(self.conv.config)
         endpoints = self.get_endpoints(config)
-        detach_removed_endpoints(self.conv, user_api, old_endpoints, endpoints)
 
         self.conv.set_config(config)
         self.conv.extra_endpoints = endpoints
+
+        return detach_removed_endpoints(
+            self.conv, user_account, old_endpoints, endpoints)
 
     def is_config_valid(self):
         raise NotImplementedError()
