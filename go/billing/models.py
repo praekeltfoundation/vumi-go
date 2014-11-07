@@ -334,3 +334,44 @@ class LineItem(models.Model):
 
     def __unicode__(self):
         return u"%s line item" % (self.statement.title,)
+
+
+class TransactionArchive(models.Model):
+    """Record of a transaction archival."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_COMPLETED = 'completed'
+    STATUS_DELETED = 'deleted'
+    STATUS_CHOICES = (
+        (STATUS_PENDING, STATUS_PENDING.title()),
+        (STATUS_COMPLETED, STATUS_COMPLETED.title()),
+        (STATUS_DELETED, STATUS_DELETED.title()),
+    )
+
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the archive is for."))
+
+    filename = models.CharField(
+        max_length=255,
+        help_text=_("Name of the file the archive was stored as in S3."))
+
+    from_date = models.DateField(
+        help_text=_("The start of the date range covered by this archive "
+                    "(inclusive)."))
+
+    to_date = models.DateField(
+        help_text=_("The end of the date range covered by this archive "
+                    "(inclusive)"))
+
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,
+        help_text=_("The status of this archive. One of pending, "
+                    "completed, or deleted."))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When this archive was created."))
+
+    def __unicode__(self):
+        return u"%s (for %s)" % (self.filename, self.account)
