@@ -17,15 +17,15 @@
       </div>
 
       <div class="form-group">
+          <label>Channel type</label>
+
           <select id="delivery-class" class="form-control">
-              {% for delivery_class, label in delivery_classes %}
-              <option value="{{ delivery_class }}" {% if delivery_class == current_delivery_class %} selected {% endif %}>
-               {{ label }}
+              {% for delivery_class in delivery_classes %}
+              <option value="{{ delivery_class.name }}" {% if delivery_class.name == current_delivery_class %} selected {% endif %}>
+               {{ delivery_class.label }}
                </option>
               {% endfor %}
           </select>
-
-          <label>Channel type</label>
       </div>
   </div>
 

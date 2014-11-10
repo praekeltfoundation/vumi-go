@@ -14,6 +14,10 @@
       GroupModel = contacts.GroupModel,
       GroupCollection = contacts.GroupCollection;
 
+  var channel = go.channel.models,
+      ChannelTypeModel = channel.ChannelTypeModel,
+      ChannelTypeCollection = channel.ChannelTypeCollection;
+
   var DialogueEndpointModel = EndpointModel.extend({
     defaults: function() { return {uuid: uuid.v4()}; }
   });
@@ -40,7 +44,8 @@
       choice: 'go.apps.dialogue.models.ChoiceStateModel',
       freetext: 'go.apps.dialogue.models.FreeTextStateModel',
       end: 'go.apps.dialogue.models.EndStateModel',
-      group: 'go.apps.dialogue.models.GroupStateModel'
+      group: 'go.apps.dialogue.models.GroupStateModel',
+      send: 'go.apps.dialogue.models.SendStateModel'
     },
 
     defaults: function() {
@@ -150,6 +155,34 @@
     }
   });
 
+  var SendStateModel = DialogueStateModel.extend({
+    storableOnContact: false,
+
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'channel_type',
+      includeInJSON: 'name',
+      relatedModel: ChannelTypeModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'entry_endpoint',
+      relatedModel: DialogueEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'exit_endpoint',
+      relatedModel: DialogueEndpointModel
+    }],
+
+    defaults: function() {
+      return _({
+        text: '',
+        channel_type: null,
+        entry_endpoint: {},
+        exit_endpoint: {}
+      }).defaults(GroupStateModel.__super__.defaults.call(this));
+    }
+  });
+
   var EndStateModel = DialogueStateModel.extend({
     storableOnContact: false,
 
@@ -215,6 +248,11 @@
       relatedModel: GroupModel,
       collectionType: GroupCollection
     }, {
+      type: Backbone.HasMany,
+      key: 'channel_types',
+      relatedModel: ChannelTypeModel,
+      collectionType: ChannelTypeCollection
+    }, {
       type: Backbone.HasOne,
       key: 'poll_metadata',
       relatedModel: DialogueMetadataModel
@@ -260,6 +298,7 @@
     ChoiceStateModel: ChoiceStateModel,
     FreeTextStateModel: FreeTextStateModel,
     EndStateModel: EndStateModel,
-    GroupStateModel: GroupStateModel
+    GroupStateModel: GroupStateModel,
+    SendStateModel: SendStateModel
   });
 })(go.apps.dialogue.models = {});
