@@ -221,6 +221,10 @@ class MetricsMiddleware(BaseMiddleware):
         metric_name = '%s.%s' % (name, self.response_time_suffix)
         return self.get_or_create_metric(metric_name, Metric)
 
+    def get_session_time_metric(self, name):
+        metric_name = '%s.%s' % (name, self.session_time_suffix)
+        return self.get_or_create_metric(metric_name, Metric)
+
     def set_response_time(self, transport_name, time):
         metric = self.get_response_time_metric(transport_name)
         metric.set(time)
