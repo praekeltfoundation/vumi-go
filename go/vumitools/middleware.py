@@ -78,23 +78,52 @@ class OptOutMiddleware(BaseMiddleware):
 class MetricsMiddleware(BaseMiddleware):
     """
     Middleware that publishes metrics on messages flowing through.
-    It tracks the number of messages sent & received on the various
-    transports and the average response times for messages received.
+
+    For each transport it tracks:
+
+    * The number of messages sent and received.
+    * The time taken to respond to each reply.
+    * The number of sessions started.
+    * The length of each session.
+
+    For each network it tracks:
+
+    * The number of messages sent and received.
+    * The number of sessions started.
+    * The length of each session.
+
+    Networks are defined in the `networks` configuration option. Each network
+    is defined as a list of MSISDN (or other address) prefixes to match
+    `from_addr` values (for inbound messages) or `to_addr` values (for outbound
+    messages) against.
+
+    For each selected tag or tag pool it tracks:
+
+    * The number of messages sent and received.
+    * The number of sessions started.
+    * The length of each session.
+
+    Tags and pools to track are defined in the `tagpools` configuration option.
 
     :param str manager_name:
         The name of the metrics publisher, this is used for the MetricManager
         publisher and all metric names will be prefixed with it.
     :param str count_suffix:
         Defaults to 'count'. This is the suffix appended to all
-        `transport_name` based counters. If a message is received on endpoint
+        counters. If a message is received on endpoint
         'foo', counters are published on
         '<manager_name>.foo.inbound.<count_suffix>'
     :param str response_time_suffix:
         Defaults to 'response_time'. This is the suffix appended to all
-        `transport_name` based average response time metrics. If a message is
+        average response time metrics. If a message is
         received its `message_id` is stored and when a reply for the given
         `message_id` is sent out, the timestamps are compared and a averaged
         metric is published.
+    :param str session_time_suffix:
+        Defaults to 'session_time'. This is the suffix appended to all session
+        timer metrics. When a session starts the current time is stored under
+        the `from_addr` and when the session ends, the duration of the session
+        is published.
     :param int max_lifetime:
         How long to keep a timestamp for. Anything older than this is trashed.
         Defaults to 60 seconds.
@@ -111,6 +140,30 @@ class MetricsMiddleware(BaseMiddleware):
         NOTE:   This does not apply for events or failures, the endpoints
                 are always used for those since those message types are not
                 guaranteed to have a `transport_name` value.
+    :param dict networks:
+        A dictionary mapping network names to a list of prefixes for
+        MSISDNs (or other client addresses) that should be considered part of
+        that network.
+        E.g.::
+
+            networks:
+                mtn: [0603, 0605, 0710, 0717, 0718, 0719, 073, 078, 0810, 083]
+        If this configuration option is missing or empty, no network metrics
+        are produced.
+    :param dict tagpools:
+        A dictionary defining which tag pools and tags should be tracked.
+        E.g.::
+
+            tagpools:
+                pool1:
+                    __track_pool__: true
+                    tagA: true
+                pool2:
+                    tagB: true
+
+        This tracks `pool1` but not `pool2` and tracks the tag `tagA`
+        (from `pool1`) and the tag `tagB` (from `pool2`). If this configuration
+        option is missing or empty, no tag or tag pool metrics are produced.
     """
 
     KNOWN_MODES = frozenset(['active', 'passive'])
@@ -118,8 +171,10 @@ class MetricsMiddleware(BaseMiddleware):
     def validate_config(self):
         self.manager_name = self.config['manager_name']
         self.count_suffix = self.config.get('count_suffix', 'count')
-        self.response_time_suffix = self.config.get('response_time_suffix',
-            'response_time')
+        self.response_time_suffix = self.config.get(
+            'response_time_suffix', 'response_time')
+        self.session_time_suffix = self.config.get(
+            'session_time_suffix', 'session_time')
         self.max_lifetime = int(self.config.get('max_lifetime', 60))
         self.op_mode = self.config.get('op_mode', 'passive')
         if self.op_mode not in self.KNOWN_MODES:
