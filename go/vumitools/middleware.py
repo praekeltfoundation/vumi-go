@@ -108,6 +108,8 @@ class MetricsMiddleware(BaseMiddleware):
     :param str manager_name:
         The name of the metrics publisher, this is used for the MetricManager
         publisher and all metric names will be prefixed with it.
+    :param dict redis_manager:
+        Connection configuration details for Redis.
     :param str count_suffix:
         Defaults to 'count'. This is the suffix appended to all
         counters. If a message is received on endpoint
@@ -124,22 +126,6 @@ class MetricsMiddleware(BaseMiddleware):
         timer metrics. When a session starts the current time is stored under
         the `from_addr` and when the session ends, the duration of the session
         is published.
-    :param int max_lifetime:
-        How long to keep a timestamp for. Anything older than this is trashed.
-        Defaults to 60 seconds.
-    :param dict redis_manager:
-        Connection configuration details for Redis.
-    :param str op_mode:
-        What mode to operate in, options are `passive` or `active`.
-        Defaults to passive.
-        *passive*:  assumes the middleware endpoints are to be used as the
-                    names for metrics publishing.
-        *active*:   assumes that the individual messages are to be inspected
-                    for their `transport_name` values.
-
-        NOTE:   This does not apply for events or failures, the endpoints
-                are always used for those since those message types are not
-                guaranteed to have a `transport_name` value.
     :param dict networks:
         A dictionary mapping network names to a list of prefixes for
         MSISDNs (or other client addresses) that should be considered part of
@@ -164,6 +150,20 @@ class MetricsMiddleware(BaseMiddleware):
         This tracks `pool1` but not `pool2` and tracks the tag `tagA`
         (from `pool1`) and the tag `tagB` (from `pool2`). If this configuration
         option is missing or empty, no tag or tag pool metrics are produced.
+    :param int max_lifetime:
+        How long to keep a timestamp for. Anything older than this is trashed.
+        Defaults to 60 seconds.
+    :param str op_mode:
+        What mode to operate in, options are `passive` or `active`.
+        Defaults to passive.
+        *passive*:  assumes the middleware endpoints are to be used as the
+                    names for metrics publishing.
+        *active*:   assumes that the individual messages are to be inspected
+                    for their `transport_name` values.
+
+        NOTE:   This does not apply for events or failures, the endpoints
+                are always used for those since those message types are not
+                guaranteed to have a `transport_name` value.
     """
 
     KNOWN_MODES = frozenset(['active', 'passive'])
