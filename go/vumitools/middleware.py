@@ -96,7 +96,7 @@ class MetricsMiddleware(BaseMiddleware):
     network operator is not detected by the transport, consider using network
     operator detecting middleware to provide it.
 
-    Network operator metrics must be enabled by setting ``operator_metrics`` to
+    Network operator metrics must be enabled by setting ``provider_metrics`` to
     ``true``.
 
     For each selected tag or tag pool it tracks:
@@ -135,7 +135,7 @@ class MetricsMiddleware(BaseMiddleware):
         `session_billing_unit` to a number fires an additional metric whenever
         the session duration metric is fired. The new metric records the
         duration rounded up to the next `session_billing_unit`.
-    :param bool operator_metrics:
+    :param bool provider_metrics:
         Defaults to ``false``. Set to ``true`` to fire per-operator metrics.
     :param dict tagpools:
         A dictionary defining which tag pools and tags should be tracked.
