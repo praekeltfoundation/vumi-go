@@ -5,6 +5,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.middleware.message_storing import StoringMiddleware
+from vumi.middleware.tagger import TaggingMiddleware
 from vumi.utils import normalize_msisdn
 from vumi.blinkenlights.metrics import (
     MetricPublisher, Count, Metric, MetricManager)
@@ -176,6 +177,15 @@ class MetricsMiddleware(BaseMiddleware):
             'response_time_suffix', 'response_time')
         self.session_time_suffix = self.config.get(
             'session_time_suffix', 'session_time')
+        self.session_billing_unit = self.config.get(
+            'session_billing_unit')
+        if self.session_billing_unit is not None:
+            self.session_billing_unit = float(self.session_billing_unit)
+        self.provider_metrics = bool(self.config.get(
+            'provider_metrics', False))
+        self.tagpools = dict(self.config.get('tagpools', {}))
+        for pool, cfg in self.tagpools.iteritems():
+            cfg['tags'] = set(cfg.get('tags', []))
         self.max_lifetime = int(self.config.get('max_lifetime', 60))
         self.op_mode = self.config.get('op_mode', 'passive')
         if self.op_mode not in self.KNOWN_MODES:
@@ -212,9 +222,8 @@ class MetricsMiddleware(BaseMiddleware):
         metric_name = '%s.%s' % (name, self.count_suffix)
         return self.get_or_create_metric(metric_name, Count)
 
-    def increment_counter(self, transport_name, message_type):
-        metric = self.get_counter_metric(
-            '%s.%s' % (transport_name, message_type))
+    def increment_counter(self, prefix, message_type):
+        metric = self.get_counter_metric('%s.%s' % (prefix, message_type))
         metric.inc()
 
     def get_response_time_metric(self, name):
@@ -245,28 +254,105 @@ class MetricsMiddleware(BaseMiddleware):
             returnValue(float(timestamp))
 
     @inlineCallbacks
-    def compare_timestamps(self, transport_name, message):
+    def record_response_time(self, transport_name, message):
         timestamp = yield self.get_outbound_timestamp(transport_name, message)
         if timestamp:
             self.set_response_time(transport_name, time.time() - timestamp)
+
+    @inlineCallbacks
+    def set_session_start_timestamp(self, transport_name, message):
+        # TODO: implement
+        yield
+
+    @inlineCallbacks
+    def record_session_length(self, transport_name, message):
+        # TODO: implement
+        yield
 
     def get_name(self, message, endpoint):
         if self.op_mode == 'active':
             return message['transport_name']
         return endpoint
 
+    def get_provider(self, message):
+        provider = message.get('provider') or 'unknown'
+        return provider.lower()
+
+    def get_tag(self, message):
+        return TaggingMiddleware.map_msg_to_tag(message)
+
+    def fire_inbound_metrics(self, prefix, msg):
+        self.increment_counter(prefix, 'inbound')
+        if msg['session_event'] == msg.SESSION_NEW:
+            self.increment_counter(prefix, 'sessions_started')
+
+    def fire_inbound_transport_metrics(self, name, msg):
+        self.fire_inbound_metrics(name, msg)
+
+    def fire_inbound_provider_metrics(self, name, msg):
+        provider = self.get_provider(msg)
+        self.fire_inbound_metrics('provider.%s' % (provider,), msg)
+
+    def fire_inbound_tagpool_metrics(self, name, msg):
+        tag = self.get_tag(msg)
+        if tag is None:
+            return
+        pool, tagname = tag
+        config = self.tagpools.get(pool)
+        if config is None:
+            return
+        if config.get('track_pool'):
+            self.fire_inbound_metrics('tagpool.%s' % (pool,), msg)
+        if config.get('track_all_tags') or tagname in config.tags:
+            self.fire_inbound_metrics('tag.%s.%s' % (pool, tagname), msg)
+
+    def fire_outbound_metrics(self, prefix, msg):
+        self.increment_counter(prefix, 'outbound')
+
+    def fire_outbound_transport_metrics(self, name, msg):
+        self.fire_outbound_metrics(name, msg)
+
+    def fire_outbound_provider_metrics(self, name, msg):
+        provider = self.get_provider(msg)
+        self.fire_outbound_metrics('provider.%s' % (provider,), msg)
+
+    def fire_outbound_tagpool_metrics(self, name, msg):
+        tag = self.get_tag(msg)
+        if tag is None:
+            return
+        pool, tagname = tag
+        config = self.tagpools.get(pool)
+        if config is None:
+            return
+        if config.get('trag_pool'):
+            self.fire_outbound_metrics('tagpool.%s', (pool,), msg)
+        if config.get('track_all_tags') or tagname in config.tags:
+            self.fire_outbound_metrics('tag.%s.%s' % (pool, tagname))
+
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):
         name = self.get_name(message, endpoint)
-        self.increment_counter(name, 'inbound')
+        self.fire_inbound_transport_metrics(name, message)
+        if self.provider_metrics:
+            self.fire_inbound_provider_metrics(name, message)
+        if self.tagpools:
+            self.fire_inbound_tagpool_metrics(name, message)
         yield self.set_inbound_timestamp(name, message)
+        if message['session_event'] == message.SESSION_NEW:
+            yield self.set_session_start_timestamp(name, message)
         returnValue(message)
 
     @inlineCallbacks
     def handle_outbound(self, message, endpoint):
         name = self.get_name(message, endpoint)
-        self.increment_counter(name, 'outbound')
-        yield self.compare_timestamps(name, message)
+        self.fire_outbound_transport_metrics(name, message)
+        if self.provider_metrics:
+            self.fire_outbound_provider_metrics(name, message)
+        if self.tagpools:
+            self.fire_outbound_tagpool_metrics(name, message)
+        yield self.record_response_time(name, message)
+        if message['session_event'] == message.SESSION_CLOSE:
+            yield self.record_session_length(name, message)
         returnValue(message)
 
     def handle_event(self, event, endpoint):
