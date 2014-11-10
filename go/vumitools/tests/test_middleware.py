@@ -190,6 +190,16 @@ class TestMetricsMiddleware(VumiTestCase):
         default_config.update(config or {})
         return self.mw_helper.create_middleware(default_config)
 
+    def assert_metrics(self, mw, metrics):
+        for metric_name, values_or_check in metrics.items():
+            metric = mw.metric_manager[metric_name]
+            metric_values = [m[1] for m in metric.poll()]
+            if callable(values_or_check):
+                self.assertTrue(all(
+                    values_or_check(v) for v in metric_values))
+            else:
+                self.assertEqual(metric_values, values_or_check)
+
     @inlineCallbacks
     def test_active_inbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
@@ -201,20 +211,19 @@ class TestMetricsMiddleware(VumiTestCase):
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
         yield mw.handle_inbound(msg2, 'dummy_endpoint')
         yield mw.handle_inbound(msg3, 'dummy_endpoint')
-        endpoint0_metric = mw.metric_manager['endpoint_0.inbound.counter']
-        endpoint0_values = endpoint0_metric.poll()
-        endpoint1_metric = mw.metric_manager['endpoint_1.inbound.counter']
-        endpoint1_values = endpoint1_metric.poll()
-        self.assertEqual(sum([m[1] for m in endpoint0_values]), 1)
-        self.assertEqual(sum([m[1] for m in endpoint1_values]), 2)
+        self.assert_metrics(mw, {
+            'endpoint_0.inbound.counter': [1],
+            'endpoint_1.inbound.counter': [1, 1],
+        })
 
     @inlineCallbacks
     def test_passive_inbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         msg1 = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
-        [metric] = mw.metric_manager['dummy_endpoint.inbound.counter'].poll()
-        self.assertEqual(metric[1], 1)
+        self.assert_metrics(mw, {
+            'dummy_endpoint.inbound.counter': [1],
+        })
 
     @inlineCallbacks
     def test_active_outbound_counters(self):
@@ -227,20 +236,19 @@ class TestMetricsMiddleware(VumiTestCase):
         yield mw.handle_outbound(msg1, 'dummy_endpoint')
         yield mw.handle_outbound(msg2, 'dummy_endpoint')
         yield mw.handle_outbound(msg3, 'dummy_endpoint')
-        endpoint0_metric = mw.metric_manager['endpoint_0.outbound.counter']
-        endpoint0_values = endpoint0_metric.poll()
-        endpoint1_metric = mw.metric_manager['endpoint_1.outbound.counter']
-        endpoint1_values = endpoint1_metric.poll()
-        self.assertEqual(sum([m[1] for m in endpoint0_values]), 1)
-        self.assertEqual(sum([m[1] for m in endpoint1_values]), 2)
+        self.assert_metrics(mw, {
+            'endpoint_0.outbound.counter': [1],
+            'endpoint_1.outbound.counter': [1, 1],
+        })
 
     @inlineCallbacks
     def test_passive_outbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         msg1 = self.mw_helper.make_outbound("x", transport_name='endpoint_0')
         yield mw.handle_outbound(msg1, 'dummy_endpoint')
-        [metric] = mw.metric_manager['dummy_endpoint.outbound.counter'].poll()
-        self.assertEqual(metric[1], 1)
+        self.assert_metrics(mw, {
+            'dummy_endpoint.outbound.counter': [1],
+        })
 
     @inlineCallbacks
     def test_active_response_time_inbound(self):
@@ -271,9 +279,9 @@ class TestMetricsMiddleware(VumiTestCase):
         yield mw.redis.set(key, repr(timestamp))
         outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
-        [timer_metric] = mw.metric_manager['endpoint_0.timer'].poll()
-        [timestamp, value] = timer_metric
-        self.assertTrue(value > 10)
+        self.assert_metrics(mw, {
+            'endpoint_0.timer': (lambda v: v > 10),
+        })
 
     @inlineCallbacks
     def test_passive_response_time_comparison_on_outbound(self):
@@ -286,17 +294,18 @@ class TestMetricsMiddleware(VumiTestCase):
         yield mw.redis.set(key, repr(timestamp))
         outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
-        [timer_metric] = mw.metric_manager['dummy_endpoint.timer'].poll()
-        [timestamp, value] = timer_metric
-        self.assertTrue(value > 10)
+        self.assert_metrics(mw, {
+            'dummy_endpoint.timer': (lambda v: v > 10),
+        })
 
     @inlineCallbacks
     def test_ack_event(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         event = self.mw_helper.make_ack()
         mw.handle_event(event, 'dummy_endpoint')
-        [count] = mw.metric_manager['dummy_endpoint.event.ack.counter'].poll()
-        self.assertEqual(count[1], 1)
+        self.assert_metrics(mw, {
+            'dummy_endpoint.event.ack.counter': [1],
+        })
 
     @inlineCallbacks
     def test_delivery_report_event(self):
@@ -309,28 +318,27 @@ class TestMetricsMiddleware(VumiTestCase):
             return 'dummy_endpoint.event.delivery_report.%s.counter' % (
                 status,)
 
-        [delivered] = mw.metric_manager[metric_name('delivered')].poll()
-        [failed] = mw.metric_manager[metric_name('failed')].poll()
-        self.assertEqual(delivered[1], 1)
-        self.assertEqual(failed[1], 1)
+        self.assert_metrics(mw, {
+            metric_name('delivered'): [1],
+            metric_name('failed'): [1],
+        })
 
     @inlineCallbacks
     def test_failure(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         for failure in ['permanent', 'temporary', None]:
             fail_msg = FailureMessage(message='foo', failure_code=failure,
-                reason='bar')
+                                      reason='bar')
             mw.handle_failure(fail_msg, 'dummy_endpoint')
 
         def metric_name(status):
             return 'dummy_endpoint.failure.%s.counter' % (status,)
 
-        [permanent] = mw.metric_manager[metric_name('permanent')].poll()
-        [temporary] = mw.metric_manager[metric_name('temporary')].poll()
-        [unspecified] = mw.metric_manager[metric_name('unspecified')].poll()
-        self.assertEqual(permanent[1], 1)
-        self.assertEqual(temporary[1], 1)
-        self.assertEqual(unspecified[1], 1)
+        self.assert_metrics(mw, {
+            metric_name('permanent'): [1],
+            metric_name('temporary'): [1],
+            metric_name('unspecified'): [1],
+        })
 
     @inlineCallbacks
     def test_expiry(self):
