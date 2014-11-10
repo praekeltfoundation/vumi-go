@@ -1,4 +1,5 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
+import math
 import time
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -230,13 +231,17 @@ class MetricsMiddleware(BaseMiddleware):
         metric_name = '%s.%s' % (name, self.response_time_suffix)
         return self.get_or_create_metric(metric_name, Metric)
 
+    def set_response_time(self, name, time_delta):
+        metric = self.get_response_time_metric(name)
+        metric.set(time_delta)
+
     def get_session_time_metric(self, name):
         metric_name = '%s.%s' % (name, self.session_time_suffix)
         return self.get_or_create_metric(metric_name, Metric)
 
-    def set_response_time(self, transport_name, time):
-        metric = self.get_response_time_metric(transport_name)
-        metric.set(time)
+    def set_session_time(self, name, time_delta):
+        metric = self.get_session_time_metric(name)
+        metric.set(time_delta)
 
     def key(self, transport_name, message_id):
         return '%s:%s' % (transport_name, message_id)
@@ -247,27 +252,36 @@ class MetricsMiddleware(BaseMiddleware):
             key, self.max_lifetime, repr(time.time()))
 
     @inlineCallbacks
-    def get_outbound_timestamp(self, transport_name, message):
+    def get_inbound_timestamp(self, transport_name, message):
         key = self.key(transport_name, message['in_reply_to'])
         timestamp = yield self.redis.get(key)
         if timestamp:
             returnValue(float(timestamp))
 
     @inlineCallbacks
-    def record_response_time(self, transport_name, message):
-        timestamp = yield self.get_outbound_timestamp(transport_name, message)
+    def get_reply_dt(self, transport_name, message):
+        timestamp = yield self.get_inbound_timestamp(transport_name, message)
         if timestamp:
-            self.set_response_time(transport_name, time.time() - timestamp)
+            returnValue(time.time() - timestamp)
+
+    def set_session_start_timestamp(self, transport_name, addr):
+        key = self.key(transport_name, addr)
+        return self.redis.setex(
+            key, self.max_lifetime, repr(time.time()))
 
     @inlineCallbacks
-    def set_session_start_timestamp(self, transport_name, message):
-        # TODO: implement
-        yield
+    def get_session_start_timestamp(self, transport_name, addr):
+        key = self.key(transport_name, addr)
+        timestamp = yield self.redis.get(key)
+        if timestamp:
+            returnValue(float(timestamp))
 
     @inlineCallbacks
-    def record_session_length(self, transport_name, message):
-        # TODO: implement
-        yield
+    def get_session_dt(self, transport_name, addr):
+        timestamp = yield self.get_session_start_timestamp(
+            transport_name, addr)
+        if timestamp:
+            returnValue(time.time() - timestamp)
 
     def get_name(self, message, endpoint):
         if self.op_mode == 'active':
@@ -281,19 +295,34 @@ class MetricsMiddleware(BaseMiddleware):
     def get_tag(self, message):
         return TaggingMiddleware.map_msg_to_tag(message)
 
-    def fire_inbound_metrics(self, prefix, msg):
+    def fire_response_time(self, prefix, reply_dt):
+        if reply_dt:
+            self.set_response_time(prefix, reply_dt)
+
+    def fire_session_dt(self, prefix, session_dt):
+        if not session_dt:
+            return
+        self.set_session_time(prefix, session_dt)
+        unit = self.session_billing_unit
+        if unit:
+            rounded_dt = math.ceil(session_dt / unit) * unit
+            rounded_prefix = '%s.rounded.%ds' % (prefix, unit)
+            self.set_session_time(rounded_prefix, rounded_dt)
+
+    def fire_inbound_metrics(self, prefix, msg, session_dt):
         self.increment_counter(prefix, 'inbound')
         if msg['session_event'] == msg.SESSION_NEW:
             self.increment_counter(prefix, 'sessions_started')
+        self.fire_session_dt(prefix, session_dt)
 
-    def fire_inbound_transport_metrics(self, name, msg):
-        self.fire_inbound_metrics(name, msg)
+    def fire_inbound_transport_metrics(self, name, msg, session_dt):
+        self.fire_inbound_metrics(name, msg, session_dt)
 
-    def fire_inbound_provider_metrics(self, name, msg):
+    def fire_inbound_provider_metrics(self, name, msg, session_dt):
         provider = self.get_provider(msg)
-        self.fire_inbound_metrics('provider.%s' % (provider,), msg)
+        self.fire_inbound_metrics('provider.%s' % (provider,), msg, session_dt)
 
-    def fire_inbound_tagpool_metrics(self, name, msg):
+    def fire_inbound_tagpool_metrics(self, name, msg, session_dt):
         tag = self.get_tag(msg)
         if tag is None:
             return
@@ -302,21 +331,25 @@ class MetricsMiddleware(BaseMiddleware):
         if config is None:
             return
         if config.get('track_pool'):
-            self.fire_inbound_metrics('tagpool.%s' % (pool,), msg)
+            self.fire_inbound_metrics('tagpool.%s' % (pool,), msg, session_dt)
         if config.get('track_all_tags') or tagname in config.tags:
-            self.fire_inbound_metrics('tag.%s.%s' % (pool, tagname), msg)
+            self.fire_inbound_metrics(
+                'tag.%s.%s' % (pool, tagname), msg, session_dt)
 
-    def fire_outbound_metrics(self, prefix, msg):
+    def fire_outbound_metrics(self, prefix, msg, session_dt):
         self.increment_counter(prefix, 'outbound')
+        if session_dt is not None:
+            self.record_session_dt(prefix, session_dt)
 
-    def fire_outbound_transport_metrics(self, name, msg):
-        self.fire_outbound_metrics(name, msg)
+    def fire_outbound_transport_metrics(self, name, msg, session_dt):
+        self.fire_outbound_metrics(name, msg, session_dt)
 
-    def fire_outbound_provider_metrics(self, name, msg):
+    def fire_outbound_provider_metrics(self, name, msg, session_dt):
         provider = self.get_provider(msg)
-        self.fire_outbound_metrics('provider.%s' % (provider,), msg)
+        self.fire_outbound_metrics(
+            'provider.%s' % (provider,), msg, session_dt)
 
-    def fire_outbound_tagpool_metrics(self, name, msg):
+    def fire_outbound_tagpool_metrics(self, name, msg, session_dt):
         tag = self.get_tag(msg)
         if tag is None:
             return
@@ -325,34 +358,46 @@ class MetricsMiddleware(BaseMiddleware):
         if config is None:
             return
         if config.get('trag_pool'):
-            self.fire_outbound_metrics('tagpool.%s', (pool,), msg)
+            self.fire_outbound_metrics('tagpool.%s', (pool,), msg, session_dt)
         if config.get('track_all_tags') or tagname in config.tags:
-            self.fire_outbound_metrics('tag.%s.%s' % (pool, tagname))
+            self.fire_outbound_metrics(
+                'tag.%s.%s' % (pool, tagname), session_dt)
 
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):
         name = self.get_name(message, endpoint)
-        self.fire_inbound_transport_metrics(name, message)
-        if self.provider_metrics:
-            self.fire_inbound_provider_metrics(name, message)
-        if self.tagpools:
-            self.fire_inbound_tagpool_metrics(name, message)
+
         yield self.set_inbound_timestamp(name, message)
         if message['session_event'] == message.SESSION_NEW:
-            yield self.set_session_start_timestamp(name, message)
+            yield self.set_session_start_timestamp(name, message['to_addr'])
+
+        session_dt = None
+        if message['session_event'] == message.SESSION_CLOSE:
+            session_dt = yield self.get_session_dt(name, message['to_addr'])
+
+        self.fire_inbound_transport_metrics(name, message, session_dt)
+        if self.provider_metrics:
+            self.fire_inbound_provider_metrics(name, message, session_dt)
+        if self.tagpools:
+            self.fire_inbound_tagpool_metrics(name, message, session_dt)
         returnValue(message)
 
     @inlineCallbacks
     def handle_outbound(self, message, endpoint):
         name = self.get_name(message, endpoint)
-        self.fire_outbound_transport_metrics(name, message)
-        if self.provider_metrics:
-            self.fire_outbound_provider_metrics(name, message)
-        if self.tagpools:
-            self.fire_outbound_tagpool_metrics(name, message)
-        yield self.record_response_time(name, message)
+
+        reply_dt = yield self.get_reply_dt(name, message)
+
+        session_dt = None
         if message['session_event'] == message.SESSION_CLOSE:
-            yield self.record_session_length(name, message)
+            session_dt = yield self.get_session_dt(name, message['from_addr'])
+
+        self.fire_response_time(name, reply_dt)
+        self.fire_outbound_transport_metrics(name, message, session_dt)
+        if self.provider_metrics:
+            self.fire_outbound_provider_metrics(name, message, session_dt)
+        if self.tagpools:
+            self.fire_outbound_tagpool_metrics(name, message, session_dt)
         returnValue(message)
 
     def handle_event(self, event, endpoint):
