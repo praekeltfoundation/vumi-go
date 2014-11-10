@@ -126,6 +126,8 @@ class MetricsMiddleware(BaseMiddleware):
         timer metrics. When a session starts the current time is stored under
         the `from_addr` and when the session ends, the duration of the session
         is published.
+    :param str session_rounding:
+        Defaults to ``null``.
     :param dict networks:
         A dictionary mapping network names to a list of prefixes for
         MSISDNs (or other client addresses) that should be considered part of
@@ -142,13 +144,13 @@ class MetricsMiddleware(BaseMiddleware):
 
             tagpools:
                 pool1:
-                    __track_pool__: true
-                    tagA: true
+                    track_pool: true
+                    track_all_tags: true
                 pool2:
-                    tagB: true
+                    track_tags: ["tagA"]
 
-        This tracks `pool1` but not `pool2` and tracks the tag `tagA`
-        (from `pool1`) and the tag `tagB` (from `pool2`). If this configuration
+        This tracks `pool1` but not `pool2` and tracks all tags from `pool`
+        and the tag `tagB` (from `pool2`). If this configuration
         option is missing or empty, no tag or tag pool metrics are produced.
     :param int max_lifetime:
         How long to keep a timestamp for. Anything older than this is trashed.
