@@ -128,8 +128,13 @@ class MetricsMiddleware(BaseMiddleware):
         timer metrics. When a session starts the current time is stored under
         the `from_addr` and when the session ends, the duration of the session
         is published.
-    :param str session_rounding:
-        Defaults to ``null``.
+    :param str session_billing_unit:
+        Defaults to ``null``. Some networks charge for sessions per unit of
+        time or part there of. This means it might be useful, for example, to
+        record the session duration rounded to the nearest 20 seconds. Setting
+        `session_billing_unit` to a number fires an additional metric whenever
+        the session duration metric is fired. The new metric records the
+        duration rounded up to the next `session_billing_unit`.
     :param bool operator_metrics:
         Defaults to ``false``. Set to ``true`` to fire per-operator metrics.
     :param dict tagpools:
