@@ -6,6 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from zope.interface import implements
 
 from vumi.transports.failures import FailureMessage
+from vumi.message import TransportUserMessage
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.helpers import VumiTestCase, generate_proxies, IHelper
 from vumi.worker import BaseWorker
@@ -200,6 +201,11 @@ class TestMetricsMiddleware(VumiTestCase):
             else:
                 self.assertEqual(metric_values, values_or_check)
 
+    def assert_timestamp_exists(self, mw, key_parts):
+        key = mw.key(*key_parts)
+        timestamp = yield mw.redis.get(key)
+        self.assertTrue(timestamp)
+
     @inlineCallbacks
     def test_active_inbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
@@ -255,18 +261,14 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'active'})
         msg = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
-        key = mw.key('endpoint_0', msg['message_id'])
-        timestamp = yield mw.redis.get(key)
-        self.assertTrue(timestamp)
+        self.assert_timestamp_exists(mw, ['endpoint_0', msg['message_id']])
 
     @inlineCallbacks
     def test_passive_response_time_inbound(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         msg = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
-        key = mw.key('dummy_endpoint', msg['message_id'])
-        timestamp = yield mw.redis.get(key)
-        self.assertTrue(timestamp)
+        self.assert_timestamp_exists(mw, ['dummy_endpoint', msg['message_id']])
 
     @inlineCallbacks
     def test_active_response_time_comparison_on_outbound(self):
@@ -297,6 +299,24 @@ class TestMetricsMiddleware(VumiTestCase):
         self.assert_metrics(mw, {
             'dummy_endpoint.timer': (lambda v: v > 10),
         })
+
+    @inlineCallbacks
+    def test_sessions_started_on_inbound(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        msg = self.mw_helper.make_inbound(
+            "foo", session_event=TransportUserMessage.SESSION_NEW)
+        yield mw.handle_inbound(msg, 'dummy_endpoint')
+        self.assert_metrics(mw, {
+            'dummy_endpoint.sessions_started.counter': [1],
+        })
+
+    @inlineCallbacks
+    def test_saving_session_start_timestamp_on_inbound(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        msg = self.mw_helper.make_inbound(
+            "foo", session_event=TransportUserMessage.SESSION_NEW)
+        yield mw.handle_inbound(msg, 'dummy_endpoint')
+        self.assert_timestamp_exists(mw, ['dummy_endpoint', msg['to_addr']])
 
     @inlineCallbacks
     def test_ack_event(self):
