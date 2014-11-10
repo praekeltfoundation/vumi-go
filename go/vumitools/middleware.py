@@ -86,16 +86,18 @@ class MetricsMiddleware(BaseMiddleware):
     * The number of sessions started.
     * The length of each session.
 
-    For each network it tracks:
+    For each network operator it tracks:
 
     * The number of messages sent and received.
     * The number of sessions started.
     * The length of each session.
 
-    Networks are defined in the `networks` configuration option. Each network
-    is defined as a list of MSISDN (or other address) prefixes to match
-    `from_addr` values (for inbound messages) or `to_addr` values (for outbound
-    messages) against.
+    The network operator is determined by examining each message. If the
+    network operator is not detected by the transport, consider using network
+    operator detecting middleware to provide it.
+
+    Network operator metrics must be enabled by setting ``operator_metrics`` to
+    ``true``.
 
     For each selected tag or tag pool it tracks:
 
@@ -128,16 +130,8 @@ class MetricsMiddleware(BaseMiddleware):
         is published.
     :param str session_rounding:
         Defaults to ``null``.
-    :param dict networks:
-        A dictionary mapping network names to a list of prefixes for
-        MSISDNs (or other client addresses) that should be considered part of
-        that network.
-        E.g.::
-
-            networks:
-                mtn: [0603, 0605, 0710, 0717, 0718, 0719, 073, 078, 0810, 083]
-        If this configuration option is missing or empty, no network metrics
-        are produced.
+    :param bool operator_metrics:
+        Defaults to ``false``. Set to ``true`` to fire per-operator metrics.
     :param dict tagpools:
         A dictionary defining which tag pools and tags should be tracked.
         E.g.::
