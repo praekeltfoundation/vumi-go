@@ -213,8 +213,8 @@ class MetricsMiddleware(BaseMiddleware):
         return self.get_or_create_metric(metric_name, Count)
 
     def increment_counter(self, transport_name, message_type):
-        metric = self.get_counter_metric('%s.%s' % (transport_name,
-            message_type))
+        metric = self.get_counter_metric(
+            '%s.%s' % (transport_name, message_type))
         metric.inc()
 
     def get_response_time_metric(self, name):
