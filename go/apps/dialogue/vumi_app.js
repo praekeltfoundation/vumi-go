@@ -51,6 +51,17 @@ var DialogueApp = App.extend(function(self) {
         });
     };
 
+    self.get_endpoint = function(channel_type) {
+        var d = _.find(self.poll.channel_types, {name: channel_type});
+
+        if (!d) {
+            throw new Error(
+                "Unknown channel type: '" + channel_type + "'");
+        }
+
+        return d.label;
+    };
+
     self.next = function(endpoint) {
         var connection = _.find(self.poll.connections, {
             source: {uuid: endpoint.uuid}
@@ -133,7 +144,7 @@ var DialogueApp = App.extend(function(self) {
             .im.outbound.send({
                 to: self.contact,
                 content: desc.text,
-                endpoint: desc.channel_type
+                endpoint: self.get_endpoint(desc.channel_type)
             })
             .then(function() {
                 return self.states.create(self.next(desc.exit_endpoint));
