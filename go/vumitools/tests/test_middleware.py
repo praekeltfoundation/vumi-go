@@ -207,6 +207,12 @@ class TestMetricsMiddleware(VumiTestCase):
         self.assertTrue(timestamp)
 
     @inlineCallbacks
+    def set_timestamp(self, mw, dt, key_parts):
+        key = mw.key(*key_parts)
+        timestamp = time.time() + dt
+        yield mw.redis.set(key, repr(timestamp))
+
+    @inlineCallbacks
     def test_active_inbound_counters(self):
         mw = yield self.get_middleware({'op_mode': 'active'})
         msg1 = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
@@ -275,10 +281,8 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'active'})
         inbound_msg = self.mw_helper.make_inbound(
             "foo", transport_name='endpoint_0')
-        key = mw.key('endpoint_0', inbound_msg['message_id'])
-        # Fake it to be 10 seconds in the past
-        timestamp = time.time() - 10
-        yield mw.redis.set(key, repr(timestamp))
+        yield self.set_timestamp(
+            mw, -10, ['endpoint_0', inbound_msg['message_id']])
         outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
@@ -290,10 +294,8 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         inbound_msg = self.mw_helper.make_inbound(
             "foo", transport_name='endpoint_0')
-        key = mw.key('dummy_endpoint', inbound_msg['message_id'])
-        # Fake it to be 10 seconds in the past
-        timestamp = time.time() - 10
-        yield mw.redis.set(key, repr(timestamp))
+        yield self.set_timestamp(
+            mw, -10, ['dummy_endpoint', inbound_msg['message_id']])
         outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
@@ -317,6 +319,17 @@ class TestMetricsMiddleware(VumiTestCase):
             "foo", session_event=TransportUserMessage.SESSION_NEW)
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_timestamp_exists(mw, ['dummy_endpoint', msg['to_addr']])
+
+    @inlineCallbacks
+    def test_session_close_on_inbound(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        msg = self.mw_helper.make_inbound(
+            "foo", session_event=TransportUserMessage.SESSION_CLOSE)
+        yield self.set_timestamp(mw, -10, ['dummy_endpoint', msg['to_addr']])
+        yield mw.handle_inbound(msg, 'dummy_endpoint')
+        self.assert_metrics(mw, {
+            'dummy_endpoint.session_time': (lambda v: v > 10),
+        })
 
     @inlineCallbacks
     def test_ack_event(self):
