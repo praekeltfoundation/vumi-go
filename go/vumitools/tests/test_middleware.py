@@ -201,10 +201,17 @@ class TestMetricsMiddleware(VumiTestCase):
             else:
                 self.assertEqual(metric_values, values_or_check)
 
-    def assert_timestamp_exists(self, mw, key_parts):
+    @inlineCallbacks
+    def assert_timestamp_exists(self, mw, key_parts, ttl=None):
         key = mw.key(*key_parts)
         timestamp = yield mw.redis.get(key)
-        self.assertTrue(timestamp)
+        self.assertTrue(timestamp, "Expected timestamp %r to exist" % (key,))
+        if ttl is not None:
+            actual_ttl = yield mw.redis.ttl(key)
+            self.assertTrue(
+                0 <= actual_ttl <= ttl,
+                "Expected ttl of %r to be less than %f, but got: %f" % (
+                    key, ttl, actual_ttl))
 
     @inlineCallbacks
     def set_timestamp(self, mw, dt, key_parts):
@@ -267,14 +274,16 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'active'})
         msg = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
-        self.assert_timestamp_exists(mw, ['endpoint_0', msg['message_id']])
+        yield self.assert_timestamp_exists(
+            mw, ['endpoint_0', msg['message_id']], ttl=60)
 
     @inlineCallbacks
     def test_passive_response_time_inbound(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         msg = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
-        self.assert_timestamp_exists(mw, ['dummy_endpoint', msg['message_id']])
+        yield self.assert_timestamp_exists(
+            mw, ['dummy_endpoint', msg['message_id']], ttl=60)
 
     @inlineCallbacks
     def test_active_response_time_comparison_on_outbound(self):
@@ -318,7 +327,8 @@ class TestMetricsMiddleware(VumiTestCase):
         msg = self.mw_helper.make_inbound(
             "foo", session_event=TransportUserMessage.SESSION_NEW)
         yield mw.handle_inbound(msg, 'dummy_endpoint')
-        self.assert_timestamp_exists(mw, ['dummy_endpoint', msg['to_addr']])
+        yield self.assert_timestamp_exists(
+            mw, ['dummy_endpoint', msg['to_addr']], ttl=60)
 
     @inlineCallbacks
     def test_session_close_on_inbound(self):
@@ -563,14 +573,21 @@ class TestMetricsMiddleware(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_expiry(self):
+    def test_response_max_lifetime(self):
         mw = yield self.get_middleware({'max_lifetime': 10})
         msg1 = self.mw_helper.make_inbound('foo', transport_name='endpoint_0')
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
-        key = mw.key('dummy_endpoint', msg1['message_id'])
-        ttl = yield mw.redis.ttl(key)
-        self.assertTrue(
-            0 < ttl <= 10, "Expected 0 < ttl <= 10, found: %r" % (ttl,))
+        yield self.assert_timestamp_exists(
+            mw, ['dummy_endpoint', msg1['message_id']], ttl=10)
+
+    @inlineCallbacks
+    def test_session_max_lifetime(self):
+        mw = yield self.get_middleware({'max_lifetime': 10})
+        msg1 = self.mw_helper.make_inbound(
+            'foo', session_event=TransportUserMessage.SESSION_NEW)
+        yield mw.handle_inbound(msg1, 'dummy_endpoint')
+        yield self.assert_timestamp_exists(
+            mw, ['dummy_endpoint', msg1['to_addr']], ttl=10)
 
 
 class TestConversationStoringMiddleware(VumiTestCase):
