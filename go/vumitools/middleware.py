@@ -332,8 +332,9 @@ class MetricsMiddleware(BaseMiddleware):
         if config is None:
             return
         if config.get('track_pool'):
-            self.fire_inbound_metrics('tagpool.%s' % (pool,), msg, session_dt)
-        if config.get('track_all_tags') or tagname in config.tags:
+            self.fire_inbound_metrics(
+                '%s.tagpool.%s' % (name, pool), msg, session_dt)
+        if config.get('track_all_tags') or tagname in config['tags']:
             self.fire_inbound_metrics(
                 'tag.%s.%s' % (pool, tagname), msg, session_dt)
 
@@ -358,9 +359,10 @@ class MetricsMiddleware(BaseMiddleware):
         config = self.tagpools.get(pool)
         if config is None:
             return
-        if config.get('trag_pool'):
-            self.fire_outbound_metrics('tagpool.%s', (pool,), msg, session_dt)
-        if config.get('track_all_tags') or tagname in config.tags:
+        if config.get('track_pool'):
+            self.fire_outbound_metrics(
+                '%s.tagpool.%s' % (name, pool), msg, session_dt)
+        if config.get('track_all_tags') or tagname in config['tags']:
             self.fire_outbound_metrics(
                 'tag.%s.%s' % (pool, tagname), session_dt)
 
