@@ -1,5 +1,6 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
 import math
+import re
 import time
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -170,6 +171,7 @@ class MetricsMiddleware(BaseMiddleware):
     """
 
     KNOWN_MODES = frozenset(['active', 'passive'])
+    TAG_SLUGIFIER_RE = re.compile(r"[^a-zA-Z0-9_-]*")
 
     def validate_config(self):
         self.manager_name = self.config['manager_name']
@@ -295,6 +297,9 @@ class MetricsMiddleware(BaseMiddleware):
     def get_tag(self, message):
         return TaggingMiddleware.map_msg_to_tag(message)
 
+    def slugify_tagname(self, tagname):
+        return self.TAG_SLUGIFIER_RE.sub("", tagname).lower()
+
     def fire_response_time(self, prefix, reply_dt):
         if reply_dt:
             self.set_response_time(prefix, reply_dt)
@@ -335,8 +340,9 @@ class MetricsMiddleware(BaseMiddleware):
             self.fire_inbound_metrics(
                 '%s.tagpool.%s' % (name, pool), msg, session_dt)
         if config.get('track_all_tags') or tagname in config['tags']:
+            slugname = self.slugify_tagname(tagname)
             self.fire_inbound_metrics(
-                '%s.tag.%s.%s' % (name, pool, tagname), msg, session_dt)
+                '%s.tag.%s.%s' % (name, pool, slugname), msg, session_dt)
 
     def fire_outbound_metrics(self, prefix, msg, session_dt):
         self.increment_counter(prefix, 'outbound')
@@ -363,8 +369,9 @@ class MetricsMiddleware(BaseMiddleware):
             self.fire_outbound_metrics(
                 '%s.tagpool.%s' % (name, pool), msg, session_dt)
         if config.get('track_all_tags') or tagname in config['tags']:
+            slugname = self.slugify_tagname(tagname)
             self.fire_outbound_metrics(
-                '%s.tag.%s.%s' % (name, pool, tagname), msg, session_dt)
+                '%s.tag.%s.%s' % (name, pool, slugname), msg, session_dt)
 
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):

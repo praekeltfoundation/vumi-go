@@ -478,7 +478,7 @@ class TestMetricsMiddleware(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "tagA"))
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.tag.mypool.tagA.inbound.counter': [1],
+            'dummy_endpoint.tag.mypool.taga.inbound.counter': [1],
             'dummy_endpoint.inbound.counter': [1],
         })
 
@@ -494,7 +494,7 @@ class TestMetricsMiddleware(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "tagA"))
         yield mw.handle_outbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.tag.mypool.tagA.outbound.counter': [1],
+            'dummy_endpoint.tag.mypool.taga.outbound.counter': [1],
             'dummy_endpoint.outbound.counter': [1],
         })
 
@@ -510,7 +510,7 @@ class TestMetricsMiddleware(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "tagC"))
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.tag.mypool.tagC.inbound.counter': [1],
+            'dummy_endpoint.tag.mypool.tagc.inbound.counter': [1],
             'dummy_endpoint.inbound.counter': [1],
         })
 
@@ -526,7 +526,39 @@ class TestMetricsMiddleware(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "tagC"))
         yield mw.handle_outbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.tag.mypool.tagC.outbound.counter': [1],
+            'dummy_endpoint.tag.mypool.tagc.outbound.counter': [1],
+            'dummy_endpoint.outbound.counter': [1],
+        })
+
+    @inlineCallbacks
+    def test_slugify_tag_on_inbound(self):
+        mw = yield self.get_middleware({
+            'op_mode': 'passive',
+            'tagpools': {
+                'mypool': {'tags': ['*123*456#']},
+            },
+        })
+        msg = self.mw_helper.make_inbound("foo", provider="MYMNO")
+        TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "*123*456#"))
+        yield mw.handle_inbound(msg, 'dummy_endpoint')
+        self.assert_metrics(mw, {
+            'dummy_endpoint.tag.mypool.123456.inbound.counter': [1],
+            'dummy_endpoint.inbound.counter': [1],
+        })
+
+    @inlineCallbacks
+    def test_slugify_tag_on_outbound(self):
+        mw = yield self.get_middleware({
+            'op_mode': 'passive',
+            'tagpools': {
+                'mypool': {'tags': ['*123*567#']},
+            },
+        })
+        msg = self.mw_helper.make_outbound("foo")
+        TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "*123*567#"))
+        yield mw.handle_outbound(msg, 'dummy_endpoint')
+        self.assert_metrics(mw, {
+            'dummy_endpoint.tag.mypool.123567.outbound.counter': [1],
             'dummy_endpoint.outbound.counter': [1],
         })
 
