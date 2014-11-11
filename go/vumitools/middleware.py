@@ -320,7 +320,8 @@ class MetricsMiddleware(BaseMiddleware):
 
     def fire_inbound_provider_metrics(self, name, msg, session_dt):
         provider = self.get_provider(msg)
-        self.fire_inbound_metrics('provider.%s' % (provider,), msg, session_dt)
+        self.fire_inbound_metrics(
+            '%s.provider.%s' % (name, provider), msg, session_dt)
 
     def fire_inbound_tagpool_metrics(self, name, msg, session_dt):
         tag = self.get_tag(msg)
@@ -347,7 +348,7 @@ class MetricsMiddleware(BaseMiddleware):
     def fire_outbound_provider_metrics(self, name, msg, session_dt):
         provider = self.get_provider(msg)
         self.fire_outbound_metrics(
-            'provider.%s' % (provider,), msg, session_dt)
+            '%s.provider.%s' % (name, provider), msg, session_dt)
 
     def fire_outbound_tagpool_metrics(self, name, msg, session_dt):
         tag = self.get_tag(msg)
