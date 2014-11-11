@@ -36,37 +36,36 @@ var simple_poll = {
         entry_endpoint: {uuid: "endpoint-4"},
         exit_endpoint: {uuid: "endpoint-5"}
     },
-        {
-            uuid: "send-1",
-            name: "Message 3",
-            type: "send",
-            text: "Hello over other endpoint",
-            channel_type: "twitter",
-            entry_endpoint: {uuid: "endpoint-6"},
-            exit_endpoint: {uuid: "endpoint-7"}
-        },
-        {
-            uuid: "freetext-1",
-            name: "Message 3",
-            store_as: "message-3",
-            type: "freetext",
-            store_on_contact: true,
-            entry_endpoint: {uuid: "endpoint-8"},
-            // freetext specific
-            exit_endpoint: {uuid: "endpoint-9"},
-            text: "What is your name?"
-        },
-            {
-                uuid: "end-1",
-                name: "Ending 1",
-                store_as: "ending-1",
-                type: "end",
-                store_on_contact: true,
-                entry_endpoint: {uuid: "endpoint-10"},
-                // end specific
-                text: "Thank you for taking our survey"
-            }
-    ],
+    {
+        uuid: "send-1",
+        name: "Message 3",
+        type: "send",
+        text: "Hello over other endpoint",
+        channel_type: "twitter",
+        entry_endpoint: {uuid: "endpoint-6"},
+        exit_endpoint: {uuid: "endpoint-7"}
+    },
+    {
+        uuid: "freetext-1",
+        name: "Message 3",
+        store_as: "message-3",
+        type: "freetext",
+        store_on_contact: true,
+        entry_endpoint: {uuid: "endpoint-8"},
+        // freetext specific
+        exit_endpoint: {uuid: "endpoint-9"},
+        text: "What is your name?"
+    },
+    {
+        uuid: "end-1",
+        name: "Ending 1",
+        store_as: "ending-1",
+        type: "end",
+        store_on_contact: true,
+        entry_endpoint: {uuid: "endpoint-10"},
+        // end specific
+        text: "Thank you for taking our survey"
+    }],
     connections: [
     {
         source: {uuid: "endpoint-1"},
@@ -76,23 +75,22 @@ var simple_poll = {
         source: {uuid: "endpoint-2"},
         target: {uuid: "endpoint-10"}
     },
-        {
-            source: {uuid: "endpoint-3"},
-            target: {uuid: "endpoint-6"}
-        },
-        {
-            source: {uuid: "endpoint-5"},
-            target: {uuid: "endpoint-8"}
-        },
-            {
-                source: {uuid: "endpoint-7"},
-                target: {uuid: "endpoint-8"}
-            },
-            {
-                source: {uuid: "endpoint-9"},
-                target: {uuid: "endpoint-10"}
-            }
-    ]
+    {
+        source: {uuid: "endpoint-3"},
+        target: {uuid: "endpoint-6"}
+    },
+    {
+        source: {uuid: "endpoint-5"},
+        target: {uuid: "endpoint-8"}
+    },
+    {
+        source: {uuid: "endpoint-7"},
+        target: {uuid: "endpoint-8"}
+    },
+    {
+        source: {uuid: "endpoint-9"},
+        target: {uuid: "endpoint-10"}
+    }]
 };
 
 
