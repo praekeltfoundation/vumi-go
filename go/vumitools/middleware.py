@@ -350,6 +350,8 @@ class MetricsMiddleware(BaseMiddleware):
 
     def fire_outbound_metrics(self, prefix, msg, session_dt):
         self.increment_counter(prefix, 'outbound')
+        if msg['session_event'] == msg.SESSION_NEW:
+            self.increment_counter(prefix, 'sessions_started')
         if session_dt is not None:
             self.fire_session_dt(prefix, session_dt)
 
@@ -399,6 +401,9 @@ class MetricsMiddleware(BaseMiddleware):
     @inlineCallbacks
     def handle_outbound(self, message, endpoint):
         name = self.get_name(message, endpoint)
+
+        if message['session_event'] == message.SESSION_NEW:
+            yield self.set_session_start_timestamp(name, message['from_addr'])
 
         reply_dt = yield self.get_reply_dt(name, message)
 

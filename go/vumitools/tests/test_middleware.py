@@ -357,6 +357,25 @@ class TestMetricsMiddleware(VumiTestCase):
         })
 
     @inlineCallbacks
+    def test_sessions_started_on_outbound(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        msg = self.mw_helper.make_outbound(
+            "foo", session_event=TransportUserMessage.SESSION_NEW)
+        yield mw.handle_outbound(msg, 'dummy_endpoint')
+        self.assert_metrics(mw, {
+            'dummy_endpoint.sessions_started.counter': [1],
+        })
+
+    @inlineCallbacks
+    def test_saving_session_start_timestamp_on_outbound(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        msg = self.mw_helper.make_outbound(
+            "foo", session_event=TransportUserMessage.SESSION_NEW)
+        yield mw.handle_outbound(msg, 'dummy_endpoint')
+        yield self.assert_timestamp_exists(
+            mw, ['dummy_endpoint', msg['from_addr']], ttl=600)
+
+    @inlineCallbacks
     def test_session_close_on_outbound(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         msg = self.mw_helper.make_outbound(
