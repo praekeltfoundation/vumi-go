@@ -5,6 +5,7 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase
 
 from go.apps.dialogue.dialogue_api import DialogueActionDispatcher
+from go.apps.dialogue.tests.dummy_polls import simple_poll
 from go.vumitools.tests.helpers import VumiApiHelper
 
 
@@ -37,3 +38,37 @@ class TestDialogueActionDispatcher(VumiTestCase):
         self.assertEqual(result, {"saved": True})
         conv = yield self.user_helper.get_conversation(conv.key)
         self.assertEqual(conv.config, {"poll": {"foo": "bar"}})
+
+    @inlineCallbacks
+    def test_save_poll_endpoints(self):
+        poll = simple_poll()
+
+        poll['channel_types'] = [{
+            'name': u'sms',
+            'label': u'SMS'
+        }, {
+            'name': u'twitter',
+            'label': u'Twitter'
+        }]
+
+        poll['states'] = [{
+            'type': 'foo'
+        }, {
+            'type': 'send',
+            'channel_type': 'sms'
+        }, {
+            'type': 'foo'
+        }, {
+            'type': 'send',
+            'channel_type': 'twitter'
+        }, {
+            'type': 'send',
+            'channel_type': 'sms'
+        }]
+
+        conv = yield self.create_dialogue(poll={})
+        yield self.dispatcher.action_save_poll(
+            self.user_helper.user_api, conv, poll=poll)
+
+        conv = yield self.user_helper.get_conversation(conv.key)
+        self.assertEqual(list(conv.extra_endpoints), ['SMS', 'Twitter'])
