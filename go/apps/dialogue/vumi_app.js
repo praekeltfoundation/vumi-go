@@ -56,7 +56,7 @@ var DialogueApp = App.extend(function(self) {
 
         if (!d) {
             throw new Error(
-                "Unknown channel type: '" + channel_type + "'");
+                "No endpoint found for channel type '" + channel_type + "'");
         }
 
         return d.label;
