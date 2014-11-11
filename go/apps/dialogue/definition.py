@@ -2,6 +2,7 @@ from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 
 from go.apps.dialogue.dialogue_api import DialogueActionDispatcher
+from go.apps.dialogue.utils import configured_endpoints
 from go.apps.jsbox.definition import SendJsboxAction
 
 
@@ -24,3 +25,6 @@ class ConversationDefinition(ConversationDefinitionBase):
     )
 
     api_dispatcher_cls = DialogueActionDispatcher
+
+    def configured_endpoints(self, config):
+        return configured_endpoints(config)
