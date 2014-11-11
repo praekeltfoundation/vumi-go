@@ -339,7 +339,7 @@ class MetricsMiddleware(BaseMiddleware):
     def fire_outbound_metrics(self, prefix, msg, session_dt):
         self.increment_counter(prefix, 'outbound')
         if session_dt is not None:
-            self.record_session_dt(prefix, session_dt)
+            self.fire_session_dt(prefix, session_dt)
 
     def fire_outbound_transport_metrics(self, name, msg, session_dt):
         self.fire_outbound_metrics(name, msg, session_dt)

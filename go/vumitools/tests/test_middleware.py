@@ -332,6 +332,17 @@ class TestMetricsMiddleware(VumiTestCase):
         })
 
     @inlineCallbacks
+    def test_session_close_on_outbound(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        msg = self.mw_helper.make_outbound(
+            "foo", session_event=TransportUserMessage.SESSION_CLOSE)
+        yield self.set_timestamp(mw, -10, ['dummy_endpoint', msg['from_addr']])
+        yield mw.handle_outbound(msg, 'dummy_endpoint')
+        self.assert_metrics(mw, {
+            'dummy_endpoint.session_time': (lambda v: v > 10),
+        })
+
+    @inlineCallbacks
     def test_ack_event(self):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         event = self.mw_helper.make_ack()
