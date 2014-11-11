@@ -1,4 +1,6 @@
-def determine_endpoints(poll):
+def configured_endpoints(config):
+    poll = config.get("poll", {})
+
     names = set(
         s['channel_type']
         for s in poll.get('states', []) if s['type'] == 'send')
@@ -12,7 +14,7 @@ def dialogue_js_config(conv):
 
     config = {
         "name": "poll-%s" % conv.key,
-        "endpoints": determine_endpoints(poll)
+        "endpoints": configured_endpoints(conv.config)
     }
 
     poll_metadata = poll.get('poll_metadata', {})

@@ -1,6 +1,6 @@
 from vumi.tests.helpers import VumiTestCase
 
-from go.apps.dialogue.utils import dialogue_js_config
+from go.apps.dialogue.utils import dialogue_js_config, configured_endpoints
 from go.vumitools.tests.helpers import VumiApiHelper
 from go.apps.dialogue.tests.dummy_polls import simple_poll
 
@@ -50,3 +50,33 @@ class TestDialogueJsConfig(VumiTestCase):
             u'dialogue', config={'poll': poll})
         config = dialogue_js_config(conv)
         self.assertEqual(config['endpoints'], ['SMS', 'Twitter'])
+
+    def test_configured_endpoints(self):
+        poll = simple_poll()
+
+        poll['channel_types'] = [{
+            'name': 'sms',
+            'label': 'SMS'
+        }, {
+            'name': 'twitter',
+            'label': 'Twitter'
+        }]
+
+        poll['states'] = [{
+            'type': 'foo'
+        }, {
+            'type': 'send',
+            'channel_type': 'sms'
+        }, {
+            'type': 'foo'
+        }, {
+            'type': 'send',
+            'channel_type': 'twitter'
+        }, {
+            'type': 'send',
+            'channel_type': 'sms'
+        }]
+
+        self.assertEqual(
+            configured_endpoints({'poll': poll}),
+            ['SMS', 'Twitter'])
