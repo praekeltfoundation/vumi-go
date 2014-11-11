@@ -336,7 +336,7 @@ class MetricsMiddleware(BaseMiddleware):
                 '%s.tagpool.%s' % (name, pool), msg, session_dt)
         if config.get('track_all_tags') or tagname in config['tags']:
             self.fire_inbound_metrics(
-                'tag.%s.%s' % (pool, tagname), msg, session_dt)
+                '%s.tag.%s.%s' % (name, pool, tagname), msg, session_dt)
 
     def fire_outbound_metrics(self, prefix, msg, session_dt):
         self.increment_counter(prefix, 'outbound')
@@ -364,7 +364,7 @@ class MetricsMiddleware(BaseMiddleware):
                 '%s.tagpool.%s' % (name, pool), msg, session_dt)
         if config.get('track_all_tags') or tagname in config['tags']:
             self.fire_outbound_metrics(
-                'tag.%s.%s' % (pool, tagname), session_dt)
+                '%s.tag.%s.%s' % (name, pool, tagname), msg, session_dt)
 
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):
