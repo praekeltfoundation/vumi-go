@@ -155,8 +155,11 @@ class MetricsMiddleware(BaseMiddleware):
         and the tag `tagB` (from `pool2`). If this configuration
         option is missing or empty, no tag or tag pool metrics are produced.
     :param int max_lifetime:
-        How long to keep a timestamp for. Anything older than this is trashed.
-        Defaults to 60 seconds.
+        How long to keep the response time timestamp for. Any response time
+        longer than this is not recorded. Defaults to 60 seconds.
+    :param int max_session_time:
+        How long to keep the session time timestamp for. Any session duration
+        longer than this is not recorded. Defaults to 600 seconds.
     :param str op_mode:
         What mode to operate in, options are `passive` or `active`.
         Defaults to passive.
@@ -190,6 +193,7 @@ class MetricsMiddleware(BaseMiddleware):
         for pool, cfg in self.tagpools.iteritems():
             cfg['tags'] = set(cfg.get('tags', []))
         self.max_lifetime = int(self.config.get('max_lifetime', 60))
+        self.max_session_time = int(self.config.get('max_session_time', 600))
         self.op_mode = self.config.get('op_mode', 'passive')
         if self.op_mode not in self.KNOWN_MODES:
             raise ConfigError('Unknown op_mode: %s' % (
@@ -269,7 +273,7 @@ class MetricsMiddleware(BaseMiddleware):
     def set_session_start_timestamp(self, transport_name, addr):
         key = self.key(transport_name, addr)
         return self.redis.setex(
-            key, self.max_lifetime, repr(time.time()))
+            key, self.max_session_time, repr(time.time()))
 
     @inlineCallbacks
     def get_session_start_timestamp(self, transport_name, addr):

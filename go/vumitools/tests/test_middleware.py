@@ -328,7 +328,7 @@ class TestMetricsMiddleware(VumiTestCase):
             "foo", session_event=TransportUserMessage.SESSION_NEW)
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         yield self.assert_timestamp_exists(
-            mw, ['dummy_endpoint', msg['to_addr']], ttl=60)
+            mw, ['dummy_endpoint', msg['to_addr']], ttl=600)
 
     @inlineCallbacks
     def test_session_close_on_inbound(self):
@@ -614,7 +614,7 @@ class TestMetricsMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def test_session_max_lifetime(self):
-        mw = yield self.get_middleware({'max_lifetime': 10})
+        mw = yield self.get_middleware({'max_session_time': 10})
         msg1 = self.mw_helper.make_inbound(
             'foo', session_event=TransportUserMessage.SESSION_NEW)
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
