@@ -590,7 +590,7 @@ class TestMetricsMiddleware(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "*123*456#"))
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.tag.mypool.123456.inbound.counter': [1],
+            'dummy_endpoint.tag.mypool.123.456.inbound.counter': [1],
             'dummy_endpoint.inbound.counter': [1],
         })
 
@@ -606,7 +606,7 @@ class TestMetricsMiddleware(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "*123*567#"))
         yield mw.handle_outbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.tag.mypool.123567.outbound.counter': [1],
+            'dummy_endpoint.tag.mypool.123.567.outbound.counter': [1],
             'dummy_endpoint.outbound.counter': [1],
         })
 
