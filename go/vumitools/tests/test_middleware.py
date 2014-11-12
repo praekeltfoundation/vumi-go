@@ -192,14 +192,19 @@ class TestMetricsMiddleware(VumiTestCase):
         return self.mw_helper.create_middleware(default_config)
 
     def assert_metrics(self, mw, metrics):
-        for metric_name, values_or_check in metrics.items():
+        for metric_name, expected in metrics.items():
             metric = mw.metric_manager[metric_name]
             metric_values = [m[1] for m in metric.poll()]
-            if callable(values_or_check):
+            if not isinstance(expected, dict):
+                expected = {'values': expected}
+            expected_values = expected.get('values')
+            if callable(expected_values):
                 self.assertTrue(all(
-                    values_or_check(v) for v in metric_values))
+                    expected_values(v) for v in metric_values))
             else:
-                self.assertEqual(metric_values, values_or_check)
+                self.assertEqual(metric_values, expected_values)
+            expected_aggs = expected.get('aggs', ['sum'])
+            self.assertEqual(set(metric.aggs), set(expected_aggs))
 
     @inlineCallbacks
     def assert_timestamp_exists(self, mw, key_parts, ttl=None):
@@ -295,7 +300,10 @@ class TestMetricsMiddleware(VumiTestCase):
         outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'endpoint_0.timer': (lambda v: v > 10),
+            'endpoint_0.timer': {
+                'values': (lambda v: v > 10),
+                'aggs': ['avg', 'sum'],
+            },
         })
 
     @inlineCallbacks
@@ -308,7 +316,10 @@ class TestMetricsMiddleware(VumiTestCase):
         outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.timer': (lambda v: v > 10),
+            'dummy_endpoint.timer': {
+                'values': (lambda v: v > 10),
+                'aggs': ['avg', 'sum'],
+            },
         })
 
     @inlineCallbacks
@@ -338,7 +349,10 @@ class TestMetricsMiddleware(VumiTestCase):
         yield self.set_timestamp(mw, -10, ['dummy_endpoint', msg['to_addr']])
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.session_time': (lambda v: v > 10),
+            'dummy_endpoint.session_time': {
+                'values': (lambda v: v > 10),
+                'aggs': ['avg', 'sum'],
+            },
         })
 
     @inlineCallbacks
@@ -352,8 +366,14 @@ class TestMetricsMiddleware(VumiTestCase):
         yield self.set_timestamp(mw, -10, ['dummy_endpoint', msg['to_addr']])
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.session_time': (lambda v: v > 10),
-            'dummy_endpoint.rounded.50s.session_time': (lambda v: v >= 50),
+            'dummy_endpoint.session_time': {
+                'values': (lambda v: v > 10),
+                'aggs': ['avg', 'sum'],
+            },
+            'dummy_endpoint.rounded.50s.session_time': {
+                'values': (lambda v: v >= 50),
+                'aggs': ['avg', 'sum'],
+            },
         })
 
     @inlineCallbacks
@@ -383,7 +403,10 @@ class TestMetricsMiddleware(VumiTestCase):
         yield self.set_timestamp(mw, -10, ['dummy_endpoint', msg['from_addr']])
         yield mw.handle_outbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.session_time': (lambda v: v > 10),
+            'dummy_endpoint.session_time': {
+                'values': (lambda v: v > 10),
+                'aggs': ['avg', 'sum'],
+            },
         })
 
     @inlineCallbacks
@@ -397,8 +420,14 @@ class TestMetricsMiddleware(VumiTestCase):
         yield self.set_timestamp(mw, -10, ['dummy_endpoint', msg['from_addr']])
         yield mw.handle_outbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.session_time': (lambda v: v > 10),
-            'dummy_endpoint.rounded.50s.session_time': (lambda v: v >= 50),
+            'dummy_endpoint.session_time': {
+                'values': (lambda v: v > 10),
+                'aggs': ['avg', 'sum'],
+            },
+            'dummy_endpoint.rounded.50s.session_time': {
+                'values': (lambda v: v >= 50),
+                'aggs': ['avg', 'sum'],
+            },
         })
 
     @inlineCallbacks
