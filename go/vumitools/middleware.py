@@ -10,7 +10,7 @@ from vumi.middleware.message_storing import StoringMiddleware
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.utils import normalize_msisdn
 from vumi.blinkenlights.metrics import (
-    MetricPublisher, Count, Metric, MetricManager)
+    MetricPublisher, Count, Metric, MetricManager, AVG, SUM)
 from vumi.errors import ConfigError
 from vumi.persist.txredis_manager import TxRedisManager
 
@@ -76,6 +76,13 @@ class OptOutMiddleware(BaseMiddleware):
     @staticmethod
     def is_optout_message(message):
         return message['helper_metadata'].get('optout', {}).get('optout')
+
+
+class TimeMetric(Metric):
+    """
+    A time-based metric that fires both sums and averages.
+    """
+    DEFAULT_AGGREGATORS = [AVG, SUM]
 
 
 class MetricsMiddleware(BaseMiddleware):
@@ -235,7 +242,7 @@ class MetricsMiddleware(BaseMiddleware):
 
     def get_response_time_metric(self, name):
         metric_name = '%s.%s' % (name, self.response_time_suffix)
-        return self.get_or_create_metric(metric_name, Metric)
+        return self.get_or_create_metric(metric_name, TimeMetric)
 
     def set_response_time(self, name, time_delta):
         metric = self.get_response_time_metric(name)
@@ -243,7 +250,7 @@ class MetricsMiddleware(BaseMiddleware):
 
     def get_session_time_metric(self, name):
         metric_name = '%s.%s' % (name, self.session_time_suffix)
-        return self.get_or_create_metric(metric_name, Metric)
+        return self.get_or_create_metric(metric_name, TimeMetric)
 
     def set_session_time(self, name, time_delta):
         metric = self.get_session_time_metric(name)
