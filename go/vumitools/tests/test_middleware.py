@@ -579,6 +579,19 @@ class TestMetricsMiddleware(VumiTestCase):
         })
 
     @inlineCallbacks
+    def test_slugify_tagname(self):
+        mw = yield self.get_middleware({})
+        self.assertEqual(mw.slugify_tagname("*123"), "123")
+        self.assertEqual(mw.slugify_tagname("*#123"), "123")
+        self.assertEqual(mw.slugify_tagname("123!"), "123")
+        self.assertEqual(mw.slugify_tagname("123!+"), "123")
+        self.assertEqual(mw.slugify_tagname("1*23"), "1.23")
+        self.assertEqual(mw.slugify_tagname("1*!23"), "1.23")
+        self.assertEqual(mw.slugify_tagname("*12*3#"), "12.3")
+        self.assertEqual(
+            mw.slugify_tagname("foo@example.com"), "foo.example.com")
+
+    @inlineCallbacks
     def test_slugify_tag_on_inbound(self):
         mw = yield self.get_middleware({
             'op_mode': 'passive',
