@@ -181,7 +181,8 @@ class MetricsMiddleware(BaseMiddleware):
     """
 
     KNOWN_MODES = frozenset(['active', 'passive'])
-    TAG_SLUGIFIER_RE = re.compile(r"[^a-zA-Z0-9_-]*")
+    TAG_STRIP_RE = re.compile(r"(^[^a-zA-Z0-9_-]+)|([^a-zA-Z0-9_-]+$)")
+    TAG_DOT_RE = re.compile(r"[^a-zA-Z0-9_-]+")
 
     def validate_config(self):
         self.manager_name = self.config['manager_name']
@@ -309,7 +310,9 @@ class MetricsMiddleware(BaseMiddleware):
         return TaggingMiddleware.map_msg_to_tag(message)
 
     def slugify_tagname(self, tagname):
-        return self.TAG_SLUGIFIER_RE.sub("", tagname).lower()
+        tagname = self.TAG_STRIP_RE.sub("", tagname)
+        tagname = self.TAG_DOT_RE.sub(".", tagname)
+        return tagname.lower()
 
     def fire_response_time(self, prefix, reply_dt):
         if reply_dt:

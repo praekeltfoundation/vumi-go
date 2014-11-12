@@ -579,6 +579,19 @@ class TestMetricsMiddleware(VumiTestCase):
         })
 
     @inlineCallbacks
+    def test_slugify_tagname(self):
+        mw = yield self.get_middleware({})
+        self.assertEqual(mw.slugify_tagname("*123"), "123")
+        self.assertEqual(mw.slugify_tagname("*#123"), "123")
+        self.assertEqual(mw.slugify_tagname("123!"), "123")
+        self.assertEqual(mw.slugify_tagname("123!+"), "123")
+        self.assertEqual(mw.slugify_tagname("1*23"), "1.23")
+        self.assertEqual(mw.slugify_tagname("1*!23"), "1.23")
+        self.assertEqual(mw.slugify_tagname("*12*3#"), "12.3")
+        self.assertEqual(
+            mw.slugify_tagname("foo@example.com"), "foo.example.com")
+
+    @inlineCallbacks
     def test_slugify_tag_on_inbound(self):
         mw = yield self.get_middleware({
             'op_mode': 'passive',
@@ -590,7 +603,7 @@ class TestMetricsMiddleware(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "*123*456#"))
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.tag.mypool.123456.inbound.counter': [1],
+            'dummy_endpoint.tag.mypool.123.456.inbound.counter': [1],
             'dummy_endpoint.inbound.counter': [1],
         })
 
@@ -606,7 +619,7 @@ class TestMetricsMiddleware(VumiTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ("mypool", "*123*567#"))
         yield mw.handle_outbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
-            'dummy_endpoint.tag.mypool.123567.outbound.counter': [1],
+            'dummy_endpoint.tag.mypool.123.567.outbound.counter': [1],
             'dummy_endpoint.outbound.counter': [1],
         })
 
