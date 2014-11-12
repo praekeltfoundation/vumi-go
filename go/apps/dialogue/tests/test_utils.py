@@ -49,7 +49,10 @@ class TestDialogueJsConfig(VumiTestCase):
         conv = self.user_helper.create_conversation(
             u'dialogue', config={'poll': poll})
         config = dialogue_js_config(conv)
-        self.assertEqual(config['endpoints'], ['SMS', 'Twitter'])
+        self.assertEqual(config['endpoints'], {
+            'SMS': {'delivery_class': 'sms'},
+            'Twitter': {'delivery_class': 'twitter'}
+        })
 
     def test_configured_endpoints(self):
         poll = simple_poll()
