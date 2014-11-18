@@ -7,6 +7,7 @@ from celery.task import task, group
 from django.db.models import Sum
 from django.core import serializers
 
+from go.base.s3utils import Bucket
 from go.billing import settings
 from go.billing.models import (
     Account, Transaction, Statement, LineItem, TransactionArchive)
@@ -114,19 +115,36 @@ def archive_transactions(account_id, from_date, to_date, serializer='json'):
             "serializer": serializer,
         })
 
-    archive = TransactionArchive.create(
-        account=account, filename=filename,
-        from_date=from_date, to_date=to_date,
-        status=TransactionArchive.PENDING)
-
     transaction_list = Transaction.objects.filter(
         account_number=account.account_number,
         created__gte=from_date,
         created__lt=(to_date + relativedelta(days=1)))
 
-    for transaction in transaction_list:
-        formatter.serialize([transaction])
-        # TODO: write to S3
+    def generate_chunks(item_iter, items_per_chunk=10000, sep="\n"):
+        data = []
+        for i, item in enumerate(item_iter):
+            data.append(formatter(item_iter))
+            data.append(sep)
+            if i % items_per_chunk == 0:
+                yield ''.join(data)
+                data = []
+        if data:
+            yield ''.join(data)
 
-    archive.status = TransactionArchive.COMPLETED
+    bucket = Bucket('billing.archive')
+    chunks = generate_chunks(transaction_list)
+
+    archive = TransactionArchive.create(
+        account=account, filename=filename,
+        from_date=from_date, to_date=to_date,
+        status=TransactionArchive.STATUS_ARCHIVE_CREATED)
+
+    bucket.upload(chunks, headers={'Content-Type': 'XXX'})
+
+    archive.status = TransactionArchive.STATUS_TRANSACTIONS_UPLOADED
+    archive.save()
+
+    transaction_list.delete()
+
+    archive.status = TransactionArchive.STATUS_ARCHIVE_COMPLETED
     archive.save()
