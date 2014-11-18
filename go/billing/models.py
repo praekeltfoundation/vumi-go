@@ -339,13 +339,14 @@ class LineItem(models.Model):
 class TransactionArchive(models.Model):
     """Record of a transaction archival."""
 
-    STATUS_PENDING = 'pending'
-    STATUS_COMPLETED = 'completed'
-    STATUS_DELETED = 'deleted'
-    STATUS_CHOICES = (
-        (STATUS_PENDING, STATUS_PENDING.title()),
-        (STATUS_COMPLETED, STATUS_COMPLETED.title()),
-        (STATUS_DELETED, STATUS_DELETED.title()),
+    STATUS_ARCHIVE_CREATED = 'archive_created'
+    STATUS_TRANSACTIONS_UPLOADED = 'transactions_uploaded'
+    STATUS_ARCHIVE_COMPLETED = 'archive_completed'
+    STATUS_ARCHIVE_DELETED = 'archive_deleted'
+    STATUS_CHOICES = tuple(
+        (choice, choice.title()) for choice in (
+            STATUS_ARCHIVE_CREATED, STATUS_TRANSACTIONS_UPLOADED,
+            STATUS_ARCHIVE_COMPLETED, STATUS_ARCHIVE_DELETED)
     )
 
     account = models.ForeignKey(
@@ -365,7 +366,7 @@ class TransactionArchive(models.Model):
                     "(inclusive)"))
 
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_ARCHIVE_CREATED,
         help_text=_("The status of this archive. One of pending, "
                     "completed, or deleted."))
 
