@@ -115,6 +115,10 @@ class GoWorkerMixin(object):
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
 
+    def _ignore_message(self, failure, msg):
+        failure.trap(IgnoreMessage)
+        log.debug("Ignoring msg due to %r: %r" % (failure.value, msg))
+
     def consume_control_command(self, command_message):
         """
         Handle a VumiApiCommand message that has arrived.
@@ -128,7 +132,9 @@ class GoWorkerMixin(object):
         kwargs = command_message['kwargs']
         cmd_method = getattr(self, cmd_method_name, None)
         if cmd_method:
-            return cmd_method(*args, **kwargs)
+            d = maybeDeferred(cmd_method, *args, **kwargs)
+            d.addErrback(self._ignore_message, command_message)
+            return d
         else:
             return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
 

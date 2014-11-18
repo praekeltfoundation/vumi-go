@@ -4,6 +4,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.connectors import IgnoreMessage
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
@@ -147,6 +148,31 @@ class TestGoApplicationWorker(VumiTestCase):
     def test_control_queue_prefetch(self):
         self.assertEqual(self.app.control_consumer.prefetch_count, 1)
 
+    @inlineCallbacks
+    def test_command_ignored(self):
+        yield self.app_helper.start_conversation(self.conv)
+
+        def ignore_cmd_collect_metrics(conversation_key, user_account_key):
+            raise IgnoreMessage("Ignoring message for conversation '%s'." % (
+                conversation_key,))
+
+        self.patch(
+            self.app, 'process_command_collect_metrics',
+            ignore_cmd_collect_metrics)
+
+        self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
+
+        lc = LogCatcher()
+        with lc:
+            yield self.app_helper.dispatch_command(
+                'collect_metrics',
+                conversation_key=self.conv.key,
+                user_account_key=self.conv.user_account.key)
+
+        [logmsg] = lc.messages()
+        self.assertTrue(logmsg.startswith("Ignoring msg due to IgnoreMessage"))
+        self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
+
 
 class DummyRouter(GoRouterWorker):
     worker_name = 'dummy_router'
@@ -226,3 +252,25 @@ class TestGoRouterWorker(VumiTestCase):
             router=self.router, hops=hops, outbound_hops=outbound_hops)
         sent_events = yield self.rtr_helper.ro.get_dispatched_events()
         self.assertEqual(sent_events, [])
+
+    @inlineCallbacks
+    def test_command_ignored(self):
+        yield self.rtr_helper.start_router(self.router)
+
+        def ignore_cmd_collect_metrics(conversation_key, user_account_key):
+            raise IgnoreMessage("Ignoring message for conversation '%s'." % (
+                conversation_key,))
+
+        self.patch(
+            self.rtr_worker, 'process_command_collect_metrics',
+            ignore_cmd_collect_metrics)
+
+        lc = LogCatcher()
+        with lc:
+            yield self.rtr_helper.dispatch_command(
+                'collect_metrics',
+                conversation_key=self.router.key,
+                user_account_key=self.router.user_account.key)
+
+        [logmsg] = lc.messages()
+        self.assertTrue(logmsg.startswith("Ignoring msg due to IgnoreMessage"))
