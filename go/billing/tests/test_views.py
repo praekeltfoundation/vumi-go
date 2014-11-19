@@ -92,12 +92,6 @@ class TestStatementView(GoDjangoTestCase):
         statement = mk_statement(self.account)
         response = self.get_statement_pdf(user, statement)
         items = statement.lineitem_set
-        
-        #def see(items):
-        #    print [item.channel for item in items]
-        #    return items
-
-        #see(response.context['billers'][0]['channels'][0]['items'])
 
         self.assertEqual(response.context['billers'], [{
             'name': u'Pool 1',
