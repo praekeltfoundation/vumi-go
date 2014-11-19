@@ -78,10 +78,11 @@ def make_message_items(account, statement, tagpools, from_date, to_date):
 
 
 @task()
-def generate_monthly_statement(account, from_date, to_date):
+def generate_monthly_statement(account_id, from_date, to_date):
     """Generate a new *Monthly* ``Statement`` for the given ``account``
        between the given ``from_date`` and ``to_date``.
     """
+    account = Account.objects.get(id=account_id)
     tagpools = get_tagpools(account)
 
     statement = Statement(
@@ -117,6 +118,6 @@ def generate_monthly_account_statements():
     task_list = []
     for account in account_list:
         task_list.append(
-            generate_monthly_statement.s(account, from_date, to_date))
+            generate_monthly_statement.s(account.id, from_date, to_date))
 
     return group(task_list)()

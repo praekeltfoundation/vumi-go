@@ -1,7 +1,7 @@
 <h1>Vumi Billing Statement</h1>
 
 {% for biller in billers %}
-<h2>{{ billed.name }} ({{ biller.channel_type }})</h2>
+<h2>{{ biller.name }} ({{ biller.channel_type }})</h2>
 
 {% for channel in biller.channels %}
 <h3>{{ channel.name }}</h3>

@@ -8,6 +8,15 @@ from go.billing import tasks
 from go.billing.models import MessageCost, Transaction
 
 
+def this_month():
+    today = date.today()
+    next_month = today + relativedelta(months=1)
+    from_date = date(today.year, today.month, 1)
+    to_date = date(next_month.year, next_month.month, 1)
+    to_date = to_date - relativedelta(days=1)
+    return [from_date, to_date]
+
+
 def mk_transaction(account, tag_pool_name='pool1',
                    tag_name="tag1",
                    message_direction=MessageCost.DIRECTION_INBOUND,
@@ -30,10 +39,4 @@ def mk_transaction(account, tag_pool_name='pool1',
 
 
 def mk_statement(account):
-    today = date.today()
-    next_month = today + relativedelta(months=1)
-    from_date = date(today.year, today.month, 1)
-    to_date = (date(next_month.year, next_month.month, 1)
-                   - relativedelta(days=1))
-
-    return tasks.generate_monthly_statement(account, from_date, to_date)
+    return tasks.generate_monthly_statement(account.id, *this_month())
