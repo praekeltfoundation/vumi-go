@@ -12,6 +12,10 @@ class TestStatementAdmin(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user(superuser=True)
+
+        self.vumi_helper.setup_tagpool(u'pool1', ['tag1'])
+        self.user_helper.add_tagpool_permission(u'pool1')
+
         self.account = Account.objects.get(
             user=self.user_helper.get_django_user())
 
@@ -46,7 +50,10 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, "Monthly Statement for")
         self.assertContains(response, "Account:")
         # check that line items have been inlined
-        self.assertContains(response, "Tag pool name")
-        self.assertContains(response, "Tag name")
-        self.assertContains(response, "Message direction")
-        self.assertContains(response, "Monthly Statement line item")
+        self.assertContains(response, "Channel")
+        self.assertContains(response, "Channel type")
+        self.assertContains(response, "Description")
+        self.assertContains(response, "Units")
+        self.assertContains(response, "Credits")
+        self.assertContains(response, "Unit cost")
+        self.assertContains(response, "Cost")

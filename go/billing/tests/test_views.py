@@ -3,7 +3,7 @@
 from django.core.urlresolvers import reverse
 
 from go.base.tests.helpers import DjangoVumiApiHelper, GoDjangoTestCase
-from go.billing.models import Account
+from go.billing.models import Account, MessageCost
 
 from .helpers import mk_statement, mk_transaction
 
@@ -12,6 +12,22 @@ class TestStatementView(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user(superuser=False)
+
+        self.vumi_helper.setup_tagpool(
+            u'pool1',
+            [u'Tag 1.1', u'Tag 1.2'],
+            {'delivery_class': 'ussd',
+             'display_name': 'Pool 1'})
+
+        self.vumi_helper.setup_tagpool(
+            u'pool2',
+            [u'Tag 2.1', u'Tag 2.2'],
+            {'delivery_class': 'sms',
+             'display_name': 'Pool 2'})
+
+        self.user_helper.add_tagpool_permission(u'pool1')
+        self.user_helper.add_tagpool_permission(u'pool2')
+
         self.account = Account.objects.get(
             user=self.user_helper.get_django_user())
 
@@ -39,8 +55,68 @@ class TestStatementView(GoDjangoTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response['Content-Type'].split(';')[0], 'text/html')
 
+    def test_statement_billers(self):
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.1',
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            message_cost=150,
+            session_cost=50)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.2',
+            message_direction=MessageCost.DIRECTION_OUTBOUND,
+            message_cost=150,
+            session_cost=50)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool2',
+            tag_name=u'Tag 2.1',
+            message_direction=MessageCost.DIRECTION_OUTBOUND,
+            message_cost=120,
+            session_cost=0)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool2',
+            tag_name=u'Tag 2.2',
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            message_cost=120,
+            session_cost=0)
+
+        user = self.user_helper.get_django_user()
+        statement = mk_statement(self.account)
+        response = self.get_statement_pdf(user, statement)
+        items = statement.lineitem_set
+
+        self.assertEqual(response.context['billers'], [{
+            'name': u'Pool 1',
+            'channel_type': u'USSD',
+            'channels': [{
+                'name': u'Tag 1.1',
+                'items': list(items.filter(channel=u'Tag 1.1')),
+            }, {
+                'name': u'Tag 1.2',
+                'items': list(items.filter(channel=u'Tag 1.2')),
+            }],
+        }, {
+            'name': u'Pool 2',
+            'channel_type': u'SMS',
+            'channels': [{
+                'name': u'Tag 2.1',
+                'items': list(items.filter(channel=u'Tag 2.1')),
+            }, {
+                'name': u'Tag 2.2',
+                'items': list(items.filter(channel=u'Tag 2.2')),
+            }],
+        }])
+
     def test_statement_accessable_by_owner(self):
-        statement = statement = self.mk_statement()
+        statement = self.mk_statement()
         self.check_statement_accessible_by(
             self.user_helper.get_django_user(), statement)
 
