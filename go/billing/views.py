@@ -1,4 +1,5 @@
 import os
+from itertools import groupby
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -9,6 +10,31 @@ from xhtml2pdf import pisa
 
 
 from go.billing.models import Statement
+
+
+def channels_from_items(all_items):
+    all_items = groupby(all_items, lambda line: line.channel)
+
+    all_items = ({
+        'name': channel,
+        'items': list(items)
+    } for channel, items in all_items)
+
+    return sorted(all_items, key=lambda d: d['name'])
+
+
+def billers_from_items(all_items):
+    all_items = (
+        (name, list(items))
+        for name, items in groupby(all_items, lambda line: line.billed_by))
+
+    all_items = ({
+        'name': billed_by,
+        'channel_type': items[0].channel_type,
+        'channels': channels_from_items(items)
+    } for billed_by, items in all_items)
+
+    return sorted(all_items, key=lambda d: d['name'])
 
 
 @login_required
@@ -29,12 +55,13 @@ def statement_view(request, statement_id=None):
     response['Content-Disposition'] = 'attachment; filename=%s' % (filename,)
 
     template = loader.get_template('billing/invoice.html')
-    line_item_list = statement.lineitem_set.all()
-    context = RequestContext(request, {'item_list': line_item_list})
+
+    context = RequestContext(request, {
+        'billers': billers_from_items(statement.lineitem_set.all())
+    })
+
     html_result = template.render(context)
-
     pisa.CreatePDF(html_result, dest=response, link_callback=link_callback)
-
     return response
 
 
