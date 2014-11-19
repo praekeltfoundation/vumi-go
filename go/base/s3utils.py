@@ -14,11 +14,14 @@ class BucketConfig(object):
         self.config_name = config_name
 
     def __getattr__(self, name):
-        bucket_config = settings.GO_S3_BUCKETS[name]
+        bucket_config = settings.GO_S3_BUCKETS.get(self.config_name, {})
         defaults = settings.GO_S3_BUCKETS.get('defaults', {})
         if name in bucket_config:
             return bucket_config[name]
-        return defaults[name]
+        if name in defaults:
+            return defaults[name]
+        raise AttributeError(
+            "BucketConfig %r has no attribute %r" % (self.config_name, name))
 
 
 class Bucket(object):
