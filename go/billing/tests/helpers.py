@@ -36,5 +36,4 @@ def mk_statement(account):
     to_date = (date(next_month.year, next_month.month, 1)
                    - relativedelta(days=1))
 
-    return tasks.generate_monthly_statement(
-        account.id, from_date, to_date)
+    return tasks.generate_monthly_statement(account, from_date, to_date)
