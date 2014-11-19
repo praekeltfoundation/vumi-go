@@ -13,28 +13,31 @@ from go.billing.models import Statement
 
 
 def channels_from_items(all_items):
-    all_items = groupby(all_items, lambda line: line.channel)
+    all_items = sorted(all_items, key=lambda d: d.channel)
+    channels = groupby(all_items, lambda line: line.channel)
 
-    all_items = ({
+    channels = [{
         'name': channel,
         'items': list(sorted(items, key=lambda d: d.description))
-    } for channel, items in all_items)
+    } for channel, items in channels]
 
-    return sorted(all_items, key=lambda d: d['name'])
+    return channels
 
 
 def billers_from_items(all_items):
-    all_items = (
-        (name, list(items))
-        for name, items in groupby(all_items, lambda line: line.billed_by))
+    all_items = sorted(all_items, key=lambda d: d.billed_by)
 
-    all_items = ({
+    billers = [
+        (name, list(items))
+        for name, items in groupby(all_items, lambda line: line.billed_by)]
+
+    billers = [{
         'name': billed_by,
         'channel_type': items[0].channel_type,
         'channels': channels_from_items(items)
-    } for billed_by, items in all_items)
+    } for billed_by, items in billers]
 
-    return sorted(all_items, key=lambda d: d['name'])
+    return billers
 
 
 @login_required
@@ -57,7 +60,7 @@ def statement_view(request, statement_id=None):
     template = loader.get_template('billing/invoice.html')
 
     context = RequestContext(request, {
-        'billers': billers_from_items(statement.lineitem_set.all())
+        'billers': billers_from_items(list(statement.lineitem_set.all()))
     })
 
     html_result = template.render(context)
