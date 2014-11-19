@@ -17,7 +17,7 @@ def channels_from_items(all_items):
 
     all_items = ({
         'name': channel,
-        'items': list(items)
+        'items': list(sorted(items, key=lambda d: d.description))
     } for channel, items in all_items)
 
     return sorted(all_items, key=lambda d: d['name'])
