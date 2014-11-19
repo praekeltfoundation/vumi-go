@@ -39,6 +39,7 @@ setup(
         'django-loginas==0.1.3',
         'reportlab==2.7',
         'xhtml2pdf>=0.0.6',
+        'six>=1.6',
         'boto',
         'moto',
     ],
