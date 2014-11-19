@@ -1,16 +1,33 @@
+<h1>Vumi Billing Statement</h1>
+
+{% for biller in billers %}
+<h2>{{ biller.name }} ({{ biller.channel_type }})</h2>
+
+{% for channel in biller.channels %}
+<h3>{{ channel.name }}</h3>
+
 <table>
     <thead>
-        <th scope="col">Tag Pool Name</th>
-        <th scope="col">Tag Name</th>
-        <th scope="col">Message Direction</th>
-        <th scope="col">Total Cost</th>
+        <tr>
+            <th>Description</th>
+            <th>Units</th>
+            <th>Credits</th>
+            <th>Unit Cost</th>
+            <th>Cost</th>
+        </tr>
     </thead>
-    {% for line in item_list %}
-    <tr>
-        <td>{{ line.tag_pool_name }}</td>
-        <td>{{ line.tag_name }}</td>
-        <td>{{ line.message_direction }}</td>
-        <td>{{ line.total_cost }}</td>
-    </tr>
+    <tbody>
+    {% for item in channel.items %}
+        <tr>
+            <td>{{ item.description }}</th>
+            <td>{{ item.units }}</th>
+            <td>{{ item.credits }}</th>
+            <td>{{ item.unit_cost }}</th>
+            <td>{{ item.cost }}
+        </tr>
+    </tbody>
     {% endfor %}
 </table>
+{% endfor %}
+
+{% endfor %}

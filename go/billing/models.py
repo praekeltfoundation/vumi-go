@@ -313,24 +313,40 @@ class LineItem(models.Model):
         Statement,
         help_text=_("The statement this line item is from."))
 
-    tag_pool_name = models.CharField(
+    billed_by = models.CharField(
         max_length=100, blank=True, default='',
-        help_text=_("Name of the tag pool this line item is for (or null if "
-                    "there is no associated tag pool)."))
+        help_text=_("Name of the entity the item is being billed for"))
 
-    tag_name = models.CharField(
+    channel = models.CharField(
+        max_length=100, blank=True, null=True, default='',
+        help_text=_("Name of the channel messages were sent/received over, "
+                    "or null if there is no associated channel"))
+
+    channel_type = models.CharField(
+        max_length=100, blank=True, null=True, default='',
+        help_text=_("The type of channel messages were sent/received over "
+                    "(e.g. SMS or USSD), or null if there is no associated"
+                    "channel"))
+
+    description = models.CharField(
         max_length=100, blank=True, default='',
-        help_text=_("Name of the tag this line item is for (or null if "
-                    "there is no associated tag)."))
+        help_text=_("Description of the item being billed"))
 
-    message_direction = models.CharField(
-        max_length=20, blank=True, default='',
-        help_text=_("Direction of the messages this line item is for (or null "
-                    "if there are no associated messages)."))
-
-    total_cost = models.IntegerField(
+    units = models.IntegerField(
         default=0,
-        help_text=_("Total cost in credits of this line item."))
+        help_text=_("Number of units associated to the item"))
+
+    credits = models.IntegerField(
+        default=0,
+        help_text=_("Total cost of the item in credits"))
+
+    unit_cost = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("Cost of each unit in cents"))
+
+    cost = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("Total cost the item in cents"))
 
     def __unicode__(self):
         return u"%s line item" % (self.statement.title,)

@@ -121,9 +121,8 @@ class LineItemInline(admin.TabularInline):
     model = LineItem
 
     readonly_fields = (
-        'statement', 'tag_pool_name', 'tag_name', 'message_direction',
-        'total_cost', 'statement',
-    )
+        'statement', 'billed_by', 'channel', 'channel_type', 'description',
+        'units', 'credits', 'unit_cost', 'cost')
 
     def has_add_permission(self, request):
         return False
