@@ -44,6 +44,7 @@ class BaseResource(resource.Resource):
         return user_api.get_wrapped_conversation(conversation_key)
 
     def finish_response(self, request, body, code, status=None):
+        request.setHeader('Content-Type', 'application/json; charset=utf-8')
         request.setResponseCode(code, status)
         request.write(body)
         request.finish()

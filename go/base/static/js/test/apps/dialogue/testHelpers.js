@@ -9,6 +9,7 @@
   var modelData = {
     campaign_id: 'campaign-1',
     conversation_key: 'conversation-1',
+    channel_types: [],
     poll_metadata: {
       repeatable: false,
       delivery_class: 'ussd'

@@ -2,6 +2,7 @@ var assert = require('assert');
 
 var _ = require('lodash');
 var vumigo = require('vumigo_v02');
+var fail = vumigo.test_utils.fail;
 var AppTester = vumigo.AppTester;
 
 var app = require('../vumi_app');
@@ -240,7 +241,7 @@ describe("app", function() {
             it("should send a message over the given channel", function() {
                 return tester
                     .setup.config.app({
-                        endpoints: {twitter_channel_type: {delivery_class: 'twitter'}}
+                        endpoints: {Twitter: {delivery_class: 'twitter'}}
                     })
                     .setup(function(api) {
                         api.contacts.add({
@@ -265,7 +266,7 @@ describe("app", function() {
             function() {
                 return tester
                     .setup.config.app({
-                        endpoints: {twitter_channel_type: {delivery_class: 'twitter'}}
+                        endpoints: {Twitter: {delivery_class: 'twitter'}}
                     })
                     .setup(function(api) {
                         api.contacts.add({
@@ -278,6 +279,29 @@ describe("app", function() {
                     .check.user.state('freetext-1')
                     .check.reply('What is your name?')
                     .run();
+            });
+
+            it("should throw an error if no channel type is found", function() {
+                var state = _.find(poll.states, {uuid: 'send-1'});
+                state.channel_type = '???';
+
+                return tester
+                    .setup(function(api) {
+                        api.contacts.add({
+                            msisdn: '+27123',
+                            twitter_handle: '@me'
+                        });
+                    })
+                    .setup.user.state('choice-1')
+                    .input('3')
+                    .run()
+                    .then(fail, function(e) {
+                        assert(e instanceof Error);
+
+                        assert.equal(
+                            e.message,
+                            "No endpoint found for channel type '???'");
+                    });
             });
         });
     });

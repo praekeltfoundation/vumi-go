@@ -122,6 +122,9 @@ class TestStreamingHTTPWorker(VumiTestCase):
 
     def assert_bad_request(self, response, reason):
         self.assertEqual(response.code, http.BAD_REQUEST)
+        self.assertEqual(
+            response.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
         data = json.loads(response.delivered_body)
         self.assertEqual(data, {
             "success": False,
@@ -252,6 +255,9 @@ class TestStreamingHTTPWorker(VumiTestCase):
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
 
+        self.assertEqual(
+            response.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
         self.assertEqual(response.code, http.OK)
         put_msg = json.loads(response.delivered_body)
 
@@ -310,6 +316,9 @@ class TestStreamingHTTPWorker(VumiTestCase):
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
 
+        self.assertEqual(
+            response.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
         put_msg = json.loads(response.delivered_body)
         self.assertEqual(response.code, http.OK)
 
@@ -413,6 +422,9 @@ class TestStreamingHTTPWorker(VumiTestCase):
                                            self.auth_headers, method='PUT')
 
         self.assertEqual(response.code, http.OK)
+        self.assertEqual(
+            response.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
         put_msg = json.loads(response.delivered_body)
         [sent_msg] = self.app_helper.get_dispatched_outbound()
 
@@ -435,6 +447,9 @@ class TestStreamingHTTPWorker(VumiTestCase):
             url, json.dumps(metric_data), self.auth_headers, method='PUT')
 
         self.assertEqual(response.code, http.OK)
+        self.assertEqual(
+            response.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
 
         prefix = "go.campaigns.test-0-user.stores.metric_store"
 
