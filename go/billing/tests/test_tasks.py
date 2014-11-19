@@ -45,10 +45,11 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         from_date = date(last_month.year, last_month.month, 1)
         to_date = date(today.year, today.month, 1) - relativedelta(days=1)
-        s.assert_called_with(self.account, from_date, to_date)
+        s.assert_called_with(self.account.id, from_date, to_date)
 
     def test_generate_monthly_statement(self):
-        result = tasks.generate_monthly_statement(self.account, *this_month())
+        result = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
 
         statement = Statement.objects.get(
             account=self.account, type=Statement.TYPE_MONTHLY)
@@ -69,7 +70,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             message_direction=MessageCost.DIRECTION_INBOUND)
 
         statement = tasks.generate_monthly_statement(
-            self.account, *this_month())
+            self.account.id, *this_month())
         [item] = statement.lineitem_set.filter(
             description='Messages received (including sessions)')
 
@@ -95,7 +96,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             message_direction=MessageCost.DIRECTION_OUTBOUND)
 
         statement = tasks.generate_monthly_statement(
-            self.account, *this_month())
+            self.account.id, *this_month())
         [item] = statement.lineitem_set.filter(
             description='Messages sent (including sessions)')
 

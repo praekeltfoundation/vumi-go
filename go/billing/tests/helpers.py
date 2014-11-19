@@ -39,4 +39,4 @@ def mk_transaction(account, tag_pool_name='pool1',
 
 
 def mk_statement(account):
-    return tasks.generate_monthly_statement(account, *this_month())
+    return tasks.generate_monthly_statement(account.id, *this_month())
