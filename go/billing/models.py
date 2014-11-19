@@ -318,13 +318,15 @@ class LineItem(models.Model):
         help_text=_("Name of the entity the item is being billed for"))
 
     channel = models.CharField(
-        max_length=100, blank=True, default='',
-        help_text=_("Name of the channel messages were sent/received over"))
+        max_length=100, blank=True, null=True, default='',
+        help_text=_("Name of the channel messages were sent/received over, "
+                    "or null if there is no associated channel"))
 
     channel_type = models.CharField(
-        max_length=100, blank=True, default='',
+        max_length=100, blank=True, null=True, default='',
         help_text=_("The type of channel messages were sent/received over "
-                    "(e.g. SMS or USSD)"))
+                    "(e.g. SMS or USSD), or null if there is no associated"
+                    "channel"))
 
     description = models.CharField(
         max_length=100, blank=True, default='',

@@ -27,12 +27,12 @@ class Migration(SchemaMigration):
 
         # Adding field 'LineItem.channel'
         db.add_column(u'billing_lineitem', 'channel',
-                      self.gf('django.db.models.fields.CharField')(default='', max_length=100, blank=True),
+                      self.gf('django.db.models.fields.CharField')(default='', max_length=100, null=True, blank=True),
                       keep_default=False)
 
         # Adding field 'LineItem.channel_type'
         db.add_column(u'billing_lineitem', 'channel_type',
-                      self.gf('django.db.models.fields.CharField')(default='', max_length=100, blank=True),
+                      self.gf('django.db.models.fields.CharField')(default='', max_length=100, null=True, blank=True),
                       keep_default=False)
 
         # Adding field 'LineItem.description'
@@ -149,8 +149,8 @@ class Migration(SchemaMigration):
         u'billing.lineitem': {
             'Meta': {'object_name': 'LineItem'},
             'billed_by': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '100', 'blank': 'True'}),
-            'channel': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '100', 'blank': 'True'}),
-            'channel_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '100', 'blank': 'True'}),
+            'channel': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '100', 'null': 'True', 'blank': 'True'}),
+            'channel_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '100', 'null': 'True', 'blank': 'True'}),
             'cost': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'max_digits': '20', 'decimal_places': '6'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
             'description': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '100', 'blank': 'True'}),
