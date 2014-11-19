@@ -8,9 +8,7 @@ from django.conf import settings
 
 
 class BucketConfig(object):
-    """
-    Helper for accessing Django GO_S3_BUCKET settings.
-    """
+    """ Helper for accessing Django GO_S3_BUCKET settings. """
 
     def __init__(self, config_name):
         self.config_name = config_name
@@ -21,16 +19,6 @@ class BucketConfig(object):
         if name in bucket_config:
             return bucket_config[name]
         return defaults[name]
-
-
-def get_bucket(config_name):
-    """
-    Return an S3 bucket object.
-    """
-    config = BucketConfig(config_name)
-    conn = boto.connect_s3(
-        config.aws_access_key_id, config.aws_secret_access_key)
-    return conn.get_bucket(config.s3_bucket_name)
 
 
 class Bucket(object):
@@ -56,15 +44,17 @@ class Bucket(object):
     """
 
     def __init__(self, config_name):
-        self.config_name = config_name
+        self.config = BucketConfig(config_name)
 
-    def get_bucket(self):
+    def get_s3_bucket(self):
         """ Return an S3 bucket object. """
-        return get_bucket(self.config_name)
+        conn = boto.connect_s3(
+            self.config.aws_access_key_id, self.config.aws_secret_access_key)
+        return conn.get_bucket(self.config.s3_bucket_name)
 
     def upload(self, key_name, chunks, headers=None):
         """ Upload chunks of data to S3. """
-        bucket = self.get_bucket()
+        bucket = self.get_s3_bucket()
         mp = bucket.initiate_multipart_upload(key_name, headers=headers)
         try:
             for i, chunk in enumerate(chunks):
