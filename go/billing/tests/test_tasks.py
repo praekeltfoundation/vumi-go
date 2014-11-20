@@ -10,6 +10,7 @@ from go.base.s3utils import Bucket
 from go.billing.models import (
     MessageCost, Account, Statement, Transaction, TransactionArchive)
 from go.billing import tasks
+from go.billing.django_utils import TransactionSerializer
 from go.billing.tests.helpers import this_month, mk_transaction
 
 
@@ -147,6 +148,24 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         self.vumi_helper.patch_settings(GO_S3_BUCKETS=go_s3_buckets)
         return Bucket(config_name)
 
+    def assert_archive_in_s3(self, bucket, filename, transactions):
+        s3_bucket = bucket.get_s3_bucket()
+        key = s3_bucket.get_key(filename)
+        data = key.get_contents_as_string().split("\n")
+        # check for final newline
+        self.assertEqual(data[-1], "")
+        # construct expected JSON
+        serializer = TransactionSerializer()
+        expected_json = serializer.to_json(transactions)
+        # check
+        self.assertEqual(
+            [json.loads(datum) for datum in data[:-1]],
+            [json.loads(expected) for expected in expected_json])
+
+    def assert_remaining_transactions(self, transactions):
+        self.assertEqual(
+            list(Transaction.objects.all()), list(transactions))
+
     @mock.patch('go.billing.tasks.archive_transactions.s',
                 new_callable=mock.MagicMock)
     def test_archive_monthly_transactions(self, s):
@@ -194,31 +213,5 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         self.assertEqual(archive.to_date, to_date)
         self.assertEqual(archive.status, archive.STATUS_ARCHIVE_COMPLETED)
 
-        transactions = Transaction.objects.all()
-        self.assertEqual(list(transactions), [])
-
-        s3_bucket = bucket.get_s3_bucket()
-        key = s3_bucket.get_key(archive.filename)
-        [datum, end] = key.get_contents_as_string().split("\n")
-        self.assertEqual(end, "")
-        self.assertEqual(json.loads(datum), {
-            u"pk": transaction.pk,
-            u"model": u"billing.transaction",
-            u"fields": {
-                u"account_number": self.account.account_number,
-                u"created": unicode(transaction.created.isoformat()),
-                u"last_modified": unicode(
-                    transaction.last_modified.isoformat()),
-                u"credit_amount": 28.0,
-                u"credit_factor": 0.25,
-                u"markup_percent": 10.0,
-                u"message_cost": 100.0,
-                u"message_direction": u"Inbound",
-                u"message_id": None,
-                u"session_cost": 0.0,
-                u"session_created": None,
-                u"status": u"Completed",
-                u"tag_pool_name": u"pool1",
-                u"tag_name": u"tag1",
-            },
-        })
+        self.assert_remaining_transactions([])
+        self.assert_archive_in_s3(bucket, archive.filename, [transaction])
