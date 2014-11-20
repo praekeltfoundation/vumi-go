@@ -200,7 +200,6 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         s3_bucket = bucket.get_s3_bucket()
         key = s3_bucket.get_key(archive.filename)
         contents = key.get_contents_as_string()
-        self.maxDiff = None
         self.assertEqual(json.loads(contents[:-1]), {
             u"pk": transaction.pk,
             u"model": u"billing.transaction",
