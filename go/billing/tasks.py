@@ -1,4 +1,5 @@
 from datetime import date
+import json
 
 from dateutil.relativedelta import relativedelta
 
@@ -7,6 +8,7 @@ from celery.task import task, group
 from django.db.models import Sum
 from django.conf import settings as go_settings
 from django.core import serializers
+from django.core.serializers.json import DjangoJSONEncoder
 
 from go.base.s3utils import Bucket
 from go.billing import settings
@@ -158,16 +160,16 @@ def archive_monthly_transactions(months_ago=3):
 
 
 @task()
-def archive_transactions(account_id, from_date, to_date, serializer='json'):
+def archive_transactions(account_id, from_date, to_date):
     account = Account.objects.get(id=account_id)
-    formatter = serializers.get(serializer)()
+    serializer = serializers.get_serializer("python")()
     filename = (
         u"transactions-%(account_number)s-%(from)s-to-%(to)s"
         ".%(serializer)s" % {
             "account_number": account.account_number,
             "from": from_date,
             "to": to_date,
-            "serializer": serializer,
+            "serializer": "json",
         })
 
     transaction_list = Transaction.objects.filter(
@@ -178,23 +180,31 @@ def archive_transactions(account_id, from_date, to_date, serializer='json'):
     def generate_chunks(item_iter, items_per_chunk=10000, sep="\n"):
         data = []
         for i, item in enumerate(item_iter):
-            data.append(formatter(item_iter))
-            data.append(sep)
+            data.append(item)
             if i % items_per_chunk == 0:
-                yield ''.join(data)
+                yield sep.join(
+                    json.dumps(obj, cls=DjangoJSONEncoder)
+                    for obj in serializer.serialize(data))
+                yield sep
                 data = []
         if data:
-            yield ''.join(data)
+            yield sep.join(
+                json.dumps(obj, cls=DjangoJSONEncoder)
+                for obj in serializer.serialize(data))
+            yield sep
 
     bucket = Bucket('billing.archive')
     chunks = generate_chunks(transaction_list)
 
-    archive = TransactionArchive.create(
+    archive = TransactionArchive(
         account=account, filename=filename,
         from_date=from_date, to_date=to_date,
         status=TransactionArchive.STATUS_ARCHIVE_CREATED)
+    archive.save()
 
-    bucket.upload(chunks, headers={'Content-Type': 'XXX'})
+    bucket.upload(filename, chunks, headers={
+        'Content-Type': 'appliation/json; charset=utf-8',
+    })
 
     archive.status = TransactionArchive.STATUS_TRANSACTIONS_UPLOADED
     archive.save()
@@ -203,3 +213,5 @@ def archive_transactions(account_id, from_date, to_date, serializer='json'):
 
     archive.status = TransactionArchive.STATUS_ARCHIVE_COMPLETED
     archive.save()
+
+    return archive

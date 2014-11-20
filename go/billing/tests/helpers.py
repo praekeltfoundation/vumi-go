@@ -8,8 +8,9 @@ from go.billing import tasks
 from go.billing.models import MessageCost, Transaction
 
 
-def this_month():
-    today = date.today()
+def this_month(today=None):
+    if today is None:
+        today = date.today()
     next_month = today + relativedelta(months=1)
     from_date = date(today.year, today.month, 1)
     to_date = date(next_month.year, next_month.month, 1)
