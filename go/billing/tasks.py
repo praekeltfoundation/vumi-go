@@ -1,5 +1,4 @@
 from datetime import date
-import json
 
 from dateutil.relativedelta import relativedelta
 
@@ -7,13 +6,12 @@ from celery.task import task, group
 
 from django.db.models import Sum
 from django.conf import settings as go_settings
-from django.core import serializers
-from django.core.serializers.json import DjangoJSONEncoder
 
 from go.base.s3utils import Bucket
 from go.billing import settings
 from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive)
+from go.billing.django_utils import TransactionSerializer
 from go.vumitools.api import VumiUserApi
 
 
@@ -162,7 +160,7 @@ def archive_monthly_transactions(months_ago=3):
 @task()
 def archive_transactions(account_id, from_date, to_date):
     account = Account.objects.get(id=account_id)
-    serializer = serializers.get_serializer("python")()
+    serializer = TransactionSerializer()
     filename = (
         u"transactions-%(account_number)s-%(from)s-to-%(to)s"
         ".%(serializer)s" % {
@@ -182,15 +180,11 @@ def archive_transactions(account_id, from_date, to_date):
         for i, item in enumerate(item_iter):
             data.append(item)
             if i % items_per_chunk == 0:
-                yield sep.join(
-                    json.dumps(obj, cls=DjangoJSONEncoder)
-                    for obj in serializer.serialize(data))
+                yield sep.join(serializer.serialize(data))
                 yield sep
                 data = []
         if data:
-            yield sep.join(
-                json.dumps(obj, cls=DjangoJSONEncoder)
-                for obj in serializer.serialize(data))
+            yield sep.join(serializer.serialize(data))
             yield sep
 
     bucket = Bucket('billing.archive')
