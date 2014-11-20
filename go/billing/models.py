@@ -350,3 +350,31 @@ class LineItem(models.Model):
 
     def __unicode__(self):
         return u"%s line item" % (self.statement.title,)
+
+
+class LowCreditNotification(models.Model):
+    """Logging of low credit notifications"""
+
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the low credit notification is for."))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When the low credit notification was created."))
+
+    success = models.DateTimeField(
+        blank=True, default=None,
+        help_text=_("When the email was successfully sent."))
+
+    threshold = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        help_text=_("The credit threshold percentage that triggered the "
+                    "notification."))
+
+    credit_balance = models.DecimalField(
+        max_digits=20, decimal_places=6,
+        help_text=_("The credit balance when the notification was sent."))
+
+    def __unicode__(self):
+        return u"%s%% threshold for %s" % (self.threshold, self.account)
