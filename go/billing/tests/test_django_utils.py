@@ -17,10 +17,10 @@ class TestTransactionSerializer(GoDjangoTestCase):
         self.account = Account.objects.get(
             user=self.user_helper.get_django_user())
 
-    def test_serialize(self):
+    def test_to_json(self):
         serializer = TransactionSerializer()
         transaction = mk_transaction(self.account)
-        [datum] = serializer.serialize([transaction])
+        [datum] = serializer.to_json([transaction])
         self.assertEqual(json.loads(datum), {
             u"pk": transaction.pk,
             u"model": u"billing.transaction",

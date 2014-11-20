@@ -162,12 +162,10 @@ def archive_transactions(account_id, from_date, to_date):
     account = Account.objects.get(id=account_id)
     serializer = TransactionSerializer()
     filename = (
-        u"transactions-%(account_number)s-%(from)s-to-%(to)s"
-        ".%(serializer)s" % {
+        u"transactions-%(account_number)s-%(from)s-to-%(to)s.json" % {
             "account_number": account.account_number,
             "from": from_date,
             "to": to_date,
-            "serializer": "json",
         })
 
     transaction_list = Transaction.objects.filter(
@@ -180,11 +178,11 @@ def archive_transactions(account_id, from_date, to_date):
         for i, item in enumerate(item_iter):
             data.append(item)
             if i % items_per_chunk == 0:
-                yield sep.join(serializer.serialize(data))
+                yield sep.join(serializer.to_json(data))
                 yield sep
                 data = []
         if data:
-            yield sep.join(serializer.serialize(data))
+            yield sep.join(serializer.to_json(data))
             yield sep
 
     bucket = Bucket('billing.archive')

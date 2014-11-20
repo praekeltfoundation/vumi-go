@@ -13,6 +13,6 @@ class TransactionSerializer(object):
     def __init__(self):
         self._simplifier = serializers.get_serializer("python")()
 
-    def serialize(self, transactions):
+    def to_json(self, transactions):
         return (json.dumps(t, cls=JSONEncoder)
                 for t in self._simplifier.serialize(transactions))
