@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from django.db import models
@@ -352,8 +353,28 @@ class LineItem(models.Model):
         return u"%s line item" % (self.statement.title,)
 
 
+class LowCreditNotificationManager(models.Manager):
+    """
+    Manager for LowCreditNotification
+    """
+    def create_notification(
+            self, account_number, threshold_percentage, credit_balance):
+        """
+        Sends a low credit notification. Returns model instance.
+        """
+        account = Account.objects.get(pk=account_number)
+        notification = self.create(
+            account=account, threshold=threshold_percentage,
+            credit_balance=credit_balance)
+        # Send email
+        notification.save()
+        return notification
+
+
 class LowCreditNotification(models.Model):
-    """Logging of low credit notifications"""
+    """
+    Logging of low credit notifications
+    """
 
     account = models.ForeignKey(
         Account,
@@ -364,7 +385,7 @@ class LowCreditNotification(models.Model):
         help_text=_("When the low credit notification was created."))
 
     success = models.DateTimeField(
-        blank=True, default=None,
+        blank=True, null=True,
         help_text=_("When the email was successfully sent."))
 
     threshold = models.DecimalField(
@@ -375,6 +396,17 @@ class LowCreditNotification(models.Model):
     credit_balance = models.DecimalField(
         max_digits=20, decimal_places=6,
         help_text=_("The credit balance when the notification was sent."))
+
+    objects = LowCreditNotificationManager()
+
+    def confirm_sent(self):
+        """
+        Confirms that the email has been sent. Returns the datetime that
+        the confirmation field has been set to.
+        """
+        self.success = datetime.now()
+        self.save()
+        return self.success
 
     def __unicode__(self):
         return u"%s%% threshold for %s" % (self.threshold, self.account)
