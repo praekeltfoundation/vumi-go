@@ -382,7 +382,7 @@ class TransactionArchive(models.Model):
                     "(inclusive)"))
 
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=STATUS_ARCHIVE_CREATED,
+        max_length=32, choices=STATUS_CHOICES, default=STATUS_ARCHIVE_CREATED,
         help_text=_("The status of this archive. One of pending, "
                     "completed, or deleted."))
 
