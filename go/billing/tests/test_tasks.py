@@ -199,8 +199,9 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
 
         s3_bucket = bucket.get_s3_bucket()
         key = s3_bucket.get_key(archive.filename)
-        contents = key.get_contents_as_string()
-        self.assertEqual(json.loads(contents[:-1]), {
+        [datum, end] = key.get_contents_as_string().split("\n")
+        self.assertEqual(end, "")
+        self.assertEqual(json.loads(datum), {
             u"pk": transaction.pk,
             u"model": u"billing.transaction",
             u"fields": {
@@ -221,4 +222,3 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
                 u"tag_name": u"tag1",
             },
         })
-        self.assertEqual(contents[-1], "\n")
