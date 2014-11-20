@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import json
 
@@ -164,7 +164,7 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
 
     def assert_remaining_transactions(self, transactions):
         self.assertEqual(
-            list(Transaction.objects.all()), list(transactions))
+            set(Transaction.objects.all()), set(transactions))
 
     @mock.patch('go.billing.tasks.archive_transactions.s',
                 new_callable=mock.MagicMock)
@@ -215,3 +215,45 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
 
         self.assert_remaining_transactions([])
         self.assert_archive_in_s3(bucket, archive.filename, [transaction])
+
+    @moto.mock_s3
+    def test_archive_transactions_complex(self):
+        bucket = self.mk_bucket('billing.archive', s3_bucket_name='billing')
+        bucket.create()
+        from_time = datetime(2013, 11, 1)
+        before_time = datetime(2013, 10, 31, 12, 59, 59)
+        after_time = datetime(2013, 12, 1, 0, 0, 0)
+        from_date, to_date = this_month(from_time.date())
+
+        def mk_transaction_set(n, created):
+            transaction_set = set()
+            for i in range(5):
+                transaction = mk_transaction(self.account)
+                transaction.created = created
+                transaction.save()
+                transaction_set.add(transaction)
+            return transaction_set
+
+        transactions_before = mk_transaction_set(5, before_time)
+        transactions_after = mk_transaction_set(5, after_time)
+        transactions_within = mk_transaction_set(10, from_time)
+
+        result = tasks.archive_transactions(
+            self.account.id, from_date, to_date)
+
+        archive = TransactionArchive.objects.get(account=self.account)
+
+        self.assertEqual(result, archive)
+        self.assertEqual(archive.account, self.account)
+        self.assertEqual(
+            archive.filename,
+            "transactions-test-0-user-2013-11-01-to-2013-11-30.json")
+        self.assertEqual(archive.from_date, from_date)
+        self.assertEqual(archive.to_date, to_date)
+        self.assertEqual(archive.status, archive.STATUS_ARCHIVE_COMPLETED)
+
+        self.assert_remaining_transactions(
+            transactions_before | transactions_after)
+        self.assert_archive_in_s3(
+            bucket, archive.filename,
+            sorted(transactions_within, key=lambda trans: trans.pk))
