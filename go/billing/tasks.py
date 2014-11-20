@@ -30,7 +30,7 @@ def month_range(months_ago=1, today=None):
         today = date.today()
     last_month = today - relativedelta(months=months_ago)
     from_date = date(last_month.year, last_month.month, 1)
-    to_date = date(today.year, today.month, 1) - relativedelta(days=1)
+    to_date = from_date + relativedelta(months=1, days=-1)
     return from_date, to_date
 
 

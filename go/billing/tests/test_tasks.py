@@ -9,6 +9,22 @@ from go.billing import tasks
 from go.billing.tests.helpers import this_month, mk_transaction
 
 
+class TestUtilityFunctions(GoDjangoTestCase):
+    def test_month_range_today(self):
+        from_date, to_date = tasks.month_range()
+        self.assertEqual(to_date, from_date + relativedelta(months=1, days=-1))
+
+    def test_month_range_specific_day(self):
+        from_date, to_date = tasks.month_range(today=date(2014, 2, 1))
+        self.assertEqual(from_date, date(2014, 1, 1))
+        self.assertEqual(to_date, date(2014, 1, 31))
+
+    def test_month_range_three_months_ago(self):
+        from_date, to_date = tasks.month_range(3, today=date(2014, 2, 1))
+        self.assertEqual(from_date, date(2013, 11, 1))
+        self.assertEqual(to_date, date(2013, 11, 30))
+
+
 class TestMonthlyStatementTask(GoDjangoTestCase):
 
     def setUp(self):
