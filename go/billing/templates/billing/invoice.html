@@ -1,89 +1,99 @@
-<header>
-    <div>
-        <!-- TODO logo -->
-        <address>
-            <p>
-                Tel: 27.11.482.8684<br>
-                Fax: 27.11.482.9042
-            </p>
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Vumi Billing Statement</title>
+        <meta charset="utf-8">
+    </head>
 
-            <p>
-                <a href="http://accounts@praekelt.com">accounts@praekelt.com</a><br>
-                <a href="http://www.praekeltfoundation.org">www.praekeltfoundation.org</a>
-            </p>
-        </address>
-    </div>
+    <body>
+        <header>
+            <div>
+                <!-- TODO logo -->
+                <address>
+                    <p>
+                        Tel: 27.11.482.8684<br>
+                        Fax: 27.11.482.9042
+                    </p>
 
-    <div>
-        <h1>Vumi Billing Statement</h1>
+                    <p>
+                        <a href="http://accounts@praekelt.com">accounts@praekelt.com</a><br>
+                        <a href="http://www.praekeltfoundation.org">www.praekeltfoundation.org</a>
+                    </p>
+                </address>
+            </div>
+
+            <div>
+                <h1>Vumi Billing Statement</h1>
+
+                <table>
+                    <tr>
+                        <th>Account</th>
+                        <td>{{ statement.account.user.email }}</td>
+                    </tr>
+                    <tr>
+                        <th>Date</th>
+                        <td>{{ statement.from_date }} to {{ statement.to_date }}</td>
+                    </tr>
+                </table>
+            </div>
+        </header>
+
+        {% for biller in billers %}
+        <h2>{{ biller.name }} ({{ biller.channel_type }})</h2>
+
+        {% for channel in biller.channels %}
+        <h3>{{ channel.name }}</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Units</th>
+                    <th>Credits</th>
+                    <th>Unit Cost</th>
+                    <th>Cost</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for item in channel.items %}
+                <tr>
+                    <td>{{ item.description }}</th>
+                    <td>{{ item.units }}</th>
+                    <td>{{ item.credits }}</th>
+                    <td>{{ item.unit_cost|floatformat:2 }}</th>
+                    <td>{{ item.cost|floatformat:2 }}
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th>Total</th>
+                    <td></td>
+                    <td>{{ channel.totals.credits }}</td>
+                    <td></td>
+                    <td>{{ channel.totals.cost|floatformat:2 }}</td>
+                </tr>
+            </tfoot>
+            {% endfor %}
+        </table>
+        {% endfor %}
+        {% endfor %}
 
         <table>
             <tr>
-                <th>Account</th>
-                <td>{{ statement.account.user.email }}</td>
+                <th></th>
+                <th></td>
+                <th>Credits</td>
+                <th></td>
+                <th>Cost</td>
             </tr>
             <tr>
-                <th>Date</th>
-                <td>{{ statement.from_date }} to {{ statement.to_date }}</td>
+                <td>Grand Total</th>
+                <td></td>
+                <td>{{ totals.credits }}</td>
+                <td></td>
+                <td>{{ totals.cost|floatformat:2 }}</td>
             </tr>
         </table>
-    </div>
-</header>
-
-{% for biller in billers %}
-<h2>{{ biller.name }} ({{ biller.channel_type }})</h2>
-
-{% for channel in biller.channels %}
-<h3>{{ channel.name }}</h3>
-
-<table>
-    <thead>
-        <tr>
-            <th>Description</th>
-            <th>Units</th>
-            <th>Credits</th>
-            <th>Unit Cost</th>
-            <th>Cost</th>
-        </tr>
-    </thead>
-
-    <tbody>
-    {% for item in channel.items %}
-        <tr>
-            <td>{{ item.description }}</th>
-            <td>{{ item.units }}</th>
-            <td>{{ item.credits }}</th>
-            <td>{{ item.unit_cost|floatformat:2 }}</th>
-            <td>{{ item.cost|floatformat:2 }}
-        </tr>
-    </tbody>
-    <tfoot>
-        <tr>
-            <th>Total</th>
-            <td></td>
-            <td>{{ channel.totals.credits }}</td>
-            <td></td>
-            <td>{{ channel.totals.cost|floatformat:2 }}</td>
-        </tr>
-    </tfoot>
-    {% endfor %}
-</table>
-{% endfor %}
-{% endfor %}
-
-<table>
-    <tr>
-        <th></th>
-        <th></td>
-        <th>Credits</td>
-        <th></td>
-        <th>Cost</td>
-    </tr>
-    <tr>
-        <td>Grand Total</th>
-        <td></td>
-        <td>{{ totals.credits }}</td>
-        <td></td>
-        <td>{{ totals.cost|floatformat:2 }}</td>
-    </tr>
-</table>
+    </body>
+</html>
