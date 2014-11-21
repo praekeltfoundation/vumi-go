@@ -1,5 +1,7 @@
 import decimal
 
+from django.core import mail
+
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import (
     TagPool, Account, MessageCost, Transaction, create_billing_account,
@@ -201,3 +203,18 @@ class TestLowCreditNotification(GoDjangoTestCase):
         notification = self.mk_notification('60.0', '31.41')
         timestamp = notification.confirm_sent()
         self.assertEqual(timestamp, notification.success)
+
+    def test_email_sent(self):
+        notification = self.mk_notification('70.1', '12.34')
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertTrue('Vumi Go low credit warning' in email.subject)
+        self.assertTrue('70.1%' in email.subject)
+        self.assertTrue('70.1%' in email.body)
+        self.assertTrue('12.34' in email.body)
+        self.assertTrue(self.django_user.get_full_name() in email.body)
+        self.assertTrue(str(notification.pk) in email.body)
+        self.assertTrue(str(self.acc) in email.body)
+        
