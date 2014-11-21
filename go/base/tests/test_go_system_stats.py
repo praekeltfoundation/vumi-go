@@ -3,10 +3,17 @@ from datetime import datetime
 from StringIO import StringIO
 
 from django.core.management.base import CommandError
+from django.core.management import call_command
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.management.commands import go_system_stats
 from go.vumitools.tests.helpers import GoMessageHelper
+
+
+class CommandIO(object):
+    def __init__(self):
+        self.stdout = StringIO()
+        self.stderr = StringIO()
 
 
 class TestGoSystemStatsCommand(GoDjangoTestCase):
@@ -17,11 +24,10 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
             GoMessageHelper(vumi_helper=self.vumi_helper))
 
     def run_command(self, **kw):
-        command = go_system_stats.Command()
-        command.stdout = StringIO()
-        command.stderr = StringIO()
-        command.handle(**kw)
-        return command
+        cmd_io = CommandIO()
+        call_command('go_system_stats',
+                     stdout=cmd_io.stdout, stderr=cmd_io.stderr, **kw)
+        return cmd_io
 
     def mk_msgs_for_conv(self, conv, inbounds=(), outbounds=()):
         """ Utility for adding messages to a conversation.
@@ -171,4 +177,19 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
             "09/01/2013,1,3,6,1,2",
             "11/01/2013,3,2,2,2,2",
             "12/01/2013,2,4,6,2,6",
+        ])
+
+    def test_custom_date_format(self):
+        day = datetime(2013, 11, 1)
+        self.mk_conversations(
+            bulk_message=[
+                {"count": 1, "created_at": day},
+            ],
+        )
+
+        cmd = self.run_command(
+            command=["conversation_types_by_month"], date_format="%Y-%m-%d")
+        self.assert_csv_output(cmd, [
+            "date,bulk_message",
+            "2013-11-01,1",
         ])
