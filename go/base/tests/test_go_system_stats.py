@@ -90,24 +90,27 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
         ])
 
     def test_conversation_types_by_date(self):
-        days = [datetime(2013, 11, i) for i in (1, 2, 3)]
+        days = [
+            datetime(2013, m, d) for m, d in [
+                (9, 1), (11, 1), (11, 5), (12, 2)
+            ]]
         self.mk_conversations(
             bulk_message=[
                 {"count": 3, "created_at": days[0]},
                 {"count": 2, "created_at": days[1]},
             ],
             jsbox=[
-                {"count": 1, "created_at": days[1]},
-                {"count": 2, "created_at": days[2]},
+                {"count": 1, "created_at": days[2]},
+                {"count": 2, "created_at": days[3]},
             ],
         )
 
         cmd = self.run_command(command=["conversation_types_by_date"])
         self.assert_csv_output(cmd, [
             "date,bulk_message,jsbox",
-            "2013-11-01,3,0",
-            "2013-11-02,2,1",
-            "2013-11-03,0,2",
+            "09/01/2013,3,0",
+            "11/01/2013,2,1",
+            "12/01/2013,0,2",
         ])
 
     def test_message_counts_by_date_no_conversations(self):

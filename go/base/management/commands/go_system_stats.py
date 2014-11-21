@@ -69,7 +69,7 @@ class Command(BaseGoCommand):
             for key in api.conversation_store.list_conversations():
                 conv = api.get_wrapped_conversation(key)
                 conv_types.add(conv.conversation_type)
-                day = conv.created_at.date()
+                day = conv.created_at.date().replace(day=1)
                 day_stats = date_stats.setdefault(day, defaultdict(int))
                 day_stats[conv.conversation_type] += 1
 
@@ -78,7 +78,7 @@ class Command(BaseGoCommand):
         writer.writeheader()
         for day in sorted(date_stats.iterkeys()):
             row = dict((f, 0) for f in fields)
-            row["date"] = day
+            row["date"] = day.strftime("%m/%d/%Y")
             row.update(date_stats[day])
             writer.writerow(row)
 
