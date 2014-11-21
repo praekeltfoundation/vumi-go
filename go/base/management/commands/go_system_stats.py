@@ -8,6 +8,22 @@ from go.base.utils import vumi_api_for_user
 from go.base.command_utils import BaseGoCommand, get_users, make_command_option
 
 
+class StatsWriter(DictWriter):
+    """ Helper for writing stats out as CSV. """
+    def __init__(self, file_obj, fields, default=0):
+        DictWriter.__init__(self, file_obj, fields)
+        self.fields = fields
+        self.defaults = dict((f, default) for f in fields)
+
+    def writeheader(self):
+        DictWriter.writerow(self, dict(zip(self.fields, self.fields)))
+
+    def writerow(self, data):
+        row = self.defaults.copy()
+        row.update(data)
+        DictWriter.writerow(self, row)
+
+
 class Command(BaseGoCommand):
     help = """Generate stats for a Vumi Go system."""
 
@@ -34,6 +50,9 @@ class Command(BaseGoCommand):
                 " understood by Google Spreadsheet's importer."))
     )
 
+    def _format_date(self, date):
+        return date.strftime(self.options['date_format'])
+
     def handle_command_conversation_types(self, *args, **options):
         conv_types = set()
         conv_statuses = set()
@@ -58,11 +77,10 @@ class Command(BaseGoCommand):
 
         fields = (["type", "total"] + sorted(conv_statuses) +
                   sorted(conv_archive_statuses))
-        writer = DictWriter(self.stdout, fields)
-        writer.writerow(dict(zip(fields, fields)))
+        writer = StatsWriter(self.stdout, fields)
+        writer.writeheader()
         for conv_type in sorted(conv_types):
-            row = dict((f, 0) for f in fields)
-            row["type"] = conv_type
+            row = {"type": conv_type}
             row.update(type_stats[conv_type])
             writer.writerow(row)
 
@@ -80,11 +98,10 @@ class Command(BaseGoCommand):
                 stats[conv.conversation_type] += 1
 
         fields = (["date"] + sorted(conv_types))
-        writer = DictWriter(self.stdout, fields)
-        writer.writerow(dict(zip(fields, fields)))
+        writer = StatsWriter(self.stdout, fields)
+        writer.writeheader()
         for month in sorted(month_stats.iterkeys()):
-            row = dict((f, 0) for f in fields)
-            row["date"] = month.strftime(self.options['date_format'])
+            row = {"date": self._format_date(month)}
             row.update(month_stats[month])
             writer.writerow(row)
 
@@ -114,10 +131,9 @@ class Command(BaseGoCommand):
             "inbound_message_count", "outbound_message_count",
             "inbound_uniques", "outbound_uniques",
         ])
-        writer = DictWriter(self.stdout, fields)
-        writer.writerow(dict(zip(fields, fields)))
+        writer = StatsWriter(self.stdout, fields)
+        writer.writeheader()
         for month in sorted(month_stats.iterkeys()):
-            row = dict((f, 0) for f in fields)
-            row["date"] = month.strftime(self.options['date_format'])
+            row = {"date": self._format_date(month)}
             row.update(month_stats[month])
             writer.writerow(row)
