@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from csv import DictWriter
+from optparse import make_option
 
 from go.base.utils import vumi_api_for_user
 from go.base.command_utils import BaseGoCommand, get_users, make_command_option
@@ -26,6 +27,11 @@ class Command(BaseGoCommand):
             help=(
                 "Inbound and outbound message counts and total unique users"
                 " by month and conversation type.")),
+        make_option(
+            '--date-format', dest='date_format', default='%m/%d/%Y',
+            help=(
+                "Output format for dates. Defaults to '%m/%d/%Y' which is"
+                " understood by Google Spreadsheet's importer."))
     )
 
     def handle_command_conversation_types(self, *args, **options):
@@ -78,7 +84,7 @@ class Command(BaseGoCommand):
         writer.writerow(dict(zip(fields, fields)))
         for month in sorted(month_stats.iterkeys()):
             row = dict((f, 0) for f in fields)
-            row["date"] = month.strftime("%m/%d/%Y")
+            row["date"] = month.strftime(self.options['date_format'])
             row.update(month_stats[month])
             writer.writerow(row)
 
@@ -112,6 +118,6 @@ class Command(BaseGoCommand):
         writer.writerow(dict(zip(fields, fields)))
         for month in sorted(month_stats.iterkeys()):
             row = dict((f, 0) for f in fields)
-            row["date"] = month.strftime("%m/%d/%Y")
+            row["date"] = month.strftime(self.options['date_format'])
             row.update(month_stats[month])
             writer.writerow(row)
