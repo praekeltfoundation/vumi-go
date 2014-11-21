@@ -12,7 +12,7 @@ from go.billing.models import Statement
 
 
 def groupby(values, fn):
-    return [(k, list(sorted(g, key=fn))) for k, g in _groupby(values, fn)]
+    return sorted([(k, list(g)) for k, g in _groupby(values, fn)])
 
 
 def totals_from_items(items):
@@ -66,6 +66,7 @@ def statement_view(request, statement_id=None):
 
     html_result = template.render(context)
     pisa.CreatePDF(html_result, dest=response, link_callback=link_callback)
+
     return response
 
 
