@@ -1,0 +1,19 @@
+Dear {{user.get_full_name}}
+
+We trust that you are well!
+
+Please note that your account {{account}} has reached {{threshold_percent}}% of the total available credits.
+
+Current credit balance: {{credit_balance}} ({{threshold_percent}}% remaining)
+
+What does this mean for you?
+
+Once you have used all of your credits, your account will be capped and you will no longer be able to send any messages. Incoming messages will still be stored as usual.
+
+If you have any questions regarding any of this, please let us know.
+
+Have a great day further!
+
+Vumi Go Team.
+
+Notification reference number: {{reference}}
