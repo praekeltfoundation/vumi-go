@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
 from StringIO import StringIO
 
 from django.core.management.base import CommandError
@@ -29,7 +30,8 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
         :param dict status_description:
             A dictionary with the keys count (how many conversations to
             create, default: 1), status (the conversation status, default:
-            running) and archive_status (default: active).
+            running), archive_status (default: active) and created_at (
+            default: now).
         """
         for conv_type, conv_descs in conv_types.items():
             for conv_desc in conv_descs:
@@ -38,7 +40,9 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
                         unicode(conv_type), name=u"%s_%d" % (conv_type, i),
                         status=unicode(conv_desc.get('status', 'running')),
                         archive_status=unicode(
-                            conv_desc.get('archive_status', 'active')))
+                            conv_desc.get('archive_status', 'active')),
+                        created_at=conv_desc.get(
+                            'created_at', datetime.utcnow()))
 
     def assert_csv_output(self, cmd, rows):
         self.assertEqual(
@@ -83,6 +87,27 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
         cmd = self.run_command(command=["conversation_types_by_date"])
         self.assert_csv_output(cmd, [
             "date",
+        ])
+
+    def test_conversation_types_by_date(self):
+        days = [datetime(2013, 11, i) for i in (1, 2, 3)]
+        self.mk_conversations(
+            bulk_message=[
+                {"count": 3, "created_at": days[0]},
+                {"count": 2, "created_at": days[1]},
+            ],
+            jsbox=[
+                {"count": 1, "created_at": days[1]},
+                {"count": 2, "created_at": days[2]},
+            ],
+        )
+
+        cmd = self.run_command(command=["conversation_types_by_date"])
+        self.assert_csv_output(cmd, [
+            "date,bulk_message,jsbox",
+            "2013-11-01,3,0",
+            "2013-11-02,2,1",
+            "2013-11-03,0,2",
         ])
 
     def test_message_counts_by_date_no_conversations(self):
