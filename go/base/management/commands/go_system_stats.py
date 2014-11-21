@@ -62,24 +62,24 @@ class Command(BaseGoCommand):
 
     def handle_command_conversation_types_by_month(self, *args, **options):
         conv_types = set()
-        date_stats = {}
+        month_stats = {}
 
         for user in get_users():
             api = vumi_api_for_user(user)
             for key in api.conversation_store.list_conversations():
                 conv = api.get_wrapped_conversation(key)
                 conv_types.add(conv.conversation_type)
-                day = conv.created_at.date().replace(day=1)
-                day_stats = date_stats.setdefault(day, defaultdict(int))
-                day_stats[conv.conversation_type] += 1
+                month = conv.created_at.date().replace(day=1)
+                stats = month_stats.setdefault(month, defaultdict(int))
+                stats[conv.conversation_type] += 1
 
         fields = (["date"] + sorted(conv_types))
         writer = DictWriter(self.stdout, fields)
         writer.writerow(dict(zip(fields, fields)))
-        for day in sorted(date_stats.iterkeys()):
+        for month in sorted(month_stats.iterkeys()):
             row = dict((f, 0) for f in fields)
-            row["date"] = day.strftime("%m/%d/%Y")
-            row.update(date_stats[day])
+            row["date"] = month.strftime("%m/%d/%Y")
+            row.update(month_stats[month])
             writer.writerow(row)
 
     def _increment_msg_stats(self, conv, stats):
@@ -93,15 +93,15 @@ class Command(BaseGoCommand):
         stats["outbound_uniques"] += cache.count_to_addrs(batch_key)
 
     def handle_command_message_counts_by_month(self, *args, **options):
-        date_stats = {}
+        month_stats = {}
 
         for user in get_users():
             api = vumi_api_for_user(user)
             for key in api.conversation_store.list_conversations():
                 conv = api.get_wrapped_conversation(key)
-                day = conv.created_at.date().replace(day=1)
-                day_stats = date_stats.setdefault(day, defaultdict(int))
-                self._increment_msg_stats(conv, day_stats)
+                month = conv.created_at.date().replace(day=1)
+                stats = month_stats.setdefault(month, defaultdict(int))
+                self._increment_msg_stats(conv, stats)
 
         fields = ([
             "date", "conversations_started",
@@ -110,8 +110,8 @@ class Command(BaseGoCommand):
         ])
         writer = DictWriter(self.stdout, fields)
         writer.writerow(dict(zip(fields, fields)))
-        for day in sorted(date_stats.iterkeys()):
+        for month in sorted(month_stats.iterkeys()):
             row = dict((f, 0) for f in fields)
-            row["date"] = day.strftime("%m/%d/%Y")
-            row.update(date_stats[day])
+            row["date"] = month.strftime("%m/%d/%Y")
+            row.update(month_stats[month])
             writer.writerow(row)
