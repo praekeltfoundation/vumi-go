@@ -5,7 +5,8 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
-
+from django.core import mail
+from django.template.loader import render_to_string
 
 import go.billing.settings as app_settings
 from go.base.models import UserProfile
@@ -69,7 +70,8 @@ def create_billing_account(sender, instance, created, **kwargs):
                                account_number=instance.user_account)
 
 
-post_save.connect(create_billing_account, sender=UserProfile,
+post_save.connect(
+    create_billing_account, sender=UserProfile,
     dispatch_uid='go.billing.models.create_billing_account')
 
 
@@ -367,6 +369,20 @@ class LowCreditNotificationManager(models.Manager):
             account=account, threshold=threshold_percentage,
             credit_balance=credit_balance)
         # Send email
+        subject = 'Vumi Go low credit warning: %s%%' % threshold_percentage
+        email_from = 'support@vumi.org'
+        email_to = account.user.email
+        message = render_to_string(
+            'billing/low_credit_notification_email.txt',
+            {
+                'user': account.user,
+                'account': account,
+                'threshold_percent': threshold_percentage,
+                'credit_balance': credit_balance,
+                'reference': notification.id,
+            })
+        mail.send_mail(subject, message, email_from, [email_to])
+        # TODO: Add callback for confirming mail sent.
         notification.save()
         return notification
 
