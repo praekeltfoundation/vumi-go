@@ -78,8 +78,8 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
             CommandError,
             "^Please specify one of the following actions:"
             " --conversation-types"
-            " --conversation-types-by-date"
-            " --message-counts-by-date$",
+            " --conversation-types-by-month"
+            " --message-counts-by-month$",
             self.run_command)
 
     def test_conversation_types_no_conversations(self):
@@ -106,13 +106,13 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
             "jsbox,3,2,1,3,0",
         ])
 
-    def test_conversation_types_by_date_no_conversations(self):
-        cmd = self.run_command(command=["conversation_types_by_date"])
+    def test_conversation_types_by_month_no_conversations(self):
+        cmd = self.run_command(command=["conversation_types_by_month"])
         self.assert_csv_output(cmd, [
             "date",
         ])
 
-    def test_conversation_types_by_date(self):
+    def test_conversation_types_by_month(self):
         days = [
             datetime(2013, m, d) for m, d in [
                 (9, 1), (11, 1), (11, 5), (12, 2)
@@ -128,7 +128,7 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
             ],
         )
 
-        cmd = self.run_command(command=["conversation_types_by_date"])
+        cmd = self.run_command(command=["conversation_types_by_month"])
         self.assert_csv_output(cmd, [
             "date,bulk_message,jsbox",
             "09/01/2013,3,0",
@@ -136,15 +136,15 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
             "12/01/2013,0,2",
         ])
 
-    def test_message_counts_by_date_no_conversations(self):
-        cmd = self.run_command(command=["message_counts_by_date"])
+    def test_message_counts_by_month_no_conversations(self):
+        cmd = self.run_command(command=["message_counts_by_month"])
         self.assert_csv_output(cmd, [
             "date,conversations_started,"
             "inbound_message_count,outbound_message_count,"
             "inbound_uniques,outbound_uniques",
         ])
 
-    def test_message_counts_by_date(self):
+    def test_message_counts_by_month(self):
         days = [
             datetime(2013, m, d) for m, d in [
                 (9, 1), (11, 1), (11, 5), (12, 2)
@@ -163,7 +163,7 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
             ],
         )
 
-        cmd = self.run_command(command=["message_counts_by_date"])
+        cmd = self.run_command(command=["message_counts_by_month"])
         self.assert_csv_output(cmd, [
             "date,conversations_started,"
             "inbound_message_count,outbound_message_count,"

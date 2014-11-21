@@ -17,12 +17,12 @@ class Command(BaseGoCommand):
                 "A count of total, active and running conversations by"
                 " conversation type.")),
         make_command_option(
-            'conversation_types_by_date',
+            'conversation_types_by_month',
             help=(
                 "A list of when conversations were started by type and"
                 " date.")),
         make_command_option(
-            'message_counts_by_date',
+            'message_counts_by_month',
             help=(
                 "Inbound and outbound message counts and total unique users"
                 " by date and conversation type.")),
@@ -60,7 +60,7 @@ class Command(BaseGoCommand):
             row.update(type_stats[conv_type])
             writer.writerow(row)
 
-    def handle_command_conversation_types_by_date(self, *args, **options):
+    def handle_command_conversation_types_by_month(self, *args, **options):
         conv_types = set()
         date_stats = {}
 
@@ -92,7 +92,7 @@ class Command(BaseGoCommand):
         stats["inbound_uniques"] += cache.count_from_addrs(batch_key)
         stats["outbound_uniques"] += cache.count_to_addrs(batch_key)
 
-    def handle_command_message_counts_by_date(self, *args, **options):
+    def handle_command_message_counts_by_month(self, *args, **options):
         date_stats = {}
 
         for user in get_users():
