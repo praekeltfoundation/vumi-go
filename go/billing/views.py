@@ -1,5 +1,5 @@
 import os
-from itertools import groupby
+from itertools import groupby as _groupby
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -8,36 +8,34 @@ from django.shortcuts import get_object_or_404
 from django.template import RequestContext, loader
 from xhtml2pdf import pisa
 
-
 from go.billing.models import Statement
 
 
+def groupby(values, fn):
+    return [(k, list(sorted(g, key=fn))) for k, g in _groupby(values, fn)]
+
+
+def totals_from_items(items):
+    return {
+        'cost': sum(item.cost for item in items),
+        'credits': sum(item.credits for item in items),
+    }
+
+
 def channels_from_items(all_items):
-    all_items = sorted(all_items, key=lambda d: d.channel)
-    channels = groupby(all_items, lambda line: line.channel)
-
-    channels = [{
-        'name': channel,
-        'items': list(sorted(items, key=lambda d: d.description))
-    } for channel, items in channels]
-
-    return channels
+    return [{
+        'name': name,
+        'items': sorted(items, key=lambda d: d.description),
+        'totals': totals_from_items(items)
+    } for name, items in groupby(all_items, lambda line: line.channel)]
 
 
 def billers_from_items(all_items):
-    all_items = sorted(all_items, key=lambda d: d.billed_by)
-
-    billers = [
-        (name, list(items))
-        for name, items in groupby(all_items, lambda line: line.billed_by)]
-
-    billers = [{
-        'name': billed_by,
+    return [{
+        'name': name,
         'channel_type': items[0].channel_type,
         'channels': channels_from_items(items)
-    } for billed_by, items in billers]
-
-    return billers
+    } for name, items in groupby(all_items, lambda d: d.billed_by)]
 
 
 @login_required
@@ -46,6 +44,7 @@ def statement_view(request, statement_id=None):
        ``statement_id`` to the user's browser.
     """
     statement = get_object_or_404(Statement, pk=statement_id)
+    items = list(statement.lineitem_set.all())
 
     if not (request.user.is_staff or
             statement.account.user == request.user):
@@ -60,7 +59,9 @@ def statement_view(request, statement_id=None):
     template = loader.get_template('billing/invoice.html')
 
     context = RequestContext(request, {
-        'billers': billers_from_items(list(statement.lineitem_set.all()))
+        'statement': statement,
+        'totals': totals_from_items(items),
+        'billers': billers_from_items(items),
     })
 
     html_result = template.render(context)

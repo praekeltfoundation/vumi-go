@@ -1,11 +1,12 @@
 """ Tests for PDF billing statement generation """
+from decimal import Decimal
 
 from django.core.urlresolvers import reverse
 
 from go.base.tests.helpers import DjangoVumiApiHelper, GoDjangoTestCase
 from go.billing.models import Account, MessageCost
 
-from .helpers import mk_statement, mk_transaction
+from .helpers import mk_statement, mk_transaction, get_message_credits
 
 
 class TestStatementView(GoDjangoTestCase):
@@ -60,33 +61,32 @@ class TestStatementView(GoDjangoTestCase):
             self.account,
             tag_pool_name=u'pool1',
             tag_name=u'Tag 1.1',
-            message_direction=MessageCost.DIRECTION_INBOUND,
             message_cost=150,
-            session_cost=50)
+            message_direction=MessageCost.DIRECTION_INBOUND)
 
         mk_transaction(
             self.account,
             tag_pool_name=u'pool1',
             tag_name=u'Tag 1.2',
-            message_direction=MessageCost.DIRECTION_OUTBOUND,
             message_cost=150,
-            session_cost=50)
+            markup_percent=10,
+            message_direction=MessageCost.DIRECTION_OUTBOUND)
 
         mk_transaction(
             self.account,
             tag_pool_name=u'pool2',
             tag_name=u'Tag 2.1',
-            message_direction=MessageCost.DIRECTION_OUTBOUND,
             message_cost=120,
-            session_cost=0)
+            markup_percent=10,
+            message_direction=MessageCost.DIRECTION_OUTBOUND)
 
         mk_transaction(
             self.account,
             tag_pool_name=u'pool2',
             tag_name=u'Tag 2.2',
-            message_direction=MessageCost.DIRECTION_INBOUND,
             message_cost=120,
-            session_cost=0)
+            markup_percent=10,
+            message_direction=MessageCost.DIRECTION_INBOUND)
 
         user = self.user_helper.get_django_user()
         statement = mk_statement(self.account)
@@ -99,9 +99,17 @@ class TestStatementView(GoDjangoTestCase):
             'channels': [{
                 'name': u'Tag 1.1',
                 'items': list(items.filter(channel=u'Tag 1.1')),
+                'totals': {
+                    'cost': Decimal('150.0'),
+                    'credits': get_message_credits(150, 10),
+                }
             }, {
                 'name': u'Tag 1.2',
                 'items': list(items.filter(channel=u'Tag 1.2')),
+                'totals': {
+                    'cost': Decimal('150.0'),
+                    'credits': get_message_credits(150, 10),
+                }
             }],
         }, {
             'name': u'Pool 2',
@@ -109,11 +117,112 @@ class TestStatementView(GoDjangoTestCase):
             'channels': [{
                 'name': u'Tag 2.1',
                 'items': list(items.filter(channel=u'Tag 2.1')),
+                'totals': {
+                    'cost': Decimal('120.0'),
+                    'credits': get_message_credits(120, 10),
+                }
             }, {
                 'name': u'Tag 2.2',
                 'items': list(items.filter(channel=u'Tag 2.2')),
+                'totals': {
+                    'cost': Decimal('120.0'),
+                    'credits': get_message_credits(120, 10),
+                }
             }],
         }])
+
+    def test_statement_channel_totals(self):
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.1',
+            message_cost=100,
+            markup_percent=20,
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.1',
+            message_cost=100,
+            markup_percent=20,
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.2',
+            message_cost=200,
+            markup_percent=40,
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.2',
+            message_cost=200,
+            markup_percent=40,
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        user = self.user_helper.get_django_user()
+        statement = mk_statement(self.account)
+        response = self.get_statement_pdf(user, statement)
+
+        totals = [
+            channel['totals']
+            for channel in response.context['billers'][0]['channels']]
+
+        self.assertEqual(totals, [{
+            'cost': Decimal('200.0'),
+            'credits': get_message_credits(200, 20),
+        }, {
+            'cost': Decimal('400.0'),
+            'credits': get_message_credits(400, 40),
+        }])
+
+    def test_statement_grand_totals(self):
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.1',
+            message_cost=100,
+            markup_percent=20,
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.1',
+            message_cost=100,
+            markup_percent=20,
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.2',
+            message_cost=200,
+            markup_percent=40,
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'Tag 1.2',
+            message_cost=200,
+            markup_percent=40,
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        user = self.user_helper.get_django_user()
+        statement = mk_statement(self.account)
+        response = self.get_statement_pdf(user, statement)
+
+        self.assertEqual(response.context['totals'], {
+            'cost': Decimal('600.0'),
+            'credits': sum([
+                get_message_credits(200, 20),
+                get_message_credits(400, 40)])
+        })
 
     def test_statement_accessable_by_owner(self):
         statement = self.mk_statement()
