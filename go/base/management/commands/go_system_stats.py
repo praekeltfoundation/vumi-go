@@ -53,7 +53,7 @@ class Command(BaseGoCommand):
         fields = (["type", "total"] + sorted(conv_statuses) +
                   sorted(conv_archive_statuses))
         writer = DictWriter(self.stdout, fields)
-        writer.writeheader()
+        writer.writerow(dict(zip(fields, fields)))
         for conv_type in sorted(conv_types):
             row = dict((f, 0) for f in fields)
             row["type"] = conv_type
@@ -75,7 +75,7 @@ class Command(BaseGoCommand):
 
         fields = (["date"] + sorted(conv_types))
         writer = DictWriter(self.stdout, fields)
-        writer.writeheader()
+        writer.writerow(dict(zip(fields, fields)))
         for day in sorted(date_stats.iterkeys()):
             row = dict((f, 0) for f in fields)
             row["date"] = day.strftime("%m/%d/%Y")
