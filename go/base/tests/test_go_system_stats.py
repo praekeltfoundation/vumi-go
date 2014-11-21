@@ -6,13 +6,15 @@ from django.core.management.base import CommandError
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.management.commands import go_system_stats
+from go.vumitools.tests.helpers import GoMessageHelper
 
 
 class TestGoSystemStatsCommand(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
-        self.redis = self.vumi_helper.get_vumi_api().redis
+        self.msg_helper = self.add_helper(
+            GoMessageHelper(vumi_helper=self.vumi_helper))
 
     def run_command(self, **kw):
         command = go_system_stats.Command()
@@ -20,6 +22,24 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
         command.stderr = StringIO()
         command.handle(**kw)
         return command
+
+    def mk_msgs_for_conv(self, conv, inbounds=(), outbounds=()):
+        """ Utility for adding messages to a conversation.
+
+        :param list inbounds:
+            List of numbers of inbound messages to add. Each set of
+            inbound messages reuses the same from_addr values which
+            allows us to tweak the set of inbound uniques.
+
+        :param list outbounds:
+            List of numbers of outbound messages to add. Each set of
+            outbound messages reuses the same to_addr values which
+            allows us to tweak the set of outbound uniques.
+        """
+        for inbound in inbounds:
+            self.msg_helper.add_inbound_to_conv(conv, inbound)
+        for outbound in outbounds:
+            self.msg_helper.add_outbound_to_conv(conv, outbound)
 
     def mk_conversations(self, **conv_types):
         """ Utility for making conversations in various statuses.
@@ -36,13 +56,16 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
         for conv_type, conv_descs in conv_types.items():
             for conv_desc in conv_descs:
                 for i in range(conv_desc.get('count', 1)):
-                    self.user_helper.create_conversation(
+                    conv = self.user_helper.create_conversation(
                         unicode(conv_type), name=u"%s_%d" % (conv_type, i),
                         status=unicode(conv_desc.get('status', 'running')),
                         archive_status=unicode(
                             conv_desc.get('archive_status', 'active')),
                         created_at=conv_desc.get(
                             'created_at', datetime.utcnow()))
+                    self.mk_msgs_for_conv(
+                        conv, inbounds=conv_desc.get('inbounds', ()),
+                        outbounds=conv_desc.get('outbounds', ()))
 
     def assert_csv_output(self, cmd, rows):
         self.assertEqual(
@@ -114,7 +137,38 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
         ])
 
     def test_message_counts_by_date_no_conversations(self):
-        self.assertRaisesRegexp(
-            NotImplementedError,
-            "counts_by_date not yet implemented",
-            self.run_command, command=["message_counts_by_date"])
+        cmd = self.run_command(command=["message_counts_by_date"])
+        self.assert_csv_output(cmd, [
+            "date,conversations_started,"
+            "inbound_message_count,outbound_message_count,"
+            "inbound_uniques,outbound_uniques",
+        ])
+
+    def test_message_counts_by_date(self):
+        days = [
+            datetime(2013, m, d) for m, d in [
+                (9, 1), (11, 1), (11, 5), (12, 2)
+            ]]
+        self.mk_conversations(
+            bulk_message=[
+                {"count": 1, "created_at": days[0],
+                 "inbounds": [1, 1, 1], "outbounds": [2, 2, 2]},
+                {"count": 2, "created_at": days[1],
+                 "inbounds": [1], "outbounds": [1]},
+            ],
+            jsbox=[
+                {"count": 1, "created_at": days[2]},
+                {"count": 2, "created_at": days[3],
+                 "inbounds": [1, 1], "outbounds": [3]},
+            ],
+        )
+
+        cmd = self.run_command(command=["message_counts_by_date"])
+        self.assert_csv_output(cmd, [
+            "date,conversations_started,"
+            "inbound_message_count,outbound_message_count,"
+            "inbound_uniques,outbound_uniques",
+            "09/01/2013,1,3,6,1,2",
+            "11/01/2013,3,2,2,2,2",
+            "12/01/2013,2,4,6,2,6",
+        ])

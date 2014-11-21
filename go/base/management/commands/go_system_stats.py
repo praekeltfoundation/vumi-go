@@ -82,5 +82,36 @@ class Command(BaseGoCommand):
             row.update(date_stats[day])
             writer.writerow(row)
 
+    def _increment_msg_stats(self, conv, stats):
+        batch_key = conv.batch.key
+        mdb = conv.mdb
+        cache = mdb.cache
+        stats["conversations_started"] += 1
+        stats["inbound_message_count"] += mdb.batch_inbound_count(batch_key)
+        stats["outbound_message_count"] += mdb.batch_outbound_count(batch_key)
+        stats["inbound_uniques"] += cache.count_from_addrs(batch_key)
+        stats["outbound_uniques"] += cache.count_to_addrs(batch_key)
+
     def handle_command_message_counts_by_date(self, *args, **options):
-        raise NotImplementedError("counts_by_date not yet implemented")
+        date_stats = {}
+
+        for user in get_users():
+            api = vumi_api_for_user(user)
+            for key in api.conversation_store.list_conversations():
+                conv = api.get_wrapped_conversation(key)
+                day = conv.created_at.date().replace(day=1)
+                day_stats = date_stats.setdefault(day, defaultdict(int))
+                self._increment_msg_stats(conv, day_stats)
+
+        fields = ([
+            "date", "conversations_started",
+            "inbound_message_count", "outbound_message_count",
+            "inbound_uniques", "outbound_uniques",
+        ])
+        writer = DictWriter(self.stdout, fields)
+        writer.writerow(dict(zip(fields, fields)))
+        for day in sorted(date_stats.iterkeys()):
+            row = dict((f, 0) for f in fields)
+            row["date"] = day.strftime("%m/%d/%Y")
+            row.update(date_stats[day])
+            writer.writerow(row)
