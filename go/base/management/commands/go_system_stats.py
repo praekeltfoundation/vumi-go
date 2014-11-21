@@ -61,8 +61,26 @@ class Command(BaseGoCommand):
             writer.writerow(row)
 
     def handle_command_conversation_types_by_date(self, *args, **options):
-        raise NotImplementedError(
-            "conversation_types_by_date not yet implemented")
+        conv_types = set()
+        date_stats = {}
+
+        for user in get_users():
+            api = vumi_api_for_user(user)
+            for key in api.conversation_store.list_conversations():
+                conv = api.get_wrapped_conversation(key)
+                conv_types.add(conv.conversation_type)
+                day = conv_types.created_at.date()
+                day_stats = date_stats.setdefault(day, defaultdict(int))
+                day_stats[conv.conversation_type] += 1
+
+        fields = (["date"] + sorted(conv_types))
+        writer = DictWriter(self.stdout, fields)
+        writer.writeheader()
+        for day in sorted(date_stats.iterkeys()):
+            row = dict((f, 0) for f in fields)
+            row["date"] = day
+            row.update(date_stats(day))
+            writer.writerow(row)
 
     def handle_command_message_counts_by_date(self, *args, **options):
         raise NotImplementedError("counts_by_date not yet implemented")
