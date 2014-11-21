@@ -20,12 +20,12 @@ class Command(BaseGoCommand):
             'conversation_types_by_month',
             help=(
                 "A list of when conversations were started by type and"
-                " date.")),
+                " month.")),
         make_command_option(
             'message_counts_by_month',
             help=(
                 "Inbound and outbound message counts and total unique users"
-                " by date and conversation type.")),
+                " by month and conversation type.")),
     )
 
     def handle_command_conversation_types(self, *args, **options):
