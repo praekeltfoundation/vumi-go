@@ -109,11 +109,14 @@ class Command(BaseGoCommand):
         batch_key = conv.batch.key
         mdb = conv.mdb
         cache = mdb.cache
+        inbound_uniques = cache.count_from_addrs(batch_key)
+        outbound_uniques = cache.count_to_addrs(batch_key)
         stats["conversations_started"] += 1
         stats["inbound_message_count"] += mdb.batch_inbound_count(batch_key)
         stats["outbound_message_count"] += mdb.batch_outbound_count(batch_key)
-        stats["inbound_uniques"] += cache.count_from_addrs(batch_key)
-        stats["outbound_uniques"] += cache.count_to_addrs(batch_key)
+        stats["inbound_uniques"] += inbound_uniques
+        stats["outbound_uniques"] += outbound_uniques
+        stats["total_uniques"] += max(inbound_uniques, outbound_uniques)
 
     def handle_command_message_counts_by_month(self, *args, **options):
         month_stats = {}
@@ -129,7 +132,7 @@ class Command(BaseGoCommand):
         fields = ([
             "date", "conversations_started",
             "inbound_message_count", "outbound_message_count",
-            "inbound_uniques", "outbound_uniques",
+            "inbound_uniques", "outbound_uniques", "total_uniques",
         ])
         writer = StatsWriter(self.stdout, fields)
         writer.writeheader()

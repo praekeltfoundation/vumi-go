@@ -6,7 +6,6 @@ from django.core.management.base import CommandError
 from django.core.management import call_command
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.management.commands import go_system_stats
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
@@ -147,7 +146,7 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
         self.assert_csv_output(cmd, [
             "date,conversations_started,"
             "inbound_message_count,outbound_message_count,"
-            "inbound_uniques,outbound_uniques",
+            "inbound_uniques,outbound_uniques,total_uniques",
         ])
 
     def test_message_counts_by_month(self):
@@ -173,10 +172,10 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
         self.assert_csv_output(cmd, [
             "date,conversations_started,"
             "inbound_message_count,outbound_message_count,"
-            "inbound_uniques,outbound_uniques",
-            "09/01/2013,1,3,6,1,2",
-            "11/01/2013,3,2,2,2,2",
-            "12/01/2013,2,4,6,2,6",
+            "inbound_uniques,outbound_uniques,total_uniques",
+            "09/01/2013,1,3,6,1,2,2",
+            "11/01/2013,3,2,2,2,2,2",
+            "12/01/2013,2,4,6,2,6,6",
         ])
 
     def test_custom_date_format(self):
