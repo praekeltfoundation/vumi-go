@@ -8,7 +8,7 @@ from twisted.web.server import NOT_DONE_YET
 from django.contrib.auth.hashers import make_password
 
 from go.billing import settings as app_settings
-from go.billing.models import MessageCost
+from go.billing.models import MessageCost, LowCreditNotification
 from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 
 
@@ -795,7 +795,8 @@ class TransactionResource(BaseResource):
         alert_credit_balance = result.get('alert_credit_balance')
         if (credit_balance < alert_credit_balance and
                 credit_balance + credit_amount > alert_credit_balance):
-            pass  # TODO: Raise a Low Credits alert; somehow
+            LowCreditNotification.objects.create_notification(
+                account_number, result.get('alert_threshold'), credit_balance)
 
         defer.returnValue(transaction)
 

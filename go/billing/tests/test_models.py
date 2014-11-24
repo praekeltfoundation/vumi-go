@@ -175,6 +175,7 @@ class TestTransaction(GoDjangoTestCase):
         self.assertNotEqual(trans.pk, None)
         self.assertEqual(unicode(trans), unicode(trans.pk))
 
+
 class TestLowCreditNotification(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
@@ -186,11 +187,11 @@ class TestLowCreditNotification(GoDjangoTestCase):
         account_number = self.acc.pk
         return LowCreditNotification.objects.create_notification(
             account_number, decimal.Decimal(percent), decimal.Decimal(balance))
-        
+
     def test_unicode(self):
         notification = self.mk_notification('50.0', '314.1')
         self.assertEqual(
-            unicode(notification), 
+            unicode(notification),
             u'50.0%% threshold for %s' % self.acc)
 
     def test_fields(self):
@@ -217,4 +218,3 @@ class TestLowCreditNotification(GoDjangoTestCase):
         self.assertTrue(self.django_user.get_full_name() in email.body)
         self.assertTrue(str(notification.pk) in email.body)
         self.assertTrue(str(self.acc) in email.body)
-        
