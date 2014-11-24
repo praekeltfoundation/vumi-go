@@ -202,11 +202,10 @@ class TestContactStore(VumiTestCase):
 
     @inlineCallbacks
     def test_contact_for_addr_unindexed(self):
-        contact = yield self.make_unindexed_contact(
-            name=u'name', msisdn=u'+27831234567')
-        found_contact = yield self.contact_store.contact_for_addr(
+        yield self.make_unindexed_contact(name=u'name', msisdn=u'+27831234567')
+        contact_d = self.contact_store.contact_for_addr(
             'sms', u'+27831234567', create=False)
-        self.assertEqual(contact.key, found_contact.key)
+        yield self.assertFailure(contact_d, ContactNotFoundError)
 
     @inlineCallbacks
     def test_contact_for_addr_unindexed_index_disabled(self):
@@ -227,12 +226,13 @@ class TestContactStore(VumiTestCase):
         self.assertEqual(contact.key, found_contact.key)
 
     @inlineCallbacks
-    def test_contact_for_addr_unindexed_fallback_disabled(self):
-        yield self.make_unindexed_contact(name=u'name', msisdn=u'+27831234567')
-        self.contact_store.FIND_BY_INDEX_SEARCH_FALLBACK = False
-        contact_d = self.contact_store.contact_for_addr(
+    def test_contact_for_addr_unindexed_fallback_enabled(self):
+        contact = yield self.make_unindexed_contact(
+            name=u'name', msisdn=u'+27831234567')
+        self.contact_store.FIND_BY_INDEX_SEARCH_FALLBACK = True
+        found_contact = yield self.contact_store.contact_for_addr(
             'sms', u'+27831234567', create=False)
-        yield self.assertFailure(contact_d, ContactNotFoundError)
+        self.assertEqual(contact.key, found_contact.key)
 
     @inlineCallbacks
     def test_contact_for_addr_indexed_fallback_disabled(self):
