@@ -129,6 +129,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         self._event_handlers = {}
         self._session_handlers = {}
 
+        self.concurrency_limiter = ConcurrencyLimiter(
+            config.worker_concurrency_limit)
         self.webserver = self.start_web_resources([
             (self.get_conversation_resource(), self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),

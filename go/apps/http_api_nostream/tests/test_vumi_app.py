@@ -152,17 +152,19 @@ class TestConcurrencyLimiter(VumiTestCase):
 
 class TestNoStreamingHTTPWorkerBase(VumiTestCase):
 
-    @inlineCallbacks
     def setUp(self):
         self.app_helper = self.add_helper(
             AppWorkerHelper(NoStreamingHTTPWorker))
 
+    @inlineCallbacks
+    def start_app_worker(self, config_overrides={}):
         self.config = {
             'health_path': '/health/',
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
         }
+        self.config.update(config_overrides)
         self.app = yield self.app_helper.get_app_worker(self.config)
         self.addr = self.app.webserver.getHost()
         self.url = 'http://%s:%s%s' % (
@@ -253,6 +255,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_missing_auth(self):
+        yield self.start_app_worker()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         msg = {
             'to_addr': '+2345',
@@ -267,6 +270,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_invalid_auth(self):
+        yield self.start_app_worker()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         msg = {
             'to_addr': '+2345',
@@ -284,6 +288,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_send_to(self):
+        yield self.start_app_worker()
         msg = {
             'to_addr': '+2345',
             'content': 'foo',
@@ -318,7 +323,33 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertEqual(sent_msg['from_addr'], None)
 
     @inlineCallbacks
+    def test_send_to_with_zero_worker_concurrency(self):
+        """
+        When the worker_concurrency_limit is set to zero, our requests will
+        never complete.
+
+        This is a hacky way to test that the concurrency limit is being applied
+        without invasive changes to the app worker.
+        """
+        yield self.start_app_worker({'worker_concurrency_limit': 0})
+        msg = {
+            'to_addr': '+2345',
+            'content': 'foo',
+            'message_id': 'evil_id',
+        }
+
+        # TaggingMiddleware.add_tag_to_msg(msg, self.tag)
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        d = http_request_full(
+            url, json.dumps(msg), self.auth_headers, method='PUT',
+            timeout=0.2)
+
+        yield self.assertFailure(d, HttpTimeoutError)
+
+    @inlineCallbacks
     def test_in_send_to_with_evil_content(self):
+        yield self.start_app_worker()
         msg = {
             'content': 0xBAD,
             'to_addr': '+1234',
@@ -332,6 +363,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_in_send_to_with_evil_to_addr(self):
+        yield self.start_app_worker()
         msg = {
             'content': 'good',
             'to_addr': 1234,
@@ -345,6 +377,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_in_reply_to(self):
+        yield self.start_app_worker()
         inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
@@ -378,6 +411,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_in_reply_to_with_evil_content(self):
+        yield self.start_app_worker()
         inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
@@ -394,6 +428,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_invalid_in_reply_to(self):
+        yield self.start_app_worker()
         msg = {
             'content': 'foo',
             'in_reply_to': '1',  # this doesn't exist
@@ -406,6 +441,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_invalid_in_reply_to_with_missing_conversation_key(self):
+        yield self.start_app_worker()
         # create a message with no (None) conversation
         inbound_msg = self.app_helper.make_inbound('in 1', message_id='msg-1')
         vumi_api = self.app_helper.vumi_helper.get_vumi_api()
@@ -428,6 +464,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_in_reply_to_with_evil_session_event(self):
+        yield self.start_app_worker()
         inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
@@ -448,6 +485,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_in_reply_to_with_evil_message_id(self):
+        yield self.start_app_worker()
         inbound_msg = yield self.app_helper.make_stored_inbound(
             self.conversation, 'in 1', message_id='1')
 
@@ -476,6 +514,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_metric_publishing(self):
+        yield self.start_app_worker()
 
         metric_data = [
             ("vumi.test.v1", 1234, 'SUM'),
@@ -500,6 +539,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_health_response(self):
+        yield self.start_app_worker()
         health_url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['health_path'])
 
@@ -508,6 +548,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message(self):
+        yield self.start_app_worker()
         msg_d = self.app_helper.make_dispatch_inbound(
             'in 1', message_id='1', conv=self.conversation)
 
@@ -524,6 +565,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message_ignored(self):
+        yield self.start_app_worker()
         self.conversation.config['http_api_nostream'].update({
             'ignore_messages': True,
         })
@@ -537,6 +579,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message_201_response(self):
+        yield self.start_app_worker()
         with LogCatcher(message='Got unexpected response code') as lc:
             msg_d = self.app_helper.make_dispatch_inbound(
                 'in 1', message_id='1', conv=self.conversation)
@@ -548,6 +591,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message_500_response(self):
+        yield self.start_app_worker()
         with LogCatcher(message='Got unexpected response code') as lc:
             msg_d = self.app_helper.make_dispatch_inbound(
                 'in 1', message_id='1', conv=self.conversation)
@@ -568,6 +612,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message_no_url(self):
+        yield self.start_app_worker()
         self.conversation.config['http_api_nostream'].update({
             'push_message_url': None,
         })
@@ -582,6 +627,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message_unsupported_scheme(self):
+        yield self.start_app_worker()
         self.conversation.config['http_api_nostream'].update({
             'push_message_url': 'example.com',
         })
@@ -596,6 +642,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message_timeout(self):
+        yield self.start_app_worker()
         self._patch_http_request_full(HttpTimeoutError)
         with LogCatcher(message='Timeout') as lc:
             yield self.app_helper.make_dispatch_inbound(
@@ -605,6 +652,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message_dns_lookup_error(self):
+        yield self.start_app_worker()
         self._patch_http_request_full(DNSLookupError)
         with LogCatcher(message='DNS lookup error') as lc:
             yield self.app_helper.make_dispatch_inbound(
@@ -614,6 +662,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_message_connection_refused_error(self):
+        yield self.start_app_worker()
         self._patch_http_request_full(ConnectionRefusedError)
         with LogCatcher(message='Connection refused') as lc:
             yield self.app_helper.make_dispatch_inbound(
@@ -623,6 +672,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_event(self):
+        yield self.start_app_worker()
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
         event_d = self.app_helper.make_dispatch_ack(
@@ -640,6 +690,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_event_ignored(self):
+        yield self.start_app_worker()
         self.conversation.config['http_api_nostream'].update({
             'ignore_events': True,
         })
@@ -655,6 +706,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_event_no_url(self):
+        yield self.start_app_worker()
         self.conversation.config['http_api_nostream'].update({
             'push_event_url': None,
         })
@@ -672,6 +724,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_event_timeout(self):
+        yield self.start_app_worker()
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
@@ -684,6 +737,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_event_dns_lookup_error(self):
+        yield self.start_app_worker()
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
@@ -696,6 +750,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_post_inbound_event_connection_refused_error(self):
+        yield self.start_app_worker()
         msg1 = yield self.app_helper.make_stored_outbound(
             self.conversation, 'out 1', message_id='1')
 
@@ -713,6 +768,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             d.addCallback(lambda r: self.assertEqual(r.code, http.NOT_FOUND))
             return d
 
+        yield self.start_app_worker()
+
         yield assert_not_found(self.url)
         yield assert_not_found(self.url + '/')
         yield assert_not_found('%s/%s' % (self.url, self.conversation.key),
@@ -724,6 +781,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_send_message_command(self):
+        yield self.start_app_worker()
         yield self.app_helper.dispatch_command(
             'send_message',
             user_account_key=self.conversation.user_account.key,
@@ -756,6 +814,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
+        yield self.start_app_worker()
         msg = yield self.app_helper.make_stored_inbound(
             self.conversation, "foo")
         yield self.app_helper.dispatch_command(
@@ -799,6 +858,7 @@ class TestNoStreamingHTTPWorkerWithAuth(TestNoStreamingHTTPWorkerBase):
 
     @inlineCallbacks
     def test_push_with_basic_auth(self):
+        yield self.start_app_worker()
         self.app_helper.make_dispatch_inbound(
             'in', message_id='1', conv=self.conversation)
         req = yield self.push_calls.get()
