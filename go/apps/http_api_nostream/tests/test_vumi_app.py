@@ -295,8 +295,6 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             'message_id': 'evil_id',
         }
 
-        # TaggingMiddleware.add_tag_to_msg(msg, self.tag)
-
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(msg),
                                            self.auth_headers, method='PUT')
@@ -337,8 +335,6 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             'content': 'foo',
             'message_id': 'evil_id',
         }
-
-        # TaggingMiddleware.add_tag_to_msg(msg, self.tag)
 
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         d = http_request_full(
