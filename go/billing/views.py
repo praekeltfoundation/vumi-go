@@ -1,12 +1,9 @@
-from os import path
 from itertools import groupby as _groupby
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.template import RequestContext, loader
-from xhtml2pdf import pisa
 
 from go.billing.models import Statement
 
