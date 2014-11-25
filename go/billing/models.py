@@ -381,7 +381,9 @@ class LowCreditNotificationManager(models.Manager):
                 'credit_balance': credit_balance,
                 'reference': notification.id,
             })
-        mail.send_mail(subject, message, email_from, [email_to])
+        results = mail.send_mail(subject, message, email_from, [email_to])
+        raise Exception('Result type: %s' % type(results))
+
         # TODO: Add callback for confirming mail sent.
         notification.save()
         return notification
