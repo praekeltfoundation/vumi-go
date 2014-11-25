@@ -152,6 +152,11 @@ class TestGoLoggingResource(ResourceTestCaseBase, LogCheckerMixin):
         ])
 
     @inlineCallbacks
+    def test_handle_info_failure(self):
+        yield self.assert_bad_command(
+            'info', u'Value expected for msg')
+
+    @inlineCallbacks
     def test_handle_unicode(self):
         with LogCatcher(log_level=logging.INFO) as lc:
             reply = yield self.dispatch_command('info', msg=u'Zoë message')
