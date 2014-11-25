@@ -1,12 +1,14 @@
 import decimal
 
 from django.core import mail
+from django.conf import settings
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import (
     TagPool, Account, MessageCost, Transaction, create_billing_account,
     LowCreditNotification)
 from go.billing.settings import QUANTIZATION_EXPONENT
+from go.billing.models import notification_confirm_sent
 
 
 class TestTagPool(GoDjangoTestCase):
@@ -178,6 +180,9 @@ class TestTransaction(GoDjangoTestCase):
 
 class TestLowCreditNotification(GoDjangoTestCase):
     def setUp(self):
+        settings.EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+        settings.CELERY_EMAIL_BACKEND = (
+            'django.core.mail.backends.locmem.EmailBackend')
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
 
@@ -189,24 +194,27 @@ class TestLowCreditNotification(GoDjangoTestCase):
             account_number, decimal.Decimal(percent), decimal.Decimal(balance))
 
     def test_unicode(self):
-        notification = self.mk_notification('50.0', '314.1')
+        notification, res = self.mk_notification('50.0', '314.1')
+        self.assertTrue(res.get() is not None)
         self.assertEqual(
             unicode(notification),
             u'50.0%% threshold for %s' % self.acc)
 
     def test_fields(self):
-        notification = self.mk_notification('55.0', '27.17')
+        notification, res = self.mk_notification('55.0', '27.17')
+        self.assertTrue(res.get() is not None)
         self.assertEqual(notification.account, self.acc)
         self.assertEqual(notification.threshold, decimal.Decimal('55.0'))
         self.assertEqual(notification.credit_balance, decimal.Decimal('27.17'))
 
     def test_confirm_sent(self):
-        notification = self.mk_notification('60.0', '31.41')
-        timestamp = notification.confirm_sent()
+        notification, res = self.mk_notification('60.0', '31.41')
+        timestamp = res = res.get()
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
-        notification = self.mk_notification('70.1', '12.34')
+        notification, res = self.mk_notification('70.1', '12.34')
+        self.assertTrue(res.get() is not None)
         self.assertEqual(len(mail.outbox), 1)
         [email] = mail.outbox
 

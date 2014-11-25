@@ -1,12 +1,16 @@
+from celery import task
 from datetime import datetime
+
 from decimal import Decimal
 
 from django.db import models
 from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
-from django.core import mail
+from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
+
+from djcelery_email.tasks import send_email
 
 import go.billing.settings as app_settings
 from go.base.models import UserProfile
@@ -362,7 +366,7 @@ class LowCreditNotificationManager(models.Manager):
     def create_notification(
             self, account_number, threshold_percentage, credit_balance):
         """
-        Sends a low credit notification. Returns model instance.
+        Sends a low credit notification. Returns (model instance, email_task).
         """
         account = Account.objects.get(pk=account_number)
         notification = self.create(
@@ -381,12 +385,14 @@ class LowCreditNotificationManager(models.Manager):
                 'credit_balance': credit_balance,
                 'reference': notification.id,
             })
-        results = mail.send_mail(subject, message, email_from, [email_to])
-        raise Exception('Result type: %s' % type(results))
 
-        # TODO: Add callback for confirming mail sent.
+        email = EmailMessage(subject, message, email_from, [email_to])
+        res = (
+            send_email.s(email) |
+            notification_confirm_sent.s(notification)).apply_async()
+
         notification.save()
-        return notification
+        return notification, res
 
 
 class LowCreditNotification(models.Model):
@@ -417,14 +423,19 @@ class LowCreditNotification(models.Model):
 
     objects = LowCreditNotificationManager()
 
-    def confirm_sent(self):
-        """
-        Confirms that the email has been sent. Returns the datetime that
-        the confirmation field has been set to.
-        """
-        self.success = datetime.now()
-        self.save()
-        return self.success
-
     def __unicode__(self):
         return u"%s%% threshold for %s" % (self.threshold, self.account)
+
+
+@task
+def notification_confirm_sent(res, notification):
+    """
+    Confirms that the email has been sent. Returns the datetime that
+    the confirmation field has been set to.
+    """
+    if res >= 1:
+        notification.success = datetime.now()
+        notification.save()
+        return notification.success
+    else:
+        return None
