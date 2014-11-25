@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.http_api_nostream.tests.test_vumi_app -*-
 import base64
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, Deferred, succeed
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
 
@@ -33,11 +33,82 @@ class HTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         default='/health/', static=True)
     concurrency_limit = ConfigInt(
         "Maximum number of clients per account. A value less than "
-        "zero disables the limit",
+        "zero disables the limit.",
         default=10)
     timeout = ConfigInt(
         "How long to wait for a response from a server when posting "
         "messages or events", default=5, static=True)
+    worker_concurrency_limit = ConfigInt(
+        "Maximum number of clients per account per worker. A value less than "
+        "zero disables the limit. (Unlike concurrency_limit, this queues "
+        "requests instead of rejecting them.)",
+        default=1, static=True)
+
+
+class ConcurrencyLimiter(object):
+    def __init__(self, limit):
+        self._limit = limit
+        self._concurrents = {}
+        self._waiters = {}
+
+    def _get_concurrent(self, key):
+        return self._concurrents.get(key, 0)
+
+    def _inc_concurrent(self, key):
+        concurrents = self._get_concurrent(key) + 1
+        self._concurrents[key] = concurrents
+        return concurrents
+
+    def _dec_concurrent(self, key):
+        concurrents = self._get_concurrent(key) - 1
+        if concurrents < 0:
+            raise RuntimeError("Can't decrement key below zero: %r" % (key,))
+        elif concurrents == 0:
+            del self._concurrents[key]
+        else:
+            self._concurrents[key] = concurrents
+        return concurrents
+
+    def _make_waiter(self, key):
+        d = Deferred()
+        self._waiters.setdefault(key, []).append(d)
+        return d
+
+    def _pop_waiter(self, key):
+        waiters = self._waiters.get(key, [])
+        if not waiters:
+            return None
+        d = waiters.pop(0)
+        if not waiters:
+            # Clean up empty keys so we don't leak memory.
+            del self._waiters[key]
+        return d
+
+    def _check_concurrent(self, key):
+        if self._get_concurrent(key) >= self._limit:
+            return
+        d = self._pop_waiter(key)
+        if d is not None:
+            self._inc_concurrent(key)
+            d.callback(None)
+
+    def start(self, key):
+        if self._limit < 0:
+            # Special case for no limit, never block.
+            return succeed(None)
+        elif self._limit == 0:
+            # Special case for limit of zero, always block forever.
+            return Deferred()
+        d = self._make_waiter(key)
+        self._check_concurrent(key)
+        return d
+
+    def stop(self, key):
+        if self._limit <= 0:
+            # Special case for where we don't keep state.
+            return
+        self._dec_concurrent(key)
+        self._check_concurrent(key)
 
 
 class NoStreamingHTTPWorker(GoApplicationWorker):
