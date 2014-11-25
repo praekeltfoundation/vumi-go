@@ -100,6 +100,8 @@ client:
       - 'go/base/static/vendor/diamondash/css/diamondash.css'
     go:
       - 'go/base/static/css/vumigo.css'
+    invoice:
+      - 'go/base/static/css/invoice.css'
 
   fonts:
     vendor:
