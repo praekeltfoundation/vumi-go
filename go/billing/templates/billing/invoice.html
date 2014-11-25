@@ -12,19 +12,19 @@
         <div class="inv-container">
             <header class="inv-header">
                 <div class="inv-pull-left">
-                    <img class="inv-logo" alt="Praekelt Logo" src="{{ STATIC_URL }}img/praekelt-logo.svg">
+                    <img class="inv-logo" alt="Logo" src="{{ STATIC_URL }}img/logo.svg">
 
-                    <address class="inv-address">
-                        <span>27.11.482.8684</span><br>
-                        <a href="http://accounts@praekelt.com">accounts@praekelt.com</a><br>
-                        <a href="http://www.praekeltfoundation.org">www.praekeltfoundation.org</a>
+                    <address class="inv-contact">
+                        <span>{{ contact_details.tel }}</span><br>
+                        <a href={{ contact_details.email }}>{{ contact_details.email }}</a><br>
+                        <a href={{ contact_details.website }}>{{ contact_details.website }}</a>
                     </address>
                 </div>
 
                 <div class="inv-pull-right">
                     <h1>Vumi Billing Statement</h1>
 
-                    <table class="inv-details-context">
+                    <table class="inv-context">
                         <tr>
                             <th>Account</th>
                             <td>{{ statement.account.user.email }}</td>

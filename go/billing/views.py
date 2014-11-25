@@ -5,6 +5,7 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.template import RequestContext, loader
 
+from go.billing import settings
 from go.billing.models import Statement
 
 
@@ -50,6 +51,7 @@ def statement_view(request, statement_id=None):
         'statement': statement,
         'totals': totals_from_items(items),
         'billers': billers_from_items(items),
+        'contact_details': settings.STATEMENT_CONTACT_DETAILS,
     })
 
     html_result = template.render(context)

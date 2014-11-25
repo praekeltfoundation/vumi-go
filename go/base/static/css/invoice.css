@@ -22,12 +22,12 @@ h3 {
   width: 960px;
   margin: 20px auto;
 }
-.inv-address {
+.inv-contact {
   margin: 4px;
   font-style: normal;
   font-size: 0.9em;
 }
-.inv-details-context th {
+.inv-context th {
   text-align: right;
 }
 .inv-items {
