@@ -67,7 +67,6 @@ def get_channel_type(transaction, tagpools):
 def get_message_credits(transaction):
     cost = get_message_cost(transaction)
     markup = transaction['markup_percent']
-    print markup
     return MessageCost.calculate_message_credit_cost(cost, markup)
 
 

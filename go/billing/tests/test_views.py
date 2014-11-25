@@ -37,22 +37,17 @@ class TestStatementView(GoDjangoTestCase):
             mk_transaction(self.account)
         return mk_statement(self.account)
 
-    def assert_is_pdf(self, response):
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response['Content-Type'], 'application/pdf')
-        self.assertTrue(response.content.startswith('%PDF-'))
-
-    def get_statement_pdf(self, username, statement):
+    def get_statement(self, username, statement):
         client = self.vumi_helper.get_client(username=username)
         return client.get(
-            reverse('pdf_statement', kwargs={'statement_id': statement.id}))
+            reverse('html_statement', kwargs={'statement_id': statement.id}))
 
     def check_statement_accessible_by(self, username, statement):
-        response = self.get_statement_pdf(username, statement)
-        self.assert_is_pdf(response)
+        response = self.get_statement(username, statement)
+        self.assertEqual(response.status_code, 200)
 
     def check_statement_not_accessible_by(self, username, statement):
-        response = self.get_statement_pdf(username, statement)
+        response = self.get_statement(username, statement)
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response['Content-Type'].split(';')[0], 'text/html')
 
@@ -90,7 +85,7 @@ class TestStatementView(GoDjangoTestCase):
 
         user = self.user_helper.get_django_user()
         statement = mk_statement(self.account)
-        response = self.get_statement_pdf(user, statement)
+        response = self.get_statement(user, statement)
         items = statement.lineitem_set
 
         self.assertEqual(response.context['billers'], [{
@@ -166,7 +161,7 @@ class TestStatementView(GoDjangoTestCase):
 
         user = self.user_helper.get_django_user()
         statement = mk_statement(self.account)
-        response = self.get_statement_pdf(user, statement)
+        response = self.get_statement(user, statement)
 
         totals = [
             channel['totals']
@@ -215,7 +210,7 @@ class TestStatementView(GoDjangoTestCase):
 
         user = self.user_helper.get_django_user()
         statement = mk_statement(self.account)
-        response = self.get_statement_pdf(user, statement)
+        response = self.get_statement(user, statement)
 
         self.assertEqual(response.context['totals'], {
             'cost': Decimal('600.0'),

@@ -31,14 +31,14 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, "Tag pools")
         self.assertContains(response, "Transactions")
 
-    def test_link_to_pdf_view(self):
+    def test_link_to_html_view(self):
         statement = mk_statement(self.account)
         client = self.vumi_helper.get_client()
         client.login()
         response = client.get(reverse('admin:billing_statement_changelist'))
         self.assertContains(response, "1 statement")
         self.assertContains(
-            response, '<a href="/billing/statement/%s">pdf</a>' % statement.id)
+            response, '<a href="/billing/statement/%s">html</a>' % statement.id)
 
     def test_statement_admin_view(self):
         mk_transaction(self.account)
