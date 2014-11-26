@@ -46,6 +46,22 @@ class HTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
 
 
 class ConcurrencyLimiter(object):
+    """
+    Concurrency limit manager.
+
+    Each concurrent operation should call :meth:`start` with a key and wait for
+    the deferred it returns to fire before doing any work. When it's done, it
+    should call :meth:`stop` to signal completion and allow the next queued
+    operation to begin.
+
+    Internally, we track two things per key:
+      * :attr:`_concurrents` holds the number of active operations, for which
+        the deferred returned by :meth:`start` has fired, but :meth:`stop` has
+        not been called.
+      * :attr:`_waiters` holds a list of pending deferreds that have been
+        returned by :meth:`start` but not yet fired.
+    """
+
     def __init__(self, limit):
         self._limit = limit
         self._concurrents = {}
@@ -93,6 +109,16 @@ class ConcurrencyLimiter(object):
             d.callback(None)
 
     def start(self, key):
+        """
+        Start a concurrent operation.
+
+        If we are below the limit for the given key, we increment the
+        concurrency count and fire the deferred we return. If not, we add the
+        deferred to the waiters list and return it unfired.
+        """
+        # While the implemetation matches the description in the docstring
+        # conceptually, it always adds a new waiter and then calls
+        # _check_concurrent() to handle the various cases.
         if self._limit < 0:
             # Special case for no limit, never block.
             return succeed(None)
@@ -104,6 +130,16 @@ class ConcurrencyLimiter(object):
         return d
 
     def stop(self, key):
+        """
+        Stop a concurrent operation.
+
+        If there are waiting operations for the given key, we pop and fire the
+        first. If not, we decrement the concurrency count. If the concurrency
+        count is reduced to zero, we clean up all state for the key.
+        """
+        # While the implemetation matches the description in the docstring
+        # conceptually, it always decrements the concurrency counter and then
+        # calls _check_concurrent() to handle the various cases.
         if self._limit <= 0:
             # Special case for where we don't keep state.
             return
