@@ -8,7 +8,6 @@ from go.billing.models import (
     TagPool, Account, MessageCost, Transaction, create_billing_account,
     LowCreditNotification)
 from go.billing.settings import QUANTIZATION_EXPONENT
-from go.billing.models import notification_confirm_sent
 
 
 class TestTagPool(GoDjangoTestCase):
@@ -209,7 +208,7 @@ class TestLowCreditNotification(GoDjangoTestCase):
 
     def test_confirm_sent(self):
         notification, res = self.mk_notification('60.0', '31.41')
-        timestamp = res = res.get()
+        timestamp = res.get()
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
