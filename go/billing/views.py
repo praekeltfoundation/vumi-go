@@ -12,16 +12,16 @@ from xhtml2pdf import pisa
 from go.billing.models import Statement
 
 
-def channels_from_items(all_items):
+def sections_from_items(all_items):
     all_items = sorted(all_items, key=lambda d: d.channel)
-    channels = groupby(all_items, lambda line: line.channel)
+    sections = groupby(all_items, lambda line: line.channel)
 
-    channels = [{
+    sections = [{
         'name': channel,
         'items': list(sorted(items, key=lambda d: d.description))
-    } for channel, items in channels]
+    } for channel, items in sections]
 
-    return channels
+    return sections
 
 
 def billers_from_items(all_items):
@@ -34,7 +34,7 @@ def billers_from_items(all_items):
     billers = [{
         'name': billed_by,
         'channel_type': items[0].channel_type,
-        'channels': channels_from_items(items)
+        'sections': sections_from_items(items)
     } for billed_by, items in billers]
 
     return billers

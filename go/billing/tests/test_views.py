@@ -96,7 +96,7 @@ class TestStatementView(GoDjangoTestCase):
         self.assertEqual(response.context['billers'], [{
             'name': u'Pool 1',
             'channel_type': u'USSD',
-            'channels': [{
+            'sections': [{
                 'name': u'Tag 1.1',
                 'items': list(items.filter(channel=u'Tag 1.1')),
             }, {
@@ -106,7 +106,7 @@ class TestStatementView(GoDjangoTestCase):
         }, {
             'name': u'Pool 2',
             'channel_type': u'SMS',
-            'channels': [{
+            'sections': [{
                 'name': u'Tag 2.1',
                 'items': list(items.filter(channel=u'Tag 2.1')),
             }, {
@@ -116,7 +116,7 @@ class TestStatementView(GoDjangoTestCase):
         }, {
             'name': u'Vumi',
             'channel_type': None,
-            'channels': [{
+            'sections': [{
                 'name': None,
                 'items': list(items.filter(billed_by=u'Vumi')),
             }]

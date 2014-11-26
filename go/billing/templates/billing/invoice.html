@@ -3,8 +3,8 @@
 {% for biller in billers %}
 <h2>{{ biller.name }} ({{ biller.channel_type }})</h2>
 
-{% for channel in biller.channels %}
-<h3>{{ channel.name }}</h3>
+{% for section in biller.sections %}
+<h3>{{ section.name }}</h3>
 
 <table>
     <thead>
@@ -17,7 +17,7 @@
         </tr>
     </thead>
     <tbody>
-    {% for item in channel.items %}
+    {% for item in section.items %}
         <tr>
             <td>{{ item.description }}</th>
             <td>{{ item.units }}</th>
