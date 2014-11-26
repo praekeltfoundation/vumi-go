@@ -218,8 +218,9 @@ class TestLowCreditNotification(GoDjangoTestCase):
         [email] = mail.outbox
 
         self.assertEqual(email.recipients(), [self.django_user.email])
-        self.assertTrue('Vumi Go low credit warning' in email.subject)
+        self.assertTrue('Vumi Go' in email.subject)
         self.assertTrue('70.1%' in email.subject)
+        self.assertTrue(self.acc in email.subject)
         self.assertTrue('70.1%' in email.body)
         self.assertTrue('12.34' in email.body)
         self.assertTrue(self.django_user.get_full_name() in email.body)

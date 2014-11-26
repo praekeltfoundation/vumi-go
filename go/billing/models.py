@@ -373,7 +373,8 @@ class LowCreditNotificationManager(models.Manager):
             account=account, threshold=threshold_percentage,
             credit_balance=credit_balance)
         # Send email
-        subject = 'Vumi Go low credit warning: %s%%' % threshold_percentage
+        subject = 'Vumi Go %s at %s%% of available credits' % (
+            account, threshold_percentage)
         email_from = 'support@vumi.org'
         email_to = account.user.email
         message = render_to_string(

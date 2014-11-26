@@ -1,19 +1,14 @@
-Dear {{user.get_full_name}}
+Hi {{user.get_full_name}}!
 
-We trust that you are well!
-
-Please note that your account {{account}} has reached {{threshold_percent}}% of the total available credits.
-
-Current credit balance: {{credit_balance}} ({{threshold_percent}}% remaining)
-
-What does this mean for you?
+Please note that your account {{account}} has reached {{threshold_percent}}% of the total available credits. Your remaining balance is {{credit_balance}}.
 
 Once you have used all of your credits, your account will be capped and you will no longer be able to send any messages. Incoming messages will still be stored as usual.
 
-If you have any questions regarding any of this, please let us know.
+To top up your credits contact your Praekelt programme manager or reply back to this email with the number of messages/sessions you want loaded
 
-Have a great day further!
 
-Vumi Go Team.
+Regards,
+
+The Vumi Go Team.
 
 Notification reference number: {{reference}}
