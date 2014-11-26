@@ -1,10 +1,10 @@
 <h1>Vumi Billing Statement</h1>
 
 {% for biller in billers %}
-<h2>{{ biller.name }} ({{ biller.channel_type }})</h2>
+<h2>{{ biller.name }}{% if biller.channel_type != None %} ({{ biller.channel_type }}){% endif %}</h2>
 
 {% for section in biller.sections %}
-<h3>{{ section.name }}</h3>
+{% if section.name != None %}<h3>{{ section.name }}</h3>{% endif %}
 
 <table>
     <thead>
@@ -19,9 +19,9 @@
     <tbody>
     {% for item in section.items %}
         <tr>
-            <td>{{ item.description }}</th>
+            <td>{% if item.description != None %}{{ item.description }}{% endif %}</th>
             <td>{{ item.units }}</th>
-            <td>{{ item.credits }}</th>
+            <td>{% if item.credits != None %}{{ item.credits }}{% endif %}</th>
             <td>{{ item.unit_cost }}</th>
             <td>{{ item.cost }}
         </tr>
