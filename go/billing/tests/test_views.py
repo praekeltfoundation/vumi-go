@@ -25,8 +25,14 @@ class TestStatementView(GoDjangoTestCase):
             {'delivery_class': 'sms',
              'display_name': 'Pool 2'})
 
+        self.vumi_helper.setup_tagpool(u'w', [u'w1'], {
+            'delivery_class': 'sms',
+            'display_name': 'W'
+        })
+
         self.user_helper.add_tagpool_permission(u'pool1')
         self.user_helper.add_tagpool_permission(u'pool2')
+        self.user_helper.add_tagpool_permission(u'w')
 
         self.account = Account.objects.get(
             user=self.user_helper.get_django_user())
@@ -121,6 +127,15 @@ class TestStatementView(GoDjangoTestCase):
                 'items': list(items.filter(billed_by=u'Vumi')),
             }]
         }])
+
+    def test_statement_billers_vumi_at_end(self):
+        mk_transaction(self.account, tag_pool_name=u'w', tag_name=u'w1')
+
+        user = self.user_helper.get_django_user()
+        statement = mk_statement(self.account)
+        response = self.get_statement_pdf(user, statement)
+
+        self.assertEqual(response.context['billers'][-1]['name'], 'Vumi')
 
     def test_statement_accessable_by_owner(self):
         statement = self.mk_statement()
