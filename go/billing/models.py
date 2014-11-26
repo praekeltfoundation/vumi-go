@@ -332,7 +332,7 @@ class LineItem(models.Model):
         max_length=100, blank=True, null=True,
         help_text=_("Description of the item being billed"))
 
-    units = models.IntegerField('
+    units = models.IntegerField(
         default=0,
         help_text=_("Number of units associated to the item"))
 
