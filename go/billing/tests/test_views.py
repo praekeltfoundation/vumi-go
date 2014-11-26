@@ -113,6 +113,13 @@ class TestStatementView(GoDjangoTestCase):
                 'name': u'Tag 2.2',
                 'items': list(items.filter(channel=u'Tag 2.2')),
             }],
+        }, {
+            'name': u'Vumi',
+            'channel_type': None,
+            'channels': [{
+                'name': None,
+                'items': list(items.filter(billed_by=u'Vumi')),
+            }]
         }])
 
     def test_statement_accessable_by_owner(self):
