@@ -1,11 +1,12 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.task import Clock
 
 from vumi.tests.helpers import VumiTestCase, MessageHelper
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError,
-    UnroutableMessageError, NoTargetError)
+    AccountRoutingTableDispatcher, RoutingMetadata, AccountRoutingTableCache,
+    RoutingError, UnroutableMessageError, NoTargetError)
 from go.vumitools.routing_table import RoutingTable
 from go.vumitools.tests.helpers import VumiApiHelper
 from go.vumitools.utils import MessageMetadataHelper
@@ -275,6 +276,56 @@ class TestRoutingMetadata(VumiTestCase):
         self.set_hops(msg, [["sc1", "dc1"], ["sc2", "dc2"]])
         self.set_outbound_hops(msg, [["dc2", "sc2"], ["dc1", "sc1"]])
         self.assertEqual(rmeta.unroutable_event_done(), True)
+
+
+class TestAccountRoutingTableCache(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u'testuser')
+        self.user_account_key = self.user_helper.account_key
+
+        user_account = yield self.user_helper.get_user_account()
+        user_account.routing_table = self.get_routing_table()
+        yield user_account.save()
+        self.clock = Clock()
+
+    def get_routing_table(self):
+        return RoutingTable({
+            # Transport side
+            "TRANSPORT_TAG:pool1:1234": {
+                "default": ["CONVERSATION:app1:conv1", "default"]},
+            # Application side
+            "CONVERSATION:app1:conv1": {
+                "default": ["TRANSPORT_TAG:pool1:1234", "default"],
+            },
+        })
+
+    @inlineCallbacks
+    def test_get_routing_table_not_cached(self):
+        """
+        When fetching an uncached routing table, we cache it.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        self.assertEqual(cache._routing_tables, {})
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        # TODO: check and cancel scheduled eviction.
+
+    @inlineCallbacks
+    def test_get_routing_table_no_caching(self):
+        """
+        When caching is disabled, we always fetch the routing table and never
+        store it.
+        """
+        cache = AccountRoutingTableCache(self.clock, 0)
+        self.assertEqual(cache._routing_tables, {})
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {})
 
 
 class RoutingTableDispatcherTestCase(VumiTestCase):

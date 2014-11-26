@@ -1,9 +1,10 @@
 # -*- test-case-name: go.vumitools.tests.test_routing -*-
 
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet import reactor
 
 from vumi.dispatchers.endpoint_dispatchers import RoutingTableDispatcher
-from vumi.config import ConfigDict, ConfigText
+from vumi.config import ConfigDict, ConfigText, ConfigFloat
 from vumi.message import TransportEvent
 from vumi import log
 
@@ -189,6 +190,35 @@ class RoutingMetadata(object):
         return (dst == outbound_dst and src == outbound_src)
 
 
+class AccountRoutingTableCache(object):
+    """
+    Low-TTL cache for routing table data to avoid hitting Riak too much.
+    """
+    def __init__(self, reactor, ttl):
+        self._reactor = reactor
+        self._ttl = ttl
+        self._routing_tables = {}
+
+    @inlineCallbacks
+    def get_routing_table(self, user_api):
+        """
+        Return the routing table for the provided user_api.
+
+        If the routing table is not cached, it will be fetched from Riak. If
+        caching is not disabled, it will also be added to the cache and
+        eviction scheduled.
+        """
+        key = user_api.user_account_key
+        if key not in self._routing_tables:
+            routing_table = yield user_api.get_routing_table()
+            if self._ttl <= 0:
+                # Special case for disabled cache.
+                returnValue(routing_table)
+            # TODO: Schedule eviction.
+            self._routing_tables[key] = routing_table
+        returnValue(self._routing_tables[key])
+
+
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
                                           GoWorkerConfigMixin):
     application_connector_mapping = ConfigDict(
@@ -219,6 +249,10 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         " `unroutable_inbound_reply`.",
         default="Vumi Go could not route your message. Please try again soon.",
         static=True, required=False)
+    routing_table_cache_ttl = ConfigFloat(
+        "TTL (in seconds) for cached routing tables. If less than or equal to"
+        " zero, routing tables will not be cached.",
+        static=True, default=5)
 
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
@@ -296,6 +330,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield super(AccountRoutingTableDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
         config = self.get_static_config()
+        self.routing_table_cache = AccountRoutingTableCache(
+            reactor, config.routing_table_cache_ttl)
         self.opt_out_connector = config.opt_out_connector
         self.billing_inbound_connector = config.billing_inbound_connector
         self.billing_outbound_connector = config.billing_outbound_connector
@@ -359,7 +395,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 "No user account key or tag on message", msg)
 
         user_api = self.get_user_api(user_account_key)
-        routing_table = yield user_api.get_routing_table()
+        routing_table = yield self.routing_table_cache.get_routing_table(
+            user_api)
 
         config_dict = self.config.copy()
         config_dict['user_account_key'] = user_account_key
