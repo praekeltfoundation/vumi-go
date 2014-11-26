@@ -7,7 +7,7 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import MessageCost, Account, Statement
 from go.billing import tasks
 from go.billing.tests.helpers import (
-    this_month, mk_transaction, get_message_credits)
+    this_month, mk_transaction, get_message_credits, get_session_credits)
 
 
 def get_line_items(statement):
@@ -148,7 +148,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item3.unit_cost, 300)
         self.assertEqual(item3.cost, 300)
 
-    def test_generate_monthly_statement_different_markups(self):
+    def test_generate_monthly_statement_messages_different_markups(self):
         mk_transaction(self.account, message_cost=100, markup_percent=10.0)
         mk_transaction(self.account, message_cost=100, markup_percent=20.0)
         mk_transaction(self.account, message_cost=100, markup_percent=30.0)
@@ -160,3 +160,67 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item1.credits, get_message_credits(100, 10))
         self.assertEqual(item2.credits, get_message_credits(100, 20))
         self.assertEqual(item3.credits, get_message_credits(100, 30))
+
+    def test_generate_monthly_statement_different_session_costs(self):
+        mk_transaction(
+            self.account,
+            session_created=True,
+            session_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_created=True,
+            session_cost=200,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_created=True,
+            session_cost=300,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description='Sessions')
+
+        self.assertEqual(item1.credits, get_session_credits(100, 10))
+        self.assertEqual(item1.unit_cost, 100)
+        self.assertEqual(item1.cost, 100)
+
+        self.assertEqual(item2.credits, get_session_credits(200, 10))
+        self.assertEqual(item2.unit_cost, 200)
+        self.assertEqual(item2.cost, 200)
+
+        self.assertEqual(item3.credits, get_session_credits(300, 10))
+        self.assertEqual(item3.unit_cost, 300)
+        self.assertEqual(item3.cost, 300)
+
+    def test_generate_monthly_statement_sessions_different_markups(self):
+        mk_transaction(
+            self.account,
+            session_created=True,
+            session_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_created=True,
+            session_cost=100,
+            markup_percent=20.0)
+
+        mk_transaction(
+            self.account,
+            session_created=True,
+            session_cost=100,
+            markup_percent=30.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description='Sessions')
+
+        self.assertEqual(item1.credits, get_session_credits(100, 10))
+        self.assertEqual(item2.credits, get_session_credits(100, 20))
+        self.assertEqual(item3.credits, get_session_credits(100, 10))
