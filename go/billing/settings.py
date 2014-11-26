@@ -9,6 +9,8 @@ from go.config import billing_quantization_exponent
 CREDIT_CONVERSION_FACTOR = getattr(
     settings, 'BILLING_CREDIT_CONVERSION_FACTOR', Decimal('10.00'))
 
+ACCOUNT_FEE = Decimal('50.00')
+
 # This is currently pulled in from `go.config` to avoid pulling a pile of
 # Django stuff into `go.vumitools.billing_worker` through `go.billing.utils`.
 QUANTIZATION_EXPONENT = billing_quantization_exponent()

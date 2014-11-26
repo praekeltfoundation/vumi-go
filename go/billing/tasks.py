@@ -154,6 +154,17 @@ def make_session_items(account, statement, tagpools, from_date, to_date):
         for transaction in transactions]
 
 
+def make_account_fee_item(account, statement):
+    return LineItem(
+        units=1,
+        statement=statement,
+        credits=None,
+        cost=settings.ACCOUNT_FEE,
+        billed_by='Vumi',
+        unit_cost=settings.ACCOUNT_FEE,
+        description='Account Fee')
+
+
 @task()
 def generate_monthly_statement(account_id, from_date, to_date):
     """Generate a new *Monthly* ``Statement`` for the given ``account``
@@ -176,6 +187,7 @@ def generate_monthly_statement(account_id, from_date, to_date):
         account, statement, tagpools, from_date, to_date))
     items.extend(make_session_items(
         account, statement, tagpools, from_date, to_date))
+    items.append(make_account_fee_item(account, statement))
 
     statement.lineitem_set.bulk_create(items)
     return statement
