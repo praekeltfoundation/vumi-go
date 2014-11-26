@@ -223,4 +223,4 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         self.assertEqual(item1.credits, get_session_credits(100, 10))
         self.assertEqual(item2.credits, get_session_credits(100, 20))
-        self.assertEqual(item3.credits, get_session_credits(100, 10))
+        self.assertEqual(item3.credits, get_session_credits(100, 30))
