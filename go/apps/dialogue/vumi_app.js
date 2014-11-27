@@ -17,7 +17,8 @@ var DialogueApp = App.extend(function(self) {
         states: [],
         accept_labels: true,
         start_state: {uuid: null},
-        poll_metadata: {repeatable: false}
+        poll_metadata: {repeatable: false},
+        answers_delimiter: ';'
     };
 
     self.init = function() {
@@ -46,6 +47,7 @@ var DialogueApp = App.extend(function(self) {
                 "Unknown dialogue state type: '" + desc.type + "'");
         }
 
+        self.states.remove(desc.uuid);
         return self.states.add(desc.uuid, function() {
             return type(desc);
         });
@@ -78,6 +80,22 @@ var DialogueApp = App.extend(function(self) {
             : null;
     };
 
+    self.append_answer = function(answers, answer) {
+        answers = answers || '';
+
+        return answers.length
+            ? [answers, answer].join(self.poll.answers_delimiter)
+            : answer;
+    };
+
+    self.store_answer = function(key, value) {
+        self.contact.extra[key] = value;
+
+        var answers_key = key + '-answers';
+        var answers = self.contact.extra[answers_key];
+        self.contact.extra[answers_key] = self.append_answer(answers, value);
+    };
+
     self.types = {};
 
     self.types.choice = function(desc) {
@@ -96,7 +114,7 @@ var DialogueApp = App.extend(function(self) {
                 var endpoint = _.find(endpoints, {value: choice.value});
 
                 if (!endpoint) { return; }
-                self.contact.extra[desc.store_as] = endpoint.value;
+                self.store_answer(desc.store_as, endpoint.value);
 
                 return self
                     .im.contacts.save(self.contact)
@@ -110,7 +128,7 @@ var DialogueApp = App.extend(function(self) {
             question: desc.text,
 
             next: function(content) {
-                self.contact.extra[desc.store_as] = content;
+                self.store_answer(desc.store_as, content);
 
                 return self
                     .im.contacts.save(self.contact)
