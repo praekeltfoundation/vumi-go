@@ -13,12 +13,6 @@ var InteractionMachine = vumigo.InteractionMachine;
 var DialogueApp = App.extend(function(self) {
     App.call(self, 'states:start');
 
-    self.events = {
-        'im im:shutdown': function() {
-            return self.im.contacts.save(self.contact);
-        }
-    };
-
     self.poll_defaults = {
         states: [],
         accept_labels: true,
@@ -129,7 +123,10 @@ var DialogueApp = App.extend(function(self) {
 
             next: function(content) {
                 self.store_answer(desc.store_as, content);
-                return self.next(desc.exit_endpoint);
+
+                return self
+                    .im.contacts.save(self.contact)
+                    .thenResolve(self.next(desc.exit_endpoint));
             }
         });
     };
