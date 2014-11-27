@@ -109,6 +109,15 @@ class MessageCost(models.Model):
             message_cost, markup_percent, context=context)
 
     @classmethod
+    def calculate_storage_credit_cost(cls, storage_cost, markup_percent,
+                                      context=None):
+        """
+        Return the storage cost per message (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            storage_cost, markup_percent, context=context)
+
+    @classmethod
     def calculate_session_credit_cost(cls, session_cost, markup_percent,
                                       context=None):
         """
@@ -118,13 +127,13 @@ class MessageCost(models.Model):
             session_cost, markup_percent, context=context)
 
     @classmethod
-    def calculate_credit_cost(cls, message_cost, markup_percent,
+    def calculate_credit_cost(cls, message_cost, storage_cost, markup_percent,
                               session_cost, session_created, context=None):
         """
         Return the total cost for both the message and the session, if any,
         in credits.
         """
-        base_cost = message_cost
+        base_cost = message_cost + storage_cost
         if session_created:
             base_cost += session_cost
         return cls.apply_markup_and_convert_to_credits(
@@ -159,6 +168,10 @@ class MessageCost(models.Model):
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The base message cost in cents."))
 
+    storage_cost = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The base message storage cost in cents."))
+
     session_cost = models.DecimalField(
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The base cost per session in cents."))
@@ -172,6 +185,12 @@ class MessageCost(models.Model):
         """Return the calculated cost per message (in credits)."""
         return self.calculate_message_credit_cost(
             self.message_cost, self.markup_percent)
+
+    @property
+    def storage_credit_cost(self):
+        """Return the calculated cost per session (in credits)."""
+        return self.calculate_storage_credit_cost(
+            self.session_cost, self.markup_percent)
 
     @property
     def session_credit_cost(self):
@@ -227,6 +246,12 @@ class Transaction(models.Model):
         help_text=_("The message cost (in cents) used to calculate"
                     " credit_amount."))
 
+    storage_cost = models.DecimalField(
+        null=True,
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The message storage cost (in cents) used to calculate"
+                    " credit_amount."))
+
     session_created = models.NullBooleanField(
         blank=True, null=True,
         help_text=_("Whether the message being billed started a new session ("
@@ -246,6 +271,11 @@ class Transaction(models.Model):
         max_digits=10, decimal_places=2, blank=True, null=True,
         help_text=_("The credit conversion factor's value when this "
                     "transaction was created."))
+
+    storage_credits = models.DecimalField(
+        null=True,
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The message storage cost (in credits)."))
 
     credit_amount = models.DecimalField(
         max_digits=20, decimal_places=6, default=Decimal('0.0'),

@@ -93,6 +93,22 @@ class TestMessageCost(GoDjangoTestCase):
         self.assertEqual(context.flags[Inexact], 1)
         self.assertEqual(context.flags[Rounded], 1)
 
+    def test_calculate_storage_credit_cost(self):
+        self.assertEqual(
+            MessageCost.calculate_storage_credit_cost(
+                Decimal('1.0'), Decimal('50.0')),
+            Decimal('15.0'))
+
+    def test_calculate_storage_credit_cost_with_context(self):
+        context = Context()
+        self.assertEqual(
+            MessageCost.calculate_storage_credit_cost(
+                Decimal('1.0'), QUANTIZATION_EXPONENT,
+                context=context),
+            Decimal('10.0'))
+        self.assertEqual(context.flags[Inexact], 1)
+        self.assertEqual(context.flags[Rounded], 1)
+
     def test_calculate_session_credit_cost(self):
         self.assertEqual(
             MessageCost.calculate_session_credit_cost(
@@ -113,52 +129,60 @@ class TestMessageCost(GoDjangoTestCase):
         self.assertEqual(
             MessageCost.calculate_credit_cost(
                 message_cost=Decimal('1.0'),
-                markup_percent=Decimal('10.0'),
+                storage_cost=Decimal('3.0'),
                 session_cost=Decimal('2.0'),
+                markup_percent=Decimal('10.0'),
                 session_created=False),
-            Decimal('11.0'))
+            Decimal('44.0'))
 
         self.assertEqual(
             MessageCost.calculate_credit_cost(
                 message_cost=Decimal('5.0'),
-                markup_percent=Decimal('20.0'),
+                storage_cost=Decimal('3.0'),
                 session_cost=Decimal('2.0'),
+                markup_percent=Decimal('10.0'),
                 session_created=False),
-            Decimal('60.0'))
+            Decimal('88.0'))
 
     def test_calculate_credit_cost_for_new_session(self):
         self.assertEqual(
             MessageCost.calculate_credit_cost(
                 message_cost=Decimal('1.0'),
-                markup_percent=Decimal('10.0'),
+                storage_cost=Decimal('3.0'),
                 session_cost=Decimal('2.0'),
+                markup_percent=Decimal('10.0'),
                 session_created=True),
-            Decimal('33.0'))
+            Decimal('66.0'))
 
         self.assertEqual(
             MessageCost.calculate_credit_cost(
                 message_cost=Decimal('5.0'),
-                markup_percent=Decimal('20.0'),
+                storage_cost=Decimal('3.0'),
                 session_cost=Decimal('2.0'),
+                markup_percent=Decimal('20.0'),
                 session_created=True),
-            Decimal('84.0'))
+            Decimal('120.0'))
 
     def test_calculate_credit_cost_with_context(self):
         context = Context()
+
         self.assertEqual(
             MessageCost.calculate_credit_cost(
                 message_cost=Decimal('1.0'),
+                storage_cost=Decimal('1.0'),
                 markup_percent=QUANTIZATION_EXPONENT,
                 session_cost=Decimal('2.0'),
                 session_created=True,
                 context=context),
-            Decimal('30.0'))
+            Decimal('40.0'))
+
         self.assertEqual(context.flags[Inexact], 1)
         self.assertEqual(context.flags[Rounded], 1)
 
     def test_message_credit_cost(self):
         mc = self.mk_msg_cost(
             message_cost=Decimal('5.0'),
+            storage_cost=Decimal('3.0'),
             markup_percent=Decimal('50.0'),
             session_cost=Decimal('100.0'))
         self.assertEqual(mc.message_credit_cost, Decimal('75.0'))
@@ -166,6 +190,7 @@ class TestMessageCost(GoDjangoTestCase):
     def test_session_credit_cost(self):
         mc = self.mk_msg_cost(
             message_cost=Decimal('100.0'),
+            storage_cost=Decimal('3.0'),
             markup_percent=Decimal('50.0'),
             session_cost=Decimal('6.0'))
         self.assertEqual(mc.session_credit_cost, Decimal('90.0'))
