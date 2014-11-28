@@ -40,3 +40,15 @@ def mk_transaction(account, tag_pool_name='pool1',
 
 def mk_statement(account):
     return tasks.generate_monthly_statement(account.id, *this_month())
+
+
+def get_message_credits(cost, markup):
+    return MessageCost.calculate_message_credit_cost(
+        Decimal(str(cost)),
+        Decimal(str(markup)))
+
+
+def get_session_credits(cost, markup):
+    return MessageCost.calculate_session_credit_cost(
+        Decimal(str(cost)),
+        Decimal(str(markup)))
