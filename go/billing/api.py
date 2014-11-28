@@ -233,7 +233,7 @@ class AccountResource(BaseResource):
             else:
                 self._handle_bad_request(request)
         elif len(params) == 2 and data is not None:
-            (account_number, path), rest = params[:2], params[2:]
+            (account_number, path) = params[:2]
             if path == 'credits':
                 d = self.load_credits(account_number,
                                       data.get('credit_amount', 0))

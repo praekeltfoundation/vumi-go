@@ -122,7 +122,8 @@ class BillingApiTestCase(VumiTestCase):
 
     def create_api_cost(self, account_number=None, tag_pool_name=None,
                         message_direction='', message_cost=0.0,
-                        session_cost=0.0, markup_percent=0.0):
+                        storage_cost=0.0, session_cost=0.0,
+                        markup_percent=0.0):
         """
         Create a message cost record via the billing API.
         """
@@ -315,7 +316,7 @@ class TestCost(BillingApiTestCase):
                 message_direction="Outbound",
                 message_cost=0.5, session_cost=0.3,
                 markup_percent=10.0)
-        except ApiCallError, e:
+        except ApiCallError as e:
             self.assertEqual(e.response.responseCode, 400)
             self.assertEqual(e.message, "")
         else:
@@ -519,7 +520,7 @@ class TestTransaction(BillingApiTestCase):
                 tag_name="erk",
                 message_direction="Inbound",
                 session_created=False)
-        except ApiCallError, e:
+        except ApiCallError as e:
             self.assertEqual(e.response.responseCode, 500)
             self.assertEqual(
                 e.message,
@@ -543,7 +544,7 @@ class TestTransaction(BillingApiTestCase):
                 tag_name="erk",
                 message_direction="Outbound",
                 session_created=False)
-        except ApiCallError, e:
+        except ApiCallError as e:
             self.assertEqual(e.response.responseCode, 500)
             self.assertEqual(
                 e.message,
