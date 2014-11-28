@@ -140,20 +140,33 @@ def make_session_item(statement, transaction, tagpools):
         description='Sessions')
 
 
-def make_message_items(account, statement, tagpools, from_date, to_date):
-    transactions = get_message_transactions(account, from_date, to_date)
+def make_message_items(account, statement, tagpools):
+    transactions = get_message_transactions(
+        account, statement.from_date, statement.to_date)
 
     return [
         make_message_item(statement, transaction, tagpools)
         for transaction in transactions]
 
 
-def make_session_items(account, statement, tagpools, from_date, to_date):
-    transactions = get_session_transactions(account, from_date, to_date)
+def make_session_items(account, statement, tagpools):
+    transactions = get_session_transactions(
+        account, statement.from_date, statement.to_date)
 
     return [
         make_session_item(statement, transaction, tagpools)
         for transaction in transactions]
+
+
+def make_account_fee_item(account, statement):
+    return LineItem(
+        units=1,
+        statement=statement,
+        credits=None,
+        cost=settings.ACCOUNT_FEE,
+        billed_by='Vumi',
+        unit_cost=settings.ACCOUNT_FEE,
+        description='Account Fee')
 
 
 @task()
@@ -174,10 +187,8 @@ def generate_monthly_statement(account_id, from_date, to_date):
     statement.save()
 
     items = []
-    items.extend(make_message_items(
-        account, statement, tagpools, from_date, to_date))
-    items.extend(make_session_items(
-        account, statement, tagpools, from_date, to_date))
+    items.extend(make_message_items(account, statement, tagpools))
+    items.extend(make_session_items(account, statement, tagpools))
 
     statement.lineitem_set.bulk_create(items)
     return statement

@@ -1,7 +1,7 @@
 import os
 from itertools import groupby
 
-from django.conf import settings
+from django.conf import settings as go_settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -9,19 +9,20 @@ from django.template import RequestContext, loader
 from xhtml2pdf import pisa
 
 
+from go.billing import settings
 from go.billing.models import Statement
 
 
-def channels_from_items(all_items):
+def sections_from_items(all_items):
     all_items = sorted(all_items, key=lambda d: d.channel)
-    channels = groupby(all_items, lambda line: line.channel)
+    sections = groupby(all_items, lambda line: line.channel)
 
-    channels = [{
+    sections = [{
         'name': channel,
         'items': list(sorted(items, key=lambda d: d.description))
-    } for channel, items in channels]
+    } for channel, items in sections]
 
-    return channels
+    return sections
 
 
 def billers_from_items(all_items):
@@ -34,8 +35,16 @@ def billers_from_items(all_items):
     billers = [{
         'name': billed_by,
         'channel_type': items[0].channel_type,
-        'channels': channels_from_items(items)
+        'sections': sections_from_items(items)
     } for billed_by, items in billers]
+
+    system_biller = next(
+        (b for b in billers if b['name'] == settings.SYSTEM_BILLER_NAME),
+        None)
+
+    if system_biller is not None:
+        billers.remove(system_biller)
+        billers.append(system_biller)
 
     return billers
 
@@ -72,10 +81,10 @@ def statement_view(request, statement_id=None):
 # resources
 def link_callback(uri, rel):
     # use short variable names
-    static_url = settings.STATIC_URL
-    static_root = settings.STATIC_ROOT
-    media_url = settings.MEDIA_URL
-    media_root = settings.MEDIA_ROOT
+    static_url = go_settings.STATIC_URL
+    static_root = go_settings.STATIC_ROOT
+    media_url = go_settings.MEDIA_URL
+    media_root = go_settings.MEDIA_ROOT
 
     # convert URIs to absolute system paths
     if uri.startswith(media_url):

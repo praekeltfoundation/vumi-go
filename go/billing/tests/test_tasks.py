@@ -7,12 +7,8 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import MessageCost, Account, Statement
 from go.billing import tasks
 from go.billing.tests.helpers import (
-    this_month, mk_transaction, get_message_credits, get_session_credits)
-
-
-def get_line_items(statement):
-    items = statement.lineitem_set.all()
-    return items.order_by('credits')
+    this_month, mk_transaction, get_message_credits, get_session_credits,
+    get_line_items)
 
 
 class TestMonthlyStatementTask(GoDjangoTestCase):
@@ -134,7 +130,8 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
-        [item1, item2, item3] = get_line_items(statement)
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description='Messages received')
 
         self.assertEqual(item1.credits, get_message_credits(100, 10))
         self.assertEqual(item1.unit_cost, 100)
@@ -155,8 +152,9 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description='Messages received')
 
-        [item1, item2, item3] = get_line_items(statement)
         self.assertEqual(item1.credits, get_message_credits(100, 10))
         self.assertEqual(item2.credits, get_message_credits(100, 20))
         self.assertEqual(item3.credits, get_message_credits(100, 30))
