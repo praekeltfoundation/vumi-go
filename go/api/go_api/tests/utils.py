@@ -24,27 +24,27 @@ class MockRpc(object):
         return self.response
 
     @staticmethod
-    def make_response_data(result={}, id=None):
-        return {
+    def make_response_json_func(result={}, id=None, error=None):
+        response_data = {
             'id': id,
             'jsonrpc': '2.0',
             'result': result,
         }
+        if error is not None:
+            response_data["error"] = error
+        return (lambda: response_data)
 
     def set_response(self, result={}, id=None):
         response = Mock()
         response.status_code = 200
-        response.json = self.make_response_data(result, id)
+        response.json = self.make_response_json_func(result, id)
         self.response = response
 
     def set_rpc_error_response(self, error, id=None):
         response = Mock()
         response.status_code = 200
-
-        data = self.make_response_data(result=None, id=id)
-        data.error = error
-        response.json = data
-
+        response.json = self.make_response_json_func(
+            result=None, id=id, error=error)
         self.response = response
 
     def set_error_response(self, code, text):

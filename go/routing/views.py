@@ -20,7 +20,7 @@ def routing(request):
             " (%r) %r." % (r.status_code, r.text))
 
     model_data = {'campaign_id': request.user_api.user_account_key}
-    model_data.update(r.json['result'])
+    model_data.update(r.json()['result'])
 
     return render(request, 'routing.html', {
         'session_id': request.session.session_key,
