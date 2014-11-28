@@ -56,7 +56,7 @@ def mk_statement(account,
         from_date = start_of_month()
 
     if to_date is None:
-        to_date = start_of_month()
+        to_date = end_of_month()
 
     statement = Statement(
         account=account,
