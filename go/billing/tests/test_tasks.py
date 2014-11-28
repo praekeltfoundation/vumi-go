@@ -8,12 +8,8 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import MessageCost, Account, Statement
 from go.billing import tasks
 from go.billing.tests.helpers import (
-    this_month, mk_transaction, get_message_credits, get_session_credits)
-
-
-def get_line_items(statement):
-    items = statement.lineitem_set.all()
-    return items.order_by('description', 'credits')
+    this_month, mk_transaction, get_message_credits, get_session_credits,
+    get_line_items)
 
 
 class TestMonthlyStatementTask(GoDjangoTestCase):

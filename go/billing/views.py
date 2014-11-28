@@ -38,6 +38,7 @@ def billers_from_items(all_items):
     } for billed_by, items in billers]
 
     billed_by_vumi = next((b for b in billers if b['name'] == 'Vumi'), None)
+
     if billed_by_vumi is not None:
         billers.remove(billed_by_vumi)
         billers.append(billed_by_vumi)
