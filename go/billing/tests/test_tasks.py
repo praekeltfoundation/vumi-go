@@ -1,5 +1,4 @@
 from datetime import date
-from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 
 import mock
@@ -223,19 +222,3 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item1.credits, get_session_credits(100, 10))
         self.assertEqual(item2.credits, get_session_credits(100, 20))
         self.assertEqual(item3.credits, get_session_credits(100, 30))
-
-    @mock.patch('go.billing.settings.ACCOUNT_FEE', Decimal('100.00'))
-    def test_generate_monthly_statement_account_fee(self):
-        statement = tasks.generate_monthly_statement(
-            self.account.id, *this_month())
-
-        [item] = get_line_items(statement).filter(
-            description='Account Fee')
-
-        self.assertEqual(item.billed_by, 'Vumi')
-        self.assertEqual(item.channel, None)
-        self.assertEqual(item.channel_type, None)
-        self.assertEqual(item.units, 1)
-        self.assertEqual(item.credits, None)
-        self.assertEqual(item.unit_cost, Decimal('100.00'))
-        self.assertEqual(item.cost, Decimal('100.00'))

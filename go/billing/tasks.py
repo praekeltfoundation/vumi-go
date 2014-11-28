@@ -187,7 +187,6 @@ def generate_monthly_statement(account_id, from_date, to_date):
         account, statement, tagpools, from_date, to_date))
     items.extend(make_session_items(
         account, statement, tagpools, from_date, to_date))
-    items.append(make_account_fee_item(account, statement))
 
     statement.lineitem_set.bulk_create(items)
     return statement
