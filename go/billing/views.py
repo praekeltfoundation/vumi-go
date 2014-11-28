@@ -20,20 +20,35 @@ def totals_from_items(items):
     }
 
 
-def channels_from_items(all_items):
-    return [{
+def sections_from_items(all_items):
+    all_items = sorted(all_items, key=lambda d: d.channel)
+    sections = groupby(all_items, lambda line: line.channel)
+
+    sections = [{
         'name': name,
-        'items': sorted(items, key=lambda d: d.description),
-        'totals': totals_from_items(items)
-    } for name, items in groupby(all_items, lambda line: line.channel)]
+        'totals': totals_from_items(items),
+        'items': list(sorted(items, key=lambda d: d.description)),
+    } for name, items in sections]
+
+    return sections
 
 
 def billers_from_items(all_items):
-    return [{
+    billers = [{
         'name': name,
         'channel_type': items[0].channel_type,
-        'channels': channels_from_items(items)
+        'sections': sections_from_items(items)
     } for name, items in groupby(all_items, lambda d: d.billed_by)]
+
+    system_biller = next(
+        (b for b in billers if b['name'] == settings.SYSTEM_BILLER_NAME),
+        None)
+
+    if system_biller is not None:
+        billers.remove(system_biller)
+        billers.append(system_biller)
+
+    return billers
 
 
 @login_required

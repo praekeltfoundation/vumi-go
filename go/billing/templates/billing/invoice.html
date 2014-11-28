@@ -39,12 +39,12 @@
 
             {% for biller in billers %}
             <div class="inv-section">
-                <h2>{{ biller.name }} ({{ biller.channel_type }})</h2>
+                <h2>{{ biller.name }}{% if biller.channel_type != None %} ({{ biller.channel_type }}){% endif %}</h2>
 
-                {% for channel in biller.channels %}
-                <h3>{{ channel.name }}</h3>
+                {% for section in biller.sections %}
+                {% if section.name != None %}<h3>{{ section.name }}</h3>{% endif %}
 
-                <table class="inv-items inv-items-channel">
+                <table class="inv-items">
                     <thead>
                         <tr>
                             <th>Description</th>
@@ -56,11 +56,11 @@
                     </thead>
 
                     <tbody>
-                    {% for item in channel.items %}
+                    {% for item in section.items %}
                         <tr>
-                            <td>{{ item.description }}</th>
+                            <td>{% if item.description != None %}{{ item.description }}{% endif %}</th>
                             <td>{{ item.units }}</th>
-                            <td>{{ item.credits }}</th>
+                            <td>{% if item.credits != None %}{{ item.credits }}{% endif %}</th>
                             <td>{{ item.unit_cost|floatformat:2 }}</th>
                             <td>{{ item.cost|floatformat:2 }}
                         </tr>
@@ -70,9 +70,9 @@
                         <tr>
                             <td>Total</td>
                             <td></td>
-                            <td>{{ channel.totals.credits }}</td>
+                            <td>{{ section.totals.credits }}</td>
                             <td></td>
-                            <td>{{ channel.totals.cost|floatformat:2 }}</td>
+                            <td>{{ section.totals.cost|floatformat:2 }}</td>
                         </tr>
                     </tfoot>
                 </table>
