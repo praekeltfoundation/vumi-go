@@ -1,5 +1,5 @@
 """ Tests for PDF billing statement generation """
-
+import mock
 from django.core.urlresolvers import reverse
 
 from go.base.tests.helpers import DjangoVumiApiHelper, GoDjangoTestCase
@@ -90,14 +90,15 @@ class TestStatementView(GoDjangoTestCase):
             }],
         }])
 
-    def test_statement_billers_vumi_at_end(self):
+    @mock.patch('go.billing.settings.SYSTEM_BILLER_NAME', 'Serenity')
+    def test_statement_billers_system_at_end(self):
         statement = self.mk_statement(items=[
-            {'billed_by': 'W'},
-            {'billed_by': 'Vumi'}
+            {'billed_by': 'Z'},
+            {'billed_by': 'Serenity'}
         ])
         user = self.user_helper.get_django_user()
         response = self.get_statement_pdf(user, statement)
-        self.assertEqual(response.context['billers'][-1]['name'], 'Vumi')
+        self.assertEqual(response.context['billers'][-1]['name'], 'Serenity')
 
     def test_statement_accessable_by_owner(self):
         statement = self.mk_statement()

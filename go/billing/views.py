@@ -1,7 +1,7 @@
 import os
 from itertools import groupby
 
-from django.conf import settings
+from django.conf import settings as go_settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -9,6 +9,7 @@ from django.template import RequestContext, loader
 from xhtml2pdf import pisa
 
 
+from go.billing import settings
 from go.billing.models import Statement
 
 
@@ -37,11 +38,13 @@ def billers_from_items(all_items):
         'sections': sections_from_items(items)
     } for billed_by, items in billers]
 
-    billed_by_vumi = next((b for b in billers if b['name'] == 'Vumi'), None)
+    system_biller = next(
+        (b for b in billers if b['name'] == settings.SYSTEM_BILLER_NAME),
+        None)
 
-    if billed_by_vumi is not None:
-        billers.remove(billed_by_vumi)
-        billers.append(billed_by_vumi)
+    if system_biller is not None:
+        billers.remove(system_biller)
+        billers.append(system_biller)
 
     return billers
 
@@ -78,10 +81,10 @@ def statement_view(request, statement_id=None):
 # resources
 def link_callback(uri, rel):
     # use short variable names
-    static_url = settings.STATIC_URL
-    static_root = settings.STATIC_ROOT
-    media_url = settings.MEDIA_URL
-    media_root = settings.MEDIA_ROOT
+    static_url = go_settings.STATIC_URL
+    static_root = go_settings.STATIC_ROOT
+    media_url = go_settings.MEDIA_URL
+    media_root = go_settings.MEDIA_ROOT
 
     # convert URIs to absolute system paths
     if uri.startswith(media_url):
