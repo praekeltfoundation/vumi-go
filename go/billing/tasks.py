@@ -80,7 +80,8 @@ def get_count(transaction):
 
 def get_message_unit_cost(transaction):
     count = get_count(transaction)
-    return get_message_cost(transaction) / count if count != 0 else count
+    # count should never be 0 since we count by id
+    return get_message_cost(transaction) / count
 
 
 def get_session_unit_cost(transaction):
