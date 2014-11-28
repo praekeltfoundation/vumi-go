@@ -37,7 +37,7 @@ class DialogueEditView(ConversationTemplateView):
             'label': d['label']
         } for d_name, d in DELIVERY_CLASSES.iteritems()]
 
-        model_data = r.json['result']['poll']
+        model_data = r.json()['result']['poll']
         model_data.update({
             'campaign_id': request.user_api.user_account_key,
             'conversation_key': conversation.key,
