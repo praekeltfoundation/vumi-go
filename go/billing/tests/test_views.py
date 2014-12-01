@@ -125,7 +125,7 @@ class TestStatementView(GoDjangoTestCase):
             'channel': 'Tag 1.1',
             'description': 'Messages Sent',
             'cost': Decimal('150.0'),
-            'credits': 200,
+            'credits': None,
         }, {
             'billed_by': 'Pool 1',
             'channel_type': 'SMS',
@@ -139,7 +139,7 @@ class TestStatementView(GoDjangoTestCase):
             'channel': 'Tag 1.2',
             'description': 'Messages Sent',
             'cost': Decimal('200.0'),
-            'credits': 250,
+            'credits': None,
         }])
 
         user = self.user_helper.get_django_user()
@@ -151,11 +151,36 @@ class TestStatementView(GoDjangoTestCase):
 
         self.assertEqual(totals, [{
             'cost': Decimal('300.0'),
-            'credits': 400,
+            'credits': 200,
         }, {
             'cost': Decimal('400.0'),
-            'credits': 500,
+            'credits': 250,
         }])
+
+    def test_statement_section_totals_nones(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 2',
+            'channel_type': 'SMS',
+            'channel': 'Tag 2.1',
+            'description': 'Messages Received',
+            'cost': Decimal('200.0'),
+            'credits': None,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertEqual(response.context['totals'], {
+            'cost': Decimal('350.0'),
+            'credits': 200,
+        })
 
     def test_statement_grand_totals(self):
         statement = self.mk_statement(items=[{
@@ -194,6 +219,31 @@ class TestStatementView(GoDjangoTestCase):
         self.assertEqual(response.context['totals'], {
             'cost': Decimal('700.0'),
             'credits': 900,
+        })
+
+    def test_statement_grand_totals_nones(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 2',
+            'channel_type': 'SMS',
+            'channel': 'Tag 2.1',
+            'description': 'Messages Received',
+            'cost': Decimal('200.0'),
+            'credits': None,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertEqual(response.context['totals'], {
+            'cost': Decimal('350.0'),
+            'credits': 200,
         })
 
     @mock.patch('go.billing.settings.SYSTEM_BILLER_NAME', 'Serenity')

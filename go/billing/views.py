@@ -13,10 +13,14 @@ def groupby(values, fn):
     return sorted([(k, list(g)) for k, g in _groupby(values, fn)])
 
 
+def ensure_int(v):
+    return v if v is not None else 0
+
+
 def totals_from_items(items):
     return {
-        'cost': sum(item.cost for item in items),
-        'credits': sum(item.credits for item in items),
+        'cost': sum(ensure_int(item.cost) for item in items),
+        'credits': sum(ensure_int(item.credits) for item in items),
     }
 
 
