@@ -15,60 +15,59 @@ from vumi.tests.utils import MockHttpServer, LogCatcher
 from vumi.tests.helpers import VumiTestCase
 
 from go.apps.http_api_nostream.vumi_app import (
-    ConcurrencyLimiter, NoStreamingHTTPWorker)
+    ConcurrencyLimitManager, NoStreamingHTTPWorker)
 from go.apps.http_api_nostream.resource import ConversationResource
 from go.apps.tests.helpers import AppWorkerHelper
 
 
-class TestConcurrencyLimiter(VumiTestCase):
+class TestConcurrencyLimitManager(VumiTestCase):
     def test_concurrency_limiter_no_limit(self):
         """
-        When given a negitive limit, ConcurrencyLimiter never blocks.
+        When given a negitive limit, ConcurrencyLimitManager never blocks.
         """
-        limiter = ConcurrencyLimiter(-1)
+        limiter = ConcurrencyLimitManager(-1)
         d1 = limiter.start("key")
         self.assertEqual(d1.called, True)
         d2 = limiter.start("key")
         self.assertEqual(d2.called, True)
 
         # Check that we aren't storing any state.
-        self.assertEqual(limiter._concurrents, {})
-        self.assertEqual(limiter._waiters, {})
+        self.assertEqual(limiter._concurrency_limiters, {})
 
         # Check that stopping doesn't explode.
         limiter.stop("key")
 
     def test_concurrency_limiter_zero_limit(self):
         """
-        When given a limit of zero, ConcurrencyLimiter always blocks forever.
+        When given a limit of zero, ConcurrencyLimitManager always blocks
+        forever.
         """
-        limiter = ConcurrencyLimiter(0)
+        limiter = ConcurrencyLimitManager(0)
         d1 = limiter.start("key")
         self.assertEqual(d1.called, False)
         d2 = limiter.start("key")
         self.assertEqual(d2.called, False)
 
         # Check that we aren't storing any state.
-        self.assertEqual(limiter._concurrents, {})
-        self.assertEqual(limiter._waiters, {})
+        self.assertEqual(limiter._concurrency_limiters, {})
 
         # Check that stopping doesn't explode.
         limiter.stop("key")
 
     def test_concurrency_limiter_stop_without_start(self):
         """
-        ConcurrencyLimiter raises an exception if stop() is called without
+        ConcurrencyLimitManager raises an exception if stop() is called without
         a prior call to start().
         """
-        limiter = ConcurrencyLimiter(1)
+        limiter = ConcurrencyLimitManager(1)
         self.assertRaises(Exception, limiter.stop)
 
     def test_concurrency_limiter_one_limit(self):
         """
-        ConcurrencyLimiter fires the next deferred in the queue when the stop()
+        ConcurrencyLimitManager fires the next deferred in the queue when stop()
         is called.
         """
-        limiter = ConcurrencyLimiter(1)
+        limiter = ConcurrencyLimitManager(1)
         d1 = limiter.start("key")
         self.assertEqual(d1.called, True)
         d2 = limiter.start("key")
@@ -87,15 +86,14 @@ class TestConcurrencyLimiter(VumiTestCase):
 
         # Stop the third concurrent and check that we don't hang on to state.
         limiter.stop("key")
-        self.assertEqual(limiter._concurrents, {})
-        self.assertEqual(limiter._waiters, {})
+        self.assertEqual(limiter._concurrency_limiters, {})
 
     def test_concurrency_limiter_two_limit(self):
         """
-        ConcurrencyLimiter fires the next deferred in the queue when the stop()
+        ConcurrencyLimitManager fires the next deferred in the queue when stop()
         is called.
         """
-        limiter = ConcurrencyLimiter(2)
+        limiter = ConcurrencyLimitManager(2)
         d1 = limiter.start("key")
         self.assertEqual(d1.called, True)
         d2 = limiter.start("key")
@@ -117,14 +115,13 @@ class TestConcurrencyLimiter(VumiTestCase):
         # Stop the last concurrents and check that we don't hang on to state.
         limiter.stop("key")
         limiter.stop("key")
-        self.assertEqual(limiter._concurrents, {})
-        self.assertEqual(limiter._waiters, {})
+        self.assertEqual(limiter._concurrency_limiters, {})
 
     def test_concurrency_limiter_multiple_keys(self):
         """
-        ConcurrencyLimiter handles different keys independently.
+        ConcurrencyLimitManager handles different keys independently.
         """
-        limiter = ConcurrencyLimiter(1)
+        limiter = ConcurrencyLimitManager(1)
         d1a = limiter.start("key-a")
         self.assertEqual(d1a.called, True)
         d2a = limiter.start("key-a")
@@ -146,8 +143,7 @@ class TestConcurrencyLimiter(VumiTestCase):
         # Stop the last concurrents and check that we don't hang on to state.
         limiter.stop("key-a")
         limiter.stop("key-b")
-        self.assertEqual(limiter._concurrents, {})
-        self.assertEqual(limiter._waiters, {})
+        self.assertEqual(limiter._concurrency_limiters, {})
 
 
 class TestNoStreamingHTTPWorkerBase(VumiTestCase):

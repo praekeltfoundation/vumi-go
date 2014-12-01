@@ -45,16 +45,22 @@ class HTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         default=1, static=True)
 
 
+class ConcurrencyLimiterError(Exception):
+    """
+    Error raised by concurrency limiters.
+    """
+
+
 class ConcurrencyLimiter(object):
     """
-    Concurrency limit manager.
+    Concurrency limiter.
 
-    Each concurrent operation should call :meth:`start` with a key and wait for
-    the deferred it returns to fire before doing any work. When it's done, it
+    Each concurrent operation should call :meth:`start` and wait for the
+    deferred it returns to fire before doing any work. When it's done, it
     should call :meth:`stop` to signal completion and allow the next queued
     operation to begin.
 
-    Internally, we track two things per key:
+    Internally, we track two things:
       * :attr:`_concurrents` holds the number of active operations, for which
         the deferred returned by :meth:`start` has fired, but :meth:`stop` has
         not been called.
@@ -62,59 +68,55 @@ class ConcurrencyLimiter(object):
         returned by :meth:`start` but not yet fired.
     """
 
-    def __init__(self, limit):
+    def __init__(self, name, limit):
+        self._name = name
         self._limit = limit
-        self._concurrents = {}
-        self._waiters = {}
+        self._concurrents = 0
+        self._waiters = []
 
-    def _get_concurrent(self, key):
-        return self._concurrents.get(key, 0)
+    def _inc_concurrent(self):
+        self._concurrents += 1
+        return self._concurrents
 
-    def _inc_concurrent(self, key):
-        concurrents = self._get_concurrent(key) + 1
-        self._concurrents[key] = concurrents
-        return concurrents
-
-    def _dec_concurrent(self, key):
-        concurrents = self._get_concurrent(key) - 1
-        if concurrents < 0:
-            raise RuntimeError("Can't decrement key below zero: %r" % (key,))
-        elif concurrents == 0:
-            del self._concurrents[key]
+    def _dec_concurrent(self):
+        if self._concurrents <= 0:
+            raise ConcurrencyLimiterError(
+                "Can't decrement key below zero: %s" % (self._name,))
         else:
-            self._concurrents[key] = concurrents
-        return concurrents
+            self._concurrents -= 1
+        return self._concurrents
 
-    def _make_waiter(self, key):
+    def _make_waiter(self):
         d = Deferred()
-        self._waiters.setdefault(key, []).append(d)
+        self._waiters.append(d)
         return d
 
-    def _pop_waiter(self, key):
-        waiters = self._waiters.get(key, [])
-        if not waiters:
+    def _pop_waiter(self):
+        if not self._waiters:
             return None
-        d = waiters.pop(0)
-        if not waiters:
-            # Clean up empty keys so we don't leak memory.
-            del self._waiters[key]
-        return d
+        return self._waiters.pop(0)
 
-    def _check_concurrent(self, key):
-        if self._get_concurrent(key) >= self._limit:
+    def _check_concurrent(self):
+        if self._concurrents >= self._limit:
             return
-        d = self._pop_waiter(key)
+        d = self._pop_waiter()
         if d is not None:
-            self._inc_concurrent(key)
+            self._inc_concurrent()
             d.callback(None)
 
-    def start(self, key):
+    def empty(self):
+        """
+        Check if this concurrency limiter is empty so it can be cleaned up.
+        """
+        return (not self._concurrents) and (not self._waiters)
+
+    def start(self):
         """
         Start a concurrent operation.
 
-        If we are below the limit for the given key, we increment the
-        concurrency count and fire the deferred we return. If not, we add the
-        deferred to the waiters list and return it unfired.
+        If we are below the limit, we increment the concurrency count and fire
+        the deferred we return. If not, we add the deferred to the waiters list
+        and return it unfired.
         """
         # While the implemetation matches the description in the docstring
         # conceptually, it always adds a new waiter and then calls
@@ -125,17 +127,16 @@ class ConcurrencyLimiter(object):
         elif self._limit == 0:
             # Special case for limit of zero, always block forever.
             return Deferred()
-        d = self._make_waiter(key)
-        self._check_concurrent(key)
+        d = self._make_waiter()
+        self._check_concurrent()
         return d
 
-    def stop(self, key):
+    def stop(self):
         """
         Stop a concurrent operation.
 
-        If there are waiting operations for the given key, we pop and fire the
-        first. If not, we decrement the concurrency count. If the concurrency
-        count is reduced to zero, we clean up all state for the key.
+        If there are waiting operations, we pop and fire the first. If not, we
+        decrement the concurrency count.
         """
         # While the implemetation matches the description in the docstring
         # conceptually, it always decrements the concurrency counter and then
@@ -143,9 +144,56 @@ class ConcurrencyLimiter(object):
         if self._limit <= 0:
             # Special case for where we don't keep state.
             return
-        self._dec_concurrent(key)
-        self._check_concurrent(key)
+        self._dec_concurrent()
+        self._check_concurrent()
 
+
+class ConcurrencyLimitManager(object):
+    """
+    Concurrency limit manager.
+
+    Each concurrent operation should call :meth:`start` with a key and wait for
+    the deferred it returns to fire before doing any work. When it's done, it
+    should call :meth:`stop` to signal completion and allow the next queued
+    operation to begin.
+    """
+
+    def __init__(self, limit):
+        self._limit = limit
+        self._concurrency_limiters = {}
+
+    def _get_limiter(self, key):
+        if key not in self._concurrency_limiters:
+            self._concurrency_limiters[key] = ConcurrencyLimiter(
+                key, self._limit)
+        return self._concurrency_limiters[key]
+
+    def _cleanup_limiter(self, key):
+        limiter = self._concurrency_limiters.get(key)
+        if limiter and limiter.empty():
+            del self._concurrency_limiters[key]
+
+    def start(self, key):
+        """
+        Start a concurrent operation.
+
+        This gets the concurrency limiter for the given key (creating it if
+        necessary) and starts a concurrent operation on it.
+        """
+        start_d = self._get_limiter(key).start()
+        self._cleanup_limiter(key)
+        return start_d
+
+    def stop(self, key):
+        """
+        Stop a concurrent operation.
+
+        This gets the concurrency limiter for the given key (creating it if
+        necessary) and stops a concurrent operation on it. If the concurrency
+        limiter is empty, it is deleted.
+        """
+        self._get_limiter(key).stop()
+        self._cleanup_limiter(key)
 
 class NoStreamingHTTPWorker(GoApplicationWorker):
 
@@ -165,7 +213,7 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         self._event_handlers = {}
         self._session_handlers = {}
 
-        self.concurrency_limiter = ConcurrencyLimiter(
+        self.concurrency_limiter = ConcurrencyLimitManager(
             config.worker_concurrency_limit)
         self.webserver = self.start_web_resources([
             (self.get_conversation_resource(), self.web_path),
