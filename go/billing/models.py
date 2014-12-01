@@ -314,22 +314,22 @@ class LineItem(models.Model):
         help_text=_("The statement this line item is from."))
 
     billed_by = models.CharField(
-        max_length=100, blank=True, default='',
+        max_length=100, blank=True, null=True,
         help_text=_("Name of the entity the item is being billed for"))
 
     channel = models.CharField(
-        max_length=100, blank=True, null=True, default='',
+        max_length=100, blank=True, null=True,
         help_text=_("Name of the channel messages were sent/received over, "
                     "or null if there is no associated channel"))
 
     channel_type = models.CharField(
-        max_length=100, blank=True, null=True, default='',
+        max_length=100, blank=True, null=True,
         help_text=_("The type of channel messages were sent/received over "
                     "(e.g. SMS or USSD), or null if there is no associated"
                     "channel"))
 
     description = models.CharField(
-        max_length=100, blank=True, default='',
+        max_length=100, blank=True, null=True,
         help_text=_("Description of the item being billed"))
 
     units = models.IntegerField(
@@ -337,8 +337,9 @@ class LineItem(models.Model):
         help_text=_("Number of units associated to the item"))
 
     credits = models.IntegerField(
-        default=0,
-        help_text=_("Total cost of the item in credits"))
+        default=0, blank=True, null=True,
+        help_text=_("Total cost of the item in credits, or null if there is "
+                    "no associated credit amount"))
 
     unit_cost = models.DecimalField(
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
