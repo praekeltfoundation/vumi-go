@@ -35,6 +35,96 @@ class TestStatementView(GoDjangoTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response['Content-Type'].split(';')[0], 'text/html')
 
+    @mock.patch('go.billing.settings.STATEMENT_CONTACT_DETAILS', {
+        'tel': '27.11.123.4567',
+        'website': 'www.foo.org',
+        'email': 'http://foo@bar.com',
+    })
+    def test_statement_contact_details(self):
+        statement = self.mk_statement()
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>www.foo.org<')
+        self.assertContains(response, '>27.11.123.4567<')
+        self.assertContains(response, '>http://foo@bar.com<')
+
+    def test_statement_biller_title(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>Pool 1 (USSD)<')
+
+    def test_statement_biller_title_none_channel_type(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': None,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>Pool 1<')
+
+    def test_statement_channel_title(self):
+        statement = self.mk_statement(items=[{'channel': 'Tag 1.1'}])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>Tag 1.1<')
+
+    def test_statement_descriptions(self):
+        statement = self.mk_statement(items=[
+            {'description': 'Messages Received'},
+            {'description': 'Messages Sent'}])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>Messages Received<')
+        self.assertContains(response, '>Messages Sent<')
+
+    def test_statement_description_nones(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'description': None
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertNotContains(response, '>None<')
+
+    def test_statement_costs(self):
+        statement = self.mk_statement(items=[{
+            'credits': 200,
+            'unit_cost': Decimal('123.456'),
+            'cost': Decimal('679.012'),
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>200<')
+        self.assertContains(response, '>123.46<')
+        self.assertContains(response, '>679.01<')
+
+    def test_statement_cost_nones(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'credits': None
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+        self.assertNotContains(response, '>None<')
+
     def test_statement_billers(self):
         statement = self.mk_statement(items=[{
             'billed_by': 'Pool 1',
