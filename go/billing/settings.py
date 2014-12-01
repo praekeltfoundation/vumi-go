@@ -37,7 +37,6 @@ STATEMENTS_PER_PAGE = getattr(
 STATEMENTS_DEFAULT_ORDER_BY = getattr(
     settings, 'BILLING_STATEMENTS_DEFAULT_ORDER_BY', '-from_date')
 
-
 STATEMENT_CONTACT_DETAILS = getattr(
     settings, 'BILLING_STATEMENT_CONTACT_DETAILS', {
         'tel': '27.11.482.8684',
