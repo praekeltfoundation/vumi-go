@@ -1,6 +1,6 @@
 import copy
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 
 from vumi.tests.helpers import VumiTestCase
 
@@ -464,3 +464,46 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         text = self.router_worker.create_menu(config)
         self.assertEqual(
             text, 'Please select a choice\n1) Flappy Bird\n2) Mama')
+
+    @inlineCallbacks
+    def test_new_session_stores_valid_session_data(self):
+        """
+        Starting a new session sets all relevant session fields.
+        """
+        router = yield self.router_helper.create_router(
+            started=True, config=self.ROUTER_CONFIG)
+
+        worker = self.router_worker
+        orig_handler = worker.handlers[worker.STATE_START]
+        pause_handler_d = Deferred()
+        unpause_handler_d = Deferred()
+
+        @inlineCallbacks
+        def pause_handler(*args, **kw):
+            pause_handler_d.callback(None)
+            yield unpause_handler_d
+            resp = yield orig_handler(*args, **kw)
+            returnValue(resp)
+
+        worker.handlers[worker.STATE_START] = pause_handler
+
+        # msg sent from user
+        self.router_helper.ri.make_dispatch_inbound(
+            None, router=router, from_addr='123')
+        yield pause_handler_d
+
+        # assert that the created session data is correct, then unpause
+        yield self.assert_session(router, '123', {
+            'state': ApplicationMultiplexer.STATE_START,
+        })
+        unpause_handler_d.callback(None)
+
+        # assert that the user received a response
+        [msg] = self.router_helper.ri.get_dispatched_outbound()
+        self.assertEqual(msg['content'],
+                         'Please select a choice.\n1) Flappy Bird')
+        # assert that session data updated correctly
+        yield self.assert_session(router, '123', {
+            'state': ApplicationMultiplexer.STATE_SELECT,
+            'endpoints': '["flappy-bird"]',
+        })
