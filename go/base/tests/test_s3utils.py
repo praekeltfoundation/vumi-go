@@ -127,3 +127,18 @@ class TestBucket(GoDjangoTestCase):
         self.assertEqual(s3_bucket.get_all_multipart_uploads(), [])
         [s3_key] = s3_bucket.get_all_keys()
         self.assertEqual(s3_key.get_contents_as_string(), data)
+
+    @moto.mock_s3
+    def test_upload_part_fails(self):
+        def bad_parts():
+            yield "chunk1"
+            yield "chunk2"
+            raise Exception("Failed")
+        self.create_s3_bucket('s3_custom')
+        bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
+        self.assertRaisesRegexp(
+            Exception, "Failed",
+            bucket.upload, "my.key", bad_parts())
+        s3_bucket = self.get_s3_bucket('s3_custom')
+        self.assertEqual(s3_bucket.get_all_multipart_uploads(), [])
+        self.assertEqual(s3_bucket.get_all_keys(), [])
