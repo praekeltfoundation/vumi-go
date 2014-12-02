@@ -5,12 +5,11 @@ from dateutil.relativedelta import relativedelta
 from celery.task import task, group
 
 from django.db.models import Sum, Count
-from django.conf import settings as go_settings
 
 from go.billing import settings
 from go.billing.models import (
     Account, Transaction, MessageCost, Statement, LineItem)
-from go.vumitools.api import VumiUserApi
+from go.base.utils import vumi_api
 
 
 def get_message_transactions(account, from_date, to_date):
@@ -53,9 +52,7 @@ def get_session_transactions(account, from_date, to_date):
 
 
 def get_tagpools(account):
-    config = go_settings.VUMI_API_CONFIG
-    user_api = VumiUserApi.from_config_sync(account.account_number, config)
-    return user_api.tagpools()
+    return vumi_api().get_user_api(account.account_number).tagpools()
 
 
 def get_provider_name(transaction, tagpools):
