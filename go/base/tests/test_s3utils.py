@@ -65,10 +65,11 @@ class TestBucket(GoDjangoTestCase):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
 
     def mk_bucket(self, config_name, defaults=None, **kw):
-        defaults = defaults if defaults is not None else {
-            "aws_access_key_id": "AWS-DUMMY-ID",
-            "aws_secret_access_key": "AWS-DUMMY-SECRET",
-        }
+        if defaults is None:
+            defaults = {
+                "aws_access_key_id": "AWS-DUMMY-ID",
+                "aws_secret_access_key": "AWS-DUMMY-SECRET",
+            }
         go_s3_buckets = {config_name: defaults}
         go_s3_buckets[config_name].update(kw)
         self.vumi_helper.patch_settings(GO_S3_BUCKETS=go_s3_buckets)
