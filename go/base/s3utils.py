@@ -7,6 +7,8 @@ import boto
 
 from django.conf import settings
 
+from zope.interface import Interface, implements
+
 
 class BucketConfig(object):
     """ Helper for accessing Django GO_S3_BUCKET settings. """
@@ -25,8 +27,26 @@ class BucketConfig(object):
             "BucketConfig %r has no attribute %r" % (self.config_name, name))
 
 
+class IMultipartWriter(Interface):
+    def push_chunks(chunks):
+        """
+        Push an iterator over chunks of data and yield files for multipart
+        uploading.
+
+        :param iter chunks:
+            An iterator over chunks of bytes.
+
+        :returns iter:
+            Returns an iterator over file-like objects, each of which is
+            a file part to upload.
+        """
+
+
 class MultipartWriter(object):
     """ Helper for writing pending chunks of data. """
+
+    implements(IMultipartWriter)
+
     def __init__(self, minimum_size=5 * 1024 * 1024):
         self.minimum_size = minimum_size
         self._clear_pending()
@@ -61,6 +81,9 @@ class MultipartWriter(object):
 
 class GzipMultipartWriter(object):
     """ Helper for tracking and compressing pending chunks of data. """
+
+    implements(IMultipartWriter)
+
     def __init__(self, minimum_size=5 * 1024 * 1024):
         self.minimum_size = minimum_size
         self._string_file = StringIO.StringIO()

@@ -9,7 +9,8 @@ import moto
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 from go.base.s3utils import (
-    BucketConfig, Bucket, MultipartWriter, GzipMultipartWriter)
+    BucketConfig, Bucket, IMultipartWriter,
+    MultipartWriter, GzipMultipartWriter)
 
 
 def gunzip(data):
@@ -73,6 +74,9 @@ class TestMultipartWriter(GoDjangoTestCase):
     def _push_chunks(self, writer, chunks):
         return [part.getvalue() for part in writer.push_chunks(chunks)]
 
+    def test_implements_IMultipartWriter(self):
+        self.assertTrue(IMultipartWriter.providedBy(MultipartWriter()))
+
     def test_push_chunks(self):
         writer = MultipartWriter(minimum_size=5)
         parts = self._push_chunks(writer, ["abab", "c", "bcd"])
@@ -90,6 +94,9 @@ class TestGzipMultipartWriter(GoDjangoTestCase):
 
     def _decode_parts(self, parts):
         return gunzip("".join(parts))
+
+    def test_implements_IMultipartWriter(self):
+        self.assertTrue(IMultipartWriter.providedBy(GzipMultipartWriter()))
 
     def test_push_chunk_and_done(self):
         writer = GzipMultipartWriter(minimum_size=5)
