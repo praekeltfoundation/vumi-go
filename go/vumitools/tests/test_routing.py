@@ -308,12 +308,78 @@ class TestAccountRoutingTableCache(VumiTestCase):
         """
         cache = AccountRoutingTableCache(self.clock, 5)
         self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
         rt = yield cache.get_routing_table(self.user_helper.user_api)
         self.assertEqual(rt, self.get_routing_table())
         self.assertEqual(cache._routing_tables, {
             self.user_account_key: rt,
         })
-        # TODO: check and cancel scheduled eviction.
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        # Clean up remaining state.
+        cache.cleanup()
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_cache_eviction(self):
+        """
+        When the TTL is reached, the routing table is removed from the cache.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        self.clock.advance(4.9)
+        self.assertNotEqual(cache._routing_tables, {})
+        self.assertNotEqual(cache._evictors, {})
+
+        self.clock.advance(0.5)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_multiple_cache_eviction(self):
+        """
+        Each routing table has its own TTL.
+        """
+        user_helper_2 = yield self.vumi_helper.make_user(u'testuser')
+        account_key_2 = user_helper_2.account_key
+        user_account_2 = yield user_helper_2.get_user_account()
+        user_account_2.routing_table = self.get_routing_table()
+        yield user_account_2.save()
+
+        cache = AccountRoutingTableCache(self.clock, 5)
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        self.clock.advance(3)
+        rt2 = yield cache.get_routing_table(user_helper_2.user_api)
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+            account_key_2: rt2,
+        })
+        self.assertEqual(
+            set(cache._evictors.keys()),
+            set([self.user_account_key, account_key_2]))
+
+        self.clock.advance(3)
+        self.assertEqual(cache._routing_tables, {
+            account_key_2: rt2,
+        })
+        self.assertEqual(cache._evictors.keys(), [account_key_2])
+
+        self.clock.advance(3)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
 
     @inlineCallbacks
     def test_get_routing_table_no_caching(self):
@@ -323,9 +389,12 @@ class TestAccountRoutingTableCache(VumiTestCase):
         """
         cache = AccountRoutingTableCache(self.clock, 0)
         self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
         rt = yield cache.get_routing_table(self.user_helper.user_api)
         self.assertEqual(rt, self.get_routing_table())
         self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
 
 
 class RoutingTableDispatcherTestCase(VumiTestCase):

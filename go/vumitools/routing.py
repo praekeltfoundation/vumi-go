@@ -198,6 +198,32 @@ class AccountRoutingTableCache(object):
         self._reactor = reactor
         self._ttl = ttl
         self._routing_tables = {}
+        self._evictors = {}
+
+    def evict_routing_table_entry(self, key):
+        """
+        Remove a routing table from the cache.
+        """
+        del self._routing_tables[key]
+        del self._evictors[key]
+
+    def schedule_eviction(self, key):
+        """
+        Schedule the eviction of a cached routing table.
+        """
+        delayed_call = self._reactor.callLater(
+            self._ttl, self.evict_routing_table_entry, key)
+        self._evictors[key] = delayed_call
+
+    def cleanup(self):
+        """
+        Clean up all remaining state.
+        """
+        # We use .items() instead of .iteritems() here because we modify
+        # self._evictors in the loop.
+        for key, delayed_call in self._evictors.items():
+            delayed_call.cancel()
+            self.evict_routing_table_entry(key)
 
     @inlineCallbacks
     def get_routing_table(self, user_api):
@@ -214,8 +240,8 @@ class AccountRoutingTableCache(object):
             if self._ttl <= 0:
                 # Special case for disabled cache.
                 returnValue(routing_table)
-            # TODO: Schedule eviction.
             self._routing_tables[key] = routing_table
+            self.schedule_eviction(key)
         returnValue(self._routing_tables[key])
 
 
@@ -359,6 +385,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def teardown_dispatcher(self):
+        yield self.routing_table_cache.cleanup()
         yield self._go_teardown_worker()
         yield super(AccountRoutingTableDispatcher, self).teardown_dispatcher()
 
