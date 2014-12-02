@@ -132,6 +132,7 @@ class BillingApiTestCase(VumiTestCase):
             'tag_pool_name': tag_pool_name,
             'message_direction': message_direction,
             'message_cost': message_cost,
+            'storage_cost': storage_cost,
             'session_cost': session_cost,
             'markup_percent': markup_percent,
         }
@@ -261,6 +262,7 @@ class TestCost(BillingApiTestCase):
             u'account_number': None,
             u'markup_percent': Decimal('20.000000'),
             u'message_cost': Decimal('0.900000'),
+            u'storage_cost': Decimal('0.800000'),
             u'message_direction': u'Outbound',
             u'session_cost': Decimal('0.700000'),
             u'tag_pool_name': u'test_pool',
@@ -274,6 +276,7 @@ class TestCost(BillingApiTestCase):
             u'account_number': None,
             u'markup_percent': Decimal('20.000000'),
             u'message_cost': Decimal('0.900000'),
+            u'storage_cost': Decimal('0.800000'),
             u'message_direction': u'Outbound',
             u'session_cost': Decimal('0.700000'),
             u'tag_pool_name': u'test_pool'
@@ -292,6 +295,7 @@ class TestCost(BillingApiTestCase):
             u'account_number': account['account_number'],
             u'markup_percent': Decimal('10.000000'),
             u'message_cost': Decimal('0.500000'),
+            u'storage_cost': Decimal('0.400000'),
             u'message_direction': u'Outbound',
             u'session_cost': Decimal('0.300000'),
             u'tag_pool_name': u'test_pool',
@@ -306,6 +310,7 @@ class TestCost(BillingApiTestCase):
             u'account_number': account['account_number'],
             u'markup_percent': Decimal('10.000000'),
             u'message_cost': Decimal('0.500000'),
+            u'storage_cost': Decimal('0.400000'),
             u'message_direction': u'Outbound',
             u'session_cost': Decimal('0.300000'),
             u'tag_pool_name': u'test_pool'
@@ -341,6 +346,7 @@ class TestCost(BillingApiTestCase):
             u'account_number': None,
             u'markup_percent': Decimal('10.0'),
             u'message_cost': Decimal('0.1'),
+            u'storage_cost': Decimal('0.1'),
             u'message_direction': u'Outbound',
             u'session_cost': Decimal('0.1'),
             u'tag_pool_name': None,
@@ -365,17 +371,20 @@ class TestTransaction(BillingApiTestCase):
             tag_pool_name="test_pool2",
             message_direction="Inbound",
             message_cost=0.6,
+            storage_cost=0.5,
             session_cost=0.3,
             markup_percent=10.0)
 
         credit_amount = MessageCost.calculate_credit_cost(
             Decimal('0.6'),
+            Decimal('0.5'),
             Decimal('10.0'),
             Decimal('0.3'),
             session_created=False)
 
         credit_amount_for_session = MessageCost.calculate_credit_cost(
             Decimal('0.6'),
+            Decimal('0.5'),
             Decimal('10.0'),
             Decimal('0.3'),
             session_created=True)
@@ -401,6 +410,7 @@ class TestTransaction(BillingApiTestCase):
             u'credit_factor': Decimal('10.000000'),
             u'markup_percent': Decimal('10.000000'),
             u'message_cost': Decimal('0.6'),
+            u'storage_cost': Decimal('0.5'),
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('0.3'),
             u'session_created': False,
@@ -434,6 +444,7 @@ class TestTransaction(BillingApiTestCase):
             u'credit_factor': Decimal('10.000000'),
             u'markup_percent': Decimal('10.000000'),
             u'message_cost': Decimal('0.6'),
+            u'storage_cost': Decimal('0.5'),
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('0.3'),
             u'session_created': True,
@@ -452,7 +463,9 @@ class TestTransaction(BillingApiTestCase):
             account_number=account["account_number"],
             tag_pool_name="test_pool2",
             message_direction="Inbound",
-            message_cost=9.0, session_cost=7.0,
+            message_cost=9.0,
+            storage_cost=8.0,
+            session_cost=7.0,
             markup_percent=11.0)
 
         transaction = yield self.create_api_transaction(
@@ -464,8 +477,11 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         credit_amount = MessageCost.calculate_credit_cost(
-            Decimal('9.0'), Decimal('11.0'),
-            Decimal('7.0'), session_created=False)
+            Decimal('9.0'),
+            Decimal('8.0'),
+            Decimal('11.0'),
+            Decimal('7.0'),
+            session_created=False)
 
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
@@ -476,6 +492,7 @@ class TestTransaction(BillingApiTestCase):
             u'credit_factor': Decimal('10.0'),
             u'markup_percent': Decimal('11.0'),
             u'message_cost': Decimal('9.0'),
+            u'storage_cost': Decimal('8.0'),
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('7.0'),
             u'session_created': False,
@@ -487,7 +504,9 @@ class TestTransaction(BillingApiTestCase):
         # Test fallback to default cost
         yield self.create_api_cost(
             message_direction="Outbound",
-            message_cost=0.1, session_cost=0.2,
+            message_cost=0.1,
+            storage_cost=0.3,
+            session_cost=0.2,
             markup_percent=12.0)
 
         yield self.create_api_user(email="test5@example.com")
@@ -503,8 +522,11 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         credit_amount = MessageCost.calculate_credit_cost(
-            Decimal('0.1'), Decimal('12.0'),
-            Decimal('0.2'), session_created=False)
+            Decimal('0.1'),
+            Decimal('0.3'),
+            Decimal('12.0'),
+            Decimal('0.2'),
+            session_created=False)
 
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
@@ -515,6 +537,7 @@ class TestTransaction(BillingApiTestCase):
             u'credit_factor': Decimal('10.0'),
             u'markup_percent': Decimal('12.0'),
             u'message_cost': Decimal('0.1'),
+            u'storage_cost': Decimal('0.3'),
             u'message_direction': u'Outbound',
             u'session_cost': Decimal('0.2'),
             u'session_created': False,

@@ -384,13 +384,16 @@ class CostResource(BaseResource):
             tag_pool_name = data.get('tag_pool_name', None)
             message_direction = data.get('message_direction', None)
             message_cost = data.get('message_cost', None)
+            storage_cost = data.get('storage_cost', None)
             session_cost = data.get('session_cost', None)
             markup_percent = data.get('markup_percent', None)
-            if all((message_direction, message_cost, session_cost,
-                    markup_percent, tag_pool_name or not account_number)):
+            if all((message_direction, message_cost, storage_cost,
+                    session_cost, markup_percent,
+                    tag_pool_name or not account_number)):
                 d = self.create_cost(account_number, tag_pool_name,
                                      message_direction, message_cost,
-                                     session_cost, markup_percent)
+                                     storage_cost, session_cost,
+                                     markup_percent)
 
                 d.addCallbacks(self._render_to_json, self._handle_error,
                                callbackArgs=[request], errbackArgs=[request])
@@ -412,7 +415,7 @@ class CostResource(BaseResource):
         """
         query = """
             SELECT a.account_number, t.name AS tag_pool_name,
-                   c.message_direction, c.message_cost,
+                   c.message_direction, c.message_cost, c.storage_cost,
                    c.session_cost, c.markup_percent
             FROM billing_messagecost c
                  LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
@@ -452,7 +455,7 @@ class CostResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_cost_interaction(self, cursor, account_number, tag_pool_name,
-                                message_direction, message_cost,
+                                message_direction, message_cost, storage_cost,
                                 session_cost, markup_percent):
         """Create a new cost.
 
@@ -486,17 +489,17 @@ class CostResource(BaseResource):
             query = """
                 INSERT INTO billing_messagecost
                     (account_id, tag_pool_id, message_direction,
-                     message_cost, session_cost, markup_percent)
-                VALUES
+                     message_cost, storage_cost, session_cost, markup_percent)
+               VALUES
                     ((SELECT id FROM billing_account
                       WHERE account_number = %(account_number)s),
                      %(tag_pool_id)s, %(message_direction)s,
-                     %(message_cost)s, %(session_cost)s,
+                     %(message_cost)s, %(storage_cost)s, %(session_cost)s,
                      %(markup_percent)s)
                 RETURNING
                     %(account_number)s AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
-                    message_direction, message_cost,
+                    message_direction, message_cost, storage_cost,
                     session_cost, markup_percent
             """
 
@@ -506,6 +509,7 @@ class CostResource(BaseResource):
                 'tag_pool_name': tag_pool_name,
                 'message_direction': message_direction,
                 'message_cost': message_cost,
+                'storage_cost': storage_cost,
                 'session_cost': session_cost,
                 'markup_percent': markup_percent
             }
@@ -513,14 +517,16 @@ class CostResource(BaseResource):
             query = """
                 INSERT INTO billing_messagecost
                     (account_id, tag_pool_id, message_direction,
-                     message_cost, session_cost, markup_percent)
+                     message_cost, storage_cost, session_cost, markup_percent)
                 VALUES
                     (NULL, %(tag_pool_id)s, %(message_direction)s,
-                     %(message_cost)s, %(session_cost)s, %(markup_percent)s)
+                     %(message_cost)s, %(storage_cost)s,
+                     %(session_cost)s, %(markup_percent)s)
                 RETURNING
                     NULL AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
-                    message_direction, message_cost, session_cost,
+                    message_direction, message_cost,
+                    storage_cost, session_cost,
                     markup_percent
             """
 
@@ -529,6 +535,7 @@ class CostResource(BaseResource):
                 'tag_pool_name': tag_pool_name,
                 'message_direction': message_direction,
                 'message_cost': message_cost,
+                'storage_cost': storage_cost,
                 'session_cost': session_cost,
                 'markup_percent': markup_percent
             }
@@ -540,7 +547,7 @@ class CostResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_cost(self, account_number, tag_pool_name, message_direction,
-                    message_cost, session_cost, markup_percent):
+                    message_cost, storage_cost, session_cost, markup_percent):
         """Create a new cost.
 
         If an ``account_number`` is given create a message cost override,
@@ -549,8 +556,8 @@ class CostResource(BaseResource):
         """
         result = yield self._connection_pool.runInteraction(
             self.create_cost_interaction, account_number,
-            tag_pool_name, message_direction, message_cost, session_cost,
-            markup_percent)
+            tag_pool_name, message_direction, message_cost,
+            storage_cost, session_cost, markup_percent)
 
         defer.returnValue(result)
 
@@ -606,9 +613,10 @@ class TransactionResource(BaseResource):
         """Return the message cost"""
         query = """
             SELECT t.account_number, t.tag_pool_name, t.message_direction,
-                   t.message_cost, t.session_cost, t.markup_percent
+                   t.message_cost, t.storage_cost, t.session_cost,
+                   t.markup_percent
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
-                         c.message_direction, c.message_cost,
+                         c.message_direction, c.message_cost, c.storage_cost,
                          c.session_cost, c.markup_percent
                   FROM billing_messagecost c
                   INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
@@ -618,7 +626,7 @@ class TransactionResource(BaseResource):
                   AND c.message_direction = %(message_direction)s
                   UNION
                   SELECT NULL AS account_number, t.name AS tag_pool_name,
-                         c.message_direction, c.message_cost,
+                         c.message_direction, c.message_cost, c.storage_cost,
                          c.session_cost, c.markup_percent
                   FROM billing_messagecost c
                   INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
@@ -627,7 +635,7 @@ class TransactionResource(BaseResource):
                   AND c.message_direction = %(message_direction)s
                   UNION
                   SELECT NULL AS account_number, NULL AS tag_pool_name,
-                         c.message_direction, c.message_cost,
+                         c.message_direction, c.message_cost, c.storage_cost,
                          c.session_cost, c.markup_percent
                   FROM billing_messagecost c
                   WHERE c.account_id IS NULL
@@ -649,6 +657,7 @@ class TransactionResource(BaseResource):
             message_cost = result[0]
             message_cost['credit_amount'] = MessageCost.calculate_credit_cost(
                 message_cost['message_cost'],
+                message_cost['storage_cost'],
                 message_cost['markup_percent'],
                 message_cost['session_cost'],
                 session_created=session_created)
@@ -664,7 +673,7 @@ class TransactionResource(BaseResource):
         query = """
             SELECT id, account_number, message_id,
                    tag_pool_name, tag_name,
-                   message_direction, message_cost,
+                   message_direction, message_cost, storage_cost,
                    session_created, session_cost,
                    markup_percent, credit_factor, credit_amount,
                    status, created, last_modified
@@ -716,6 +725,7 @@ class TransactionResource(BaseResource):
 
         message_cost = result.get('message_cost', 0)
         session_cost = result.get('session_cost', 0)
+        storage_cost = result.get('storage_cost', 0)
         markup_percent = result.get('markup_percent', 0)
         credit_amount = result.get('credit_amount', 0)
 
@@ -724,21 +734,21 @@ class TransactionResource(BaseResource):
             INSERT INTO billing_transaction
                 (account_number, message_id,
                  tag_pool_name, tag_name,
-                 message_direction, message_cost,
+                 message_direction, message_cost, storage_cost,
                  session_created, session_cost,
                  markup_percent, credit_factor,
                  credit_amount, status, created, last_modified)
             VALUES
                 (%(account_number)s, %(message_id)s,
                  %(tag_pool_name)s, %(tag_name)s,
-                 %(message_direction)s, %(message_cost)s,
+                 %(message_direction)s, %(message_cost)s, %(storage_cost)s,
                  %(session_created)s, %(session_cost)s,
                  %(markup_percent)s, %(credit_factor)s,
                  %(credit_amount)s, 'Completed', now(),
                  now())
             RETURNING id, account_number, message_id,
                       tag_pool_name, tag_name,
-                      message_direction, message_cost,
+                      message_direction, message_cost, storage_cost,
                       session_cost, session_created,
                       markup_percent, credit_factor, credit_amount, status,
                       created, last_modified
@@ -751,6 +761,7 @@ class TransactionResource(BaseResource):
             'tag_name': tag_name,
             'message_direction': message_direction,
             'message_cost': message_cost,
+            'storage_cost': storage_cost,
             'session_created': session_created,
             'session_cost': session_cost,
             'markup_percent': markup_percent,
