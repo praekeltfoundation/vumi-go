@@ -52,7 +52,7 @@ def get_session_transactions(account, from_date, to_date):
 
 
 def get_tagpools(account):
-    return vumi_api().get_user_api(account.account_number).tagpools()
+    return vumi_api().get_user_api(account.account_number).known_tagpools()
 
 
 def get_provider_name(transaction, tagpools):
