@@ -1,5 +1,8 @@
 """ Tests for go.base.s3utils. """
 
+import gzip
+import StringIO
+
 import boto
 import moto
 
@@ -142,3 +145,23 @@ class TestBucket(GoDjangoTestCase):
         s3_bucket = self.get_s3_bucket('s3_custom')
         self.assertEqual(s3_bucket.get_all_multipart_uploads(), [])
         self.assertEqual(s3_bucket.get_all_keys(), [])
+
+    @moto.mock_s3
+    def test_upload_gzip(self):
+        self.create_s3_bucket('s3_custom')
+        data = "ab" * (3 * 1024)  # 6KB
+
+        def chunks(data=data, chunk_size=200):
+            for i in xrange(0, len(data), chunk_size):
+                yield data[i:i + chunk_size]
+
+        bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
+        bucket.upload("my.key", chunks(), gzip=True)
+        s3_bucket = self.get_s3_bucket('s3_custom')
+        self.assertEqual(s3_bucket.get_all_multipart_uploads(), [])
+        [s3_key] = s3_bucket.get_all_keys()
+
+        s3_data_gzipped = s3_key.get_contents_as_string()
+        s3_data = gzip.GzipFile(
+            fileobj=StringIO.StringIO(s3_data_gzipped)).read()
+        self.assertEqual(s3_data, data)

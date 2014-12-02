@@ -1,6 +1,7 @@
 """ Utilities for dealing with uploading to S3. """
 
 import StringIO
+import gzip
 
 import boto
 
@@ -24,43 +25,91 @@ class BucketConfig(object):
             "BucketConfig %r has no attribute %r" % (self.config_name, name))
 
 
-class MultipartPusher(object):
-    """ Helper for tracking pending chunks of data. """
-    def __init__(self, mp, minimum_size=5 * 1024 * 1024):
-        self.mp = mp
+class MultipartWriter(object):
+    """ Helper for writing pending chunks of data. """
+    def __init__(self, minimum_size=5 * 1024 * 1024):
         self.minimum_size = minimum_size
-        self.part_num = 0
-        self.clear_pending()
+        self._clear_pending()
 
-    def clear_pending(self):
+    def _clear_pending(self):
         self._pending = []
         self._pending_size = 0
 
-    def ready(self):
+    def _ready(self):
         return self._pending_size >= self.minimum_size
 
-    def empty(self):
+    def _empty(self):
         return not bool(self._pending)
+
+    def _pop_part(self):
+        fp = StringIO.StringIO("".join(self._pending))
+        self._clear_pending()
+        return fp
 
     def push_chunk(self, chunk):
         self._pending.append(chunk)
         self._pending_size += len(chunk)
-        if self.ready():
-            self.push_part()
+        if self._ready():
+            return self._pop_part()
 
     def push_done(self):
-        if not self.empty():
-            self.push_part()
+        if not self._empty():
+            return self._pop_part()
 
-    def pop_part(self):
+
+class GzipMultipartWriter(object):
+    """ Helper for tracking and compressing pending chunks of data. """
+    def __init__(self, minimum_size=5 * 1024 * 1024):
+        self.minimum_size = minimum_size
+        self._string_file = StringIO.StringIO()
+        self._gzip_file = gzip.GzipFile(fileobj=self._string_file, mode='w')
+
+    def _clear_pending(self):
+        self._string_file.seek(0)
+        self._string_file.truncate()
+
+    def _ready(self):
+        return self._string_file.tell() >= self.minimum_size
+
+    def _empty(self):
+        return not bool(self._string_file.tell())
+
+    def _pop_part(self):
+        fp = StringIO.StringIO(self._string_file.getvalue())
+        self._clear_pending()
+        return fp
+
+    def push_chunk(self, chunk):
+        self._gzip_file.write(chunk)
+        if self._ready():
+            return self._pop_part()
+
+    def push_done(self):
+        self._gzip_file.close()
+        if not self._empty():
+            return self._pop_part()
+
+
+class MultipartPusher(object):
+    """ Helper for tracking pending chunks of data. """
+    def __init__(self, mp, writer):
+        self.mp = mp
+        self.writer = writer
+        self.part_num = 0
+
+    def _write_part(self, fp):
         self.part_num += 1
-        fp = StringIO.StringIO("".join(self._pending))
-        self.clear_pending()
-        return fp, self.part_num
+        self.mp.upload_part_from_file(fp, part_num=self.part_num)
 
-    def push_part(self):
-        fp, part_num = self.pop_part()
-        self.mp.upload_part_from_file(fp, part_num=part_num)
+    def push_chunk(self, chunk):
+        part = self.writer.push_chunk(chunk)
+        if part is not None:
+            self._write_part(part)
+
+    def push_done(self):
+        part = self.writer.push_done()
+        if part is not None:
+            self._write_part(part)
 
 
 class Bucket(object):
@@ -102,11 +151,17 @@ class Bucket(object):
         conn = self._s3_conn()
         return conn.create_bucket(self.config.s3_bucket_name)
 
-    def upload(self, key_name, chunks, headers=None):
+    def upload(self, key_name, chunks, headers=None, gzip=False):
         """ Upload chunks of data to S3. """
         bucket = self.get_s3_bucket()
         mp = bucket.initiate_multipart_upload(key_name, headers=headers)
-        pusher = MultipartPusher(mp)
+
+        if gzip:
+            writer = GzipMultipartWriter(mp)
+        else:
+            writer = MultipartWriter(mp)
+
+        pusher = MultipartPusher(mp, writer)
         try:
             for chunk in chunks:
                 pusher.push_chunk(chunk)
