@@ -164,10 +164,17 @@ class MessageResource(BaseResource):
             return
 
         in_reply_to = payload.get('in_reply_to')
-        if in_reply_to:
-            yield self.handle_PUT_in_reply_to(request, payload, in_reply_to)
-        else:
-            yield self.handle_PUT_send_to(request, payload)
+        user_account = request.getUser()
+        d = self.worker.concurrency_limiter.start(user_account)
+        try:
+            yield d  # Wait for our concurrency limiter to let us move on.
+            if in_reply_to:
+                yield self.handle_PUT_in_reply_to(
+                    request, payload, in_reply_to)
+            else:
+                yield self.handle_PUT_send_to(request, payload)
+        finally:
+            self.worker.concurrency_limiter.stop(user_account)
 
     @inlineCallbacks
     def handle_PUT_in_reply_to(self, request, payload, in_reply_to):

@@ -138,17 +138,17 @@ class StatementAdmin(admin.ModelAdmin):
 
     list_display = (
         'account', 'title', 'type', 'from_date', 'to_date', 'created',
-        'view_pdf',
+        'view_html',
     )
 
     readonly_fields = (
         'account', 'title', 'type', 'from_date', 'to_date', 'created',
     )
 
-    def view_pdf(self, obj):
-        return format_html('<a href="{0}">pdf</a>', urlresolvers.reverse(
-            'pdf_statement', kwargs={'statement_id': obj.id}))
-    view_pdf.short_description = "PDF"
+    def view_html(self, obj):
+        return format_html('<a href="{0}">html</a>', urlresolvers.reverse(
+            'html_statement', kwargs={'statement_id': obj.id}))
+    view_html.short_description = "HTML"
 
 
 admin.site.register(TagPool, TagPoolAdmin)

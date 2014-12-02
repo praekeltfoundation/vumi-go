@@ -84,14 +84,21 @@ describe("app", function() {
 
             it("should store the user's answer", function() {
                 return tester
-                    .setup.user.state('choice-1')
-                    .input('1')
+                    .inputs(
+                        null, '1', 'foo',
+                        null, '2', 'bar',
+                        null, '1', 'baz',
+                        null, '2', 'quux')
                     .check(function(api) {
                         var contact = _.find(api.contacts.store, {
                             msisdn: '+27123'
                         });
 
-                        assert.equal(contact.extra['message-1'], 'value-1');
+                        assert.equal(contact.extra['message-1'], 'value-2');
+                        assert.equal(contact.extra['message-1-1'], 'value-1');
+                        assert.equal(contact.extra['message-1-2'], 'value-2');
+                        assert.equal(contact.extra['message-1-3'], 'value-1');
+                        assert.equal(contact.extra['message-1-4'], 'value-2');
                     })
                     .run();
             });
@@ -135,14 +142,21 @@ describe("app", function() {
 
             it("should store the user's answer", function() {
                 return tester
-                    .setup.user.state('freetext-1')
-                    .input('foo')
+                    .inputs(
+                        null, '1', 'foo',
+                        null, '1', 'bar',
+                        null, '1', 'baz',
+                        null, '1', 'quux')
                     .check(function(api) {
                         var contact = _.find(api.contacts.store, {
                             msisdn: '+27123'
                         });
 
-                        assert.equal(contact.extra['message-3'], 'foo');
+                        assert.equal(contact.extra['message-3'], 'quux');
+                        assert.equal(contact.extra['message-3-1'], 'foo');
+                        assert.equal(contact.extra['message-3-2'], 'bar');
+                        assert.equal(contact.extra['message-3-3'], 'baz');
+                        assert.equal(contact.extra['message-3-4'], 'quux');
                     })
                     .run();
             });
