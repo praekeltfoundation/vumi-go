@@ -12,41 +12,41 @@ class TestBucketConfig(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
 
-    def mk_config(self, **kw):
+    def patch_s3_settings(self, **kw):
         self.vumi_helper.patch_settings(GO_S3_BUCKETS=kw)
 
     def test_custom_value_with_defaults(self):
-        self.mk_config(defaults={'foo': 'bar'}, custom={'foo': 'baz'})
+        self.patch_s3_settings(defaults={'foo': 'bar'}, custom={'foo': 'baz'})
         self.assertEqual(BucketConfig('custom').foo, 'baz')
 
     def test_custom_value_no_defaults(self):
-        self.mk_config(custom={'foo': 'baz'})
+        self.patch_s3_settings(custom={'foo': 'baz'})
         self.assertEqual(BucketConfig('custom').foo, 'baz')
 
     def test_default_value_with_custom_config(self):
-        self.mk_config(defaults={'foo': 'bar'}, custom={})
+        self.patch_s3_settings(defaults={'foo': 'bar'}, custom={})
         self.assertEqual(BucketConfig('custom').foo, 'bar')
 
     def test_default_value_no_custom_config(self):
-        self.mk_config(defaults={'foo': 'bar'})
+        self.patch_s3_settings(defaults={'foo': 'bar'})
         self.assertEqual(BucketConfig('custom').foo, 'bar')
 
     def test_missing_value(self):
-        self.mk_config(defaults={'foo': 'bar'}, custom={'foo': 'baz'})
+        self.patch_s3_settings(defaults={'foo': 'bar'}, custom={'foo': 'baz'})
         b = BucketConfig('custom')
         self.assertRaisesRegexp(
             AttributeError, "BucketConfig 'custom' has no attribute 'unknown'",
             getattr, b, 'unknown')
 
     def test_missing_bucket(self):
-        self.mk_config(defaults={'foo': 'bar'})
+        self.patch_s3_settings(defaults={'foo': 'bar'})
         b = BucketConfig('custom')
         self.assertRaisesRegexp(
             AttributeError, "BucketConfig 'custom' has no attribute 'unknown'",
             getattr, b, 'unknown')
 
     def test_blank_config(self):
-        self.mk_config()
+        self.patch_s3_settings()
         b = BucketConfig('custom')
         self.assertRaisesRegexp(
             AttributeError, "BucketConfig 'custom' has no attribute 'unknown'",
