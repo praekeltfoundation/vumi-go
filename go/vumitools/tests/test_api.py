@@ -413,6 +413,54 @@ class TestTxVumiUserApi(VumiTestCase):
         pools = yield self.user_api.tagpools()
         self.assertEqual(pools.pools(), [])
 
+    @inlineCallbacks
+    def test_known_tagpools(self):
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1'])
+        yield self.vumi_helper.setup_tagpool(u'pool2', [u'2.1'])
+        yield self.user_helper.add_tagpool_permission(u'pool1')
+        yield self.user_helper.add_tagpool_permission(u'pool2')
+
+        pools = yield self.user_api.known_tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1', u'pool2'])
+
+    @inlineCallbacks
+    def test_known_tagpools_max_keys(self):
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1', u'1.2'])
+        yield self.user_helper.add_tagpool_permission(u'pool1', max_keys=2)
+
+        pools = yield self.user_api.known_tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1'])
+
+        yield self.user_api.acquire_specific_tag((u'pool1', u'1.1'))
+        pools = yield self.user_api.known_tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1'])
+
+        pools = yield self.user_api.known_tagpools()
+        yield self.user_api.acquire_specific_tag((u'pool1', u'1.2'))
+        self.assertEqual(sorted(pools.pools()), [u'pool1'])
+
+    @inlineCallbacks
+    def test_known_tagpools_available(self):
+        user2_helper = yield self.vumi_helper.make_user(u'User 2')
+        user2_api = user2_helper.user_api
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1', u'1.2'])
+        yield self.user_helper.add_tagpool_permission(u'pool1')
+        yield user2_helper.add_tagpool_permission(u'pool1')
+
+        yield user2_api.acquire_specific_tag((u'pool1', u'1.1'))
+        pools = yield self.user_api.known_tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1'])
+
+        yield user2_api.acquire_specific_tag((u'pool1', u'1.2'))
+        pools = yield self.user_api.known_tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1'])
+
+    @inlineCallbacks
+    def test_known_tagpools_accessible(self):
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1'])
+        pools = yield self.user_api.known_tagpools()
+        self.assertEqual(pools.pools(), [u'pool1'])
+
 
 class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True

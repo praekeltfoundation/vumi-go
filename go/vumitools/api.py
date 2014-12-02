@@ -214,6 +214,13 @@ class VumiUserApi(object):
         returnValue(channels)
 
     @Manager.calls_manager
+    def _tagpool_set(self, pools):
+        pool_data = dict([
+            (pool, (yield self.api.tpm.get_metadata(pool)))
+            for pool in pools])
+        returnValue(TagpoolSet(pool_data))
+
+    @Manager.calls_manager
     def tagpools(self):
         user_account = yield self.get_user_account()
 
@@ -237,9 +244,12 @@ class VumiUserApi(object):
             if free_tags:
                 available_pools.append(pool)
 
-        pool_data = dict([(pool, (yield self.api.tpm.get_metadata(pool)))
-                          for pool in available_pools])
-        returnValue(TagpoolSet(pool_data))
+        returnValue((yield self._tagpool_set(available_pools)))
+
+    @Manager.calls_manager
+    def known_tagpools(self):
+        pools = yield self.api.tpm.list_pools()
+        returnValue((yield self._tagpool_set(pools)))
 
     @Manager.calls_manager
     def applications(self):
