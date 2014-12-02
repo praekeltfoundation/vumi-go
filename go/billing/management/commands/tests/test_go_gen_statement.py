@@ -4,7 +4,7 @@ from StringIO import StringIO
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import Account, Statement
-from go.billing.management.commands.gen_statement import Command
+from go.billing.management.commands.go_gen_statement import Command
 
 
 class TestGenStatement(GoDjangoTestCase):
