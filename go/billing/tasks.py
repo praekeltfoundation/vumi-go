@@ -51,10 +51,6 @@ def get_session_transactions(account, from_date, to_date):
     return transactions
 
 
-def get_tagpools(account):
-    return vumi_api().get_user_api(account.account_number).known_tagpools()
-
-
 def get_provider_name(transaction, tagpools):
     return tagpools.display_name(transaction['tag_pool_name'])
 
@@ -172,7 +168,7 @@ def generate_monthly_statement(account_id, from_date, to_date):
        between the given ``from_date`` and ``to_date``.
     """
     account = Account.objects.get(id=account_id)
-    tagpools = get_tagpools(account)
+    tagpools = vumi_api().known_tagpools()
 
     statement = Statement(
         account=account,
