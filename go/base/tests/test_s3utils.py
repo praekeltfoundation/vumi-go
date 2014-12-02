@@ -8,7 +8,13 @@ import moto
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
-from go.base.s3utils import BucketConfig, Bucket
+from go.base.s3utils import (
+    BucketConfig, Bucket, MultipartWriter, GzipMultipartWriter)
+
+
+def gunzip(data):
+    """ Gunzip data. """
+    return gzip.GzipFile(fileobj=StringIO.StringIO(data)).read()
 
 
 class TestBucketConfig(GoDjangoTestCase):
@@ -61,6 +67,43 @@ class TestBucketConfig(GoDjangoTestCase):
             AttributeError,
             "'Settings' object has no attribute 'GO_S3_BUCKETS'",
             getattr, b, 'unknown')
+
+
+class TestMultipartWriter(GoDjangoTestCase):
+    def test_push_chunk(self):
+        writer = MultipartWriter(minimum_size=5)
+        self.assertEqual(writer.push_chunk("ab" * 2), None)
+        self.assertEqual(writer.push_chunk("c").getvalue(), "ababc")
+        self.assertEqual(writer.push_chunk("bcd"), None)
+
+    def test_push_done(self):
+        writer = MultipartWriter(minimum_size=5)
+        writer.push_chunk("abc")
+        self.assertEqual(writer.push_done().getvalue(), "abc")
+
+    def test_push_done_empty(self):
+        writer = MultipartWriter(minimum_size=5)
+        self.assertEqual(writer.push_done(), None)
+
+
+class TestGzipMultipartWriter(GoDjangoTestCase):
+    def _push_chunks(self, writer, chunks):
+        parts = [writer.push_chunk(x) for x in chunks]
+        parts.append(writer.push_done())
+        parts = [p and p.getvalue() for p in parts]
+        return parts
+
+    def _decode_parts(self, parts):
+        return gunzip("".join(p for p in parts if p is not None))
+
+    def _none_parts(self, parts):
+        return [True if p is None else False for p in parts]
+
+    def test_push_chunk_and_done(self):
+        writer = GzipMultipartWriter(minimum_size=5)
+        parts = self._push_chunks(writer, ["ab" * 2, "c", "bcd"])
+        self.assertEqual(self._decode_parts(parts), "ababcbcd")
+        self.assertEqual(self._none_parts(parts), [False, True, True, False])
 
 
 class TestBucket(GoDjangoTestCase):
@@ -161,7 +204,5 @@ class TestBucket(GoDjangoTestCase):
         self.assertEqual(s3_bucket.get_all_multipart_uploads(), [])
         [s3_key] = s3_bucket.get_all_keys()
 
-        s3_data_gzipped = s3_key.get_contents_as_string()
-        s3_data = gzip.GzipFile(
-            fileobj=StringIO.StringIO(s3_data_gzipped)).read()
-        self.assertEqual(s3_data, data)
+        s3_data = s3_key.get_contents_as_string()
+        self.assertEqual(gunzip(s3_data), data)
