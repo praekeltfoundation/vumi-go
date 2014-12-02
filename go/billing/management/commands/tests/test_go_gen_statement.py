@@ -2,9 +2,11 @@
 from iso8601 import parse_date
 from StringIO import StringIO
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from django.core.management import call_command
+
+from go.base.tests.helpers import (
+    GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
 from go.billing.models import Account, Statement
-from go.billing.management.commands.go_gen_statement import Command
 
 
 class TestGenStatement(GoDjangoTestCase):
@@ -18,13 +20,14 @@ class TestGenStatement(GoDjangoTestCase):
         account_number = user.get_profile().user_account
         self.account = Account.objects.get(account_number=account_number)
 
-        self.command = Command()
-        self.command.stdout = StringIO()
-        self.command.stderr = StringIO()
-
-    def run_command(self, **opts):
-        self.command.handle(**opts)
-        return self.command.stdout.getvalue()
+    def run_command(self, **kw):
+        cmd = CommandIO()
+        call_command(
+            'go_gen_statement',
+            stdout=cmd.stdout,
+            stderr=cmd.stderr,
+            **kw)
+        return cmd
 
     def test_generate(self):
         def num_statements():
@@ -50,7 +53,7 @@ class TestGenStatement(GoDjangoTestCase):
         self.assertEqual(num_statements(), 2)
 
     def test_generate_output(self):
-        actual = self.run_command(
+        cmd = self.run_command(
             email_address=self.user_email,
             from_date='2014-12-01',
             to_date='2014-12-31')
@@ -60,4 +63,4 @@ class TestGenStatement(GoDjangoTestCase):
             parse_date('2014-12-01'),
             parse_date('2014-12-31'))
 
-        self.assertEqual(actual, expected)
+        self.assertEqual(cmd.stdout.getvalue().strip(), expected)
