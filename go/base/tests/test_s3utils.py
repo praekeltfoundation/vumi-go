@@ -70,40 +70,32 @@ class TestBucketConfig(GoDjangoTestCase):
 
 
 class TestMultipartWriter(GoDjangoTestCase):
-    def test_push_chunk(self):
-        writer = MultipartWriter(minimum_size=5)
-        self.assertEqual(writer.push_chunk("ab" * 2), None)
-        self.assertEqual(writer.push_chunk("c").getvalue(), "ababc")
-        self.assertEqual(writer.push_chunk("bcd"), None)
+    def _push_chunks(self, writer, chunks):
+        return [part.getvalue() for part in writer.push_chunks(chunks)]
 
-    def test_push_done(self):
+    def test_push_chunks(self):
         writer = MultipartWriter(minimum_size=5)
-        writer.push_chunk("abc")
-        self.assertEqual(writer.push_done().getvalue(), "abc")
+        parts = self._push_chunks(writer, ["abab", "c", "bcd"])
+        self.assertEqual(parts, ["ababc", "bcd"])
 
-    def test_push_done_empty(self):
+    def test_push_chunks_empty(self):
         writer = MultipartWriter(minimum_size=5)
-        self.assertEqual(writer.push_done(), None)
+        parts = self._push_chunks(writer, [])
+        self.assertEqual(parts, [])
 
 
 class TestGzipMultipartWriter(GoDjangoTestCase):
     def _push_chunks(self, writer, chunks):
-        parts = [writer.push_chunk(x) for x in chunks]
-        parts.append(writer.push_done())
-        parts = [p and p.getvalue() for p in parts]
-        return parts
+        return [part.getvalue() for part in writer.push_chunks(chunks)]
 
     def _decode_parts(self, parts):
-        return gunzip("".join(p for p in parts if p is not None))
-
-    def _none_parts(self, parts):
-        return [True if p is None else False for p in parts]
+        return gunzip("".join(parts))
 
     def test_push_chunk_and_done(self):
         writer = GzipMultipartWriter(minimum_size=5)
         parts = self._push_chunks(writer, ["ab" * 2, "c", "bcd"])
         self.assertEqual(self._decode_parts(parts), "ababcbcd")
-        self.assertEqual(self._none_parts(parts), [False, True, True, False])
+        self.assertEqual(len(parts), 2)
 
 
 class TestBucket(GoDjangoTestCase):

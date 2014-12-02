@@ -41,20 +41,22 @@ class MultipartWriter(object):
     def _empty(self):
         return not bool(self._pending)
 
+    def _push_chunk(self, chunk):
+        self._pending.append(chunk)
+        self._pending_size += len(chunk)
+
     def _pop_part(self):
         fp = StringIO.StringIO("".join(self._pending))
         self._clear_pending()
         return fp
 
-    def push_chunk(self, chunk):
-        self._pending.append(chunk)
-        self._pending_size += len(chunk)
-        if self._ready():
-            return self._pop_part()
-
-    def push_done(self):
+    def push_chunks(self, chunks):
+        for chunk in chunks:
+            self._push_chunk(chunk)
+            if self._ready():
+                yield self._pop_part()
         if not self._empty():
-            return self._pop_part()
+            yield self._pop_part()
 
 
 class GzipMultipartWriter(object):
@@ -79,37 +81,14 @@ class GzipMultipartWriter(object):
         self._clear_pending()
         return fp
 
-    def push_chunk(self, chunk):
-        self._gzip_file.write(chunk)
-        if self._ready():
-            return self._pop_part()
-
-    def push_done(self):
+    def push_chunks(self, chunks):
+        for chunk in chunks:
+            self._gzip_file.write(chunk)
+            if self._ready():
+                yield self._pop_part()
         self._gzip_file.close()
         if not self._empty():
-            return self._pop_part()
-
-
-class MultipartPusher(object):
-    """ Helper for tracking pending chunks of data. """
-    def __init__(self, mp, writer):
-        self.mp = mp
-        self.writer = writer
-        self.part_num = 0
-
-    def _write_part(self, fp):
-        self.part_num += 1
-        self.mp.upload_part_from_file(fp, part_num=self.part_num)
-
-    def push_chunk(self, chunk):
-        part = self.writer.push_chunk(chunk)
-        if part is not None:
-            self._write_part(part)
-
-    def push_done(self):
-        part = self.writer.push_done()
-        if part is not None:
-            self._write_part(part)
+            yield self._pop_part()
 
 
 class Bucket(object):
@@ -157,15 +136,13 @@ class Bucket(object):
         mp = bucket.initiate_multipart_upload(key_name, headers=headers)
 
         if gzip:
-            writer = GzipMultipartWriter(mp)
+            writer = GzipMultipartWriter()
         else:
-            writer = MultipartWriter(mp)
+            writer = MultipartWriter()
 
-        pusher = MultipartPusher(mp, writer)
         try:
-            for chunk in chunks:
-                pusher.push_chunk(chunk)
-            pusher.push_done()
+            for part_num, part in enumerate(writer.push_chunks(chunks)):
+                mp.upload_part_from_file(part, part_num=part_num + 1)
         except:
             mp.cancel_upload()
             raise
