@@ -1,6 +1,7 @@
 """ Tests for go.base.s3utils. """
 
 import gzip
+import md5
 import StringIO
 
 import boto
@@ -82,6 +83,11 @@ class TestMultipartWriter(GoDjangoTestCase):
         parts = self._push_chunks(writer, ["abab", "c", "bcd"])
         self.assertEqual(parts, ["ababc", "bcd"])
 
+    def test_push_chunks_splits_second_part_correctly(self):
+        writer = MultipartWriter(minimum_size=5)
+        parts = self._push_chunks(writer, ["abab", "c", "abab", "c", "b"])
+        self.assertEqual(parts, ["ababc", "ababc", "b"])
+
     def test_push_chunks_empty(self):
         writer = MultipartWriter(minimum_size=5)
         parts = self._push_chunks(writer, [])
@@ -101,11 +107,31 @@ class TestGzipMultipartWriter(GoDjangoTestCase):
     def test_implements_IMultipartWriter(self):
         self.assertTrue(IMultipartWriter.providedBy(GzipMultipartWriter()))
 
-    def test_push_chunk_and_done(self):
+    def test_push_chunks(self):
         writer = GzipMultipartWriter(minimum_size=5)
-        parts = self._push_chunks(writer, ["ab" * 2, "c", "bcd"])
+        parts = self._push_chunks(writer, ["abab", "c", "bcd"])
         self.assertEqual(self._decode_parts(parts), "ababcbcd")
         self.assertEqual(self._part_lengths(parts), [10, 18])
+
+    def test_push_chunks_splits_second_part_correctly(self):
+        writer = GzipMultipartWriter(minimum_size=5)
+
+        # This generates a fixed pseudo random sequence that is hard for gzip
+        # to compress so we can get multiple parts without a huge data set.
+
+        def chunk(i, j):
+            return md5.md5(chr(i) + chr(j)).hexdigest()
+        chunks = [chunk(i, j) for i in range(40) for j in range(40)]
+
+        parts = self._push_chunks(writer, chunks)
+        self.assertEqual(self._decode_parts(parts), "".join(chunks))
+        self.assertEqual(self._part_lengths(parts), [10, 23533, 6169])
+
+    def test_push_chunks_empty(self):
+        writer = MultipartWriter(minimum_size=5)
+        parts = self._push_chunks(writer, [])
+        self.assertEqual(self._decode_parts(parts), "")
+        self.assertEqual(self._part_lengths(parts), [])
 
 
 class TestBucket(GoDjangoTestCase):
