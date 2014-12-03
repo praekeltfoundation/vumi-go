@@ -211,6 +211,10 @@ class AccountRoutingTableCache(object):
         """
         Schedule the eviction of a cached routing table.
         """
+        if key in self._evictors:
+            # We already have an evictor for this routing table, so we don't
+            # need a new one.
+            return
         delayed_call = self._reactor.callLater(
             self._ttl, self.evict_routing_table_entry, key)
         self._evictors[key] = delayed_call
@@ -236,6 +240,11 @@ class AccountRoutingTableCache(object):
         """
         key = user_api.user_account_key
         if key not in self._routing_tables:
+            # Fetching the routing table returns control to the reactor and
+            # gives other things the opportunity to cache the routing table
+            # behind our back. If this happens, we replace the cached table
+            # (the one we fetched may be newer) and let schedule_eviction()
+            # worry about the existing evictor.
             routing_table = yield user_api.get_routing_table()
             if self._ttl <= 0:
                 # Special case for disabled cache.
