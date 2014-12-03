@@ -95,6 +95,9 @@ class TestGzipMultipartWriter(GoDjangoTestCase):
     def _decode_parts(self, parts):
         return gunzip("".join(parts))
 
+    def _part_lengths(self, parts):
+        return [len(p) for p in parts]
+
     def test_implements_IMultipartWriter(self):
         self.assertTrue(IMultipartWriter.providedBy(GzipMultipartWriter()))
 
@@ -102,7 +105,7 @@ class TestGzipMultipartWriter(GoDjangoTestCase):
         writer = GzipMultipartWriter(minimum_size=5)
         parts = self._push_chunks(writer, ["ab" * 2, "c", "bcd"])
         self.assertEqual(self._decode_parts(parts), "ababcbcd")
-        self.assertEqual(len(parts), 2)
+        self.assertEqual(self._part_lengths(parts), [10, 18])
 
 
 class TestBucket(GoDjangoTestCase):
