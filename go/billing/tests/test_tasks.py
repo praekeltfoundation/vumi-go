@@ -288,10 +288,17 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         # construct expected JSON
         serializer = TransactionSerializer()
         expected_json = serializer.to_json(transactions)
-        # check
+
+        def tuplify(d):
+            if isinstance(d, dict):
+                return tuple(sorted(
+                    (k, tuplify(v)) for k, v in d.iteritems()))
+            return d
+
+        # check transactions
         self.assertEqual(
-            [json.loads(datum) for datum in data[:-1]],
-            [json.loads(expected) for expected in expected_json])
+            set(tuplify(json.loads(datum)) for datum in data[:-1]),
+            set(tuplify(json.loads(expected)) for expected in expected_json))
 
     def assert_remaining_transactions(self, transactions):
         self.assertEqual(
@@ -386,5 +393,4 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         self.assert_remaining_transactions(
             transactions_before | transactions_after)
         self.assert_archive_in_s3(
-            bucket, archive.filename,
-            sorted(transactions_within, key=lambda trans: trans.pk))
+            bucket, archive.filename, transactions_within)
