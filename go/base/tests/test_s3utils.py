@@ -183,8 +183,16 @@ class TestBucket(GoDjangoTestCase):
         self.assertEqual(
             s3_key.get_contents_as_string(), "chunk1:chunk2:chunk3")
 
+    def _patch_s3_key_buffer_size(self, size=1024 * 1024):
+        # the default BufferSize is tiny (8KB) and gives terrible
+        # performance in tests with largish (e.g. 6MB) data sets. This
+        # tweak improves test run time by a factor of ~30 (6s -> 0.2s).
+        from boto.s3.key import Key
+        self.monkey_patch(Key, 'BufferSize', size)
+
     @moto.mock_s3
     def test_upload_multiple_parts(self):
+        self._patch_s3_key_buffer_size()
         self.create_s3_bucket('s3_custom')
         data = "ab" * (3 * 1024 * 1024)  # ~ 6MB
 
