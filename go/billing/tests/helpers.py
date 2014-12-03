@@ -8,21 +8,21 @@ from go.billing import settings
 from go.billing.models import MessageCost, Transaction, Statement, LineItem
 
 
-def start_of_month():
-    today = date.today()
-    return date(today.year, today.month, 1)
+def start_of_month(day):
+    return date(day.year, day.month, 1)
 
 
-def end_of_month():
-    today = date.today()
-    next_month = today + relativedelta(months=1)
+def end_of_month(day):
+    next_month = day + relativedelta(months=1)
     result = date(next_month.year, next_month.month, 1)
     result = result - relativedelta(days=1)
     return result
 
 
-def this_month():
-    return [start_of_month(), end_of_month()]
+def this_month(day=None):
+    if day is None:
+        day = date.today()
+    return [start_of_month(day), end_of_month(day)]
 
 
 def mk_transaction(account, tag_pool_name='pool1',

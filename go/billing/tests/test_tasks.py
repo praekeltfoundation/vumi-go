@@ -12,8 +12,8 @@ from go.billing.models import (
 from go.billing import tasks
 from go.billing.django_utils import TransactionSerializer
 from go.billing.tests.helpers import (
-    this_month, mk_transaction, get_message_credits, get_session_credits,
-    get_line_items)
+    this_month, mk_transaction, get_message_credits,
+    get_session_credits, get_line_items)
 
 
 class TestUtilityFunctions(GoDjangoTestCase):
