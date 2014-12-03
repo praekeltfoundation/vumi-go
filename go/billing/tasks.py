@@ -4,15 +4,14 @@ from dateutil.relativedelta import relativedelta
 
 from celery.task import task, group
 
-from django.db.models import Sum
-from django.conf import settings as go_settings
+from django.db.models import Sum, Count
 
 from go.base.s3utils import Bucket
 from go.billing import settings
 from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive)
 from go.billing.django_utils import TransactionSerializer
-from go.vumitools.api import VumiUserApi
+from go.base.utils import vumi_api
 
 
 def month_range(months_ago=1, today=None):
@@ -34,12 +33,6 @@ def month_range(months_ago=1, today=None):
     return from_date, to_date
 
 
-def get_tagpools(account):
-    config = go_settings.VUMI_API_CONFIG
-    user_api = VumiUserApi.from_config_sync(account.account_number, config)
-    return user_api.tagpools()
-
-
 def get_message_transactions(account, from_date, to_date):
     transactions = Transaction.objects.filter(
         account_number=account.account_number,
@@ -47,55 +40,147 @@ def get_message_transactions(account, from_date, to_date):
         created__lt=(to_date + relativedelta(days=1)))
 
     transactions = transactions.values(
-        'tag_pool_name', 'tag_name', 'message_direction')
+        'tag_pool_name',
+        'tag_name',
+        'message_direction',
+        'message_cost',
+        'markup_percent')
 
     transactions = transactions.annotate(
-        cost=Sum('message_cost'), credits=Sum('credit_amount'))
+        count=Count('id'), total_message_cost=Sum('message_cost'))
 
     return transactions
 
 
-def make_provider_item(statement, transaction, tagpools, count, description,
-                       credits, cost):
-    pool = transaction['tag_pool_name']
-    count = count if count != 0 else 1
-    delivery_class = tagpools.delivery_class(pool)
-    delivery_class = tagpools.delivery_class_name(delivery_class)
+def get_session_transactions(account, from_date, to_date):
+    transactions = Transaction.objects.filter(
+        account_number=account.account_number,
+        created__gte=from_date,
+        created__lt=(to_date + relativedelta(days=1)))
 
-    return LineItem(
-        statement=statement,
-        billed_by=tagpools.display_name(pool),
-        channel=transaction['tag_name'],
-        channel_type=delivery_class,
-        description=description,
-        credits=credits,
-        units=count,
-        unit_cost=cost / count,
-        cost=cost)
+    transactions = transactions.filter(session_created=True)
+
+    transactions = transactions.values(
+        'tag_pool_name',
+        'tag_name',
+        'session_cost',
+        'markup_percent')
+
+    transactions = transactions.annotate(
+        count=Count('id'), total_session_cost=Sum('session_cost'))
+
+    return transactions
 
 
-def make_message_item(statement, transaction, tagpools, count):
+def get_provider_name(transaction, tagpools):
+    return tagpools.display_name(transaction['tag_pool_name'])
+
+
+def get_channel_name(transaction, tagpools):
+    return transaction['tag_name']
+
+
+def get_message_cost(transaction):
+    return transaction['total_message_cost']
+
+
+def get_session_cost(transaction):
+    return transaction['total_session_cost']
+
+
+def get_count(transaction):
+    return transaction['count']
+
+
+def get_message_unit_cost(transaction):
+    count = get_count(transaction)
+    # count should never be 0 since we count by id
+    return get_message_cost(transaction) / count
+
+
+def get_session_unit_cost(transaction):
+    count = get_count(transaction)
+    # count should never be 0 since we count by id
+    return get_session_cost(transaction) / count
+
+
+def get_message_credits(transaction):
+    cost = get_message_cost(transaction)
+    markup = transaction['markup_percent']
+    return MessageCost.calculate_message_credit_cost(cost, markup)
+
+
+def get_session_credits(transaction):
+    cost = get_session_cost(transaction)
+    markup = transaction['markup_percent']
+    return MessageCost.calculate_session_credit_cost(cost, markup)
+
+
+def get_channel_type(transaction, tagpools):
+    delivery_class = tagpools.delivery_class(transaction['tag_pool_name'])
+    return tagpools.delivery_class_name(delivery_class)
+
+
+def get_message_description(transaction):
     if transaction['message_direction'] == MessageCost.DIRECTION_INBOUND:
-        description = 'Messages received (including sessions)'
+        return 'Messages received'
     else:
-        description = 'Messages sent (including sessions)'
+        return 'Messages sent'
 
-    return make_provider_item(
+
+def make_message_item(statement, transaction, tagpools):
+    return LineItem(
+        units=get_count(transaction),
         statement=statement,
-        transaction=transaction,
-        tagpools=tagpools,
-        count=count,
-        description=description,
-        credits=transaction['credits'],
-        cost=transaction['cost'])
+        cost=get_message_cost(transaction),
+        credits=get_message_credits(transaction),
+        channel=get_channel_name(transaction, tagpools),
+        billed_by=get_provider_name(transaction, tagpools),
+        unit_cost=get_message_unit_cost(transaction),
+        channel_type=get_channel_type(transaction, tagpools),
+        description=get_message_description(transaction))
 
 
-def make_message_items(account, statement, tagpools, from_date, to_date):
-    transactions = get_message_transactions(account, from_date, to_date)
-    count = len(transactions)
+def make_session_item(statement, transaction, tagpools):
+    return LineItem(
+        units=get_count(transaction),
+        statement=statement,
+        cost=get_session_cost(transaction),
+        credits=get_session_credits(transaction),
+        channel=get_channel_name(transaction, tagpools),
+        billed_by=get_provider_name(transaction, tagpools),
+        unit_cost=get_session_unit_cost(transaction),
+        channel_type=get_channel_type(transaction, tagpools),
+        description='Sessions')
+
+
+def make_message_items(account, statement, tagpools):
+    transactions = get_message_transactions(
+        account, statement.from_date, statement.to_date)
+
     return [
-        make_message_item(statement, transaction, tagpools, count)
+        make_message_item(statement, transaction, tagpools)
         for transaction in transactions]
+
+
+def make_session_items(account, statement, tagpools):
+    transactions = get_session_transactions(
+        account, statement.from_date, statement.to_date)
+
+    return [
+        make_session_item(statement, transaction, tagpools)
+        for transaction in transactions]
+
+
+def make_account_fee_item(account, statement):
+    return LineItem(
+        units=1,
+        statement=statement,
+        credits=None,
+        cost=settings.ACCOUNT_FEE,
+        billed_by='Vumi',
+        unit_cost=settings.ACCOUNT_FEE,
+        description='Account Fee')
 
 
 @task()
@@ -104,7 +189,7 @@ def generate_monthly_statement(account_id, from_date, to_date):
        between the given ``from_date`` and ``to_date``.
     """
     account = Account.objects.get(id=account_id)
-    tagpools = get_tagpools(account)
+    tagpools = vumi_api().known_tagpools()
 
     statement = Statement(
         account=account,
@@ -115,10 +200,11 @@ def generate_monthly_statement(account_id, from_date, to_date):
 
     statement.save()
 
-    line_items = make_message_items(
-        account, statement, tagpools, from_date, to_date)
+    items = []
+    items.extend(make_message_items(account, statement, tagpools))
+    items.extend(make_session_items(account, statement, tagpools))
 
-    statement.lineitem_set.bulk_create(line_items)
+    statement.lineitem_set.bulk_create(items)
     return statement
 
 

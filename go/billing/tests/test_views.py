@@ -1,11 +1,13 @@
 """ Tests for PDF billing statement generation """
+from decimal import Decimal
 
+import mock
 from django.core.urlresolvers import reverse
 
 from go.base.tests.helpers import DjangoVumiApiHelper, GoDjangoTestCase
-from go.billing.models import Account, MessageCost
+from go.billing.models import Account
 
-from .helpers import mk_statement, mk_transaction
+from .helpers import mk_statement, get_line_items
 
 
 class TestStatementView(GoDjangoTestCase):
@@ -13,107 +15,336 @@ class TestStatementView(GoDjangoTestCase):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user(superuser=False)
 
-        self.vumi_helper.setup_tagpool(
-            u'pool1',
-            [u'Tag 1.1', u'Tag 1.2'],
-            {'delivery_class': 'ussd',
-             'display_name': 'Pool 1'})
-
-        self.vumi_helper.setup_tagpool(
-            u'pool2',
-            [u'Tag 2.1', u'Tag 2.2'],
-            {'delivery_class': 'sms',
-             'display_name': 'Pool 2'})
-
-        self.user_helper.add_tagpool_permission(u'pool1')
-        self.user_helper.add_tagpool_permission(u'pool2')
-
         self.account = Account.objects.get(
             user=self.user_helper.get_django_user())
 
-    def mk_statement(self, transactions=2):
-        for _i in range(transactions):
-            mk_transaction(self.account)
-        return mk_statement(self.account)
+    def mk_statement(self, **kw):
+        return mk_statement(self.account, **kw)
 
-    def assert_is_pdf(self, response):
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response['Content-Type'], 'application/pdf')
-        self.assertTrue(response.content.startswith('%PDF-'))
-
-    def get_statement_pdf(self, username, statement):
+    def get_statement(self, username, statement):
         client = self.vumi_helper.get_client(username=username)
         return client.get(
-            reverse('pdf_statement', kwargs={'statement_id': statement.id}))
+            reverse('html_statement', kwargs={'statement_id': statement.id}))
 
     def check_statement_accessible_by(self, username, statement):
-        response = self.get_statement_pdf(username, statement)
-        self.assert_is_pdf(response)
+        response = self.get_statement(username, statement)
+        self.assertEqual(response.status_code, 200)
 
     def check_statement_not_accessible_by(self, username, statement):
-        response = self.get_statement_pdf(username, statement)
+        response = self.get_statement(username, statement)
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response['Content-Type'].split(';')[0], 'text/html')
 
-    def test_statement_billers(self):
-        mk_transaction(
-            self.account,
-            tag_pool_name=u'pool1',
-            tag_name=u'Tag 1.1',
-            message_direction=MessageCost.DIRECTION_INBOUND,
-            message_cost=150,
-            session_cost=50)
+    @mock.patch('go.billing.settings.STATEMENT_CONTACT_DETAILS', {
+        'tel': '27.11.123.4567',
+        'website': 'www.foo.org',
+        'email': 'http://foo@bar.com',
+    })
+    def test_statement_contact_details(self):
+        statement = self.mk_statement()
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
 
-        mk_transaction(
-            self.account,
-            tag_pool_name=u'pool1',
-            tag_name=u'Tag 1.2',
-            message_direction=MessageCost.DIRECTION_OUTBOUND,
-            message_cost=150,
-            session_cost=50)
+        self.assertContains(response, '>www.foo.org<')
+        self.assertContains(response, '>27.11.123.4567<')
+        self.assertContains(response, '>http://foo@bar.com<')
 
-        mk_transaction(
-            self.account,
-            tag_pool_name=u'pool2',
-            tag_name=u'Tag 2.1',
-            message_direction=MessageCost.DIRECTION_OUTBOUND,
-            message_cost=120,
-            session_cost=0)
-
-        mk_transaction(
-            self.account,
-            tag_pool_name=u'pool2',
-            tag_name=u'Tag 2.2',
-            message_direction=MessageCost.DIRECTION_INBOUND,
-            message_cost=120,
-            session_cost=0)
+    def test_statement_biller_title(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+        }])
 
         user = self.user_helper.get_django_user()
-        statement = mk_statement(self.account)
-        response = self.get_statement_pdf(user, statement)
-        items = statement.lineitem_set
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>Pool 1 (USSD)<')
+
+    def test_statement_biller_title_none_channel_type(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': None,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>Pool 1<')
+
+    def test_statement_channel_title(self):
+        statement = self.mk_statement(items=[{'channel': 'Tag 1.1'}])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>Tag 1.1<')
+
+    def test_statement_descriptions(self):
+        statement = self.mk_statement(items=[
+            {'description': 'Messages Received'},
+            {'description': 'Messages Sent'}])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>Messages Received<')
+        self.assertContains(response, '>Messages Sent<')
+
+    def test_statement_description_nones(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'description': None
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertNotContains(response, '>None<')
+
+    def test_statement_costs(self):
+        statement = self.mk_statement(items=[{
+            'credits': 200,
+            'unit_cost': Decimal('123.456'),
+            'cost': Decimal('679.012'),
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertContains(response, '>200<')
+        self.assertContains(response, '>123.46<')
+        self.assertContains(response, '>679.01<')
+
+    def test_statement_cost_nones(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'credits': None
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+        self.assertNotContains(response, '>None<')
+
+    def test_statement_billers(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.2',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 2',
+            'channel_type': 'SMS',
+            'channel': 'Tag 2.1',
+            'description': 'Messages Received',
+            'cost': Decimal('200.0'),
+            'credits': 250,
+        }, {
+            'billed_by': 'Pool 2',
+            'channel_type': 'SMS',
+            'channel': 'Tag 2.2',
+            'description': 'Messages Received',
+            'cost': Decimal('200.0'),
+            'credits': 250,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
 
         self.assertEqual(response.context['billers'], [{
             'name': u'Pool 1',
             'channel_type': u'USSD',
-            'channels': [{
+            'sections': [{
                 'name': u'Tag 1.1',
-                'items': list(items.filter(channel=u'Tag 1.1')),
+                'items': list(
+                    get_line_items(statement).filter(channel='Tag 1.1')),
+                'totals': {
+                    'cost': Decimal('150.0'),
+                    'credits': 200,
+                }
             }, {
                 'name': u'Tag 1.2',
-                'items': list(items.filter(channel=u'Tag 1.2')),
-            }],
+                'items': list(
+                    get_line_items(statement).filter(channel='Tag 1.2')),
+                'totals': {
+                    'cost': Decimal('150.0'),
+                    'credits': 200,
+                }
+            }]
         }, {
             'name': u'Pool 2',
             'channel_type': u'SMS',
-            'channels': [{
+            'sections': [{
                 'name': u'Tag 2.1',
-                'items': list(items.filter(channel=u'Tag 2.1')),
+                'items': list(
+                    get_line_items(statement).filter(channel='Tag 2.1')),
+                'totals': {
+                    'cost': Decimal('200.0'),
+                    'credits': 250,
+                }
             }, {
                 'name': u'Tag 2.2',
-                'items': list(items.filter(channel=u'Tag 2.2')),
+                'items': list(
+                    get_line_items(statement).filter(channel='Tag 2.2')),
+                'totals': {
+                    'cost': Decimal('200.0 '),
+                    'credits': 250,
+                }
             }],
         }])
+
+    def test_statement_section_totals(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Sent',
+            'cost': Decimal('150.0'),
+            'credits': None,
+        }, {
+            'billed_by': 'Pool 1',
+            'channel_type': 'SMS',
+            'channel': 'Tag 1.2',
+            'description': 'Messages Received',
+            'cost': Decimal('200.0'),
+            'credits': 250,
+        }, {
+            'billed_by': 'Pool 1',
+            'channel_type': 'SMS',
+            'channel': 'Tag 1.2',
+            'description': 'Messages Sent',
+            'cost': Decimal('200.0'),
+            'credits': None,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        totals = [
+            section['totals']
+            for section in response.context['billers'][0]['sections']]
+
+        self.assertEqual(totals, [{
+            'cost': Decimal('300.0'),
+            'credits': 200,
+        }, {
+            'cost': Decimal('400.0'),
+            'credits': 250,
+        }])
+
+    def test_statement_section_totals_nones(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 2',
+            'channel_type': 'SMS',
+            'channel': 'Tag 2.1',
+            'description': 'Messages Received',
+            'cost': Decimal('200.0'),
+            'credits': None,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertEqual(response.context['totals'], {
+            'cost': Decimal('350.0'),
+            'credits': 200,
+        })
+
+    def test_statement_grand_totals(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Sent',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 2',
+            'channel_type': 'SMS',
+            'channel': 'Tag 2.1',
+            'description': 'Messages Received',
+            'cost': Decimal('200.0'),
+            'credits': 250,
+        }, {
+            'billed_by': 'Pool 2',
+            'channel_type': 'SMS',
+            'channel': 'Tag 2.1',
+            'description': 'Messages Sent',
+            'cost': Decimal('200.0'),
+            'credits': 250,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertEqual(response.context['totals'], {
+            'cost': Decimal('700.0'),
+            'credits': 900,
+        })
+
+    def test_statement_grand_totals_nones(self):
+        statement = self.mk_statement(items=[{
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.1',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': 200,
+        }, {
+            'billed_by': 'Pool 2',
+            'channel_type': 'SMS',
+            'channel': 'Tag 2.1',
+            'description': 'Messages Received',
+            'cost': Decimal('200.0'),
+            'credits': None,
+        }])
+
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+
+        self.assertEqual(response.context['totals'], {
+            'cost': Decimal('350.0'),
+            'credits': 200,
+        })
+
+    @mock.patch('go.billing.settings.SYSTEM_BILLER_NAME', 'Serenity')
+    def test_statement_billers_system_at_end(self):
+        statement = self.mk_statement(items=[
+            {'billed_by': 'Z'},
+            {'billed_by': 'Serenity'}
+        ])
+        user = self.user_helper.get_django_user()
+        response = self.get_statement(user, statement)
+        self.assertEqual(response.context['billers'][-1]['name'], 'Serenity')
 
     def test_statement_accessable_by_owner(self):
         statement = self.mk_statement()

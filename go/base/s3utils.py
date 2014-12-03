@@ -26,7 +26,7 @@ class BucketConfig(object):
 
 class MultipartPusher(object):
     """ Helper for tracking pending chunks of data. """
-    def __init__(self, mp, minimum_size=5*1024*1024):
+    def __init__(self, mp, minimum_size=5 * 1024 * 1024):
         self.mp = mp
         self.minimum_size = minimum_size
         self.part_num = 0

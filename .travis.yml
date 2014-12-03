@@ -23,7 +23,7 @@ before_script:
   - "psql -c 'create database go owner go;' -U postgres"
   - "export PYTHONPATH=."
   - "django-admin.py syncdb --migrate --noinput --settings=go.testsettings"
-  - "pip freeze"
+  - "pip list"
 script:
   - ./run-tests.sh
   - grunt test

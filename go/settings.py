@@ -347,6 +347,10 @@ PIPELINE_CSS = {
         'source_filenames': static_paths(paths['client']['styles']['go']),
         'output_filename': 'export/go.css',
     },
+    'invoice': {
+        'source_filenames': static_paths(paths['client']['styles']['invoice']),
+        'output_filename': 'export/go-invoice.css',
+    },
 }
 
 PIPELINE_TEMPLATE_FUNC = '_.template'

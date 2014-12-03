@@ -5,5 +5,5 @@ urlpatterns = patterns(
     '',
     url(
         r'^statement/(?P<statement_id>[\d]+)', views.statement_view,
-        name='pdf_statement')
+        name='html_statement')
 )
