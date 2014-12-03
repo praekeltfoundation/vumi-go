@@ -360,10 +360,11 @@ class TransactionArchive(models.Model):
     STATUS_TRANSACTIONS_UPLOADED = 'transactions_uploaded'
     STATUS_ARCHIVE_COMPLETED = 'archive_completed'
     STATUS_ARCHIVE_DELETED = 'archive_deleted'
-    STATUS_CHOICES = tuple(
-        (choice, choice.title()) for choice in (
-            STATUS_ARCHIVE_CREATED, STATUS_TRANSACTIONS_UPLOADED,
-            STATUS_ARCHIVE_COMPLETED, STATUS_ARCHIVE_DELETED)
+    STATUS_CHOICES = (
+        (STATUS_ARCHIVE_CREATED, "Archive created"),
+        (STATUS_TRANSACTIONS_UPLOADED, "Transactions uploaded"),
+        (STATUS_ARCHIVE_COMPLETED, "Archive completed"),
+        (STATUS_ARCHIVE_DELETED, "Archive deleted"),
     )
 
     account = models.ForeignKey(
