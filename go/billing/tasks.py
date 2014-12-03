@@ -6,10 +6,31 @@ from celery.task import task, group
 
 from django.db.models import Sum, Count
 
+from go.base.s3utils import Bucket
 from go.billing import settings
 from go.billing.models import (
-    Account, Transaction, MessageCost, Statement, LineItem)
+    Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive)
+from go.billing.django_utils import TransactionSerializer
 from go.base.utils import vumi_api
+
+
+def month_range(months_ago=1, today=None):
+    """ Return the dates at the start and end of a calendar month.
+
+    :param int months_ago:
+        How many months back the range should be.
+    :param date today:
+        The date which months_ago is relative to.
+
+    :returns:
+        A tuple consisting of (from_date, to_date).
+    """
+    if today is None:
+        today = date.today()
+    last_month = today - relativedelta(months=months_ago)
+    from_date = date(last_month.year, last_month.month, 1)
+    to_date = from_date + relativedelta(months=1, days=-1)
+    return from_date, to_date
 
 
 def get_message_transactions(account, from_date, to_date):
@@ -192,10 +213,7 @@ def generate_monthly_account_statements():
     """Spawn sub-tasks to generate a *Monthly* ``Statement`` for accounts
        without a *Monthly* statement.
     """
-    today = date.today()
-    last_month = today - relativedelta(months=1)
-    from_date = date(last_month.year, last_month.month, 1)
-    to_date = date(today.year, today.month, 1) - relativedelta(days=1)
+    from_date, to_date = month_range(months_ago=1)
     account_list = Account.objects.exclude(
         statement__type=Statement.TYPE_MONTHLY,
         statement__from_date=from_date,
@@ -207,3 +225,71 @@ def generate_monthly_account_statements():
             generate_monthly_statement.s(account.id, from_date, to_date))
 
     return group(task_list)()
+
+
+@task
+def archive_monthly_transactions(months_ago=3):
+    """Spawn sub-tasks to archive transactions from N months ago."""
+    from_date, to_date = month_range(months_ago=months_ago)
+    account_list = Account.objects.exclude(
+        transactionarchive__from_date=from_date,
+        transactionarchive__to_date=to_date)
+
+    task_list = []
+    for account in account_list:
+        task_list.append(archive_transactions.s(
+            account.id, from_date, to_date))
+
+    return group(task_list)()
+
+
+@task()
+def archive_transactions(account_id, from_date, to_date, delete=True):
+    account = Account.objects.get(id=account_id)
+    serializer = TransactionSerializer()
+    filename = (
+        u"transactions-%(account_number)s-%(from)s-to-%(to)s.json" % {
+            "account_number": account.account_number,
+            "from": from_date,
+            "to": to_date,
+        })
+
+    transaction_list = Transaction.objects.filter(
+        account_number=account.account_number,
+        created__gte=from_date,
+        created__lt=(to_date + relativedelta(days=1)))
+
+    def generate_chunks(item_iter, items_per_chunk=10000, sep="\n"):
+        data = []
+        for i, item in enumerate(item_iter):
+            data.append(item)
+            if i % items_per_chunk == 0:
+                yield sep.join(serializer.to_json(data))
+                yield sep
+                data = []
+        if data:
+            yield sep.join(serializer.to_json(data))
+            yield sep
+
+    bucket = Bucket('billing.archive')
+    chunks = generate_chunks(transaction_list)
+
+    archive = TransactionArchive(
+        account=account, filename=filename,
+        from_date=from_date, to_date=to_date,
+        status=TransactionArchive.STATUS_ARCHIVE_CREATED)
+    archive.save()
+
+    bucket.upload(filename, chunks, headers={
+        'Content-Type': 'appliation/json; charset=utf-8',
+    })
+
+    archive.status = TransactionArchive.STATUS_TRANSACTIONS_UPLOADED
+    archive.save()
+
+    if delete:
+        transaction_list.delete()
+        archive.status = TransactionArchive.STATUS_ARCHIVE_COMPLETED
+        archive.save()
+
+    return archive

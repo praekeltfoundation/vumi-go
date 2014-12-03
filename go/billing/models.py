@@ -351,3 +351,47 @@ class LineItem(models.Model):
 
     def __unicode__(self):
         return u"%s line item" % (self.statement.title,)
+
+
+class TransactionArchive(models.Model):
+    """Record of a transaction archival."""
+
+    STATUS_ARCHIVE_CREATED = 'archive_created'
+    STATUS_TRANSACTIONS_UPLOADED = 'transactions_uploaded'
+    STATUS_ARCHIVE_COMPLETED = 'archive_completed'
+    STATUS_ARCHIVE_DELETED = 'archive_deleted'
+    STATUS_CHOICES = (
+        (STATUS_ARCHIVE_CREATED, "Archive created"),
+        (STATUS_TRANSACTIONS_UPLOADED, "Transactions uploaded"),
+        (STATUS_ARCHIVE_COMPLETED, "Archive completed"),
+        (STATUS_ARCHIVE_DELETED, "Archive deleted"),
+    )
+
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the archive is for."))
+
+    filename = models.CharField(
+        max_length=255,
+        help_text=_("Name of the file the archive was stored as in S3."))
+
+    from_date = models.DateField(
+        help_text=_("The start of the date range covered by this archive "
+                    "(inclusive)."))
+
+    to_date = models.DateField(
+        help_text=_("The end of the date range covered by this archive "
+                    "(inclusive)"))
+
+    status = models.CharField(
+        max_length=32, choices=STATUS_CHOICES, default=STATUS_ARCHIVE_CREATED,
+        help_text=_("The status of this archive. One of archive_created, "
+                    "transactions_uploaded, archive_completed or "
+                    "archive_deleted."))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When this archive was created."))
+
+    def __unicode__(self):
+        return u"%s (for %s)" % (self.filename, self.account)

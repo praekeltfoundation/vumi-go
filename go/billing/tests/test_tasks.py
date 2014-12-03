@@ -1,14 +1,35 @@
-from datetime import date
+from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
+import json
 
 import mock
+import moto
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import MessageCost, Account, Statement
+from go.base.s3utils import Bucket
+from go.billing.models import (
+    MessageCost, Account, Statement, Transaction, TransactionArchive)
 from go.billing import tasks
+from go.billing.django_utils import TransactionSerializer
 from go.billing.tests.helpers import (
-    this_month, mk_transaction, get_message_credits, get_session_credits,
-    get_line_items)
+    this_month, mk_transaction, get_message_credits,
+    get_session_credits, get_line_items)
+
+
+class TestUtilityFunctions(GoDjangoTestCase):
+    def test_month_range_today(self):
+        from_date, to_date = tasks.month_range()
+        self.assertEqual(to_date, from_date + relativedelta(months=1, days=-1))
+
+    def test_month_range_specific_day(self):
+        from_date, to_date = tasks.month_range(today=date(2014, 2, 1))
+        self.assertEqual(from_date, date(2014, 1, 1))
+        self.assertEqual(to_date, date(2014, 1, 31))
+
+    def test_month_range_three_months_ago(self):
+        from_date, to_date = tasks.month_range(3, today=date(2014, 2, 1))
+        self.assertEqual(from_date, date(2013, 11, 1))
+        self.assertEqual(to_date, date(2013, 11, 30))
 
 
 class TestMonthlyStatementTask(GoDjangoTestCase):
@@ -238,3 +259,160 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         [item] = get_line_items(statement).filter(channel=u'tag2.1')
         self.assertEqual(item.billed_by, 'Pool 2')
+
+
+class TestArchiveTransactionsTask(GoDjangoTestCase):
+
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.account = Account.objects.get(
+            user=self.user_helper.get_django_user())
+
+    def mk_bucket(self, config_name, defaults=None, **kw):
+        defaults = defaults if defaults is not None else {
+            "aws_access_key_id": "AWS-DUMMY-ID",
+            "aws_secret_access_key": "AWS-DUMMY-SECRET",
+        }
+        go_s3_buckets = {config_name: defaults}
+        go_s3_buckets[config_name].update(kw)
+        self.vumi_helper.patch_settings(GO_S3_BUCKETS=go_s3_buckets)
+        return Bucket(config_name)
+
+    def assert_archive_in_s3(self, bucket, filename, transactions):
+        s3_bucket = bucket.get_s3_bucket()
+        key = s3_bucket.get_key(filename)
+        data = key.get_contents_as_string().split("\n")
+        # check for final newline
+        self.assertEqual(data[-1], "")
+        # construct expected JSON
+        serializer = TransactionSerializer()
+        expected_json = serializer.to_json(transactions)
+
+        def tuplify(d):
+            if isinstance(d, dict):
+                return tuple(sorted(
+                    (k, tuplify(v)) for k, v in d.iteritems()))
+            return d
+
+        # check transactions
+        self.assertEqual(
+            set(tuplify(json.loads(datum)) for datum in data[:-1]),
+            set(tuplify(json.loads(expected)) for expected in expected_json))
+
+    def assert_remaining_transactions(self, transactions):
+        self.assertEqual(
+            set(Transaction.objects.all()), set(transactions))
+
+    @mock.patch('go.billing.tasks.archive_transactions.s',
+                new_callable=mock.MagicMock)
+    def test_archive_monthly_transactions(self, s):
+        today = date.today()
+        three_months_ago = today - relativedelta(months=3)
+
+        mk_transaction(
+            self.account,
+            created=three_months_ago,
+            last_modified=three_months_ago)
+
+        mk_transaction(
+            self.account,
+            message_direction=MessageCost.DIRECTION_OUTBOUND,
+            created=three_months_ago, last_modified=three_months_ago)
+
+        tasks.archive_monthly_transactions()
+
+        from_date = date(three_months_ago.year, three_months_ago.month, 1)
+        to_date = from_date + relativedelta(months=1, days=-1)
+        s.assert_called_with(self.account.id, from_date, to_date)
+
+    @moto.mock_s3
+    def test_archive_transactions(self):
+        bucket = self.mk_bucket('billing.archive', s3_bucket_name='billing')
+        bucket.create()
+        from_time = datetime(2013, 11, 1)
+        from_date, to_date = this_month(from_time.date())
+
+        transaction = mk_transaction(self.account, created=from_time)
+
+        result = tasks.archive_transactions(
+            self.account.id, from_date, to_date)
+
+        archive = TransactionArchive.objects.get(account=self.account)
+
+        self.assertEqual(result, archive)
+        self.assertEqual(archive.account, self.account)
+        self.assertEqual(
+            archive.filename,
+            "transactions-test-0-user-2013-11-01-to-2013-11-30.json")
+        self.assertEqual(archive.from_date, from_date)
+        self.assertEqual(archive.to_date, to_date)
+        self.assertEqual(archive.status, archive.STATUS_ARCHIVE_COMPLETED)
+
+        self.assert_remaining_transactions([])
+        self.assert_archive_in_s3(bucket, archive.filename, [transaction])
+
+    @moto.mock_s3
+    def test_archive_transactions_upload_only(self):
+        bucket = self.mk_bucket('billing.archive', s3_bucket_name='billing')
+        bucket.create()
+        from_time = datetime(2013, 11, 1)
+        from_date, to_date = this_month(from_time.date())
+
+        transaction = mk_transaction(self.account, created=from_time)
+
+        result = tasks.archive_transactions(
+            self.account.id, from_date, to_date, delete=False)
+
+        archive = TransactionArchive.objects.get(account=self.account)
+
+        self.assertEqual(result, archive)
+        self.assertEqual(archive.account, self.account)
+        self.assertEqual(
+            archive.filename,
+            "transactions-test-0-user-2013-11-01-to-2013-11-30.json")
+        self.assertEqual(archive.from_date, from_date)
+        self.assertEqual(archive.to_date, to_date)
+        self.assertEqual(archive.status, archive.STATUS_TRANSACTIONS_UPLOADED)
+
+        self.assert_remaining_transactions([transaction])
+        self.assert_archive_in_s3(bucket, archive.filename, [transaction])
+
+    @moto.mock_s3
+    def test_archive_transactions_complex(self):
+        bucket = self.mk_bucket('billing.archive', s3_bucket_name='billing')
+        bucket.create()
+        from_time = datetime(2013, 11, 1)
+        before_time = datetime(2013, 10, 31, 12, 59, 59)
+        after_time = datetime(2013, 12, 1, 0, 0, 0)
+        from_date, to_date = this_month(from_time.date())
+
+        def mk_transaction_set(n, created):
+            transaction_set = set()
+            for i in range(n):
+                transaction = mk_transaction(self.account, created=created)
+                transaction_set.add(transaction)
+            return transaction_set
+
+        transactions_before = mk_transaction_set(5, before_time)
+        transactions_after = mk_transaction_set(5, after_time)
+        transactions_within = mk_transaction_set(10, from_time)
+
+        result = tasks.archive_transactions(
+            self.account.id, from_date, to_date)
+
+        archive = TransactionArchive.objects.get(account=self.account)
+
+        self.assertEqual(result, archive)
+        self.assertEqual(archive.account, self.account)
+        self.assertEqual(
+            archive.filename,
+            "transactions-test-0-user-2013-11-01-to-2013-11-30.json")
+        self.assertEqual(archive.from_date, from_date)
+        self.assertEqual(archive.to_date, to_date)
+        self.assertEqual(archive.status, archive.STATUS_ARCHIVE_COMPLETED)
+
+        self.assert_remaining_transactions(
+            transactions_before | transactions_after)
+        self.assert_archive_in_s3(
+            bucket, archive.filename, transactions_within)
