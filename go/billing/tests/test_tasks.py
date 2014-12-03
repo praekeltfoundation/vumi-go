@@ -222,3 +222,19 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item1.credits, get_session_credits(100, 10))
         self.assertEqual(item2.credits, get_session_credits(100, 20))
         self.assertEqual(item3.credits, get_session_credits(100, 30))
+
+    def test_generate_monthly_statement_unaccessible_tags(self):
+        self.vumi_helper.setup_tagpool(u'pool2', [u'tag2.1'], {
+            'display_name': 'Pool 2'
+        })
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool2',
+            tag_name=u'tag2.1')
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(channel=u'tag2.1')
+        self.assertEqual(item.billed_by, 'Pool 2')
