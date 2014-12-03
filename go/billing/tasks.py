@@ -17,7 +17,7 @@ from go.base.utils import vumi_api
 def month_range(months_ago=1, today=None):
     """ Return the dates at the start and end of a calendar month.
 
-    :param in months_ago:
+    :param int months_ago:
         How many months back the range should be.
     :param date today:
         The date which months_ago is relative to.
