@@ -1,11 +1,12 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.task import Clock
 
 from vumi.tests.helpers import VumiTestCase, MessageHelper
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError,
-    UnroutableMessageError, NoTargetError)
+    AccountRoutingTableDispatcher, RoutingMetadata, AccountRoutingTableCache,
+    RoutingError, UnroutableMessageError, NoTargetError)
 from go.vumitools.routing_table import RoutingTable
 from go.vumitools.tests.helpers import VumiApiHelper
 from go.vumitools.utils import MessageMetadataHelper
@@ -275,6 +276,154 @@ class TestRoutingMetadata(VumiTestCase):
         self.set_hops(msg, [["sc1", "dc1"], ["sc2", "dc2"]])
         self.set_outbound_hops(msg, [["dc2", "sc2"], ["dc1", "sc1"]])
         self.assertEqual(rmeta.unroutable_event_done(), True)
+
+
+class TestAccountRoutingTableCache(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u'testuser')
+        self.user_account_key = self.user_helper.account_key
+
+        user_account = yield self.user_helper.get_user_account()
+        user_account.routing_table = self.get_routing_table()
+        yield user_account.save()
+        self.clock = Clock()
+
+    def get_routing_table(self):
+        return RoutingTable({
+            # Transport side
+            "TRANSPORT_TAG:pool1:1234": {
+                "default": ["CONVERSATION:app1:conv1", "default"]},
+            # Application side
+            "CONVERSATION:app1:conv1": {
+                "default": ["TRANSPORT_TAG:pool1:1234", "default"],
+            },
+        })
+
+    @inlineCallbacks
+    def test_get_routing_table_not_cached(self):
+        """
+        When fetching an uncached routing table, we cache it.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        # Clean up remaining state.
+        cache.cleanup()
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_cache_eviction(self):
+        """
+        When the TTL is reached, the routing table is removed from the cache.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        self.clock.advance(4.9)
+        self.assertNotEqual(cache._routing_tables, {})
+        self.assertNotEqual(cache._evictors, {})
+
+        self.clock.advance(0.5)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_multiple_cache_eviction(self):
+        """
+        Each routing table has its own TTL.
+        """
+        user_helper_2 = yield self.vumi_helper.make_user(u'testuser')
+        account_key_2 = user_helper_2.account_key
+        user_account_2 = yield user_helper_2.get_user_account()
+        user_account_2.routing_table = self.get_routing_table()
+        yield user_account_2.save()
+
+        cache = AccountRoutingTableCache(self.clock, 5)
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        self.clock.advance(3)
+        rt2 = yield cache.get_routing_table(user_helper_2.user_api)
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+            account_key_2: rt2,
+        })
+        self.assertEqual(
+            set(cache._evictors.keys()),
+            set([self.user_account_key, account_key_2]))
+
+        self.clock.advance(3)
+        self.assertEqual(cache._routing_tables, {
+            account_key_2: rt2,
+        })
+        self.assertEqual(cache._evictors.keys(), [account_key_2])
+
+        self.clock.advance(3)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_get_routing_table_no_caching(self):
+        """
+        When caching is disabled, we always fetch the routing table and never
+        store it.
+        """
+        cache = AccountRoutingTableCache(self.clock, 0)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_schedule_duplicate_eviction(self):
+        """
+        If we schedule an eviction that already exists, we keep the old one
+        instead.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        delayed_call = cache._evictors[self.user_account_key]
+        self.clock.advance(1)
+
+        # Calling schedule_eviction() doesn't replace the existing one.
+        cache.schedule_eviction(self.user_account_key)
+        self.assertNotEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors[self.user_account_key], delayed_call)
+
+        # The existing eviction happens at the expected time.
+        self.clock.advance(4)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+        # Advance to the time the new eviction would have been schduled to make
+        # sure nothing breaks.
+        self.clock.advance(1)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
 
 
 class RoutingTableDispatcherTestCase(VumiTestCase):
