@@ -396,6 +396,35 @@ class TestAccountRoutingTableCache(VumiTestCase):
         self.assertEqual(cache._routing_tables, {})
         self.assertEqual(cache._evictors, {})
 
+    @inlineCallbacks
+    def test_schedule_duplicate_eviction(self):
+        """
+        If we schedule an eviction that already exists, we keep the old one
+        instead.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        delayed_call = cache._evictors[self.user_account_key]
+        self.clock.advance(1)
+
+        # Calling schedule_eviction() doesn't replace the existing one.
+        cache.schedule_eviction(self.user_account_key)
+        self.assertNotEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors[self.user_account_key], delayed_call)
+
+        # The existing eviction happens at the expected time.
+        self.clock.advance(4)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+        # Advance to the time the new eviction would have been schduled to make
+        # sure nothing breaks.
+        self.clock.advance(1)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
 
 class RoutingTableDispatcherTestCase(VumiTestCase):
     """Base class for ``AccountRoutingTableDispatcher`` test cases"""
