@@ -8,11 +8,15 @@ from go.billing import settings
 from go.billing.models import MessageCost, Transaction, Statement, LineItem
 
 
-def start_of_month(day):
+def start_of_month(day=None):
+    if day is None:
+        day = date.today()
     return date(day.year, day.month, 1)
 
 
-def end_of_month(day):
+def end_of_month(day=None):
+    if day is None:
+        day = date.today()
     next_month = day + relativedelta(months=1)
     result = date(next_month.year, next_month.month, 1)
     result = result - relativedelta(days=1)
