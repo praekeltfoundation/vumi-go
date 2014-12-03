@@ -333,9 +333,7 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         from_time = datetime(2013, 11, 1)
         from_date, to_date = this_month(from_time.date())
 
-        transaction = mk_transaction(self.account)
-        transaction.created = from_time
-        transaction.save()
+        transaction = mk_transaction(self.account, created=from_time)
 
         result = tasks.archive_transactions(
             self.account.id, from_date, to_date)
@@ -361,9 +359,7 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         from_time = datetime(2013, 11, 1)
         from_date, to_date = this_month(from_time.date())
 
-        transaction = mk_transaction(self.account)
-        transaction.created = from_time
-        transaction.save()
+        transaction = mk_transaction(self.account, created=from_time)
 
         result = tasks.archive_transactions(
             self.account.id, from_date, to_date, delete=False)
@@ -393,10 +389,8 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
 
         def mk_transaction_set(n, created):
             transaction_set = set()
-            for i in range(5):
-                transaction = mk_transaction(self.account)
-                transaction.created = created
-                transaction.save()
+            for i in range(n):
+                transaction = mk_transaction(self.account, created=created)
                 transaction_set.add(transaction)
             return transaction_set
 

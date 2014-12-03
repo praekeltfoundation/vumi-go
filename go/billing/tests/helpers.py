@@ -34,7 +34,8 @@ def mk_transaction(account, tag_pool_name='pool1',
                    message_direction=MessageCost.DIRECTION_INBOUND,
                    message_cost=100, markup_percent=10.0,
                    credit_factor=0.25, credit_amount=28,
-                   status=Transaction.STATUS_COMPLETED, **kwargs):
+                   status=Transaction.STATUS_COMPLETED,
+                   created=None, **kwargs):
     transaction = Transaction(
         account_number=account.account_number,
         tag_pool_name=tag_pool_name,
@@ -47,6 +48,13 @@ def mk_transaction(account, tag_pool_name='pool1',
         status=status, **kwargs)
 
     transaction.save()
+
+    if created is not None:
+        # a double-save is needed here because transaction.create is
+        # overridden by auto_add_now when the transaction is first
+        # created.
+        transaction.created = created
+        transaction.save()
     return transaction
 
 
