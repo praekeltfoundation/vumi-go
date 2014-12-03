@@ -48,9 +48,11 @@ def mk_transaction(account, tag_pool_name='pool1',
         status=status, **kwargs)
 
     transaction.save()
+
     if created is not None:
-        # a double-save is needed here because auto_now_add overrides created
-        # when the transaction is first saved.
+        # a double-save is needed here because transaction.create is
+        # overridden by auto_add_now when the transaction is first
+        # created.
         transaction.created = created
         transaction.save()
     return transaction

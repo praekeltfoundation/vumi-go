@@ -244,7 +244,7 @@ def archive_monthly_transactions(months_ago=3):
 
 
 @task()
-def archive_transactions(account_id, from_date, to_date):
+def archive_transactions(account_id, from_date, to_date, delete=True):
     account = Account.objects.get(id=account_id)
     serializer = TransactionSerializer()
     filename = (
@@ -287,9 +287,9 @@ def archive_transactions(account_id, from_date, to_date):
     archive.status = TransactionArchive.STATUS_TRANSACTIONS_UPLOADED
     archive.save()
 
-    transaction_list.delete()
-
-    archive.status = TransactionArchive.STATUS_ARCHIVE_COMPLETED
-    archive.save()
+    if delete:
+        transaction_list.delete()
+        archive.status = TransactionArchive.STATUS_ARCHIVE_COMPLETED
+        archive.save()
 
     return archive

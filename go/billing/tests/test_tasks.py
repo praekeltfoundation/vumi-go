@@ -288,10 +288,17 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         # construct expected JSON
         serializer = TransactionSerializer()
         expected_json = serializer.to_json(transactions)
-        # check
+
+        def tuplify(d):
+            if isinstance(d, dict):
+                return tuple(sorted(
+                    (k, tuplify(v)) for k, v in d.iteritems()))
+            return d
+
+        # check transactions
         self.assertEqual(
-            [json.loads(datum) for datum in data[:-1]],
-            [json.loads(expected) for expected in expected_json])
+            set(tuplify(json.loads(datum)) for datum in data[:-1]),
+            set(tuplify(json.loads(expected)) for expected in expected_json))
 
     def assert_remaining_transactions(self, transactions):
         self.assertEqual(
@@ -346,6 +353,32 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         self.assert_archive_in_s3(bucket, archive.filename, [transaction])
 
     @moto.mock_s3
+    def test_archive_transactions_upload_only(self):
+        bucket = self.mk_bucket('billing.archive', s3_bucket_name='billing')
+        bucket.create()
+        from_time = datetime(2013, 11, 1)
+        from_date, to_date = this_month(from_time.date())
+
+        transaction = mk_transaction(self.account, created=from_time)
+
+        result = tasks.archive_transactions(
+            self.account.id, from_date, to_date, delete=False)
+
+        archive = TransactionArchive.objects.get(account=self.account)
+
+        self.assertEqual(result, archive)
+        self.assertEqual(archive.account, self.account)
+        self.assertEqual(
+            archive.filename,
+            "transactions-test-0-user-2013-11-01-to-2013-11-30.json")
+        self.assertEqual(archive.from_date, from_date)
+        self.assertEqual(archive.to_date, to_date)
+        self.assertEqual(archive.status, archive.STATUS_TRANSACTIONS_UPLOADED)
+
+        self.assert_remaining_transactions([transaction])
+        self.assert_archive_in_s3(bucket, archive.filename, [transaction])
+
+    @moto.mock_s3
     def test_archive_transactions_complex(self):
         bucket = self.mk_bucket('billing.archive', s3_bucket_name='billing')
         bucket.create()
@@ -356,7 +389,7 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
 
         def mk_transaction_set(n, created):
             transaction_set = set()
-            for i in range(5):
+            for i in range(n):
                 transaction = mk_transaction(self.account, created=created)
                 transaction_set.add(transaction)
             return transaction_set
@@ -382,5 +415,4 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         self.assert_remaining_transactions(
             transactions_before | transactions_after)
         self.assert_archive_in_s3(
-            bucket, archive.filename,
-            sorted(transactions_within, key=lambda trans: trans.pk))
+            bucket, archive.filename, transactions_within)
