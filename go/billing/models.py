@@ -384,8 +384,9 @@ class TransactionArchive(models.Model):
 
     status = models.CharField(
         max_length=32, choices=STATUS_CHOICES, default=STATUS_ARCHIVE_CREATED,
-        help_text=_("The status of this archive. One of pending, "
-                    "completed, or deleted."))
+        help_text=_("The status of this archive. One of archive_created, "
+                    "transactions_uploaded, archive_completed or "
+                    "archive_deleted."))
 
     created = models.DateTimeField(
         auto_now_add=True,
