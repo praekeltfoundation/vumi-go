@@ -675,7 +675,8 @@ class TransactionResource(BaseResource):
                    tag_pool_name, tag_name,
                    message_direction, message_cost, storage_cost,
                    session_created, session_cost,
-                   markup_percent, credit_factor, credit_amount,
+                   markup_percent, credit_factor,
+                   storage_credits, credit_amount,
                    status, created, last_modified
             FROM billing_transaction
             WHERE account_number = %(account_number)s
@@ -729,14 +730,17 @@ class TransactionResource(BaseResource):
         markup_percent = result.get('markup_percent', 0)
         credit_amount = result.get('credit_amount', 0)
 
+        storage_credits = MessageCost.calculate_storage_credit_cost(
+            storage_cost, markup_percent)
+
         # Create a new transaction
         query = """
             INSERT INTO billing_transaction
                 (account_number, message_id,
                  tag_pool_name, tag_name,
                  message_direction, message_cost, storage_cost,
-                 session_created, session_cost,
-                 markup_percent, credit_factor,
+                 session_created, session_cost, markup_percent,
+                 credit_factor, storage_credits,
                  credit_amount, status, created, last_modified)
             VALUES
                 (%(account_number)s, %(message_id)s,
@@ -744,13 +748,15 @@ class TransactionResource(BaseResource):
                  %(message_direction)s, %(message_cost)s, %(storage_cost)s,
                  %(session_created)s, %(session_cost)s,
                  %(markup_percent)s, %(credit_factor)s,
-                 %(credit_amount)s, 'Completed', now(),
+                 %(storage_credits)s, %(credit_amount)s,
+                 'Completed', now(),
                  now())
             RETURNING id, account_number, message_id,
                       tag_pool_name, tag_name,
                       message_direction, message_cost, storage_cost,
                       session_cost, session_created,
-                      markup_percent, credit_factor, credit_amount, status,
+                      markup_percent, credit_factor, storage_credits,
+                      credit_amount, status,
                       created, last_modified
         """
 
@@ -766,6 +772,7 @@ class TransactionResource(BaseResource):
             'session_cost': session_cost,
             'markup_percent': markup_percent,
             'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
+            'storage_credits': storage_credits,
             'credit_amount': -credit_amount
         }
 

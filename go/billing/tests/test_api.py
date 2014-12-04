@@ -389,6 +389,9 @@ class TestTransaction(BillingApiTestCase):
             Decimal('0.3'),
             session_created=True)
 
+        storage_credits = MessageCost.calculate_storage_credit_cost(
+            Decimal('0.5'), Decimal('10.0'))
+
         # Create a transaction
         yield self.create_api_transaction(
             account_number=account['account_number'],
@@ -414,6 +417,7 @@ class TestTransaction(BillingApiTestCase):
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('0.3'),
             u'session_created': False,
+            u'storage_credits': storage_credits,
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2'
@@ -448,6 +452,7 @@ class TestTransaction(BillingApiTestCase):
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('0.3'),
             u'session_created': True,
+            u'storage_credits': storage_credits,
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2'
@@ -483,6 +488,9 @@ class TestTransaction(BillingApiTestCase):
             Decimal('7.0'),
             session_created=False)
 
+        storage_credits = MessageCost.calculate_storage_credit_cost(
+            Decimal('8.0'), Decimal('11.0'))
+
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
         self.assertEqual(transaction, {
@@ -496,6 +504,7 @@ class TestTransaction(BillingApiTestCase):
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('7.0'),
             u'session_created': False,
+            u'storage_credits': storage_credits,
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2',
@@ -528,6 +537,9 @@ class TestTransaction(BillingApiTestCase):
             Decimal('0.2'),
             session_created=False)
 
+        storage_credits = MessageCost.calculate_storage_credit_cost(
+            Decimal('0.3'), Decimal('12.0'))
+
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
         self.assertEqual(transaction, {
@@ -541,6 +553,7 @@ class TestTransaction(BillingApiTestCase):
             u'message_direction': u'Outbound',
             u'session_cost': Decimal('0.2'),
             u'session_created': False,
+            u'storage_credits': storage_credits,
             u'status': u'Completed',
             u'tag_name': u'erk',
             u'tag_pool_name': u'some-random-pool',
