@@ -1,10 +1,13 @@
 """ Utilities for dealing with uploading to S3. """
 
 import StringIO
+import gzip
 
 import boto
 
 from django.conf import settings
+
+from zope.interface import Interface, implements
 
 
 class BucketConfig(object):
@@ -24,43 +27,91 @@ class BucketConfig(object):
             "BucketConfig %r has no attribute %r" % (self.config_name, name))
 
 
-class MultipartPusher(object):
-    """ Helper for tracking pending chunks of data. """
-    def __init__(self, mp, minimum_size=5 * 1024 * 1024):
-        self.mp = mp
-        self.minimum_size = minimum_size
-        self.part_num = 0
-        self.clear_pending()
+class IMultipartWriter(Interface):
+    def push_chunks(chunks):
+        """
+        Push an iterator over chunks of data and yield files for multipart
+        uploading.
 
-    def clear_pending(self):
+        :param iter chunks:
+            An iterator over chunks of bytes.
+
+        :returns iter:
+            Returns an iterator over file-like objects, each of which is
+            a file part to upload.
+        """
+
+
+class MultipartWriter(object):
+    """ Helper for writing pending chunks of data. """
+
+    implements(IMultipartWriter)
+
+    def __init__(self, minimum_size=5 * 1024 * 1024):
+        self.minimum_size = minimum_size
+        self._clear_pending()
+
+    def _clear_pending(self):
         self._pending = []
         self._pending_size = 0
 
-    def ready(self):
+    def _ready(self):
         return self._pending_size >= self.minimum_size
 
-    def empty(self):
+    def _empty(self):
         return not bool(self._pending)
 
-    def push_chunk(self, chunk):
+    def _push_chunk(self, chunk):
         self._pending.append(chunk)
         self._pending_size += len(chunk)
-        if self.ready():
-            self.push_part()
 
-    def push_done(self):
-        if not self.empty():
-            self.push_part()
-
-    def pop_part(self):
-        self.part_num += 1
+    def _pop_part(self):
         fp = StringIO.StringIO("".join(self._pending))
-        self.clear_pending()
-        return fp, self.part_num
+        self._clear_pending()
+        return fp
 
-    def push_part(self):
-        fp, part_num = self.pop_part()
-        self.mp.upload_part_from_file(fp, part_num=part_num)
+    def push_chunks(self, chunks):
+        for chunk in chunks:
+            self._push_chunk(chunk)
+            if self._ready():
+                yield self._pop_part()
+        if not self._empty():
+            yield self._pop_part()
+
+
+class GzipMultipartWriter(object):
+    """ Helper for tracking and compressing pending chunks of data. """
+
+    implements(IMultipartWriter)
+
+    def __init__(self, minimum_size=5 * 1024 * 1024):
+        self.minimum_size = minimum_size
+        self._string_file = StringIO.StringIO()
+        self._gzip_file = gzip.GzipFile(fileobj=self._string_file, mode='w')
+
+    def _clear_pending(self):
+        self._string_file.seek(0)
+        self._string_file.truncate()
+
+    def _ready(self):
+        return self._string_file.tell() >= self.minimum_size
+
+    def _empty(self):
+        return not bool(self._string_file.tell())
+
+    def _pop_part(self):
+        fp = StringIO.StringIO(self._string_file.getvalue())
+        self._clear_pending()
+        return fp
+
+    def push_chunks(self, chunks):
+        for chunk in chunks:
+            self._gzip_file.write(chunk)
+            if self._ready():
+                yield self._pop_part()
+        self._gzip_file.close()
+        if not self._empty():
+            yield self._pop_part()
 
 
 class Bucket(object):
@@ -102,15 +153,19 @@ class Bucket(object):
         conn = self._s3_conn()
         return conn.create_bucket(self.config.s3_bucket_name)
 
-    def upload(self, key_name, chunks, headers=None):
+    def upload(self, key_name, chunks, headers=None, gzip=False):
         """ Upload chunks of data to S3. """
         bucket = self.get_s3_bucket()
         mp = bucket.initiate_multipart_upload(key_name, headers=headers)
-        pusher = MultipartPusher(mp)
+
+        if gzip:
+            writer = GzipMultipartWriter()
+        else:
+            writer = MultipartWriter()
+
         try:
-            for chunk in chunks:
-                pusher.push_chunk(chunk)
-            pusher.push_done()
+            for part_num, part in enumerate(writer.push_chunks(chunks)):
+                mp.upload_part_from_file(part, part_num=part_num + 1)
         except:
             mp.cancel_upload()
             raise
