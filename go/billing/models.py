@@ -267,15 +267,25 @@ class Transaction(models.Model):
         max_digits=10, decimal_places=2, blank=True, null=True,
         help_text=_("The markup percentage used to calculate credit_amount."))
 
-    credit_factor = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True,
-        help_text=_("The credit conversion factor's value when this "
-                    "transaction was created."))
+    message_credits = models.DecimalField(
+        null=True,
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The message cost (in credits)."))
 
     storage_credits = models.DecimalField(
         null=True,
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The message storage cost (in credits)."))
+
+    session_credits = models.DecimalField(
+        null=True,
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The session cost (in credits)."))
+
+    credit_factor = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True,
+        help_text=_("The credit conversion factor's value when this "
+                    "transaction was created."))
 
     credit_amount = models.DecimalField(
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
