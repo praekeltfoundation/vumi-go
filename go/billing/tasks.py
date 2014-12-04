@@ -47,7 +47,9 @@ def get_message_transactions(account, from_date, to_date):
         'markup_percent')
 
     transactions = transactions.annotate(
-        count=Count('id'), total_message_cost=Sum('message_cost'))
+        count=Count('id'),
+        total_message_cost=Sum('message_cost'),
+        total_message_credits=Sum('message_credits'))
 
     return transactions
 
@@ -67,7 +69,9 @@ def get_session_transactions(account, from_date, to_date):
         'markup_percent')
 
     transactions = transactions.annotate(
-        count=Count('id'), total_session_cost=Sum('session_cost'))
+        count=Count('id'),
+        total_session_cost=Sum('session_cost'),
+        total_session_credits=Sum('session_credits'))
 
     return transactions
 
@@ -105,15 +109,11 @@ def get_session_unit_cost(transaction):
 
 
 def get_message_credits(transaction):
-    cost = get_message_cost(transaction)
-    markup = transaction['markup_percent']
-    return MessageCost.calculate_message_credit_cost(cost, markup)
+    return transaction['total_message_credits']
 
 
 def get_session_credits(transaction):
-    cost = get_session_cost(transaction)
-    markup = transaction['markup_percent']
-    return MessageCost.calculate_session_credit_cost(cost, markup)
+    return transaction['total_session_credits']
 
 
 def get_channel_type(transaction, tagpools):
