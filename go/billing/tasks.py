@@ -4,19 +4,33 @@ from dateutil.relativedelta import relativedelta
 
 from celery.task import task, group
 
-from django.db.models import Sum
-from django.conf import settings as go_settings
+from django.db.models import Sum, Count
 
+from go.base.s3utils import Bucket
 from go.billing import settings
 from go.billing.models import (
-    Account, Transaction, MessageCost, Statement, LineItem)
-from go.vumitools.api import VumiUserApi
+    Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive)
+from go.billing.django_utils import TransactionSerializer
+from go.base.utils import vumi_api
 
 
-def get_tagpools(account):
-    config = go_settings.VUMI_API_CONFIG
-    user_api = VumiUserApi.from_config_sync(account.account_number, config)
-    return user_api.tagpools()
+def month_range(months_ago=1, today=None):
+    """ Return the dates at the start and end of a calendar month.
+
+    :param int months_ago:
+        How many months back the range should be.
+    :param date today:
+        The date which months_ago is relative to.
+
+    :returns:
+        A tuple consisting of (from_date, to_date).
+    """
+    if today is None:
+        today = date.today()
+    last_month = today - relativedelta(months=months_ago)
+    from_date = date(last_month.year, last_month.month, 1)
+    to_date = from_date + relativedelta(months=1, days=-1)
+    return from_date, to_date
 
 
 def get_message_transactions(account, from_date, to_date):
@@ -26,55 +40,147 @@ def get_message_transactions(account, from_date, to_date):
         created__lt=(to_date + relativedelta(days=1)))
 
     transactions = transactions.values(
-        'tag_pool_name', 'tag_name', 'message_direction')
+        'tag_pool_name',
+        'tag_name',
+        'message_direction',
+        'message_cost',
+        'markup_percent')
 
     transactions = transactions.annotate(
-        cost=Sum('message_cost'), credits=Sum('credit_amount'))
+        count=Count('id'), total_message_cost=Sum('message_cost'))
 
     return transactions
 
 
-def make_provider_item(statement, transaction, tagpools, count, description,
-                       credits, cost):
-    pool = transaction['tag_pool_name']
-    count = count if count != 0 else 1
-    delivery_class = tagpools.delivery_class(pool)
-    delivery_class = tagpools.delivery_class_name(delivery_class)
+def get_session_transactions(account, from_date, to_date):
+    transactions = Transaction.objects.filter(
+        account_number=account.account_number,
+        created__gte=from_date,
+        created__lt=(to_date + relativedelta(days=1)))
 
-    return LineItem(
-        statement=statement,
-        billed_by=tagpools.display_name(pool),
-        channel=transaction['tag_name'],
-        channel_type=delivery_class,
-        description=description,
-        credits=credits,
-        units=count,
-        unit_cost=cost / count,
-        cost=cost)
+    transactions = transactions.filter(session_created=True)
+
+    transactions = transactions.values(
+        'tag_pool_name',
+        'tag_name',
+        'session_cost',
+        'markup_percent')
+
+    transactions = transactions.annotate(
+        count=Count('id'), total_session_cost=Sum('session_cost'))
+
+    return transactions
 
 
-def make_message_item(statement, transaction, tagpools, count):
+def get_provider_name(transaction, tagpools):
+    return tagpools.display_name(transaction['tag_pool_name'])
+
+
+def get_channel_name(transaction, tagpools):
+    return transaction['tag_name']
+
+
+def get_message_cost(transaction):
+    return transaction['total_message_cost']
+
+
+def get_session_cost(transaction):
+    return transaction['total_session_cost']
+
+
+def get_count(transaction):
+    return transaction['count']
+
+
+def get_message_unit_cost(transaction):
+    count = get_count(transaction)
+    # count should never be 0 since we count by id
+    return get_message_cost(transaction) / count
+
+
+def get_session_unit_cost(transaction):
+    count = get_count(transaction)
+    # count should never be 0 since we count by id
+    return get_session_cost(transaction) / count
+
+
+def get_message_credits(transaction):
+    cost = get_message_cost(transaction)
+    markup = transaction['markup_percent']
+    return MessageCost.calculate_message_credit_cost(cost, markup)
+
+
+def get_session_credits(transaction):
+    cost = get_session_cost(transaction)
+    markup = transaction['markup_percent']
+    return MessageCost.calculate_session_credit_cost(cost, markup)
+
+
+def get_channel_type(transaction, tagpools):
+    delivery_class = tagpools.delivery_class(transaction['tag_pool_name'])
+    return tagpools.delivery_class_name(delivery_class)
+
+
+def get_message_description(transaction):
     if transaction['message_direction'] == MessageCost.DIRECTION_INBOUND:
-        description = 'Messages received (including sessions)'
+        return 'Messages received'
     else:
-        description = 'Messages sent (including sessions)'
+        return 'Messages sent'
 
-    return make_provider_item(
+
+def make_message_item(statement, transaction, tagpools):
+    return LineItem(
+        units=get_count(transaction),
         statement=statement,
-        transaction=transaction,
-        tagpools=tagpools,
-        count=count,
-        description=description,
-        credits=transaction['credits'],
-        cost=transaction['cost'])
+        cost=get_message_cost(transaction),
+        credits=get_message_credits(transaction),
+        channel=get_channel_name(transaction, tagpools),
+        billed_by=get_provider_name(transaction, tagpools),
+        unit_cost=get_message_unit_cost(transaction),
+        channel_type=get_channel_type(transaction, tagpools),
+        description=get_message_description(transaction))
 
 
-def make_message_items(account, statement, tagpools, from_date, to_date):
-    transactions = get_message_transactions(account, from_date, to_date)
-    count = len(transactions)
+def make_session_item(statement, transaction, tagpools):
+    return LineItem(
+        units=get_count(transaction),
+        statement=statement,
+        cost=get_session_cost(transaction),
+        credits=get_session_credits(transaction),
+        channel=get_channel_name(transaction, tagpools),
+        billed_by=get_provider_name(transaction, tagpools),
+        unit_cost=get_session_unit_cost(transaction),
+        channel_type=get_channel_type(transaction, tagpools),
+        description='Sessions')
+
+
+def make_message_items(account, statement, tagpools):
+    transactions = get_message_transactions(
+        account, statement.from_date, statement.to_date)
+
     return [
-        make_message_item(statement, transaction, tagpools, count)
+        make_message_item(statement, transaction, tagpools)
         for transaction in transactions]
+
+
+def make_session_items(account, statement, tagpools):
+    transactions = get_session_transactions(
+        account, statement.from_date, statement.to_date)
+
+    return [
+        make_session_item(statement, transaction, tagpools)
+        for transaction in transactions]
+
+
+def make_account_fee_item(account, statement):
+    return LineItem(
+        units=1,
+        statement=statement,
+        credits=None,
+        cost=settings.ACCOUNT_FEE,
+        billed_by='Vumi',
+        unit_cost=settings.ACCOUNT_FEE,
+        description='Account Fee')
 
 
 @task()
@@ -83,7 +189,7 @@ def generate_monthly_statement(account_id, from_date, to_date):
        between the given ``from_date`` and ``to_date``.
     """
     account = Account.objects.get(id=account_id)
-    tagpools = get_tagpools(account)
+    tagpools = vumi_api().known_tagpools()
 
     statement = Statement(
         account=account,
@@ -94,10 +200,11 @@ def generate_monthly_statement(account_id, from_date, to_date):
 
     statement.save()
 
-    line_items = make_message_items(
-        account, statement, tagpools, from_date, to_date)
+    items = []
+    items.extend(make_message_items(account, statement, tagpools))
+    items.extend(make_session_items(account, statement, tagpools))
 
-    statement.lineitem_set.bulk_create(line_items)
+    statement.lineitem_set.bulk_create(items)
     return statement
 
 
@@ -106,10 +213,7 @@ def generate_monthly_account_statements():
     """Spawn sub-tasks to generate a *Monthly* ``Statement`` for accounts
        without a *Monthly* statement.
     """
-    today = date.today()
-    last_month = today - relativedelta(months=1)
-    from_date = date(last_month.year, last_month.month, 1)
-    to_date = date(today.year, today.month, 1) - relativedelta(days=1)
+    from_date, to_date = month_range(months_ago=1)
     account_list = Account.objects.exclude(
         statement__type=Statement.TYPE_MONTHLY,
         statement__from_date=from_date,
@@ -121,3 +225,71 @@ def generate_monthly_account_statements():
             generate_monthly_statement.s(account.id, from_date, to_date))
 
     return group(task_list)()
+
+
+@task
+def archive_monthly_transactions(months_ago=3):
+    """Spawn sub-tasks to archive transactions from N months ago."""
+    from_date, to_date = month_range(months_ago=months_ago)
+    account_list = Account.objects.exclude(
+        transactionarchive__from_date=from_date,
+        transactionarchive__to_date=to_date)
+
+    task_list = []
+    for account in account_list:
+        task_list.append(archive_transactions.s(
+            account.id, from_date, to_date))
+
+    return group(task_list)()
+
+
+@task()
+def archive_transactions(account_id, from_date, to_date, delete=True):
+    account = Account.objects.get(id=account_id)
+    serializer = TransactionSerializer()
+    filename = (
+        u"transactions-%(account_number)s-%(from)s-to-%(to)s.json" % {
+            "account_number": account.account_number,
+            "from": from_date,
+            "to": to_date,
+        })
+
+    transaction_list = Transaction.objects.filter(
+        account_number=account.account_number,
+        created__gte=from_date,
+        created__lt=(to_date + relativedelta(days=1)))
+
+    def generate_chunks(item_iter, items_per_chunk=10000, sep="\n"):
+        data = []
+        for i, item in enumerate(item_iter):
+            data.append(item)
+            if i % items_per_chunk == 0:
+                yield sep.join(serializer.to_json(data))
+                yield sep
+                data = []
+        if data:
+            yield sep.join(serializer.to_json(data))
+            yield sep
+
+    bucket = Bucket('billing.archive')
+    chunks = generate_chunks(transaction_list)
+
+    archive = TransactionArchive(
+        account=account, filename=filename,
+        from_date=from_date, to_date=to_date,
+        status=TransactionArchive.STATUS_ARCHIVE_CREATED)
+    archive.save()
+
+    bucket.upload(filename, chunks, headers={
+        'Content-Type': 'appliation/json; charset=utf-8',
+    })
+
+    archive.status = TransactionArchive.STATUS_TRANSACTIONS_UPLOADED
+    archive.save()
+
+    if delete:
+        transaction_list.delete()
+        archive.status = TransactionArchive.STATUS_ARCHIVE_COMPLETED
+        archive.save()
+
+    return archive
