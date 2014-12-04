@@ -674,10 +674,9 @@ class TransactionResource(BaseResource):
             SELECT id, account_number, message_id,
                    tag_pool_name, tag_name,
                    message_direction, message_cost, storage_cost,
-                   session_created, session_cost,
-                   markup_percent, credit_factor,
-                   storage_credits, credit_amount,
-                   status, created, last_modified
+                   session_created, session_cost, markup_percent,
+                   message_credits, storage_credits, session_credits,
+                   credit_factor, credit_amount, status,created, last_modified
             FROM billing_transaction
             WHERE account_number = %(account_number)s
             ORDER BY created DESC
@@ -730,8 +729,14 @@ class TransactionResource(BaseResource):
         markup_percent = result.get('markup_percent', 0)
         credit_amount = result.get('credit_amount', 0)
 
+        message_credits = MessageCost.calculate_message_credit_cost(
+            message_cost, markup_percent)
+
         storage_credits = MessageCost.calculate_storage_credit_cost(
             storage_cost, markup_percent)
+
+        session_credits = MessageCost.calculate_session_credit_cost(
+            session_cost, markup_percent)
 
         # Create a new transaction
         query = """
@@ -740,23 +745,23 @@ class TransactionResource(BaseResource):
                  tag_pool_name, tag_name,
                  message_direction, message_cost, storage_cost,
                  session_created, session_cost, markup_percent,
-                 credit_factor, storage_credits,
-                 credit_amount, status, created, last_modified)
+                 message_credits, storage_credits, session_credits,
+                 credit_factor, credit_amount, status, created, last_modified)
             VALUES
                 (%(account_number)s, %(message_id)s,
                  %(tag_pool_name)s, %(tag_name)s,
                  %(message_direction)s, %(message_cost)s, %(storage_cost)s,
-                 %(session_created)s, %(session_cost)s,
-                 %(markup_percent)s, %(credit_factor)s,
-                 %(storage_credits)s, %(credit_amount)s,
+                 %(session_created)s, %(session_cost)s, %(markup_percent)s, 
+                 %(message_credits)s, %(storage_credits)s, %(session_credits)s,
+                 %(credit_factor)s, %(credit_amount)s,
                  'Completed', now(),
                  now())
             RETURNING id, account_number, message_id,
                       tag_pool_name, tag_name,
                       message_direction, message_cost, storage_cost,
-                      session_cost, session_created,
-                      markup_percent, credit_factor, storage_credits,
-                      credit_amount, status,
+                      session_cost, session_created, markup_percent,
+                      message_credits, storage_credits, session_credits,
+                      credit_factor, credit_amount, status,
                       created, last_modified
         """
 
@@ -771,8 +776,10 @@ class TransactionResource(BaseResource):
             'session_created': session_created,
             'session_cost': session_cost,
             'markup_percent': markup_percent,
-            'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
+            'message_credits': message_credits,
             'storage_credits': storage_credits,
+            'session_credits': session_credits,
+            'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
             'credit_amount': -credit_amount
         }
 

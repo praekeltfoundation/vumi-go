@@ -11,6 +11,8 @@ from go.billing import settings as app_settings
 from go.billing import api
 from go.billing.models import MessageCost
 from go.billing.utils import DummySite, DictRowConnectionPool, JSONDecoder
+from go.billing.tests.helpers import (
+    get_message_credits, get_storage_credits, get_session_credits)
 
 
 DB_SUPPORTED = False
@@ -389,9 +391,6 @@ class TestTransaction(BillingApiTestCase):
             Decimal('0.3'),
             session_created=True)
 
-        storage_credits = MessageCost.calculate_storage_credit_cost(
-            Decimal('0.5'), Decimal('10.0'))
-
         # Create a transaction
         yield self.create_api_transaction(
             account_number=account['account_number'],
@@ -417,7 +416,9 @@ class TestTransaction(BillingApiTestCase):
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('0.3'),
             u'session_created': False,
-            u'storage_credits': storage_credits,
+            u'message_credits': get_message_credits(0.6, 10.0),
+            u'storage_credits': get_storage_credits(0.5, 10.0),
+            u'session_credits': get_session_credits(0.3, 10.0),
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2'
@@ -452,7 +453,9 @@ class TestTransaction(BillingApiTestCase):
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('0.3'),
             u'session_created': True,
-            u'storage_credits': storage_credits,
+            u'message_credits': get_message_credits(0.6, 10.0),
+            u'storage_credits': get_storage_credits(0.5, 10.0),
+            u'session_credits': get_session_credits(0.3, 10.0),
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2'
@@ -488,9 +491,6 @@ class TestTransaction(BillingApiTestCase):
             Decimal('7.0'),
             session_created=False)
 
-        storage_credits = MessageCost.calculate_storage_credit_cost(
-            Decimal('8.0'), Decimal('11.0'))
-
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
         self.assertEqual(transaction, {
@@ -504,7 +504,9 @@ class TestTransaction(BillingApiTestCase):
             u'message_direction': u'Inbound',
             u'session_cost': Decimal('7.0'),
             u'session_created': False,
-            u'storage_credits': storage_credits,
+            u'message_credits': get_message_credits(9.0, 11.0),
+            u'storage_credits': get_storage_credits(8.0, 11.0),
+            u'session_credits': get_session_credits(7.0, 11.0),
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2',
@@ -537,9 +539,6 @@ class TestTransaction(BillingApiTestCase):
             Decimal('0.2'),
             session_created=False)
 
-        storage_credits = MessageCost.calculate_storage_credit_cost(
-            Decimal('0.3'), Decimal('12.0'))
-
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
         self.assertEqual(transaction, {
@@ -553,7 +552,9 @@ class TestTransaction(BillingApiTestCase):
             u'message_direction': u'Outbound',
             u'session_cost': Decimal('0.2'),
             u'session_created': False,
-            u'storage_credits': storage_credits,
+            u'message_credits': get_message_credits(0.1, 12.0),
+            u'storage_credits': get_storage_credits(0.3, 12.0),
+            u'session_credits': get_session_credits(0.2, 12.0),
             u'status': u'Completed',
             u'tag_name': u'erk',
             u'tag_pool_name': u'some-random-pool',
