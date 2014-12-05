@@ -280,7 +280,7 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
         status=TransactionArchive.STATUS_ARCHIVE_CREATED)
     archive.save()
 
-    bucket.upload(filename, chunks, headers={
+    bucket.upload(filename, chunks, gzip=True, headers={
         'Content-Type': 'appliation/json; charset=utf-8',
     })
 

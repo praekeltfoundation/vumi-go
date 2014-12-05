@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
+import gzip
 import json
+import StringIO
 
 import mock
 import moto
@@ -14,6 +16,11 @@ from go.billing.django_utils import TransactionSerializer
 from go.billing.tests.helpers import (
     this_month, mk_transaction, get_message_credits,
     get_session_credits, get_line_items)
+
+
+def gunzip(data):
+    """ Gunzip data. """
+    return gzip.GzipFile(fileobj=StringIO.StringIO(data)).read()
 
 
 class TestUtilityFunctions(GoDjangoTestCase):
@@ -272,7 +279,7 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
     def assert_archive_in_s3(self, bucket, filename, transactions):
         s3_bucket = bucket.get_s3_bucket()
         key = s3_bucket.get_key(filename)
-        data = key.get_contents_as_string().split("\n")
+        data = gunzip(key.get_contents_as_string()).split("\n")
         # check for final newline
         self.assertEqual(data[-1], "")
         # construct expected JSON
