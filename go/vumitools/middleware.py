@@ -162,8 +162,8 @@ class MetricsMiddleware(BaseMiddleware):
         and the tag `tagB` (from `pool2`). If this configuration
         option is missing or empty, no tag or tag pool metrics are produced.
     :param int max_lifetime:
-        How long to keep the response time timestamp for. Any response time
-        longer than this is not recorded. Defaults to 60 seconds.
+        *DEPRECATED* This used to define how long we kept the response time
+        timestamp in Redis for, but we no longer keep it in Redis.
     :param int max_session_time:
         How long to keep the session time timestamp for. Any session duration
         longer than this is not recorded. Defaults to 600 seconds.
@@ -200,7 +200,6 @@ class MetricsMiddleware(BaseMiddleware):
         self.tagpools = dict(self.config.get('tagpools', {}))
         for pool, cfg in self.tagpools.iteritems():
             cfg['tags'] = set(cfg.get('tags', []))
-        self.max_lifetime = int(self.config.get('max_lifetime', 60))
         self.max_session_time = int(self.config.get('max_session_time', 600))
         self.op_mode = self.config.get('op_mode', 'passive')
         if self.op_mode not in self.KNOWN_MODES:
