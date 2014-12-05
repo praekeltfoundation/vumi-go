@@ -159,6 +159,18 @@ class DjangoVumiApiHelper(object):
         user_api = base_utils.vumi_api_for_user(user)
         return self.get_user_helper(user_api.user_account_key)
 
+    @proxyable
+    def patch_s3_bucket_settings(self, config_name, defaults=None, **kw):
+        from go.base.s3utils import Bucket
+        defaults = defaults if defaults is not None else {
+            "aws_access_key_id": "AWS-DUMMY-ID",
+            "aws_secret_access_key": "AWS-DUMMY-SECRET",
+        }
+        go_s3_buckets = {config_name: defaults}
+        go_s3_buckets[config_name].update(kw)
+        self.patch_settings(GO_S3_BUCKETS=go_s3_buckets)
+        return Bucket(config_name)
+
     def create_user_profile(self, sender, instance, created, **kwargs):
         if not created:
             return
