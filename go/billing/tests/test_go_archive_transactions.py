@@ -54,11 +54,9 @@ class TestArchiveTransactions(GoDjangoTestCase):
 
         self.assertEqual(cmd.stderr.getvalue(), "")
         self.assertEqual(cmd.stdout.getvalue().splitlines(), [
-            'Transactions archived for account user@domain.com'
-            ' from 2014-12-01 00:00:00 to 2014-12-31 00:00:00',
+            'Transactions archived for account user@domain.com.',
             'Archived to S3 as'
-            ' transactions-test-0-user-2014-12-01 00:00:00'
-            '-to-2014-12-31 00:00:00.json.',
+            ' transactions-test-0-user-2014-12-01-to-2014-12-31.json.',
             'Archive status is: transactions_uploaded.'
         ])
 
@@ -93,11 +91,9 @@ class TestArchiveTransactions(GoDjangoTestCase):
 
         self.assertEqual(cmd.stderr.getvalue(), "")
         self.assertEqual(cmd.stdout.getvalue().splitlines(), [
-            'Transactions archived for account user@domain.com'
-            ' from 2014-12-01 00:00:00 to 2014-12-31 00:00:00',
+            'Transactions archived for account user@domain.com.',
             'Archived to S3 as'
-            ' transactions-test-0-user-2014-12-01 00:00:00'
-            '-to-2014-12-31 00:00:00.json.',
+            ' transactions-test-0-user-2014-12-01-to-2014-12-31.json.',
             'Archive status is: archive_completed.'
         ])
 

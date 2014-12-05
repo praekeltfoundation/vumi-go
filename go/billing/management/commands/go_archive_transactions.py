@@ -34,17 +34,14 @@ class Command(BaseGoCommand):
         account_number = user.get_profile().user_account
         account = Account.objects.get(account_number=account_number)
 
-        from_date = parse_date(opts['from_date'], default_timezone=None)
-        to_date = parse_date(opts['to_date'], default_timezone=None)
+        from_date = parse_date(opts['from_date']).date()
+        to_date = parse_date(opts['to_date']).date()
         delete = opts['delete']
 
         archive = archive_transactions(
             account.id, from_date, to_date, delete=delete)
 
         self.stdout.write(
-            "Transactions archived for account %s from %s to %s"
-            % (opts['email_address'], archive.from_date, archive.to_date))
-        self.stdout.write(
-            "Archived to S3 as %s." % (archive.filename,))
-        self.stdout.write(
-            "Archive status is: %s." % (archive.status,))
+            "Transactions archived for account %s." % (opts['email_address'],))
+        self.stdout.write("Archived to S3 as %s." % (archive.filename,))
+        self.stdout.write("Archive status is: %s." % (archive.status,))
