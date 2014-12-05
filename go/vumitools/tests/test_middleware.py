@@ -227,8 +227,7 @@ class TestMetricsMiddleware(VumiTestCase):
 
     def assert_msg_timestamp_exists(self, mw, msg, key_parts):
         key = mw.key(*key_parts)
-        meta = msg['helper_metadata'].setdefault('metrics_middleware', {})
-        timestamp = meta.get(key)
+        timestamp = mw._message_metadata(msg).get(key)
         self.assertNotEqual(
             timestamp, None, "Expected timestamp %r in message." % (key,))
 
@@ -241,8 +240,7 @@ class TestMetricsMiddleware(VumiTestCase):
     def set_msg_timestamp(self, mw, msg, dt, key_parts):
         key = mw.key(*key_parts)
         timestamp = time.time() + dt
-        meta = msg['helper_metadata'].setdefault('metrics_middleware', {})
-        meta[key] = repr(timestamp)
+        mw._message_metadata(msg)[key] = repr(timestamp)
 
     @inlineCallbacks
     def test_active_inbound_counters(self):

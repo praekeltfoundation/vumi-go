@@ -259,15 +259,16 @@ class MetricsMiddleware(BaseMiddleware):
     def key(self, transport_name, message_id):
         return '%s:%s' % (transport_name, message_id)
 
+    def _message_metadata(self, message):
+        return message['helper_metadata'].setdefault('metrics_middleware', {})
+
     def set_inbound_timestamp(self, transport_name, message):
         key = self.key(transport_name, message['message_id'])
-        meta = message['helper_metadata'].setdefault('metrics_middleware', {})
-        meta[key] = repr(time.time())
+        self._message_metadata(message)[key] = repr(time.time())
 
     def get_inbound_timestamp(self, transport_name, message):
         key = self.key(transport_name, message['in_reply_to'])
-        meta = message['helper_metadata'].setdefault('metrics_middleware', {})
-        timestamp = meta.get(key)
+        timestamp = self._message_metadata(message).get(key)
         if timestamp:
             return float(timestamp)
 
