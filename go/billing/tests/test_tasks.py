@@ -145,6 +145,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item.unit_cost, 100)
         self.assertEqual(item.cost, 200)
 
+    @mock.patch('go.billing.settings.SYSTEM_BILLER_NAME', 'Serenity')
     def test_generate_monthly_statement_storage_cost(self):
         mk_transaction(
             self.account,
@@ -172,7 +173,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         [item] = get_line_items(statement).filter(description='Storage cost')
 
-        self.assertEqual(item.billed_by, 'Vumi')
+        self.assertEqual(item.billed_by, 'Serenity')
         self.assertEqual(item.channel, None)
         self.assertEqual(item.channel_type, None)
         self.assertEqual(item.units, 3)

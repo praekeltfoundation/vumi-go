@@ -169,7 +169,7 @@ def make_message_item(statement, transaction, tagpools):
 
 def make_storage_item(statement, transaction, tagpools):
     return LineItem(
-        billed_by='Vumi',
+        billed_by=settings.SYSTEM_BILLER_NAME,
         statement=statement,
         units=get_count(transaction),
         cost=get_storage_cost(transaction),
@@ -215,7 +215,7 @@ def make_account_fee_item(statement):
         statement=statement,
         credits=None,
         cost=settings.ACCOUNT_FEE,
-        billed_by='Vumi',
+        billed_by=settings.SYSTEM_BILLER_NAME,
         unit_cost=settings.ACCOUNT_FEE,
         description='Account fee')
 
