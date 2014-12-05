@@ -44,6 +44,7 @@ def get_message_transactions(account, from_date, to_date):
         'tag_name',
         'message_direction',
         'message_cost',
+        'message_credits',
         'markup_percent')
 
     transactions = transactions.annotate(
@@ -66,6 +67,7 @@ def get_session_transactions(account, from_date, to_date):
         'tag_pool_name',
         'tag_name',
         'session_cost',
+        'session_credits',
         'markup_percent')
 
     transactions = transactions.annotate(
