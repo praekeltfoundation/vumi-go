@@ -262,15 +262,15 @@ class MetricsMiddleware(BaseMiddleware):
 
     def set_inbound_timestamp(self, transport_name, message):
         key = self.key(transport_name, message['message_id'])
-        return self.redis.setex(
-            key, self.max_lifetime, repr(time.time()))
+        meta = message['helper_metadata'].setdefault('metrics_middleware', {})
+        meta[key] = repr(time.time())
 
-    @inlineCallbacks
     def get_inbound_timestamp(self, transport_name, message):
         key = self.key(transport_name, message['in_reply_to'])
-        timestamp = yield self.redis.get(key)
+        meta = message['helper_metadata'].setdefault('metrics_middleware', {})
+        timestamp = meta.get(key)
         if timestamp:
-            returnValue(float(timestamp))
+            return float(timestamp)
 
     @inlineCallbacks
     def get_reply_dt(self, transport_name, message):
