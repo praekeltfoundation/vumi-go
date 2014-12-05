@@ -12,8 +12,8 @@ from go.billing.models import (
 from go.billing import tasks
 from go.billing.django_utils import TransactionSerializer
 from go.billing.tests.helpers import (
-    this_month, mk_transaction, get_message_credits,
-    get_session_credits, get_line_items)
+    this_month, mk_transaction, get_line_items,
+    get_message_credits, get_session_credits, get_storage_credits)
 
 
 class TestUtilityFunctions(GoDjangoTestCase):
@@ -39,11 +39,12 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         self.user_helper = self.vumi_helper.make_django_user()
 
-        self.vumi_helper.setup_tagpool(u'pool1', [u'tag1'], {
+        self.vumi_helper.setup_tagpool(u'pool1', [u'tag1', u'tag2'], {
             'delivery_class': 'ussd',
             'display_name': 'Pool 1'
         })
-        self.user_helper.add_tagpool_permission(u'pool1')
+
+        self.vumi_helper.setup_tagpool(u'pool2', [u'tag1'])
 
         self.account = Account.objects.get(
             user=self.user_helper.get_django_user())
@@ -144,6 +145,41 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item.unit_cost, 100)
         self.assertEqual(item.cost, 200)
 
+    def test_generate_monthly_statement_storage_cost(self):
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'tag1',
+            storage_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool1',
+            tag_name=u'tag2',
+            storage_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            tag_pool_name=u'pool2',
+            tag_name=u'tag1',
+            storage_cost=100,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(description='Storage cost')
+
+        self.assertEqual(item.billed_by, 'Vumi')
+        self.assertEqual(item.channel, None)
+        self.assertEqual(item.channel_type, None)
+        self.assertEqual(item.units, 3)
+        self.assertEqual(item.credits, get_storage_credits(300, 10))
+        self.assertEqual(item.unit_cost, 100)
+        self.assertEqual(item.cost, 300)
+
     def test_generate_monthly_statement_different_message_costs(self):
         mk_transaction(self.account, message_cost=100, markup_percent=10.0)
         mk_transaction(self.account, message_cost=200, markup_percent=10.0)
@@ -179,6 +215,42 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item1.credits, get_message_credits(100, 10))
         self.assertEqual(item2.credits, get_message_credits(100, 20))
         self.assertEqual(item3.credits, get_message_credits(100, 30))
+
+    def test_generate_monthly_statement_different_storage_costs(self):
+        mk_transaction(self.account, storage_cost=100, markup_percent=10.0)
+        mk_transaction(self.account, storage_cost=200, markup_percent=10.0)
+        mk_transaction(self.account, storage_cost=300, markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description='Storage cost')
+
+        self.assertEqual(item1.credits, get_storage_credits(100, 10))
+        self.assertEqual(item1.unit_cost, 100)
+        self.assertEqual(item1.cost, 100)
+
+        self.assertEqual(item2.credits, get_storage_credits(200, 10))
+        self.assertEqual(item2.unit_cost, 200)
+        self.assertEqual(item2.cost, 200)
+
+        self.assertEqual(item3.credits, get_storage_credits(300, 10))
+        self.assertEqual(item3.unit_cost, 300)
+        self.assertEqual(item3.cost, 300)
+
+    def test_generate_monthly_statement_storage_different_markups(self):
+        mk_transaction(self.account, storage_cost=100, markup_percent=10.0)
+        mk_transaction(self.account, storage_cost=100, markup_percent=20.0)
+        mk_transaction(self.account, storage_cost=100, markup_percent=30.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description='Storage cost')
+
+        self.assertEqual(item1.credits, get_storage_credits(100, 10))
+        self.assertEqual(item2.credits, get_storage_credits(100, 20))
+        self.assertEqual(item3.credits, get_storage_credits(100, 30))
 
     def test_generate_monthly_statement_different_session_costs(self):
         mk_transaction(
