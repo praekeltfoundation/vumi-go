@@ -263,20 +263,17 @@ class MetricsMiddleware(BaseMiddleware):
         return message['helper_metadata'].setdefault('metrics_middleware', {})
 
     def set_inbound_timestamp(self, transport_name, message):
-        key = self.key(transport_name, message['message_id'])
-        self._message_metadata(message)[key] = repr(time.time())
+        self._message_metadata(message)[transport_name] = repr(time.time())
 
     def get_inbound_timestamp(self, transport_name, message):
-        key = self.key(transport_name, message['in_reply_to'])
-        timestamp = self._message_metadata(message).get(key)
+        timestamp = self._message_metadata(message).get(transport_name)
         if timestamp:
             return float(timestamp)
 
-    @inlineCallbacks
     def get_reply_dt(self, transport_name, message):
-        timestamp = yield self.get_inbound_timestamp(transport_name, message)
+        timestamp = self.get_inbound_timestamp(transport_name, message)
         if timestamp:
-            returnValue(time.time() - timestamp)
+            return time.time() - timestamp
 
     def set_session_start_timestamp(self, transport_name, addr):
         key = self.key(transport_name, addr)

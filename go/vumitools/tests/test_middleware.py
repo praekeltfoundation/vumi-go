@@ -225,11 +225,10 @@ class TestMetricsMiddleware(VumiTestCase):
         self.assertEqual(
             timestamp, None, "Timestamp %r in Redis, expected none." % (key,))
 
-    def assert_msg_timestamp_exists(self, mw, msg, key_parts):
-        key = mw.key(*key_parts)
-        timestamp = mw._message_metadata(msg).get(key)
+    def assert_msg_timestamp_exists(self, mw, msg, transport_name):
+        timestamp = mw._message_metadata(msg).get(transport_name)
         self.assertNotEqual(
-            timestamp, None, "Expected timestamp %r in message." % (key,))
+            timestamp, None, "Expected timestamp in message metadata.")
 
     @inlineCallbacks
     def set_redis_timestamp(self, mw, dt, key_parts):
@@ -237,10 +236,9 @@ class TestMetricsMiddleware(VumiTestCase):
         timestamp = time.time() + dt
         yield mw.redis.set(key, repr(timestamp))
 
-    def set_msg_timestamp(self, mw, msg, dt, key_parts):
-        key = mw.key(*key_parts)
+    def set_msg_timestamp(self, mw, msg, dt, transport_name):
         timestamp = time.time() + dt
-        mw._message_metadata(msg)[key] = repr(timestamp)
+        mw._message_metadata(msg)[transport_name] = repr(timestamp)
 
     @inlineCallbacks
     def test_active_inbound_counters(self):
@@ -297,8 +295,7 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'active'})
         msg = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
-        self.assert_msg_timestamp_exists(
-            mw, msg, ['endpoint_0', msg['message_id']])
+        self.assert_msg_timestamp_exists(mw, msg, 'endpoint_0')
         yield self.assert_no_redis_timestamp(
             mw, ['endpoint_0', msg['message_id']])
 
@@ -307,8 +304,7 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         msg = self.mw_helper.make_inbound("foo", transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
-        self.assert_msg_timestamp_exists(
-            mw, msg, ['dummy_endpoint', msg['message_id']])
+        self.assert_msg_timestamp_exists(mw, msg, 'dummy_endpoint')
         yield self.assert_no_redis_timestamp(
             mw, ['dummy_endpoint', msg['message_id']])
 
@@ -317,8 +313,7 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'active'})
         inbound_msg = self.mw_helper.make_inbound(
             "foo", transport_name='endpoint_0')
-        self.set_msg_timestamp(
-            mw, inbound_msg, -10, ['endpoint_0', inbound_msg['message_id']])
+        self.set_msg_timestamp(mw, inbound_msg, -10, 'endpoint_0')
         outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
@@ -333,9 +328,7 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         inbound_msg = self.mw_helper.make_inbound(
             "foo", transport_name='endpoint_0')
-        self.set_msg_timestamp(
-            mw, inbound_msg, -10,
-            ['dummy_endpoint', inbound_msg['message_id']])
+        self.set_msg_timestamp(mw, inbound_msg, -10, 'dummy_endpoint')
         outbound_msg = inbound_msg.reply("bar")
         yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
@@ -369,7 +362,8 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         msg = self.mw_helper.make_inbound(
             "foo", session_event=TransportUserMessage.SESSION_CLOSE)
-        yield self.set_redis_timestamp(mw, -10, ['dummy_endpoint', msg['to_addr']])
+        yield self.set_redis_timestamp(
+            mw, -10, ['dummy_endpoint', msg['to_addr']])
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
             'dummy_endpoint.session_time': {
@@ -386,7 +380,8 @@ class TestMetricsMiddleware(VumiTestCase):
         })
         msg = self.mw_helper.make_inbound(
             "foo", session_event=TransportUserMessage.SESSION_CLOSE)
-        yield self.set_redis_timestamp(mw, -10, ['dummy_endpoint', msg['to_addr']])
+        yield self.set_redis_timestamp(
+            mw, -10, ['dummy_endpoint', msg['to_addr']])
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
             'dummy_endpoint.session_time': {
@@ -423,7 +418,8 @@ class TestMetricsMiddleware(VumiTestCase):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         msg = self.mw_helper.make_outbound(
             "foo", session_event=TransportUserMessage.SESSION_CLOSE)
-        yield self.set_redis_timestamp(mw, -10, ['dummy_endpoint', msg['from_addr']])
+        yield self.set_redis_timestamp(
+            mw, -10, ['dummy_endpoint', msg['from_addr']])
         yield mw.handle_outbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
             'dummy_endpoint.session_time': {
@@ -440,7 +436,8 @@ class TestMetricsMiddleware(VumiTestCase):
         })
         msg = self.mw_helper.make_outbound(
             "foo", session_event=TransportUserMessage.SESSION_CLOSE)
-        yield self.set_redis_timestamp(mw, -10, ['dummy_endpoint', msg['from_addr']])
+        yield self.set_redis_timestamp(
+            mw, -10, ['dummy_endpoint', msg['from_addr']])
         yield mw.handle_outbound(msg, 'dummy_endpoint')
         self.assert_metrics(mw, {
             'dummy_endpoint.session_time': {
