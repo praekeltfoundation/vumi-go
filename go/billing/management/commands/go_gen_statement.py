@@ -27,8 +27,8 @@ class Command(BaseGoCommand):
         account_number = user.get_profile().user_account
         account = Account.objects.get(account_number=account_number)
 
-        from_date = parse_date(opts['from_date'])
-        to_date = parse_date(opts['to_date'])
+        from_date = parse_date(opts['from_date']).date()
+        to_date = parse_date(opts['to_date']).date()
 
         generate_monthly_statement(account.id, from_date, to_date)
 

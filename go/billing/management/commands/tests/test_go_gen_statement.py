@@ -60,7 +60,7 @@ class TestGenStatement(GoDjangoTestCase):
 
         expected = 'Statement generated for account %s from %s to %s' % (
             self.user_email,
-            parse_date('2014-12-01'),
-            parse_date('2014-12-31'))
+            parse_date('2014-12-01').date(),
+            parse_date('2014-12-31').date())
 
         self.assertEqual(cmd.stdout.getvalue().strip(), expected)
