@@ -676,7 +676,7 @@ class TransactionResource(BaseResource):
                    message_direction, message_cost, storage_cost,
                    session_created, session_cost, markup_percent,
                    message_credits, storage_credits, session_credits,
-                   credit_factor, credit_amount, status,created, last_modified
+                   credit_factor, credit_amount, status, created, last_modified
             FROM billing_transaction
             WHERE account_number = %(account_number)s
             ORDER BY created DESC
