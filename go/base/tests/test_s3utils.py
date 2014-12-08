@@ -194,6 +194,7 @@ class TestBucket(GoDjangoTestCase):
         s3_key = s3_bucket.get_key('my.key')
         # moto doesn't currently track content type for multipart
         # uploads -- see https://github.com/spulec/moto/issues/274
+        # TODO: uncomment when #274 is released.
         # self.assertEqual(
         #     s3_key.content_type, "text/xml; charset=latin-1")
 
@@ -264,5 +265,6 @@ class TestBucket(GoDjangoTestCase):
         s3_key = s3_bucket.get_key('my.key')
         # moto doesn't currently track content encoding for multipart
         # uploads -- see https://github.com/spulec/moto/issues/274
+        # TODO: uncomment when #274 is released.
         # self.assertEqual(
         #     s3_key.content_encoding, "gzip")
