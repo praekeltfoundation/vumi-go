@@ -5,7 +5,8 @@ from dateutil.relativedelta import relativedelta
 from decimal import Decimal
 
 from go.billing import settings
-from go.billing.models import MessageCost, Transaction, Statement, LineItem
+from go.billing.models import (
+    Account, MessageCost, Transaction, Statement, LineItem)
 
 
 def start_of_month(day=None):
@@ -27,6 +28,10 @@ def this_month(day=None):
     if day is None:
         day = date.today()
     return [start_of_month(day), end_of_month(day)]
+
+
+def get_billing_account(user_account):
+    return Account.objects.get(user=user_account)
 
 
 def mk_transaction(account, tag_pool_name='pool1',
