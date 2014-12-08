@@ -147,7 +147,7 @@ class StatementAdmin(admin.ModelAdmin):
 
     def view_html(self, obj):
         return format_html('<a href="{0}">html</a>', urlresolvers.reverse(
-            'html_statement', kwargs={'statement_id': obj.id}))
+            'billing:html_statement', kwargs={'statement_id': obj.id}))
     view_html.short_description = "HTML"
 
 
