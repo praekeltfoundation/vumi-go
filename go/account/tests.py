@@ -333,7 +333,6 @@ class TestEmail(GoDjangoTestCase):
         s3 = mk_statement(account, from_date=datetime(2014, 3, 28))
         resp = self.client.get(reverse('account:billing'))
 
-        print resp.content
         self.assertTrue(contains_in_order(resp.content, [
             '>January 2014<',
             '>February 2014<',
