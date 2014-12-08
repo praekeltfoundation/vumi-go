@@ -153,16 +153,27 @@ class Bucket(object):
         conn = self._s3_conn()
         return conn.create_bucket(self.config.s3_bucket_name)
 
-    def upload(self, key_name, chunks, headers=None, gzip=False):
+    def upload(self, key_name, chunks, headers=None, metadata=None,
+               gzip=False):
         """ Upload chunks of data to S3. """
         bucket = self.get_s3_bucket()
-        mp = bucket.initiate_multipart_upload(key_name, headers=headers)
+        if headers is None:
+            headers = {}
+        if metadata is None:
+            metadata = {}
 
         if gzip:
             writer = GzipMultipartWriter()
+            headers['Content-Encoding'] = 'gzip'
         else:
             writer = MultipartWriter()
 
+        for field in ('Content-Type', 'Content-Encoding'):
+            if field in headers:
+                metadata[field] = headers[field]
+
+        mp = bucket.initiate_multipart_upload(
+            key_name, headers=headers, metadata=metadata)
         try:
             for part_num, part in enumerate(writer.push_chunks(chunks)):
                 mp.upload_part_from_file(part, part_num=part_num + 1)

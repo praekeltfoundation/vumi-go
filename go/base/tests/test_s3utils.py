@@ -183,6 +183,21 @@ class TestBucket(GoDjangoTestCase):
         self.assertEqual(
             s3_key.get_contents_as_string(), "chunk1:chunk2:chunk3")
 
+    @moto.mock_s3
+    def test_upload_headers(self):
+        self.create_s3_bucket('s3_custom')
+        bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
+        bucket.upload(
+            "my.key", ["chunk1"], headers={
+                "Content-Type": "text/xml; charset=latin-1"})
+        s3_bucket = self.get_s3_bucket('s3_custom')
+        s3_key = s3_bucket.get_key('my.key')
+        # moto doesn't currently track content type for multipart
+        # uploads -- see https://github.com/spulec/moto/issues/274
+        # TODO: uncomment when #274 is released.
+        # self.assertEqual(
+        #     s3_key.content_type, "text/xml; charset=latin-1")
+
     def _patch_s3_key_buffer_size(self, size=1024 * 1024):
         # the default BufferSize is tiny (8KB) and gives terrible
         # performance in tests with largish (e.g. 6MB) data sets. This
@@ -239,3 +254,17 @@ class TestBucket(GoDjangoTestCase):
 
         s3_data = s3_key.get_contents_as_string()
         self.assertEqual(gunzip(s3_data), data)
+
+    @moto.mock_s3
+    def test_upload_gzip_headers(self):
+        self.create_s3_bucket('s3_custom')
+        bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
+        bucket.upload(
+            "my.key", ["chunk1"], gzip=True)
+        s3_bucket = self.get_s3_bucket('s3_custom')
+        s3_key = s3_bucket.get_key('my.key')
+        # moto doesn't currently track content encoding for multipart
+        # uploads -- see https://github.com/spulec/moto/issues/274
+        # TODO: uncomment when #274 is released.
+        # self.assertEqual(
+        #     s3_key.content_encoding, "gzip")
