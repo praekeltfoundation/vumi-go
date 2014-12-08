@@ -188,9 +188,9 @@ class MessageCost(models.Model):
 
     @property
     def storage_credit_cost(self):
-        """Return the calculated cost per session (in credits)."""
+        """Return the calculated storage cost per message (in credits)."""
         return self.calculate_storage_credit_cost(
-            self.session_cost, self.markup_percent)
+            self.storage_cost, self.markup_percent)
 
     @property
     def session_credit_cost(self):
