@@ -315,11 +315,6 @@ class TestEmail(GoDjangoTestCase):
         mk_statement(account, from_date=datetime(2014, 2, 28))
         mk_statement(account, from_date=datetime(2014, 3, 28))
 
-        resp = self.client.get(reverse('account:billing'), {'p': 1})
-        self.assertContains(resp, '>January 2014<')
-        self.assertContains(resp, '>February 2014<')
-        self.assertNotContains(resp, '>March 2014<')
-
         resp = self.client.get(reverse('account:billing'))
         self.assertContains(resp, '>January 2014<')
         self.assertContains(resp, '>February 2014<')
