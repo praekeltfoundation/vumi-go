@@ -320,9 +320,9 @@ class TestEmail(GoDjangoTestCase):
     @mock.patch('go.billing.settings.STATEMENTS_DEFAULT_ORDER_BY', 'from_date')
     def test_billing_statements_default_order(self):
         account = get_billing_account(self.user_helper.get_django_user())
-        s3 = mk_statement(account, from_date=datetime(2014, 3, 28))
-        s1 = mk_statement(account, from_date=datetime(2014, 1, 28))
-        s2 = mk_statement(account, from_date=datetime(2014, 2, 28))
+        mk_statement(account, from_date=datetime(2014, 3, 28))
+        mk_statement(account, from_date=datetime(2014, 1, 28))
+        mk_statement(account, from_date=datetime(2014, 2, 28))
         resp = self.client.get(reverse('account:billing'))
 
         self.assertTrue(contains_in_order(resp.content, [
@@ -333,9 +333,9 @@ class TestEmail(GoDjangoTestCase):
 
     def test_billing_statements_ascending_order(self):
         account = get_billing_account(self.user_helper.get_django_user())
-        s3 = mk_statement(account, from_date=datetime(2014, 3, 28))
-        s1 = mk_statement(account, from_date=datetime(2014, 1, 28))
-        s2 = mk_statement(account, from_date=datetime(2014, 2, 28))
+        mk_statement(account, from_date=datetime(2014, 3, 28))
+        mk_statement(account, from_date=datetime(2014, 1, 28))
+        mk_statement(account, from_date=datetime(2014, 2, 28))
         resp = self.client.get(reverse('account:billing'), {'o': 'from_date'})
 
         self.assertTrue(contains_in_order(resp.content, [
@@ -346,9 +346,9 @@ class TestEmail(GoDjangoTestCase):
 
     def test_billing_statements_descending_order(self):
         account = get_billing_account(self.user_helper.get_django_user())
-        s3 = mk_statement(account, from_date=datetime(2014, 3, 28))
-        s1 = mk_statement(account, from_date=datetime(2014, 1, 28))
-        s2 = mk_statement(account, from_date=datetime(2014, 2, 28))
+        mk_statement(account, from_date=datetime(2014, 3, 28))
+        mk_statement(account, from_date=datetime(2014, 1, 28))
+        mk_statement(account, from_date=datetime(2014, 2, 28))
         resp = self.client.get(reverse('account:billing'), {'o': '-from_date'})
 
         self.assertTrue(contains_in_order(resp.content, [
@@ -356,3 +356,19 @@ class TestEmail(GoDjangoTestCase):
             '>February 2014<',
             '>January 2014<',
         ]))
+
+    @mock.patch('go.billing.settings.STATEMENTS_DEFAULT_ORDER_BY', 'from_date')
+    def test_billing_statements_default_order_action(self):
+        resp = self.client.get(reverse('account:billing'))
+        self.assertContains(resp, 'href="?o=-from_date"')
+        self.assertNotContains(resp, 'href="?o=from_date"')
+
+    def test_billing_statements_ascending_order_action(self):
+        resp = self.client.get(reverse('account:billing'), {'o': '-from_date'})
+        self.assertNotContains(resp, 'href="?o=-from_date"')
+        self.assertContains(resp, 'href="?o=from_date"')
+
+    def test_billing_statements_descending_order_action(self):
+        resp = self.client.get(reverse('account:billing'), {'o': 'from_date'})
+        self.assertContains(resp, 'href="?o=-from_date"')
+        self.assertNotContains(resp, 'href="?o=from_date"')
