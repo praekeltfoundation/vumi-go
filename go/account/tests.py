@@ -20,11 +20,8 @@ def get_statement_html_url(statement_id):
 
 
 def contains_in_order(haystack, needles):
-    if not needles[0] in haystack:
-        return False
-
     indices = [haystack.find(needle) for needle in needles]
-    return indices == sorted(indices)
+    return (-1 not in indices) and (indices == sorted(indices))
 
 
 class TestAccountViews(GoDjangoTestCase):
