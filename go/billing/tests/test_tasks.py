@@ -4,6 +4,9 @@ import gzip
 import json
 import StringIO
 
+from django.conf import settings
+from django.core import mail
+
 import mock
 import moto
 
@@ -416,3 +419,39 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
             transactions_before | transactions_after)
         self.assert_archive_in_s3(
             bucket, archive.filename, transactions_within)
+
+
+class TestLowCreditNotificationTask(GoDjangoTestCase):
+    def setUp(self):
+        settings.EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+        settings.CELERY_EMAIL_BACKEND = (
+            'django.core.mail.backends.locmem.EmailBackend')
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+
+    def mk_notification(self,  percent, balance):
+        self.django_user = self.user_helper.get_django_user()
+        self.acc = Account.objects.get(user=self.django_user)
+        return tasks.create_low_credit_notification(
+            self.acc.pk, percent, balance)
+
+    def test_confirm_sent(self):
+        notification, res = self.mk_notification('60.0', '31.41')
+        timestamp = res.get()
+        self.assertEqual(timestamp, notification.success)
+
+    def test_email_sent(self):
+        notification, res = self.mk_notification('70.1', '12.34')
+        self.assertTrue(res.get() is not None)
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertTrue('Vumi Go' in email.subject)
+        self.assertTrue('70.1%' in email.subject)
+        self.assertTrue(str(self.acc) in email.subject)
+        self.assertTrue('70.1%' in email.body)
+        self.assertTrue('12.34' in email.body)
+        self.assertTrue(self.django_user.get_full_name() in email.body)
+        self.assertTrue(str(notification.pk) in email.body)
+        self.assertTrue(str(self.acc) in email.body)

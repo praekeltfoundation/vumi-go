@@ -204,24 +204,3 @@ class TestLowCreditNotification(GoDjangoTestCase):
         self.assertEqual(notification.account, self.acc)
         self.assertEqual(notification.threshold, decimal.Decimal('55.0'))
         self.assertEqual(notification.credit_balance, decimal.Decimal('27.17'))
-
-    # def test_confirm_sent(self):
-    #     notification, res = self.mk_notification('60.0', '31.41')
-    #     timestamp = res.get()
-    #     self.assertEqual(timestamp, notification.success)
-
-    # def test_email_sent(self):
-    #     notification, res = self.mk_notification('70.1', '12.34')
-    #     self.assertTrue(res.get() is not None)
-    #     self.assertEqual(len(mail.outbox), 1)
-    #     [email] = mail.outbox
-
-    #     self.assertEqual(email.recipients(), [self.django_user.email])
-    #     self.assertTrue('Vumi Go' in email.subject)
-    #     self.assertTrue('70.1%' in email.subject)
-    #     self.assertTrue(str(self.acc) in email.subject)
-    #     self.assertTrue('70.1%' in email.body)
-    #     self.assertTrue('12.34' in email.body)
-    #     self.assertTrue(self.django_user.get_full_name() in email.body)
-    #     self.assertTrue(str(notification.pk) in email.body)
-    #     self.assertTrue(str(self.acc) in email.body)
