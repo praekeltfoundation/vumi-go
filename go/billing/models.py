@@ -321,22 +321,22 @@ class LineItem(models.Model):
         help_text=_("The statement this line item is from."))
 
     billed_by = models.CharField(
-        max_length=100, blank=True, default='',
+        max_length=100, blank=True, null=True,
         help_text=_("Name of the entity the item is being billed for"))
 
     channel = models.CharField(
-        max_length=100, blank=True, null=True, default='',
+        max_length=100, blank=True, null=True,
         help_text=_("Name of the channel messages were sent/received over, "
                     "or null if there is no associated channel"))
 
     channel_type = models.CharField(
-        max_length=100, blank=True, null=True, default='',
+        max_length=100, blank=True, null=True,
         help_text=_("The type of channel messages were sent/received over "
                     "(e.g. SMS or USSD), or null if there is no associated"
                     "channel"))
 
     description = models.CharField(
-        max_length=100, blank=True, default='',
+        max_length=100, blank=True, null=True,
         help_text=_("Description of the item being billed"))
 
     units = models.IntegerField(
@@ -344,8 +344,9 @@ class LineItem(models.Model):
         help_text=_("Number of units associated to the item"))
 
     credits = models.IntegerField(
-        default=0,
-        help_text=_("Total cost of the item in credits"))
+        default=0, blank=True, null=True,
+        help_text=_("Total cost of the item in credits, or null if there is "
+                    "no associated credit amount"))
 
     unit_cost = models.DecimalField(
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
@@ -440,3 +441,47 @@ def notification_confirm_sent(res, notification):
         return notification.success
     else:
         return None
+
+
+class TransactionArchive(models.Model):
+    """Record of a transaction archival."""
+
+    STATUS_ARCHIVE_CREATED = 'archive_created'
+    STATUS_TRANSACTIONS_UPLOADED = 'transactions_uploaded'
+    STATUS_ARCHIVE_COMPLETED = 'archive_completed'
+    STATUS_ARCHIVE_DELETED = 'archive_deleted'
+    STATUS_CHOICES = (
+        (STATUS_ARCHIVE_CREATED, "Archive created"),
+        (STATUS_TRANSACTIONS_UPLOADED, "Transactions uploaded"),
+        (STATUS_ARCHIVE_COMPLETED, "Archive completed"),
+        (STATUS_ARCHIVE_DELETED, "Archive deleted"),
+    )
+
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the archive is for."))
+
+    filename = models.CharField(
+        max_length=255,
+        help_text=_("Name of the file the archive was stored as in S3."))
+
+    from_date = models.DateField(
+        help_text=_("The start of the date range covered by this archive "
+                    "(inclusive)."))
+
+    to_date = models.DateField(
+        help_text=_("The end of the date range covered by this archive "
+                    "(inclusive)"))
+
+    status = models.CharField(
+        max_length=32, choices=STATUS_CHOICES, default=STATUS_ARCHIVE_CREATED,
+        help_text=_("The status of this archive. One of archive_created, "
+                    "transactions_uploaded, archive_completed or "
+                    "archive_deleted."))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When this archive was created."))
+
+    def __unicode__(self):
+        return u"%s (for %s)" % (self.filename, self.account)

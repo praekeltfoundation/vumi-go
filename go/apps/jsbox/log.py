@@ -79,9 +79,10 @@ class GoLoggingResource(LoggingResource):
         campaign_key = conv.user_account.key
         conversation_key = conv.key
 
-        internal_msg = "[Account: %s, Conversation: %s] %s" % (
+        # The keys may be unicode, so make everything unicode and then encode.
+        internal_msg = u"[Account: %s, Conversation: %s] %r" % (
             campaign_key, conversation_key, msg)
-        log.msg(internal_msg, logLevel=level)
+        log.msg(internal_msg.encode("ascii"), logLevel=level)
 
         yield self.log_manager.add_log(campaign_key, conversation_key,
                                        msg, level)

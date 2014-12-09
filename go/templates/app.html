@@ -35,7 +35,7 @@
             {% if request.user.is_authenticated %}
             <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                    Account
+                    Account ({% credit_balance request.user %})
                     <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu" role="menu">
@@ -43,8 +43,8 @@
                     <li><a href="{% url 'admin:index' %}">Site Admin</a></li>
                     {% endif %}
                     <li><a href="{% url 'account:details' %}">Details</a></li>
+                    <li><a href="{% url 'account:billing' %}">Billing</a></li>
                     <li><a href="{% url 'auth_logout' %}">Logout</a></li>
-                    <li><span class="status">{% credit_balance request.user %}</span></li>
                 </ul>
             </li>
             {% endif %}

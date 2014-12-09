@@ -162,8 +162,8 @@ class MetricsMiddleware(BaseMiddleware):
         and the tag `tagB` (from `pool2`). If this configuration
         option is missing or empty, no tag or tag pool metrics are produced.
     :param int max_lifetime:
-        How long to keep the response time timestamp for. Any response time
-        longer than this is not recorded. Defaults to 60 seconds.
+        *DEPRECATED* This used to define how long we kept the response time
+        timestamp in Redis for, but we no longer keep it in Redis.
     :param int max_session_time:
         How long to keep the session time timestamp for. Any session duration
         longer than this is not recorded. Defaults to 600 seconds.
@@ -200,7 +200,6 @@ class MetricsMiddleware(BaseMiddleware):
         self.tagpools = dict(self.config.get('tagpools', {}))
         for pool, cfg in self.tagpools.iteritems():
             cfg['tags'] = set(cfg.get('tags', []))
-        self.max_lifetime = int(self.config.get('max_lifetime', 60))
         self.max_session_time = int(self.config.get('max_session_time', 600))
         self.op_mode = self.config.get('op_mode', 'passive')
         if self.op_mode not in self.KNOWN_MODES:
@@ -260,23 +259,21 @@ class MetricsMiddleware(BaseMiddleware):
     def key(self, transport_name, message_id):
         return '%s:%s' % (transport_name, message_id)
 
+    def _message_metadata(self, message):
+        return message['helper_metadata'].setdefault('metrics_middleware', {})
+
     def set_inbound_timestamp(self, transport_name, message):
-        key = self.key(transport_name, message['message_id'])
-        return self.redis.setex(
-            key, self.max_lifetime, repr(time.time()))
+        self._message_metadata(message)[transport_name] = repr(time.time())
 
-    @inlineCallbacks
     def get_inbound_timestamp(self, transport_name, message):
-        key = self.key(transport_name, message['in_reply_to'])
-        timestamp = yield self.redis.get(key)
+        timestamp = self._message_metadata(message).get(transport_name)
         if timestamp:
-            returnValue(float(timestamp))
+            return float(timestamp)
 
-    @inlineCallbacks
     def get_reply_dt(self, transport_name, message):
-        timestamp = yield self.get_inbound_timestamp(transport_name, message)
+        timestamp = self.get_inbound_timestamp(transport_name, message)
         if timestamp:
-            returnValue(time.time() - timestamp)
+            return time.time() - timestamp
 
     def set_session_start_timestamp(self, transport_name, addr):
         key = self.key(transport_name, addr)
