@@ -11,6 +11,4 @@ urlpatterns = patterns('',
     url(r'^users/(?P<user_id>\d+)/$', views.user_detail,
         name='user_detail'),
     url(r'^billing/$', views.billing, name='billing'),
-    url(r'^billing/statement/(?P<statement_id>\d+)/$',
-        views.statement_view, name='statement_view'),
 )
