@@ -356,3 +356,19 @@ class TestEmail(GoDjangoTestCase):
             '>February 2014<',
             '>January 2014<',
         ]))
+
+    @mock.patch('go.billing.settings.STATEMENTS_DEFAULT_ORDER_BY', 'from_date')
+    def test_billing_statements_default_order_action(self):
+        resp = self.client.get(reverse('account:billing'))
+        self.assertContains(resp, 'href="?o=-from_date"')
+        self.assertNotContains(resp, 'href="?o=from_date"')
+
+    def test_billing_statements_ascending_order_action(self):
+        resp = self.client.get(reverse('account:billing'), {'o': '-from_date'})
+        self.assertNotContains(resp, 'href="?o=-from_date"')
+        self.assertContains(resp, 'href="?o=from_date"')
+
+    def test_billing_statements_descending_order_action(self):
+        resp = self.client.get(reverse('account:billing'), {'o': 'from_date'})
+        self.assertContains(resp, 'href="?o=-from_date"')
+        self.assertNotContains(resp, 'href="?o=from_date"')
