@@ -1,15 +1,20 @@
-from datetime import date
+from datetime import date, datetime
 
 from dateutil.relativedelta import relativedelta
 
 from celery.task import task, group
 
 from django.db.models import Sum, Count
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+
+from djcelery_email.tasks import send_email
 
 from go.base.s3utils import Bucket
 from go.billing import settings
 from go.billing.models import (
-    Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive)
+    Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
+    LowCreditNotification)
 from go.billing.django_utils import TransactionSerializer
 from go.base.utils import vumi_api
 
@@ -293,3 +298,49 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
         archive.save()
 
     return archive
+
+
+@task()
+def low_credit_notification_confirm_sent(res, notification):
+    """
+    Confirms that the email has been sent. Returns the datetime that
+    the confirmation field has been set to.
+    """
+    if res >= 1:
+        notification.success = datetime.now()
+        notification.save()
+        return notification.success
+    else:
+        return None
+
+
+@task()
+def create_low_credit_notification(account_id, threshold, balance):
+    """
+    Sends a low credit notification. Returns (model instance, email_task).
+    """
+    account = Account.objects.get(pk=account_id)
+    notification = LowCreditNotification(
+        account=account, threshold=threshold, credit_balance=balance)
+    # Send email
+    subject = 'Vumi Go %s at %s%% of available credits' % (
+        account, threshold)
+    email_from = 'support@vumi.org'
+    email_to = account.user.email
+    message = render_to_string(
+        'billing/low_credit_notification_email.txt',
+        {
+            'user': account.user,
+            'account': account,
+            'threshold_percent': threshold,
+            'credit_balance': balance,
+            'reference': notification.id,
+        })
+
+    email = EmailMessage(subject, message, email_from, [email_to])
+    res = (
+        send_email.s(email) |
+        low_credit_notification_confirm_sent.s(notification)).apply_async()
+
+    notification.save()
+    return notification, res

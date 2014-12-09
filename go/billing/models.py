@@ -1,16 +1,9 @@
-from celery import task
-from datetime import datetime
-
 from decimal import Decimal
 
 from django.db import models
 from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
-from django.core.mail import EmailMessage
-from django.template.loader import render_to_string
-
-from djcelery_email.tasks import send_email
 
 import go.billing.settings as app_settings
 from go.base.models import UserProfile
@@ -360,43 +353,6 @@ class LineItem(models.Model):
         return u"%s line item" % (self.statement.title,)
 
 
-class LowCreditNotificationManager(models.Manager):
-    """
-    Manager for LowCreditNotification
-    """
-    def create_notification(
-            self, account_number, threshold_percentage, credit_balance):
-        """
-        Sends a low credit notification. Returns (model instance, email_task).
-        """
-        account = Account.objects.get(pk=account_number)
-        notification = self.create(
-            account=account, threshold=threshold_percentage,
-            credit_balance=credit_balance)
-        # Send email
-        subject = 'Vumi Go %s at %s%% of available credits' % (
-            account, threshold_percentage)
-        email_from = 'support@vumi.org'
-        email_to = account.user.email
-        message = render_to_string(
-            'billing/low_credit_notification_email.txt',
-            {
-                'user': account.user,
-                'account': account,
-                'threshold_percent': threshold_percentage,
-                'credit_balance': credit_balance,
-                'reference': notification.id,
-            })
-
-        email = EmailMessage(subject, message, email_from, [email_to])
-        res = (
-            send_email.s(email) |
-            notification_confirm_sent.s(notification)).apply_async()
-
-        notification.save()
-        return notification, res
-
-
 class LowCreditNotification(models.Model):
     """
     Logging of low credit notifications
@@ -423,24 +379,8 @@ class LowCreditNotification(models.Model):
         max_digits=20, decimal_places=6,
         help_text=_("The credit balance when the notification was sent."))
 
-    objects = LowCreditNotificationManager()
-
     def __unicode__(self):
         return u"%s%% threshold for %s" % (self.threshold, self.account)
-
-
-@task
-def notification_confirm_sent(res, notification):
-    """
-    Confirms that the email has been sent. Returns the datetime that
-    the confirmation field has been set to.
-    """
-    if res >= 1:
-        notification.success = datetime.now()
-        notification.save()
-        return notification.success
-    else:
-        return None
 
 
 class TransactionArchive(models.Model):
