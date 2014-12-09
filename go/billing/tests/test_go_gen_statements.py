@@ -8,7 +8,7 @@ from go.base.tests.helpers import (
 from go.billing.models import Account, Statement
 
 
-class TestGenStatement(GoDjangoTestCase):
+class TestGenStatements(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.user_helper = self.vumi_helper.make_django_user()
