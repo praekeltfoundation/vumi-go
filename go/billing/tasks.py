@@ -301,11 +301,12 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
 
 
 @task()
-def low_credit_notification_confirm_sent(res, notification):
+def low_credit_notification_confirm_sent(res, notification_id):
     """
     Confirms that the email has been sent. Returns the datetime that
     the confirmation field has been set to.
     """
+    notification = LowCreditNotification.objects.get(pk=notification_id)
     if res >= 1:
         notification.success = datetime.now()
         notification.save()
@@ -340,7 +341,7 @@ def create_low_credit_notification(account_id, threshold, balance):
     email = EmailMessage(subject, message, email_from, [email_to])
     res = (
         send_email.s(email) |
-        low_credit_notification_confirm_sent.s(notification)).apply_async()
+        low_credit_notification_confirm_sent.s(notification.pk)).apply_async()
 
     notification.save()
     return notification, res
