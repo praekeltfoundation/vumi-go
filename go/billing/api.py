@@ -809,8 +809,8 @@ class TransactionResource(BaseResource):
 
         credit_balance = result.get('credit_balance')
         alert_credit_balance = result.get('alert_credit_balance')
-        if (credit_balance < alert_credit_balance and
-                credit_balance + credit_amount > alert_credit_balance):
+        if (credit_balance - credit_amount <= alert_credit_balance
+            < credit_amount):
             yield spawn_celery_task_via_thread(
                 create_low_credit_notification,
                 account_number, result.get('alert_threshold'), credit_balance)
