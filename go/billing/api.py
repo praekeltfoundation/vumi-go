@@ -2,6 +2,7 @@ import json
 
 from twisted.python import log
 from twisted.internet import defer
+from twisted.internet.threads import deferToThread
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
@@ -11,6 +12,20 @@ from go.billing import settings as app_settings
 from go.billing.models import MessageCost
 from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 from go.billing.tasks import create_low_credit_notification
+
+
+def spawn_celery_task_via_thread(t, *args, **kw):
+    """
+    Issue a task to a Celery worker using deferToThread.
+
+    :param Task t:
+        The Celery task to issue.
+    :param list args:
+        Postional arguments for the Celery task.
+    :param dict kw:
+        Keyword arguments for the Celery task.
+    """
+    return deferToThread(t.delay, *args, **kw)
 
 
 class BaseResource(Resource):
@@ -796,7 +811,8 @@ class TransactionResource(BaseResource):
         alert_credit_balance = result.get('alert_credit_balance')
         if (credit_balance < alert_credit_balance and
                 credit_balance + credit_amount > alert_credit_balance):
-            create_low_credit_notification.delay(
+            yield spawn_celery_task_via_thread(
+                create_low_credit_notification,
                 account_number, result.get('alert_threshold'), credit_balance)
 
         defer.returnValue(transaction)
