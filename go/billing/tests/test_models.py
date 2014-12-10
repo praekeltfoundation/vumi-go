@@ -1,7 +1,5 @@
 import decimal
 
-from django.conf import settings
-
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import (
     TagPool, Account, MessageCost, Transaction, create_billing_account,
@@ -178,10 +176,12 @@ class TestTransaction(GoDjangoTestCase):
 
 class TestLowCreditNotification(GoDjangoTestCase):
     def setUp(self):
-        settings.EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
-        settings.CELERY_EMAIL_BACKEND = (
-            'django.core.mail.backends.locmem.EmailBackend')
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        # Django overides these settings before tests start, so set them here
+        self.vumi_helper.patch_settings(
+            EMAIL_BACKEND='djcelery_email.backends.CeleryEmailBackend',
+            CELERY_EMAIL_BACKEND='django.core.mail.backends.locmem.'
+                                 + 'EmailBackend')
         self.user_helper = self.vumi_helper.make_django_user()
 
     def mk_notification(self, percent, balance):

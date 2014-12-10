@@ -4,7 +4,6 @@ import gzip
 import json
 import StringIO
 
-from django.conf import settings
 from django.core import mail
 
 import mock
@@ -424,10 +423,12 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
 
 class TestLowCreditNotificationTask(GoDjangoTestCase):
     def setUp(self):
-        settings.EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
-        settings.CELERY_EMAIL_BACKEND = (
-            'django.core.mail.backends.locmem.EmailBackend')
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        # Django overides these settings before tests start, so set them here
+        self.vumi_helper.patch_settings(
+            EMAIL_BACKEND='djcelery_email.backends.CeleryEmailBackend',
+            CELERY_EMAIL_BACKEND='django.core.mail.backends.locmem.'
+                                 + 'EmailBackend')
         self.user_helper = self.vumi_helper.make_django_user()
 
     def mk_notification(self,  percent, balance):
