@@ -27,9 +27,12 @@ class Command(BaseGoCommand):
             "Generating statements for account %s..."
             % (opts['email_address'],))
 
-        months = [datetime.strptime(m, '%Y-%m') for m in opts['months']]
+        months = [datetime.strptime(m, '%Y-%m') for m in opts['month']]
 
         for month in months:
             from_date, to_date = month_range(0, month)
             generate_monthly_statement(account.id, from_date, to_date)
-            self.stdout.write("Generated statement for %s." % (month,))
+
+            self.stdout.write(
+                "Generated statement for %s."
+                % (datetime.strftime(month, '%Y-%m'),))
