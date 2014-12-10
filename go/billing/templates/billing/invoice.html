@@ -1,4 +1,5 @@
 {% load compressed %}
+{% load billing_tags %}
 
 <!DOCTYPE html>
 <html>
@@ -61,8 +62,8 @@
                             <td>{% if item.description != None %}{{ item.description }}{% endif %}</th>
                             <td>{{ item.units }}</th>
                             <td>{% if item.credits != None %}{{ item.credits }}{% endif %}</th>
-                            <td>{{ item.unit_cost|floatformat:2 }}</th>
-                            <td>{{ item.cost|floatformat:2 }}
+                            <td>{{ item.unit_cost|dollars }}</th>
+                            <td>{{ item.cost|dollars }}
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -72,7 +73,7 @@
                             <td></td>
                             <td>{{ section.totals.credits }}</td>
                             <td></td>
-                            <td>{{ section.totals.cost|floatformat:2 }}</td>
+                            <td>{{ section.totals.cost|dollars }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -94,7 +95,7 @@
                         <td></td>
                         <td>{{ totals.credits }}</td>
                         <td></td>
-                        <td>{{ totals.cost|floatformat:2 }}</td>
+                        <td>{{ totals.cost|dollars }}</td>
                     </tfoot>
                 </table>
             </div>

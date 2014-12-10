@@ -101,6 +101,7 @@ class TestStatementView(GoDjangoTestCase):
 
         self.assertNotContains(response, '>None<')
 
+    @mock.patch('go.billing.settings.DOLLAR_FORMAT', '%.3f')
     def test_statement_costs(self):
         statement = self.mk_statement(items=[{
             'credits': 200,
@@ -112,8 +113,8 @@ class TestStatementView(GoDjangoTestCase):
         response = self.get_statement(user, statement)
 
         self.assertContains(response, '>200<')
-        self.assertContains(response, '>123.46<')
-        self.assertContains(response, '>679.01<')
+        self.assertContains(response, '>1.235<')
+        self.assertContains(response, '>6.790<')
 
     def test_statement_cost_nones(self):
         statement = self.mk_statement(items=[{
