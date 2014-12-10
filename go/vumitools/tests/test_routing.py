@@ -593,7 +593,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
 
 class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
 
-    def get_dispatcher(self):
+    def get_dispatcher(self, **extra_config):
         config = self.vumi_helper.mk_config({
             "receive_inbound_connectors": [
                 "sphex", "router_ro"
@@ -614,6 +614,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             },
             "opt_out_connector": "optout",
         })
+        config.update(extra_config)
         return self.vumi_helper.get_worker_helper().get_worker(
             AccountRoutingTableDispatcher, config)
 
@@ -942,6 +943,31 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         self.assertEqual(stored_msg, msg)
 
     @inlineCallbacks
+    def test_outbound_message_does_not_get_stored_if_disabled(self):
+        """
+        Outbound messages going to transports are not stored when storing is
+        disabled.
+        """
+        yield self.get_dispatcher(store_messages_to_transports=False)
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "1234"), hops=[
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+        ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+    @inlineCallbacks
     def test_outbound_message_does_not_get_stored_before_router(self):
         """
         Outbound messages going to routers are not stored.
@@ -970,7 +996,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
 
 class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
 
-    def get_dispatcher(self):
+    def get_dispatcher(self, **extra_config):
         config = self.vumi_helper.mk_config({
             "receive_inbound_connectors": [
                 "sphex", "router_ro", "billing_dispatcher_ro"
@@ -995,6 +1021,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             "opt_out_connector": "optout",
             "default_unroutable_inbound_reply": "Eep!",
         })
+        config.update(extra_config)
         return self.vumi_helper.get_worker_helper().get_worker(
             AccountRoutingTableDispatcher, config)
 
@@ -1234,6 +1261,35 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
 
         stored_msg = yield mdb.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, msg)
+
+    @inlineCallbacks
+    def test_outbound_message_does_not_get_stored_if_disabled(self):
+        """
+        Outbound messages going to transports are not stored when storing is
+        disabled.
+        """
+        yield self.get_dispatcher(store_messages_to_transports=False)
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), tag=("pool1", "1234"),
+            conv=('app1', 'conv1'), is_paid=True)
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ri.outbound', 'sphex.outbound')
+
+        hops = [
+            ['BILLING:INBOUND', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default']
+        ]
+        self.with_md(msg, hops=hops)
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
 
     @inlineCallbacks
     def test_outbound_message_does_not_get_stored_before_billing(self):
