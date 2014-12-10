@@ -318,14 +318,15 @@ def low_credit_notification_confirm_sent(res, notification_id):
 @task()
 def create_low_credit_notification(account_id, threshold, balance):
     """
-    Sends a low credit notification. Returns (model instance, email_task).
+    Sends a low credit notification. Returns (model instance id, email_task).
     """
     account = Account.objects.get(pk=account_id)
     notification = LowCreditNotification(
         account=account, threshold=threshold, credit_balance=balance)
+    notification.save()
     # Send email
-    subject = 'Vumi Go %s at %s%% of available credits' % (
-        account, threshold)
+    subject = 'Vumi Go account %s (%s) at %s%% of available credits' % (
+        account.user.email, account.user.get_full_name(), threshold)
     email_from = settings.STATEMENT_CONTACT_DETAILS.get('email')
     email_to = account.user.email
     message = render_to_string(
@@ -343,5 +344,4 @@ def create_low_credit_notification(account_id, threshold, balance):
         send_email.s(email) |
         low_credit_notification_confirm_sent.s(notification.pk)).apply_async()
 
-    notification.save()
-    return notification, res
+    return notification.pk, res

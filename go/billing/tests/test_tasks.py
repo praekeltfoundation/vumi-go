@@ -13,7 +13,8 @@ import moto
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 from go.billing.models import (
-    MessageCost, Account, Statement, Transaction, TransactionArchive)
+    MessageCost, Account, Statement, Transaction, TransactionArchive,
+    LowCreditNotification)
 from go.billing import tasks
 from go.billing.django_utils import TransactionSerializer
 from go.billing.tests.helpers import (
@@ -436,12 +437,14 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
             self.acc.pk, percent, balance)
 
     def test_confirm_sent(self):
-        notification, res = self.mk_notification('60.0', '31.41')
+        notification_id, res = self.mk_notification('60.0', '31.41')
+        notification = LowCreditNotification.objects.get(pk=notification_id)
         timestamp = res.get()
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
-        notification, res = self.mk_notification('70.1', '12.34')
+        notification_id, res = self.mk_notification('70.1', '12.34')
+        notification = LowCreditNotification.objects.get(pk=notification_id)
         self.assertTrue(res.get() is not None)
         self.assertEqual(len(mail.outbox), 1)
         [email] = mail.outbox
@@ -449,7 +452,8 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertEqual(email.recipients(), [self.django_user.email])
         self.assertTrue('Vumi Go' in email.subject)
         self.assertTrue('70.1%' in email.subject)
-        self.assertTrue(str(self.acc) in email.subject)
+        self.assertTrue(str(self.acc.user.email) in email.subject)
+        self.assertTrue(str(self.acc.user.get_full_name()) in email.subject)
         self.assertTrue('70.1%' in email.body)
         self.assertTrue('12.34' in email.body)
         self.assertTrue(self.django_user.get_full_name() in email.body)
