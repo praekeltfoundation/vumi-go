@@ -451,10 +451,11 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         [email] = mail.outbox
 
         self.assertEqual(email.recipients(), [self.django_user.email])
-        self.assertTrue('Vumi Go' in email.subject)
-        self.assertTrue('70.1%' in email.subject)
-        self.assertTrue(str(self.acc.user.email) in email.subject)
-        self.assertTrue(str(self.acc.user.get_full_name()) in email.subject)
+        self.assertEqual(
+            'Vumi Go account %s (%s) at %s%% of available credits' % (
+                str(self.acc.user.email), str(self.acc.user.get_full_name()),
+                '70.1'),
+            email.subject)
         self.assertTrue('70.1%' in email.body)
         self.assertTrue('12.34' in email.body)
         self.assertTrue(self.django_user.get_full_name() in email.body)
