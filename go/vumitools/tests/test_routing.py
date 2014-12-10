@@ -464,6 +464,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
             "CONVERSATION:app1:conv1": {
                 "default": ["TRANSPORT_TAG:pool1:1234", "default"],
                 "other": ["TRANSPORT_TAG:pool1:5678", "default"],
+                "router": ["ROUTER:router:router1:OUTBOUND", "default"],
             },
             "CONVERSATION:app2:conv2": {
                 "default": ["TRANSPORT_TAG:pool1:9012", "default"],
@@ -916,6 +917,56 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
+    @inlineCallbacks
+    def test_outbound_message_gets_stored_before_transport(self):
+        """
+        Outbound messages going to transports are stored.
+        """
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "1234"), hops=[
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+        ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, msg)
+
+    @inlineCallbacks
+    def test_outbound_message_does_not_get_stored_before_router(self):
+        """
+        Outbound messages going to routers are not stored.
+        """
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'),
+            endpoint="router")
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'router_ro.outbound')
+        self.with_md(
+            msg, router=("router", "router1"), endpoint="default", hops=[
+                ['CONVERSATION:app1:conv1', 'router'],
+                ['ROUTER:router:router1:OUTBOUND', 'default'],
+            ])
+        self.assertEqual([msg], self.get_dispatched_outbound('router_ro'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
 
 class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
 
@@ -1155,6 +1206,62 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'billing_dispatcher_ro')
         self.assert_unroutable_reply(
             'billing_dispatcher_ro', msg, "Eep!", tag=("pool1", "unowned-tag"))
+
+    @inlineCallbacks
+    def test_outbound_message_gets_stored_before_transport(self):
+        """
+        Outbound messages going to transports are stored.
+        """
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), tag=("pool1", "1234"),
+            conv=('app1', 'conv1'), is_paid=True)
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ri.outbound', 'sphex.outbound')
+
+        hops = [
+            ['BILLING:INBOUND', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default']
+        ]
+        self.with_md(msg, hops=hops)
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, msg)
+
+    @inlineCallbacks
+    def test_outbound_message_does_not_get_stored_before_billing(self):
+        """
+        Outbound messages going to billing are not stored.
+        """
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used(
+            'app1.outbound', 'billing_dispatcher_ro.outbound')
+
+        hops = [
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['BILLING:OUTBOUND', 'default'],
+        ]
+        self.with_md(msg, tag=("pool1", "1234"), hops=hops)
+        self.assertEqual(
+            [msg], self.get_dispatched_outbound('billing_dispatcher_ro'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
 
 
 class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):

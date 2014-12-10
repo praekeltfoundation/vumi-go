@@ -686,6 +686,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, [str(dst_conn), 'default'], self.OUTBOUND)
 
+        # We skip the store code in `process_outbound()` if billing is enabled,
+        # so we need to duplicate it here.
+        yield self.vumi_api.mdb.add_outbound_message(msg)
+
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
@@ -821,9 +825,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             raise NoTargetError(
                 "No target found for outbound message from '%s': %s" % (
                     connector_name, msg), msg)
+        target_conn = GoConnector.parse(target[0])
 
         if self.billing_outbound_connector:
-            target_conn = GoConnector.parse(target[0])
             if target_conn.ctype == target_conn.TRANSPORT_TAG:
                 tag = [target_conn.tagpool, target_conn.tagname]
                 yield self.publish_outbound_to_billing(config, msg, tag)
@@ -831,6 +835,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.OUTBOUND)
+
+        if target_conn.ctype == target_conn.TRANSPORT_TAG:
+            # This code is only reached if billing is disabled. There's a
+            # separate code path for messages from billing to transports.
+            yield self.vumi_api.mdb.add_outbound_message(msg)
 
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
