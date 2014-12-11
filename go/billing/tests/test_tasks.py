@@ -119,6 +119,20 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item.unit_cost, 100)
         self.assertEqual(item.cost, 200)
 
+    def test_generate_monthly_statement_unknown_tagpool(self):
+        mk_transaction(
+            self.account,
+            tag_name=u'unknown-tag',
+            tag_pool_name=u'unknown-tagpool',
+            message_direction=MessageCost.DIRECTION_INBOUND)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(billed_by='unknown-tagpool')
+        self.assertEqual(item.channel, 'unknown-tag')
+        self.assertEqual(item.channel_type, None)
+
     def test_generate_monthly_statement_outbound_messages(self):
         mk_transaction(
             self.account,

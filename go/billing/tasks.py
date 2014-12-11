@@ -73,7 +73,10 @@ def get_session_transactions(account, from_date, to_date):
 
 
 def get_provider_name(transaction, tagpools):
-    return tagpools.display_name(transaction['tag_pool_name'])
+    if transaction['tag_pool_name'] not in tagpools.pools():
+        return transaction['tag_pool_name']
+    else:
+        return tagpools.display_name(transaction['tag_pool_name'])
 
 
 def get_channel_name(transaction, tagpools):
@@ -117,8 +120,11 @@ def get_session_credits(transaction):
 
 
 def get_channel_type(transaction, tagpools):
-    delivery_class = tagpools.delivery_class(transaction['tag_pool_name'])
-    return tagpools.delivery_class_name(delivery_class)
+    if transaction['tag_pool_name'] not in tagpools.pools():
+        return None
+    else:
+        delivery_class = tagpools.delivery_class(transaction['tag_pool_name'])
+        return tagpools.delivery_class_name(delivery_class)
 
 
 def get_message_description(transaction):
