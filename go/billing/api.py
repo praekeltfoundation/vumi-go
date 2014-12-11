@@ -810,13 +810,26 @@ class TransactionResource(BaseResource):
         credit_balance = result.get('credit_balance')
         alert_credit_balance = result.get('alert_credit_balance')
         if (app_settings.ENABLE_LOW_CREDIT_NOTIFICATION and
-            credit_balance - credit_amount <= alert_credit_balance
-                < credit_amount):
+            self.notification_threshold_crossed(
+                credit_balance, credit_amount, alert_credit_balance)):
             yield spawn_celery_task_via_thread(
                 create_low_credit_notification,
                 account_number, result.get('alert_threshold'), credit_balance)
 
         defer.returnValue(transaction)
+
+    @staticmethod
+    def notification_threshold_crossed(
+            credit_balance, credit_amount, alert_credit_balance):
+        """
+        Given the current balance (afther the transaction) ``credit_balance``,
+        the transaction amount ``credit_amount``, and the alert threshold
+        ``alert_credit_balance``, will return ``True`` if the transaction
+        caused the alert threshold to be crossed, and false if not.
+        """
+        return (
+            credit_balance - credit_amount <= alert_credit_balance
+            < credit_amount)
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,
