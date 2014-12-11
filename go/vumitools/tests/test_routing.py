@@ -1500,3 +1500,23 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         self.assert_rkeys_used('sphex.event')
         [orig_ack] = self.get_dispatched_events('sphex')
         self.assertEqual(ack, orig_ack)
+
+    @inlineCallbacks
+    def test_reply_for_unroutable_inbound_gets_stored(self):
+        """
+        Replies to unroutable messages are stored.
+        """
+        yield self.mk_unroutable_tagpool(u"pool1")
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_unroutable_reply(
+            'sphex', msg, "Eep!", tag=("pool1", "1234"),
+            user_account=self.user_helper.account_key)
+
+        [reply] = self.get_dispatched_outbound('sphex')
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(reply["message_id"])
+        self.assertEqual(stored_msg, reply)
