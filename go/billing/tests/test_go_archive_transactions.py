@@ -36,41 +36,64 @@ class TestArchiveTransactions(GoDjangoTestCase):
         self.assertEqual(
             set(Transaction.objects.all()), set(transactions))
 
+    def mk_monthly_transactions(self, *from_times):
+        transactions = []
+
+        for from_time in from_times:
+            from_date, to_date = this_month(from_time.date())
+            transactions.extend([
+                mk_transaction(self.account, created=from_date),
+                mk_transaction(self.account, created=to_date)])
+
+        return transactions
+
     @moto.mock_s3
     def test_archive_transactions_without_deletion(self):
         bucket = self.vumi_helper.patch_s3_bucket_settings(
             'billing.archive', s3_bucket_name='billing')
         bucket.create()
 
-        from_time = datetime(2014, 12, 1)
-        from_date, to_date = this_month(from_time.date())
-        transaction_1 = mk_transaction(self.account, created=from_date)
-        transaction_2 = mk_transaction(self.account, created=to_date)
+        transactions = self.mk_monthly_transactions(
+            datetime(2014, 11, 1),
+            datetime(2014, 12, 1))
 
         cmd = self.run_command(
             email_address=self.user_email,
-            from_date='2014-12-01',
-            to_date='2014-12-31')
+            months=['2014-11', '2014-12'])
 
         self.assertEqual(cmd.stderr.getvalue(), "")
         self.assertEqual(cmd.stdout.getvalue().splitlines(), [
-            'Transactions archived for account user@domain.com.',
+            'Archiving transactions for account user@domain.com...',
+            'Archiving transactions that occured in 2014-11...',
+            'Archived to S3 as'
+            ' transactions-test-0-user-2014-11-01-to-2014-11-30.json.',
+            'Archive status is: transactions_uploaded.',
+            '',
+            'Archiving transactions that occured in 2014-12...',
             'Archived to S3 as'
             ' transactions-test-0-user-2014-12-01-to-2014-12-31.json.',
-            'Archive status is: transactions_uploaded.'
+            'Archive status is: transactions_uploaded.',
+            ''
         ])
 
-        self.assert_remaining_transactions([transaction_1, transaction_2])
+        self.assert_remaining_transactions(transactions)
 
-        archive = TransactionArchive.objects.get(account=self.account)
-        self.assertEqual(
-            archive.status, TransactionArchive.STATUS_TRANSACTIONS_UPLOADED)
-        self.assertEqual(archive.from_date, from_date)
-        self.assertEqual(archive.to_date, to_date)
+        [nov_archive] = TransactionArchive.objects.filter(
+            account=self.account,
+            from_date=datetime(2014, 11, 1),
+            to_date=datetime(2014, 11, 30),
+            status=TransactionArchive.STATUS_TRANSACTIONS_UPLOADED)
+
+        [dec_archive] = TransactionArchive.objects.filter(
+            account=self.account,
+            from_date=datetime(2014, 12, 1),
+            to_date=datetime(2014, 12, 31),
+            status=TransactionArchive.STATUS_TRANSACTIONS_UPLOADED)
 
         s3_bucket = bucket.get_s3_bucket()
-        [s3_key] = list(s3_bucket.list())
-        self.assertEqual(s3_key.key, archive.filename)
+        [nov_s3_key, dec_s3_key] = list(s3_bucket.list())
+        self.assertEqual(nov_s3_key.key, nov_archive.filename)
+        self.assertEqual(dec_s3_key.key, dec_archive.filename)
 
     @moto.mock_s3
     def test_archive_transactions_with_deletion(self):
@@ -78,33 +101,45 @@ class TestArchiveTransactions(GoDjangoTestCase):
             'billing.archive', s3_bucket_name='billing')
         bucket.create()
 
-        from_time = datetime(2014, 12, 1)
-        from_date, to_date = this_month(from_time.date())
-        mk_transaction(self.account, created=from_date)
-        mk_transaction(self.account, created=to_date)
+        self.mk_monthly_transactions(
+            datetime(2014, 11, 1),
+            datetime(2014, 12, 1))
 
         cmd = self.run_command(
             email_address=self.user_email,
-            from_date='2014-12-01',
-            to_date='2014-12-31',
+            months=['2014-11', '2014-12'],
             delete=True)
 
         self.assertEqual(cmd.stderr.getvalue(), "")
         self.assertEqual(cmd.stdout.getvalue().splitlines(), [
-            'Transactions archived for account user@domain.com.',
+            'Archiving transactions for account user@domain.com...',
+            'Archiving transactions that occured in 2014-11...',
+            'Archived to S3 as'
+            ' transactions-test-0-user-2014-11-01-to-2014-11-30.json.',
+            'Archive status is: archive_completed.',
+            '',
+            'Archiving transactions that occured in 2014-12...',
             'Archived to S3 as'
             ' transactions-test-0-user-2014-12-01-to-2014-12-31.json.',
-            'Archive status is: archive_completed.'
+            'Archive status is: archive_completed.',
+            ''
         ])
 
         self.assert_remaining_transactions([])
 
-        archive = TransactionArchive.objects.get(account=self.account)
-        self.assertEqual(
-            archive.status, TransactionArchive.STATUS_ARCHIVE_COMPLETED)
-        self.assertEqual(archive.from_date, from_date)
-        self.assertEqual(archive.to_date, to_date)
+        [nov_archive] = TransactionArchive.objects.filter(
+            account=self.account,
+            from_date=datetime(2014, 11, 1),
+            to_date=datetime(2014, 11, 30),
+            status=TransactionArchive.STATUS_ARCHIVE_COMPLETED)
+
+        [dec_archive] = TransactionArchive.objects.filter(
+            account=self.account,
+            from_date=datetime(2014, 12, 1),
+            to_date=datetime(2014, 12, 31),
+            status=TransactionArchive.STATUS_ARCHIVE_COMPLETED)
 
         s3_bucket = bucket.get_s3_bucket()
-        [s3_key] = list(s3_bucket.list())
-        self.assertEqual(s3_key.key, archive.filename)
+        [nov_s3_key, dec_s3_key] = list(s3_bucket.list())
+        self.assertEqual(nov_s3_key.key, nov_archive.filename)
+        self.assertEqual(dec_s3_key.key, dec_archive.filename)
