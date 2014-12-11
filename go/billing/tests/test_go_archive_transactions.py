@@ -91,7 +91,10 @@ class TestArchiveTransactions(GoDjangoTestCase):
             status=TransactionArchive.STATUS_TRANSACTIONS_UPLOADED)
 
         s3_bucket = bucket.get_s3_bucket()
-        [nov_s3_key, dec_s3_key] = list(s3_bucket.list())
+        [nov_s3_key, dec_s3_key] = sorted(
+            list(s3_bucket.list()),
+            key=lambda key: key.key)
+
         self.assertEqual(nov_s3_key.key, nov_archive.filename)
         self.assertEqual(dec_s3_key.key, dec_archive.filename)
 
@@ -140,6 +143,9 @@ class TestArchiveTransactions(GoDjangoTestCase):
             status=TransactionArchive.STATUS_ARCHIVE_COMPLETED)
 
         s3_bucket = bucket.get_s3_bucket()
-        [nov_s3_key, dec_s3_key] = list(s3_bucket.list())
+        [nov_s3_key, dec_s3_key] = sorted(
+            list(s3_bucket.list()),
+            key=lambda key: key.key)
+
         self.assertEqual(nov_s3_key.key, nov_archive.filename)
         self.assertEqual(dec_s3_key.key, dec_archive.filename)
