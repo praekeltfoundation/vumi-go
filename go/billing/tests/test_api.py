@@ -345,6 +345,19 @@ class TestCost(BillingApiTestCase):
 
 class TestTransaction(BillingApiTestCase):
 
+    def test_notification_threshold_crossed_function(self):
+        """
+        Tests various combinations of parameters for
+        notification_threshold_crossed
+        """
+        notification_threshold_crossed = (
+            api.TransactionResource.notification_threshold_crossed)
+        # Argument order: credit_balance, credit_amount, alert_credit_balance
+        self.assertFalse(notification_threshold_crossed(9, 1, 10))   # 10 -> 9
+        self.assertTrue(notification_threshold_crossed(10, 1, 10))   # 11 -> 10
+        self.assertTrue(notification_threshold_crossed(9, 2, 10))    # 11 -> 9
+        self.assertFalse(notification_threshold_crossed(11, 1, 10))  # 12 -> 11
+
     @inlineCallbacks
     def test_transaction(self):
         yield self.create_api_user(email="test4@example.com")
