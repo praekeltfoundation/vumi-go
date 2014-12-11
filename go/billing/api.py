@@ -828,8 +828,8 @@ class TransactionResource(BaseResource):
         caused the alert threshold to be crossed, and false if not.
         """
         return (
-            credit_balance - credit_amount <= alert_credit_balance
-            < credit_amount)
+            credit_balance <= alert_credit_balance <
+            credit_amount + credit_balance)
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,
