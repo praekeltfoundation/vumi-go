@@ -9,6 +9,16 @@ from django.conf import settings
 
 from zope.interface import Interface, implements
 
+from go.errors import VumiGoError
+
+
+class BucketError(VumiGoError):
+    """ Raised when an error occurs during an operation on a bucket. """
+
+
+class KeyAlreadyExistsError(BucketError):
+    """ Raised when an S3 key unexpectedly already exists. """
+
 
 class BucketConfig(object):
     """ Helper for accessing Django GO_S3_BUCKET settings. """
@@ -154,8 +164,29 @@ class Bucket(object):
         return conn.create_bucket(self.config.s3_bucket_name)
 
     def upload(self, key_name, chunks, headers=None, metadata=None,
-               gzip=False):
-        """ Upload chunks of data to S3. """
+               gzip=False, replace=False):
+        """ Upload chunks of data to S3.
+
+        :param str key_name:
+            Key to upload to.
+
+        :param iter chunks:
+            Iterator over chunks of bytes to upload.
+
+        :param dict headers:
+            Dictionary of HTTP headers to upload with the file.
+
+        :param dict metadata:
+            Dictionary of S3 metadata to upload with the file.
+            Content-Type and Content-Encoding are copied from ``headers``.
+
+        :param bool gzip:
+            Whether to gzip the data before uploading it. Automatically
+            sets the Content-Encoding to ``gzip``.
+
+        :param bool replace:
+            Whether to allow an existing file to be replaced.
+        """
         bucket = self.get_s3_bucket()
         if headers is None:
             headers = {}
@@ -171,6 +202,10 @@ class Bucket(object):
         for field in ('Content-Type', 'Content-Encoding'):
             if field in headers:
                 metadata[field] = headers[field]
+
+        if not replace and bucket.get_key(key_name) is not None:
+            raise KeyAlreadyExistsError(
+                "Key %r already exists in bucket %r" % (key_name, bucket.name))
 
         mp = bucket.initiate_multipart_upload(
             key_name, headers=headers, metadata=metadata)

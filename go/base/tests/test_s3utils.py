@@ -11,7 +11,8 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 from go.base.s3utils import (
     BucketConfig, Bucket, IMultipartWriter,
-    MultipartWriter, GzipMultipartWriter)
+    MultipartWriter, GzipMultipartWriter,
+    KeyAlreadyExistsError)
 
 
 def gunzip(data):
@@ -268,3 +269,30 @@ class TestBucket(GoDjangoTestCase):
         # TODO: uncomment when #274 is released.
         # self.assertEqual(
         #     s3_key.content_encoding, "gzip")
+
+    @moto.mock_s3
+    def test_upload_to_existing_key_fails(self):
+        self.create_s3_bucket('s3_custom')
+        bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
+        s3_bucket = self.get_s3_bucket('s3_custom')
+        s3_key = s3_bucket.new_key('my.key')
+        s3_key.set_contents_from_string("box of chocolates")
+        self.assertRaisesRegexp(
+            KeyAlreadyExistsError,
+            "Key 'my.key' already exists in bucket 's3_custom'",
+            bucket.upload, "my.key", ["chunk"])
+
+        [s3_key] = s3_bucket.get_all_keys()
+        self.assertEqual(s3_key.get_contents_as_string(), "box of chocolates")
+
+    @moto.mock_s3
+    def test_upload_to_existing_key_succeeds_if_replace_is_true(self):
+        self.create_s3_bucket('s3_custom')
+        bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
+        s3_bucket = self.get_s3_bucket('s3_custom')
+        s3_key = s3_bucket.new_key('my.key')
+        s3_key.set_contents_from_string("bags of coffee")
+        bucket.upload("my.key", ["chunk"], replace=True)
+
+        [s3_key] = s3_bucket.get_all_keys()
+        self.assertEqual(s3_key.get_contents_as_string(), "chunk")
