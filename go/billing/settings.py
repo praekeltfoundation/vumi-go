@@ -47,6 +47,9 @@ STATEMENT_CONTACT_DETAILS = getattr(
         'website': 'www.praekeltfoundation.org',
     })
 
+ENABLE_LOW_CREDIT_NOTIFICATION = getattr(
+    settings, 'GO_ENABLE_LOW_CREDIT_NOTIFICATION', False)
+
 
 def get_user_table():
     """Return the name of the table used by the user model."""
