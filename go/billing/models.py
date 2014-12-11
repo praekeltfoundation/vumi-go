@@ -5,7 +5,6 @@ from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
-
 import go.billing.settings as app_settings
 from go.base.models import UserProfile
 
@@ -68,7 +67,8 @@ def create_billing_account(sender, instance, created, **kwargs):
                                account_number=instance.user_account)
 
 
-post_save.connect(create_billing_account, sender=UserProfile,
+post_save.connect(
+    create_billing_account, sender=UserProfile,
     dispatch_uid='go.billing.models.create_billing_account')
 
 
@@ -351,6 +351,36 @@ class LineItem(models.Model):
 
     def __unicode__(self):
         return u"%s line item" % (self.statement.title,)
+
+
+class LowCreditNotification(models.Model):
+    """
+    Logging of low credit notifications
+    """
+
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the low credit notification is for."))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When the low credit notification was created."))
+
+    success = models.DateTimeField(
+        blank=True, null=True,
+        help_text=_("When the email was successfully sent."))
+
+    threshold = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        help_text=_("The credit threshold percentage that triggered the "
+                    "notification."))
+
+    credit_balance = models.DecimalField(
+        max_digits=20, decimal_places=6,
+        help_text=_("The credit balance when the notification was sent."))
+
+    def __unicode__(self):
+        return u"%s%% threshold for %s" % (self.threshold, self.account)
 
 
 class TransactionArchive(models.Model):

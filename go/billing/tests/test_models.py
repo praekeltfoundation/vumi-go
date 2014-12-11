@@ -2,7 +2,8 @@ import decimal
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import (
-    TagPool, Account, MessageCost, Transaction, create_billing_account)
+    TagPool, Account, MessageCost, Transaction, create_billing_account,
+    LowCreditNotification)
 from go.billing.settings import QUANTIZATION_EXPONENT
 
 
@@ -171,3 +172,35 @@ class TestTransaction(GoDjangoTestCase):
         trans.save()
         self.assertNotEqual(trans.pk, None)
         self.assertEqual(unicode(trans), unicode(trans.pk))
+
+
+class TestLowCreditNotification(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        # Django overides these settings before tests start, so set them here
+        self.vumi_helper.patch_settings(
+            EMAIL_BACKEND='djcelery_email.backends.CeleryEmailBackend',
+            CELERY_EMAIL_BACKEND='django.core.mail.backends.locmem.'
+                                 + 'EmailBackend')
+        self.user_helper = self.vumi_helper.make_django_user()
+
+    def mk_notification(self, percent, balance):
+        self.django_user = self.user_helper.get_django_user()
+        self.acc = Account.objects.get(user=self.django_user)
+        notification = LowCreditNotification(
+            account=self.acc, threshold=decimal.Decimal(percent),
+            credit_balance=decimal.Decimal(balance))
+        notification.save()
+        return notification
+
+    def test_unicode(self):
+        notification = self.mk_notification('50.0', '314.1')
+        self.assertEqual(
+            unicode(notification),
+            u'50.0%% threshold for %s' % self.acc)
+
+    def test_fields(self):
+        notification = self.mk_notification('55.0', '27.17')
+        self.assertEqual(notification.account, self.acc)
+        self.assertEqual(notification.threshold, decimal.Decimal('55.0'))
+        self.assertEqual(notification.credit_balance, decimal.Decimal('27.17'))
