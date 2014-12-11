@@ -371,12 +371,16 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         config = self.get_static_config()
         self.routing_table_cache = AccountRoutingTableCache(
             reactor, config.routing_table_cache_ttl)
+
+        # Opt out and billing connectors
         self.opt_out_connector = config.opt_out_connector
         self.billing_inbound_connector = config.billing_inbound_connector
         self.billing_outbound_connector = config.billing_outbound_connector
         self.billing_connectors = set()
         self.billing_connectors.add(self.billing_inbound_connector)
         self.billing_connectors.add(self.billing_outbound_connector)
+
+        # Router connectors
         self.router_inbound_connector_mapping = (
             config.router_inbound_connector_mapping)
         self.router_outbound_connector_mapping = (
@@ -386,15 +390,17 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             config.router_inbound_connector_mapping.itervalues())
         self.router_connectors.update(
             config.router_outbound_connector_mapping.itervalues())
+
+        # Application connectors
         self.application_connector_mapping = (
             config.application_connector_mapping)
         self.application_connectors = set(
             config.application_connector_mapping.itervalues())
-        self.transport_connectors = set()
-        self.transport_connectors.update(
-            config.receive_inbound_connectors)
-        self.transport_connectors.discard(
-            self.router_connectors)
+
+        # Transport connectors
+        self.transport_connectors = set(config.receive_inbound_connectors)
+        self.transport_connectors -= self.router_connectors
+        self.transport_connectors -= self.billing_connectors
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -690,18 +696,22 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, [str(dst_conn), 'default'], self.OUTBOUND)
 
-        # We skip the store code in `process_outbound()` if billing is enabled,
-        # so we need to duplicate it here.
-        yield self.store_outbound_transport_message(msg)
-
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
-    def store_outbound_transport_message(self, msg):
+    @inlineCallbacks
+    def publish_outbound(self, msg, connector_name, endpoint):
         """
-        Add an outbound message to the message store if configured to do so.
+        Publish an outbound message, storing it if necessary.
+
+        We override the default outbound publisher here so we can write the
+        outbound message to the message store where we need to.
         """
-        if self.get_static_config().store_messages_to_transports:
-            return self.vumi_api.mdb.add_outbound_message(msg)
+        if connector_name in self.transport_connectors:
+            if self.get_static_config().store_messages_to_transports:
+                yield self.vumi_api.mdb.add_outbound_message(msg)
+
+        yield super(RoutingTableDispatcher, self).publish_outbound(
+            msg, connector_name, endpoint)
 
     @inlineCallbacks
     def handle_unroutable_inbound_message(self, f, msg, connector_name):
@@ -738,7 +748,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         # mark as an unroutable reply
         reply_rmeta = RoutingMetadata(reply)
         reply_rmeta.set_unroutable_reply()
-        self.publish_outbound(
+
+        yield self.publish_outbound(
             reply, dst_connector_name, dst_endpoint)
 
     def errback_inbound(self, f, msg, connector_name):
@@ -836,9 +847,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             raise NoTargetError(
                 "No target found for outbound message from '%s': %s" % (
                     connector_name, msg), msg)
-        target_conn = GoConnector.parse(target[0])
 
         if self.billing_outbound_connector:
+            target_conn = GoConnector.parse(target[0])
             if target_conn.ctype == target_conn.TRANSPORT_TAG:
                 tag = [target_conn.tagpool, target_conn.tagname]
                 yield self.publish_outbound_to_billing(config, msg, tag)
@@ -846,11 +857,6 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
             msg, target, self.OUTBOUND)
-
-        if target_conn.ctype == target_conn.TRANSPORT_TAG:
-            # This code is only reached if billing is disabled. There's a
-            # separate code path for messages from billing to transports.
-            yield self.store_outbound_transport_message(msg)
 
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
