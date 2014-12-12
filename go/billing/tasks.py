@@ -89,11 +89,13 @@ def get_channel_name(transaction, tagpools):
 
 
 def get_message_cost(transaction):
-    return transaction['total_message_cost']
+    cost = transaction['total_message_cost']
+    return cost if cost is not None else 0
 
 
 def get_session_cost(transaction):
-    return transaction['total_session_cost']
+    cost = transaction['total_session_cost']
+    return cost if cost is not None else 0
 
 
 def get_count(transaction):
@@ -113,14 +115,18 @@ def get_session_unit_cost(transaction):
 
 
 def get_message_credits(transaction):
-    cost = get_message_cost(transaction)
+    cost = transaction['total_message_cost']
     markup = transaction['markup_percent']
+    if cost is None or markup is None:
+        return None
     return MessageCost.calculate_message_credit_cost(cost, markup)
 
 
 def get_session_credits(transaction):
-    cost = get_session_cost(transaction)
+    cost = transaction['total_session_cost']
     markup = transaction['markup_percent']
+    if cost is None or markup is None:
+        return None
     return MessageCost.calculate_session_credit_cost(cost, markup)
 
 
