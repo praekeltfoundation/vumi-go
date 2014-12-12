@@ -37,8 +37,8 @@ def get_billing_account(user_account):
 def mk_transaction(account, tag_pool_name='pool1',
                    tag_name="tag1",
                    message_direction=MessageCost.DIRECTION_INBOUND,
-                   message_cost=100, markup_percent=10.0,
-                   credit_factor=0.25, credit_amount=28,
+                   message_cost=100, storage_cost=50, markup_percent=10.0,
+                   credit_factor=0.25, credit_amount=28, session_cost=10.0,
                    status=Transaction.STATUS_COMPLETED,
                    created=None, **kwargs):
     transaction = Transaction(
@@ -47,9 +47,14 @@ def mk_transaction(account, tag_pool_name='pool1',
         tag_name=tag_name,
         message_direction=message_direction,
         message_cost=message_cost,
+        session_cost=Decimal(str(session_cost)),
+        storage_cost=Decimal(str(storage_cost)),
         markup_percent=Decimal(str(markup_percent)),
         credit_factor=Decimal(str(credit_factor)),
         credit_amount=credit_amount,
+        message_credits=get_message_credits(message_cost, markup_percent),
+        storage_credits=get_storage_credits(storage_cost, markup_percent),
+        session_credits=get_session_credits(session_cost, markup_percent),
         status=status, **kwargs)
 
     transaction.save()
@@ -98,6 +103,11 @@ def get_message_credits(cost, markup):
 
 def get_session_credits(cost, markup):
     return MessageCost.calculate_session_credit_cost(
+        Decimal(str(cost)),
+        Decimal(str(markup)))
+
+def get_storage_credits(cost, markup):
+    return MessageCost.calculate_storage_credit_cost(
         Decimal(str(cost)),
         Decimal(str(markup)))
 
