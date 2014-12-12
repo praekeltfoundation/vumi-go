@@ -9,7 +9,7 @@ from django.core.management import call_command
 from go.base.tests.helpers import (
     GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
 from go.billing.models import Account, Transaction, TransactionArchive
-from go.billing.tests.helpers import mk_transaction, this_month
+from go.billing.tests.helpers import mk_statement, mk_transaction, this_month
 
 
 class TestArchiveTransactions(GoDjangoTestCase):
@@ -52,6 +52,16 @@ class TestArchiveTransactions(GoDjangoTestCase):
         bucket = self.vumi_helper.patch_s3_bucket_settings(
             'billing.archive', s3_bucket_name='billing')
         bucket.create()
+
+        mk_statement(
+            self.account,
+            from_date=datetime(2014, 11, 1),
+            to_date=datetime(2014, 11, 30))
+
+        mk_statement(
+            self.account,
+            from_date=datetime(2014, 12, 1),
+            to_date=datetime(2014, 12, 31))
 
         transactions = self.mk_monthly_transactions(
             datetime(2014, 11, 1),
@@ -104,6 +114,16 @@ class TestArchiveTransactions(GoDjangoTestCase):
             'billing.archive', s3_bucket_name='billing')
         bucket.create()
 
+        mk_statement(
+            self.account,
+            from_date=datetime(2014, 11, 1),
+            to_date=datetime(2014, 11, 30))
+
+        mk_statement(
+            self.account,
+            from_date=datetime(2014, 12, 1),
+            to_date=datetime(2014, 12, 31))
+
         self.mk_monthly_transactions(
             datetime(2014, 11, 1),
             datetime(2014, 12, 1))
@@ -149,3 +169,33 @@ class TestArchiveTransactions(GoDjangoTestCase):
 
         self.assertEqual(nov_s3_key.key, nov_archive.filename)
         self.assertEqual(dec_s3_key.key, dec_archive.filename)
+
+    @moto.mock_s3
+    def test_archive_transactions_no_statement(self):
+        bucket = self.vumi_helper.patch_s3_bucket_settings(
+            'billing.archive', s3_bucket_name='billing')
+        bucket.create()
+
+        mk_statement(
+            self.account,
+            from_date=datetime(2014, 11, 1),
+            to_date=datetime(2014, 11, 30))
+
+        transactions = self.mk_monthly_transactions(
+            datetime(2014, 10, 1),
+            datetime(2014, 11, 1),
+            datetime(2014, 12, 1))
+
+        cmd = self.run_command(
+            email_address=self.user_email,
+            months=['2014-10', '2014-11', '2014-12'],
+            delete=True)
+
+        self.assertEqual(cmd.stderr.getvalue().splitlines(), [
+            'Aborting archiving, no statements found for the following months:',
+            '2014-10',
+            '2014-12'
+        ])
+
+        self.assert_remaining_transactions(transactions)
+        self.assertEqual(list(bucket.get_s3_bucket().list()), [])
