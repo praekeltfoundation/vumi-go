@@ -171,7 +171,7 @@ class TestArchiveTransactions(GoDjangoTestCase):
         self.assertEqual(dec_s3_key.key, dec_archive.filename)
 
     @moto.mock_s3
-    def test_archive_transactions_no_statement(self):
+    def test_archive_transactions_missing_statements(self):
         bucket = self.vumi_helper.patch_s3_bucket_settings(
             'billing.archive', s3_bucket_name='billing')
         bucket.create()
@@ -199,3 +199,56 @@ class TestArchiveTransactions(GoDjangoTestCase):
 
         self.assert_remaining_transactions(transactions)
         self.assertEqual(list(bucket.get_s3_bucket().list()), [])
+
+    @moto.mock_s3
+    def test_archive_transactions_no_statement_option(self):
+        bucket = self.vumi_helper.patch_s3_bucket_settings(
+            'billing.archive', s3_bucket_name='billing')
+        bucket.create()
+
+        mk_statement(
+            self.account,
+            from_date=datetime(2014, 12, 1),
+            to_date=datetime(2014, 12, 31))
+
+        transactions = self.mk_monthly_transactions(
+            datetime(2014, 11, 1),
+            datetime(2014, 12, 1))
+
+        cmd = self.run_command(
+            email_address=self.user_email,
+            no_statement=True,
+            months=['2014-11', '2014-12'])
+
+        self.assertEqual(cmd.stderr.getvalue(), "")
+        self.assertEqual(cmd.stdout.getvalue().splitlines(), [
+            'Archiving transactions for account user@domain.com...',
+            'Archiving transactions that occured in 2014-11...',
+            'Archived to S3 as'
+            ' transactions-test-0-user-2014-11-01-to-2014-11-30.json.',
+            'Archive status is: transactions_uploaded.',
+            '',
+            'Archiving transactions that occured in 2014-12...',
+            'Archived to S3 as'
+            ' transactions-test-0-user-2014-12-01-to-2014-12-31.json.',
+            'Archive status is: transactions_uploaded.',
+            ''
+        ])
+
+        [nov_archive] = TransactionArchive.objects.filter(
+            account=self.account,
+            from_date=datetime(2014, 11, 1),
+            to_date=datetime(2014, 11, 30))
+
+        [dec_archive] = TransactionArchive.objects.filter(
+            account=self.account,
+            from_date=datetime(2014, 12, 1),
+            to_date=datetime(2014, 12, 31))
+
+        s3_bucket = bucket.get_s3_bucket()
+        [nov_s3_key, dec_s3_key] = sorted(
+            list(s3_bucket.list()),
+            key=lambda key: key.key)
+
+        self.assertEqual(nov_s3_key.key, nov_archive.filename)
+        self.assertEqual(dec_s3_key.key, dec_archive.filename)
