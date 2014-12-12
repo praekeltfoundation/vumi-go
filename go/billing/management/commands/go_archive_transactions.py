@@ -25,8 +25,8 @@ class Command(BaseGoCommand):
         make_option(
             '--no-statement',
             dest='no_statement', action="store_true", default=False,
-            help=("Aborts an archive if no equivalent billing statement is "
-                  "found. Default: TRUE.")))
+            help=("Allow transactions to be archived even if no equivalent "
+                  "billing statement is found. Default: FALSE.")))
 
 
     def statement_exists(self, account, from_date, to_date):
