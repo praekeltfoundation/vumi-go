@@ -81,7 +81,6 @@ module.exports = function (grunt) {
       dev: {
         options: {
           paths: ["go/base/static/css"],
-          compress: true,
           sourceMap: true,
           sourceMapFilename: "go/base/static/css/vumigo.css.map",
           sourceMapBasepath: "go/base/static/css/"
