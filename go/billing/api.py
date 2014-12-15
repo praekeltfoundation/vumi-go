@@ -820,7 +820,8 @@ class TransactionResource(BaseResource):
             account_number):
         """
         Checks the current balance percentage against all those stored within
-        the settings. Sends the notification email if it is required.
+        the settings. Sends the notification email if it is required. Returns
+        the alert percent if email was sent, or ``None`` if no email was sent.
 
         :param credit_balance: The current balance (after the transaction)
         :param credit_amount: The amount of credits used in the transaction
@@ -834,9 +835,10 @@ class TransactionResource(BaseResource):
                 yield spawn_celery_task_via_thread(
                     create_low_credit_notification,
                     account_number, level, credit_balance)
-                break
+                defer.returnValue(level)
             if credit_balance < alert_credit_balance:
-                break
+                defer.returnValue(None)
+            defer.returnValue(None)
 
     @staticmethod
     def notification_threshold_crossed(
