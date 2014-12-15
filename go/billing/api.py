@@ -205,8 +205,7 @@ class AccountResource(BaseResource):
         """Fetch the account with the given ``account_number``"""
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
             AND a.account_number = %%(account_number)s
@@ -224,8 +223,7 @@ class AccountResource(BaseResource):
         """Fetch all accounts"""
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
         """ % self._auth_user_table
@@ -282,9 +280,9 @@ class AccountResource(BaseResource):
         query = """
             INSERT INTO billing_account
                 (user_id, account_number, description, credit_balance,
-                 alert_threshold, alert_credit_balance)
+                 last_topup_balance)
             VALUES
-                (%(user_id)s, %(account_number)s, %(description)s, 0, 0.0, 0)
+                (%(user_id)s, %(account_number)s, %(description)s, 0, 0.0)
             RETURNING id
         """
 
@@ -300,8 +298,7 @@ class AccountResource(BaseResource):
         # Fetch the newly created account
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
             AND a.id = %%(id)s
@@ -342,8 +339,7 @@ class AccountResource(BaseResource):
         query = """
             UPDATE billing_account
             SET credit_balance = credit_balance + %(credit_amount)s,
-                alert_credit_balance = (credit_balance + %(credit_amount)s)
-                                       * alert_threshold / 100.0
+                last_topup_balance = credit_balance + %(credit_amount)s
             WHERE account_number = %(account_number)s
         """
 
@@ -356,7 +352,7 @@ class AccountResource(BaseResource):
 
         # Fetch the latest account information
         query = """SELECT account_number, description, credit_balance,
-                          alert_threshold, alert_credit_balance
+                          last_topup_balance
                    FROM billing_account
                    WHERE account_number = %(account_number)s"""
 
@@ -795,7 +791,7 @@ class TransactionResource(BaseResource):
 
         # Check the account's credit balance and raise an
         # alert if it has gone below the credit balance threshold
-        query = """SELECT credit_balance, alert_credit_balance
+        query = """SELECT credit_balance, last_topup_balance
                    FROM billing_account
                    WHERE account_number = %(account_number)s"""
 
