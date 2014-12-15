@@ -80,11 +80,12 @@ module.exports = function (grunt) {
     less: {
       dev: {
         options: {
-          paths: ["go/base/static/css"]
+          paths: ["go/base/static/css"],
+          compress: true
         },
         files: {
           "go/base/static/css/vumigo.css": "go/base/static/css/vumigo.less"
-        }
+        },
       }
     },
     watch: {
