@@ -9,9 +9,8 @@ from vumi.tests.helpers import VumiTestCase
 
 from go.billing import settings as app_settings
 from go.billing import api
-from go.billing.models import MessageCost
+from go.billing.models import MessageCost, LowCreditNotification
 from go.billing.utils import DummySite, DictRowConnectionPool, JSONDecoder
-
 
 DB_SUPPORTED = False
 try:
@@ -355,6 +354,41 @@ class TestTransaction(BillingApiTestCase):
         self.assertTrue(notification_threshold_crossed(10, 1, 10))   # 11 -> 10
         self.assertTrue(notification_threshold_crossed(9, 2, 10))    # 11 -> 9
         self.assertFalse(notification_threshold_crossed(11, 1, 10))  # 12 -> 11
+
+    @inlineCallbacks
+    def test_check_all_low_credit_thresholds_function(self):
+        app_settings.EMAIL_BACKEND = (
+            'djcelery_email.backends.CeleryEmailBackend')
+        app_settings.CELERY_EMAIL_BACKEND = (
+            'django.core.mail.backends.locmem.EmailBackend')
+        app_settings.ENABLE_LOW_CREDIT_NOTIFICATION = True
+
+        # Create account
+        yield self.create_api_user(email="test4@example.com")
+        account = yield self.create_api_account(
+            email="test4@example.com", account_number="11111")
+
+        # Load credits
+        yield self.load_api_account_credits(
+            account['account_number'], 10)
+
+        # Set the message cost
+        yield self.create_api_cost(
+            tag_pool_name="test_pool2",
+            message_direction="Inbound",
+            message_cost=0.6, session_cost=0.3,
+            markup_percent=10.0)
+
+        # Create a transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-1',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        print LowCreditNotification.objects.all()
 
     @inlineCallbacks
     def test_transaction(self):

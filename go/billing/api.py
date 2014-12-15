@@ -571,8 +571,8 @@ class TransactionResource(BaseResource):
     """Expose a REST interface for a transaction"""
 
     isLeaf = True
-    credit_notification_levels = (
-        app_settings.LOW_CREDIT_NOTIFICATION_LEVELS.sort(reverse=True))
+    credit_notification_levels = sorted(
+        app_settings.LOW_CREDIT_NOTIFICATION_LEVELS, reverse=True)
 
     def render_GET(self, request):
         """Handle an HTTP GET request"""
@@ -828,17 +828,17 @@ class TransactionResource(BaseResource):
         :param last_topup_balance: The account credit balance at the last topup
         :param account_number: The account number of the associated account
         """
-        for level in self.notification_levels:
-            alert_credit_balance = last_topup_balance * level
+        for level in self.credit_notification_levels:
+            alert_credit_balance = float(last_topup_balance) * level
             if self.notification_threshold_crossed(
                     credit_balance, credit_amount, alert_credit_balance):
+                print 'here'
                 yield spawn_celery_task_via_thread(
                     create_low_credit_notification,
                     account_number, level, credit_balance)
-                defer.returnValue(level)
+                break
             if credit_balance < alert_credit_balance:
-                defer.returnValue(None)
-            defer.returnValue(None)
+                break
 
     @staticmethod
     def notification_threshold_crossed(
