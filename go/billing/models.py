@@ -44,18 +44,11 @@ class Account(models.Model):
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The current credit balance."))
 
-    alert_threshold = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal('0.0'),
-        help_text=_("Low-credits notification will be sent when the "
-                    "credit balance reaches the alert threshold percentage "
-                    "of the balance after the last credit purchase."))
-
-    alert_credit_balance = models.DecimalField(
+    last_topup_balance = models.DecimalField(
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
-        help_text=_("Low-credits notification will be sent when the credit "
-                    "balance goes below this value. This value is updated to "
-                    "(alert_threshold * current balance) when credits are "
-                    "loaded."))
+        help_text=_("The credits balance after the last credit top up. Used "
+                    "in the calculation to determine when low-credits "
+                    "notifications should be sent."))
 
     def __unicode__(self):
         return u"{0} ({1})".format(self.account_number, self.user.email)
