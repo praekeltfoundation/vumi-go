@@ -392,8 +392,8 @@ class TestTransaction(BillingApiTestCase):
 
     @inlineCallbacks
     def test_transaction(self):
-        yield self.create_api_user(email="test4@example.com")
-        account = yield self.create_api_account(email="test4@example.com",
+        yield self.create_api_user(email="test5@example.com")
+        account = yield self.create_api_account(email="test5@example.com",
                                                 account_number="11111")
 
         # Set the message cost
@@ -521,9 +521,9 @@ class TestTransaction(BillingApiTestCase):
             message_cost=0.1, session_cost=0.2,
             markup_percent=12.0)
 
-        yield self.create_api_user(email="test5@example.com")
+        yield self.create_api_user(email="test6@example.com")
         account = yield self.create_api_account(
-            email="test5@example.com", account_number="arbitrary-user")
+            email="test6@example.com", account_number="arbitrary-user")
 
         transaction = yield self.create_api_transaction(
             account_number="arbitrary-user",
