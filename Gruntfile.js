@@ -8,6 +8,8 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-mocha-cov');
   grunt.loadNpmTasks('grunt-karma');
   grunt.loadNpmTasks('grunt-exec');
+  grunt.loadNpmTasks('grunt-contrib-less');
+  grunt.loadNpmTasks('grunt-contrib-watch');
 
   grunt.initConfig({
     paths: require('./js_paths.yml'),
@@ -75,6 +77,22 @@ module.exports = function (grunt) {
         ].join('')
       }
     },
+    less: {
+      dev: {
+        options: {
+          paths: ["go/base/static/css"]
+        },
+        files: {
+          "go/base/static/css/vumigo.css": "go/base/static/css/vumigo.less"
+        }
+      }
+    },
+    watch: {
+      less: {
+        files: ['go/base/static/css/*.less'],
+        tasks: ['less']
+      }
+    }
   });
 
   grunt.registerTask('test:jsbox_apps', [
@@ -100,4 +118,5 @@ module.exports = function (grunt) {
   grunt.registerTask('default', [
     'test'
   ]);
+
 };
