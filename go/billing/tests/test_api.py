@@ -206,8 +206,7 @@ class TestAccount(BillingApiTestCase):
         new_account = yield self.create_api_account(email="test2@example.com")
         self.assertEqual(new_account, {
             "account_number": "12345",
-            "alert_credit_balance": decimal.Decimal('0.0'),
-            "alert_threshold": decimal.Decimal('0.0'),
+            "last_topup_balance": decimal.Decimal('0.0'),
             "credit_balance": decimal.Decimal('0.0'),
             "description": "Test account",
             "email": "test2@example.com",
@@ -221,8 +220,7 @@ class TestAccount(BillingApiTestCase):
         account = yield self.get_api_account(new_account["account_number"])
         self.assertEqual(account, {
             "account_number": "12345",
-            "alert_credit_balance": decimal.Decimal('0.0'),
-            "alert_threshold": decimal.Decimal('0.0'),
+            "last_topup_balance": decimal.Decimal('100.0'),
             "credit_balance": decimal.Decimal('100.0'),
             "description": "Test account",
             "email": "test2@example.com",
