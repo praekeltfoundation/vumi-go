@@ -277,6 +277,37 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item2.credits, get_storage_credits(100, 20))
         self.assertEqual(item3.credits, get_storage_credits(100, 30))
 
+    def test_generate_monthly_statement_storage_none_storage_cost(self):
+        mk_transaction(
+            self.account,
+            storage_cost=None)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(
+            description='Storage cost')
+
+        self.assertEqual(item.credits, None)
+        self.assertEqual(item.unit_cost, 0)
+        self.assertEqual(item.cost, 0)
+
+    def test_generate_monthly_statement_storage_none_markup(self):
+        mk_transaction(
+            self.account,
+            storage_cost=100,
+            markup_percent=None)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(
+            description='Storage cost')
+
+        self.assertEqual(item.credits, None)
+        self.assertEqual(item.unit_cost, 100)
+        self.assertEqual(item.cost, 100)
+
     def test_generate_monthly_statement_different_session_costs(self):
         mk_transaction(
             self.account,

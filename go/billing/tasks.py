@@ -110,7 +110,8 @@ def get_message_cost(transaction):
 
 
 def get_storage_cost(transaction):
-    return transaction['total_storage_cost']
+    cost = transaction['total_storage_cost']
+    return cost if cost is not None else 0
 
 
 def get_session_cost(transaction):
