@@ -237,9 +237,7 @@ class VumiUserApi(object):
             if free_tags:
                 available_pools.append(pool)
 
-        pool_data = dict([(pool, (yield self.api.tpm.get_metadata(pool)))
-                          for pool in available_pools])
-        returnValue(TagpoolSet(pool_data))
+        returnValue((yield self.api.tagpool_set(available_pools)))
 
     @Manager.calls_manager
     def applications(self):
@@ -592,6 +590,18 @@ class VumiApi(object):
         if self.metric_publisher is None:
             raise VumiError("No metric publisher available.")
         return MetricManager(prefix, publisher=self.metric_publisher)
+
+    @Manager.calls_manager
+    def tagpool_set(self, pools):
+        pool_data = dict([
+            (pool, (yield self.tpm.get_metadata(pool)))
+            for pool in pools])
+        returnValue(TagpoolSet(pool_data))
+
+    @Manager.calls_manager
+    def known_tagpools(self):
+        pools = yield self.tpm.list_pools()
+        returnValue((yield self.tagpool_set(pools)))
 
 
 class SyncMessageSender(object):

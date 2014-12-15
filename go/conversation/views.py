@@ -99,9 +99,13 @@ def new_conversation(request):
             conversation_type = form.cleaned_data['conversation_type']
 
             view_def = get_conversation_view_definition(conversation_type)
+            name = form.cleaned_data['name']
+            description = form.cleaned_data['description']
+            config = view_def._conv_def.get_default_config(name, description)
+
             conv = request.user_api.new_conversation(
-                conversation_type, name=form.cleaned_data['name'],
-                description=form.cleaned_data['description'], config={},
+                conversation_type, name=name,
+                description=description, config=config,
                 extra_endpoints=list(view_def.extra_static_endpoints),
             )
             messages.info(request, 'Conversation created successfully.')

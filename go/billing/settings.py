@@ -5,9 +5,18 @@ from django.contrib.auth import get_user_model
 
 from go.config import billing_quantization_exponent
 
+SYSTEM_BILLER_NAME = getattr(
+    settings, 'BILLING_SYSTEM_BILLER_NAME', 'Vumi')
+
+DOLLAR_FORMAT = getattr(
+    settings, 'BILLING_DOLLAR_FORMAT', '%.3f')
+
 # 10 credits = 1 US cent
 CREDIT_CONVERSION_FACTOR = getattr(
     settings, 'BILLING_CREDIT_CONVERSION_FACTOR', Decimal('10.00'))
+
+ACCOUNT_FEE = getattr(
+    settings, 'BILLING_ACCOUNT_FEE', Decimal('50.00'))
 
 # This is currently pulled in from `go.config` to avoid pulling a pile of
 # Django stuff into `go.vumitools.billing_worker` through `go.billing.utils`.
@@ -30,6 +39,16 @@ STATEMENTS_PER_PAGE = getattr(
 
 STATEMENTS_DEFAULT_ORDER_BY = getattr(
     settings, 'BILLING_STATEMENTS_DEFAULT_ORDER_BY', '-from_date')
+
+STATEMENT_CONTACT_DETAILS = getattr(
+    settings, 'BILLING_STATEMENT_CONTACT_DETAILS', {
+        'tel': '27.11.482.8684',
+        'email': 'http://accounts@praekelt.com',
+        'website': 'www.praekeltfoundation.org',
+    })
+
+ENABLE_LOW_CREDIT_NOTIFICATION = getattr(
+    settings, 'GO_ENABLE_LOW_CREDIT_NOTIFICATION', False)
 
 
 def get_user_table():

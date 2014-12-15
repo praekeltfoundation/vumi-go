@@ -14,8 +14,8 @@ from vumi.application.tests.test_sandbox import (
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
-from go.apps.dialogue.vumi_app import (
-    DialogueApplication, PollConfigResource)
+from go.apps.dialogue.vumi_app import DialogueApplication, PollConfigResource
+from go.apps.dialogue.utils import dialogue_js_config
 from go.apps.dialogue.tests.dummy_polls import simple_poll
 from go.apps.tests.helpers import AppWorkerHelper
 
@@ -257,17 +257,12 @@ class TestPollConfigResource(ResourceTestCaseBase):
         yield self.create_resource({})
 
     @inlineCallbacks
-    def test_config_delivery_class(self):
+    def test_get(self):
         conv = yield self.app_helper.create_conversation(
-            config={
-                'poll': {
-                    'poll_metadata': {'delivery_class': 'twitter'}
-                }
-            })
-
+            config={'poll': simple_poll()})
         self.app_worker.conv = conv
 
         reply = yield self.dispatch_command('get', key='config')
         config = json.loads(reply['value'])
 
-        self.assertEqual(config['delivery_class'], 'twitter')
+        self.assertEqual(config, dialogue_js_config(conv))

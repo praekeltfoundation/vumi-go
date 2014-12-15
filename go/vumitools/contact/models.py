@@ -158,7 +158,7 @@ class ContactStore(PerAccountStore):
     # but will result in false negatives if there are matching contacts that
     # have not yet been migrated to version 2.
     FIND_BY_INDEX = True
-    FIND_BY_INDEX_SEARCH_FALLBACK = True
+    FIND_BY_INDEX_SEARCH_FALLBACK = False
 
     def setup_proxies(self):
         self.contacts = self.manager.proxy(Contact)

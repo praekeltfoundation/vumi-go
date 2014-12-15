@@ -2,6 +2,7 @@ import json
 
 from twisted.python import log
 from twisted.internet import defer
+from twisted.internet.threads import deferToThread
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
@@ -10,6 +11,21 @@ from django.contrib.auth.hashers import make_password
 from go.billing import settings as app_settings
 from go.billing.models import MessageCost
 from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
+from go.billing.tasks import create_low_credit_notification
+
+
+def spawn_celery_task_via_thread(t, *args, **kw):
+    """
+    Issue a task to a Celery worker using deferToThread.
+
+    :param Task t:
+        The Celery task to issue.
+    :param list args:
+        Postional arguments for the Celery task.
+    :param dict kw:
+        Keyword arguments for the Celery task.
+    """
+    return deferToThread(t.delay, *args, **kw)
 
 
 class BaseResource(Resource):
@@ -793,11 +809,27 @@ class TransactionResource(BaseResource):
 
         credit_balance = result.get('credit_balance')
         alert_credit_balance = result.get('alert_credit_balance')
-        if (credit_balance < alert_credit_balance and
-                credit_balance + credit_amount > alert_credit_balance):
-            pass  # TODO: Raise a Low Credits alert; somehow
+        if (app_settings.ENABLE_LOW_CREDIT_NOTIFICATION and
+            self.notification_threshold_crossed(
+                credit_balance, credit_amount, alert_credit_balance)):
+            yield spawn_celery_task_via_thread(
+                create_low_credit_notification,
+                account_number, result.get('alert_threshold'), credit_balance)
 
         defer.returnValue(transaction)
+
+    @staticmethod
+    def notification_threshold_crossed(
+            credit_balance, credit_amount, alert_credit_balance):
+        """
+        Given the current balance (afther the transaction) ``credit_balance``,
+        the transaction amount ``credit_amount``, and the alert threshold
+        ``alert_credit_balance``, will return ``True`` if the transaction
+        caused the alert threshold to be crossed, and false if not.
+        """
+        return (
+            credit_balance <= alert_credit_balance <
+            credit_amount + credit_balance)
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,

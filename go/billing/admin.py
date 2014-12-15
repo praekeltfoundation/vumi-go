@@ -4,11 +4,12 @@ from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.forms.models import modelformset_factory
 from django.utils.translation import ugettext_lazy as _
+from django.utils.html import format_html
 from django.contrib import admin
 from django.contrib import messages
 
 from go.billing.models import (
-    TagPool, Account, MessageCost, Transaction, Statement)
+    TagPool, Account, MessageCost, Transaction, Statement, LineItem)
 from go.billing.forms import (
     CreditLoadForm, BaseCreditLoadFormSet, MessageCostForm, TagPoolForm)
 
@@ -116,8 +117,42 @@ class TransactionAdmin(admin.ModelAdmin):
         return False
 
 
+class LineItemInline(admin.TabularInline):
+    model = LineItem
+
+    readonly_fields = (
+        'statement', 'billed_by', 'channel', 'channel_type', 'description',
+        'units', 'credits', 'unit_cost', 'cost')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class StatementAdmin(admin.ModelAdmin):
+    inlines = [
+        LineItemInline,
+    ]
+
+    list_display = (
+        'account', 'title', 'type', 'from_date', 'to_date', 'created',
+        'view_html',
+    )
+
+    readonly_fields = (
+        'account', 'title', 'type', 'from_date', 'to_date', 'created',
+    )
+
+    def view_html(self, obj):
+        return format_html('<a href="{0}">html</a>', urlresolvers.reverse(
+            'billing:html_statement', kwargs={'statement_id': obj.id}))
+    view_html.short_description = "HTML"
+
+
 admin.site.register(TagPool, TagPoolAdmin)
 admin.site.register(Account, AccountAdmin)
 admin.site.register(MessageCost, MessageCostAdmin)
 admin.site.register(Transaction, TransactionAdmin)
-admin.site.register(Statement)
+admin.site.register(Statement, StatementAdmin)

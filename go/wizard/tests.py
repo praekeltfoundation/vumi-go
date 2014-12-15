@@ -1,15 +1,69 @@
 from django.core.urlresolvers import reverse
 
+import go.config
+from go.base.utils import get_conversation_pkg
+from go.conversation.view_definition import ConversationViewDefinitionBase
+from go.vumitools.conversation.definition import ConversationDefinitionBase
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.routing_table import RoutingTable
+
+
+class DefaultConfigConversationDefinition(ConversationDefinitionBase):
+    conversation_type = 'default_config'
+    conversation_display_name = 'Default Config Conversation'
+
+    def get_default_config(self, name, description):
+        return {
+            'name': name,
+            'description': description,
+        }
+
+
+DUMMY_CONVERSATION_DEFS = {
+    'default_config': (
+        DefaultConfigConversationDefinition,
+        ConversationViewDefinitionBase)
+}
+
+
+DUMMY_CONVERSATION_SETTINGS = go.config._VUMI_INSTALLED_APPS.copy()
+DUMMY_CONVERSATION_SETTINGS.update(dict([
+    ('gotest.' + app, {
+        'namespace': app,
+        'display_name': defs[0].conversation_display_name,
+    }) for app, defs in DUMMY_CONVERSATION_DEFS.items()]))
+
+
+class FakeConversationPackage(object):
+    """Pretends to be a package containing modules and classes for an app.
+    """
+    def __init__(self, conversation_type):
+        self.definition = self
+        self.view_definition = self
+        def_cls, vdef_cls = DUMMY_CONVERSATION_DEFS[conversation_type]
+        self.ConversationDefinition = def_cls
+        self.ConversationViewDefinition = vdef_cls
 
 
 class TestWizardViews(GoDjangoTestCase):
 
     def setUp(self):
-        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.vumi_helper = self.add_helper(
+            DjangoVumiApiHelper(), setup_vumi_api=False)
+        self.vumi_helper.patch_config(
+            VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
+
+        self.monkey_patch(
+            go.base.utils, 'get_conversation_pkg', self.get_conversation_pkg)
+
+        self.vumi_helper.setup_vumi_api()
         self.user_helper = self.vumi_helper.make_django_user()
         self.client = self.vumi_helper.get_client()
+
+    def get_conversation_pkg(self, conversation_type, from_list=()):
+        if conversation_type in DUMMY_CONVERSATION_DEFS:
+            return FakeConversationPackage(conversation_type)
+        return get_conversation_pkg(conversation_type, from_list)
 
     def assert_stored_models(self, channels=[], routers=[], convs=[]):
         user_api = self.user_helper.user_api
@@ -227,3 +281,23 @@ class TestWizardViews(GoDjangoTestCase):
                 'channel': [
                     u'Select a valid choice. badpool: is not one of the'
                     u' available choices.']})
+
+    def test_post_new_conversation_default_config(self):
+        self.user_helper.add_app_permission(u'gotest.default_config')
+        self.vumi_helper.setup_tagpool(u'longcode', [u'tag1'])
+        self.user_helper.add_tagpool_permission(u'longcode')
+
+        conv_data = {
+            'name': 'new conv',
+            'description': 'a new conversation',
+            'conversation_type': 'default_config',
+            'country': 'International',
+            'channel': 'longcode:',
+        }
+        self.client.post(reverse('wizard:create'), conv_data)
+        [conv] = self.user_helper.user_api.active_conversations()
+
+        self.assertEqual(conv.config, {
+            'name': 'new conv',
+            'description': 'a new conversation'
+        })

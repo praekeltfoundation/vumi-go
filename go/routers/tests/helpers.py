@@ -193,7 +193,7 @@ class RouterWorkerHelper(object):
     def dispatch_command(self, command, *args, **kw):
         cmd = VumiApiCommand.command(
             self._worker_name(), command, *args, **kw)
-        yield self.dispatch_raw('vumi.api', cmd)
+        yield self.ri.dispatch_raw('vumi.api', cmd)
         yield self.dispatch_commands_to_router()
 
     def get_published_metrics(self, worker):

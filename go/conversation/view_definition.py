@@ -203,10 +203,14 @@ class ExportMessageView(ConversationApiView):
         if direction not in ['inbound', 'outbound']:
             raise Http404()
 
-        url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
-                                                      direction)
-        return sendfile(url, buffering=False, filename='%s-%s.json' % (
-            conversation.key, direction))
+        export_format = request.GET.get('format', 'json')
+        if export_format not in ['csv', 'json']:
+            raise Http404()
+
+        url = '/message_store_exporter/%s/%s.%s' % (
+            conversation.batch.key, direction, export_format)
+        return sendfile(url, buffering=False, filename='%s-%s.%s' % (
+            conversation.key, direction, export_format))
 
     def post(self, request, conversation):
         export_conversation_messages_unsorted.delay(
@@ -464,9 +468,9 @@ class EditConversationView(ConversationTemplateView):
                 config = self.process_form(edit_form)
             else:
                 config[key] = self.process_form(edit_form)
-        conversation.set_config(config)
-        conversation.c.extra_endpoints = self.view_def.get_endpoints(config)
 
+        user_account = request.user_api.get_user_account()
+        self.view_def._conv_def.update_config(user_account, config)
         conversation.save()
 
 
@@ -765,11 +769,7 @@ class ConversationViewDefinitionBase(object):
         return self._conv_def.extra_static_endpoints
 
     def get_endpoints(self, config):
-        endpoints = list(self.extra_static_endpoints)
-        for endpoint in self._conv_def.configured_endpoints(config):
-            if (endpoint != 'default') and (endpoint not in endpoints):
-                endpoints.append(endpoint)
-        return endpoints
+        return self._conv_def.get_endpoints(config)
 
     @property
     def is_editable(self):

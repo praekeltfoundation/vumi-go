@@ -251,7 +251,8 @@
       choice: 'go.apps.dialogue.states.choice.ChoiceStateView',
       freetext: 'go.apps.dialogue.states.freetext.FreeTextStateView',
       end: 'go.apps.dialogue.states.end.EndStateView',
-      group: 'go.apps.dialogue.states.group.GroupStateView'
+      group: 'go.apps.dialogue.states.group.GroupStateView',
+      send: 'go.apps.dialogue.states.send.SendStateView'
     },
 
     events: {

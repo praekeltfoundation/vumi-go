@@ -5,7 +5,6 @@ from django.db.models.signals import post_save
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
-
 import go.billing.settings as app_settings
 from go.base.models import UserProfile
 
@@ -13,8 +12,13 @@ from go.base.models import UserProfile
 class TagPool(models.Model):
     """Tag pool definition"""
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
+    name = models.CharField(
+        max_length=100, unique=True,
+        help_text=_("The name of the tagpool."))
+
+    description = models.TextField(
+        blank=True,
+        help_text=_("A description of the tagpool."))
 
     def __unicode__(self):
         return self.name
@@ -23,19 +27,35 @@ class TagPool(models.Model):
 class Account(models.Model):
     """Represents a user account"""
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    account_number = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-    credit_balance = models.DecimalField(max_digits=20, decimal_places=6,
-                                         default=Decimal('0.0'))
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        help_text=_("The user the billing account belongs to."))
+
+    account_number = models.CharField(
+        max_length=100, unique=True,
+        help_text=_("The account number associated with the user the account"
+                    " belongs to."))
+
+    description = models.TextField(
+        blank=True,
+        help_text=_("A description of this account."))
+
+    credit_balance = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The current credit balance."))
 
     alert_threshold = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("Low-credits notification will be sent when the "
-                    "credit balance reaches the alert threshold percentage"))
+                    "credit balance reaches the alert threshold percentage "
+                    "of the balance after the last credit purchase."))
 
     alert_credit_balance = models.DecimalField(
-        max_digits=20, decimal_places=6, default=Decimal('0.0'))
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("Low-credits notification will be sent when the credit "
+                    "balance goes below this value. This value is updated to "
+                    "(alert_threshold * current balance) when credits are "
+                    "loaded."))
 
     def __unicode__(self):
         return u"{0} ({1})".format(self.account_number, self.user.email)
@@ -47,7 +67,8 @@ def create_billing_account(sender, instance, created, **kwargs):
                                account_number=instance.user_account)
 
 
-post_save.connect(create_billing_account, sender=UserProfile,
+post_save.connect(
+    create_billing_account, sender=UserProfile,
     dispatch_uid='go.billing.models.create_billing_account')
 
 
@@ -176,10 +197,24 @@ class Transaction(models.Model):
         (STATUS_REVERSED, STATUS_REVERSED),
     )
 
-    account_number = models.CharField(max_length=100)
-    tag_pool_name = models.CharField(max_length=100, blank=True)
-    tag_name = models.CharField(max_length=100, blank=True)
-    message_direction = models.CharField(max_length=20, blank=True)
+    account_number = models.CharField(
+        max_length=100,
+        help_text=_("Account number the transaction is associated with."))
+
+    tag_pool_name = models.CharField(
+        max_length=100, blank=True,
+        help_text=_("The tag pool of the message being billed (or null if "
+                    "there is no associated message)."))
+
+    tag_name = models.CharField(
+        max_length=100, blank=True,
+        help_text=_("The tag of the message being billed (or null if "
+                    "there is no associated message)."))
+
+    message_direction = models.CharField(
+        max_length=20, blank=True,
+        help_text=_("The direction of the message being billed (or null if "
+                    "there is no associated message)."))
 
     message_id = models.CharField(
         max_length=64, null=True, blank=True,
@@ -192,7 +227,10 @@ class Transaction(models.Model):
         help_text=_("The message cost (in cents) used to calculate"
                     " credit_amount."))
 
-    session_created = models.NullBooleanField(blank=True, null=True)
+    session_created = models.NullBooleanField(
+        blank=True, null=True,
+        help_text=_("Whether the message being billed started a new session ("
+                    "or null if there is no associated message)."))
 
     session_cost = models.DecimalField(
         null=True,
@@ -200,20 +238,32 @@ class Transaction(models.Model):
         help_text=_("The session cost (in cents) used to calculate"
                     " credit_amount."))
 
-    markup_percent = models.DecimalField(max_digits=10, decimal_places=2,
-                                         blank=True, null=True)
+    markup_percent = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True,
+        help_text=_("The markup percentage used to calculate credit_amount."))
 
-    credit_factor = models.DecimalField(max_digits=10, decimal_places=2,
-                                        blank=True, null=True)
+    credit_factor = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True,
+        help_text=_("The credit conversion factor's value when this "
+                    "transaction was created."))
 
-    credit_amount = models.DecimalField(max_digits=20, decimal_places=6,
-                                        default=Decimal('0.0'))
+    credit_amount = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The number of credits this transaction adds or "
+                    "subtracts."))
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES,
-                              default=STATUS_PENDING)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,
+        help_text=_("The status of this transaction. One of pending, "
+                    "completed, failed or reversed."))
 
-    created = models.DateTimeField(auto_now_add=True)
-    last_modified = models.DateTimeField(auto_now=True)
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When this transaction was created."))
+
+    last_modified = models.DateTimeField(
+        auto_now=True,
+        help_text=_("When this transaction was last modified"))
 
     def __unicode__(self):
         return unicode(self.pk)
@@ -227,12 +277,30 @@ class Statement(models.Model):
         (TYPE_MONTHLY, TYPE_MONTHLY),
     )
 
-    account = models.ForeignKey(Account)
-    title = models.CharField(max_length=255)
-    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
-    from_date = models.DateField()
-    to_date = models.DateField()
-    created = models.DateTimeField(auto_now_add=True)
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the statment is for."))
+
+    title = models.CharField(
+        max_length=255,
+        help_text=_("Title of the statement."))
+
+    type = models.CharField(
+        max_length=40, choices=TYPE_CHOICES,
+        help_text=_("Type of statement. Currently the only type is "
+                    "'Monthly'."))
+
+    from_date = models.DateField(
+        help_text=_("The start of the date range covered by this statement "
+                    "(inclusive)."))
+
+    to_date = models.DateField(
+        help_text=_("The end of the date range covered by this statement "
+                    "(inclusive)"))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When this statement was created."))
 
     def __unicode__(self):
         return u"%s for %s" % (self.title, self.account)
@@ -241,13 +309,119 @@ class Statement(models.Model):
 class LineItem(models.Model):
     """A line item of a statement"""
 
-    statement = models.ForeignKey(Statement)
-    tag_pool_name = models.CharField(max_length=100, blank=True, default='')
-    tag_name = models.CharField(max_length=100, blank=True, default='')
-    message_direction = models.CharField(max_length=20, blank=True,
-                                         default='')
+    statement = models.ForeignKey(
+        Statement,
+        help_text=_("The statement this line item is from."))
 
-    total_cost = models.IntegerField(default=0)
+    billed_by = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text=_("Name of the entity the item is being billed for"))
+
+    channel = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text=_("Name of the channel messages were sent/received over, "
+                    "or null if there is no associated channel"))
+
+    channel_type = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text=_("The type of channel messages were sent/received over "
+                    "(e.g. SMS or USSD), or null if there is no associated"
+                    "channel"))
+
+    description = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text=_("Description of the item being billed"))
+
+    units = models.IntegerField(
+        default=0,
+        help_text=_("Number of units associated to the item"))
+
+    credits = models.IntegerField(
+        default=0, blank=True, null=True,
+        help_text=_("Total cost of the item in credits, or null if there is "
+                    "no associated credit amount"))
+
+    unit_cost = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("Cost of each unit in cents"))
+
+    cost = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("Total cost the item in cents"))
 
     def __unicode__(self):
         return u"%s line item" % (self.statement.title,)
+
+
+class LowCreditNotification(models.Model):
+    """
+    Logging of low credit notifications
+    """
+
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the low credit notification is for."))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When the low credit notification was created."))
+
+    success = models.DateTimeField(
+        blank=True, null=True,
+        help_text=_("When the email was successfully sent."))
+
+    threshold = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        help_text=_("The credit threshold percentage that triggered the "
+                    "notification."))
+
+    credit_balance = models.DecimalField(
+        max_digits=20, decimal_places=6,
+        help_text=_("The credit balance when the notification was sent."))
+
+    def __unicode__(self):
+        return u"%s%% threshold for %s" % (self.threshold, self.account)
+
+
+class TransactionArchive(models.Model):
+    """Record of a transaction archival."""
+
+    STATUS_ARCHIVE_CREATED = 'archive_created'
+    STATUS_TRANSACTIONS_UPLOADED = 'transactions_uploaded'
+    STATUS_ARCHIVE_COMPLETED = 'archive_completed'
+    STATUS_ARCHIVE_DELETED = 'archive_deleted'
+    STATUS_CHOICES = (
+        (STATUS_ARCHIVE_CREATED, "Archive created"),
+        (STATUS_TRANSACTIONS_UPLOADED, "Transactions uploaded"),
+        (STATUS_ARCHIVE_COMPLETED, "Archive completed"),
+        (STATUS_ARCHIVE_DELETED, "Archive deleted"),
+    )
+
+    account = models.ForeignKey(
+        Account,
+        help_text=_("Account number the archive is for."))
+
+    filename = models.CharField(
+        max_length=255,
+        help_text=_("Name of the file the archive was stored as in S3."))
+
+    from_date = models.DateField(
+        help_text=_("The start of the date range covered by this archive "
+                    "(inclusive)."))
+
+    to_date = models.DateField(
+        help_text=_("The end of the date range covered by this archive "
+                    "(inclusive)"))
+
+    status = models.CharField(
+        max_length=32, choices=STATUS_CHOICES, default=STATUS_ARCHIVE_CREATED,
+        help_text=_("The status of this archive. One of archive_created, "
+                    "transactions_uploaded, archive_completed or "
+                    "archive_deleted."))
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("When this archive was created."))
+
+    def __unicode__(self):
+        return u"%s (for %s)" % (self.filename, self.account)

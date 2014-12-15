@@ -1,5 +1,3 @@
-import csv
-
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -8,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordChangeForm
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 
@@ -188,7 +186,7 @@ def billing(request, template_name='account/billing.html'):
         field = order_by[1:]
     else:
         field = order_by
-    if not field in Statement._meta.get_all_field_names():
+    if field not in Statement._meta.get_all_field_names():
         order_by = billing_settings.STATEMENTS_DEFAULT_ORDER_BY
 
     # If the user has multiple accounts, take the first one
@@ -213,32 +211,8 @@ def billing(request, template_name='account/billing.html'):
         page = paginator.page(paginator.num_pages)
 
     context = {
+        'order_by': order_by,
         'paginator': paginator,
         'page': page,
     }
     return render(request, template_name, context)
-
-
-@login_required
-def statement_view(request, statement_id=None):
-    """Send a CSV version of the statement with the given
-       ``statement_id`` to the user's browser.
-    """
-    statement = get_object_or_404(
-        Statement, pk=statement_id, account__user=request.user)
-
-    response = HttpResponse(mimetype='text/csv')
-    filename = "%s (%s).csv" % (statement.title,
-                                statement.from_date.strftime('%B %Y'))
-
-    response['Content-Disposition'] = 'attachment; filename=%s' % (filename,)
-    writer = csv.writer(response)
-    headings = ["Tag pool name", "Tag name", "Message direction", "Total cost"]
-    writer.writerow(headings)
-    line_item_list = statement.lineitem_set.all()
-    for line_item in line_item_list:
-        writer.writerow([
-            line_item.tag_pool_name, line_item.tag_name,
-            line_item.message_direction, line_item.total_cost])
-
-    return response

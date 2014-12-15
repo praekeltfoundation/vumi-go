@@ -1,5 +1,9 @@
+from decimal import Decimal
+
 from django import template
 from django.utils.translation import ungettext
+
+from go.billing import settings
 
 register = template.Library()
 
@@ -20,3 +24,11 @@ def credit_balance(user):
         "%(credit_balance)d credit",
         "%(credit_balance)d credits",
         credit_balance) % {'credit_balance': credit_balance}
+
+
+@register.filter
+def dollars(v):
+    """Returns a formatted dollar value from a decimal cents value (cents are
+    the billing system's internal representation for monetary amounts).
+    """
+    return settings.DOLLAR_FORMAT % (v / Decimal('100.0'),)

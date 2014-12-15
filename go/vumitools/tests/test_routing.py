@@ -1,11 +1,12 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.task import Clock
 
 from vumi.tests.helpers import VumiTestCase, MessageHelper
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError,
-    UnroutableMessageError, NoTargetError)
+    AccountRoutingTableDispatcher, RoutingMetadata, AccountRoutingTableCache,
+    RoutingError, UnroutableMessageError, NoTargetError)
 from go.vumitools.routing_table import RoutingTable
 from go.vumitools.tests.helpers import VumiApiHelper
 from go.vumitools.utils import MessageMetadataHelper
@@ -277,6 +278,154 @@ class TestRoutingMetadata(VumiTestCase):
         self.assertEqual(rmeta.unroutable_event_done(), True)
 
 
+class TestAccountRoutingTableCache(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.make_user(u'testuser')
+        self.user_account_key = self.user_helper.account_key
+
+        user_account = yield self.user_helper.get_user_account()
+        user_account.routing_table = self.get_routing_table()
+        yield user_account.save()
+        self.clock = Clock()
+
+    def get_routing_table(self):
+        return RoutingTable({
+            # Transport side
+            "TRANSPORT_TAG:pool1:1234": {
+                "default": ["CONVERSATION:app1:conv1", "default"]},
+            # Application side
+            "CONVERSATION:app1:conv1": {
+                "default": ["TRANSPORT_TAG:pool1:1234", "default"],
+            },
+        })
+
+    @inlineCallbacks
+    def test_get_routing_table_not_cached(self):
+        """
+        When fetching an uncached routing table, we cache it.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        # Clean up remaining state.
+        cache.cleanup()
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_cache_eviction(self):
+        """
+        When the TTL is reached, the routing table is removed from the cache.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        self.clock.advance(4.9)
+        self.assertNotEqual(cache._routing_tables, {})
+        self.assertNotEqual(cache._evictors, {})
+
+        self.clock.advance(0.5)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_multiple_cache_eviction(self):
+        """
+        Each routing table has its own TTL.
+        """
+        user_helper_2 = yield self.vumi_helper.make_user(u'testuser')
+        account_key_2 = user_helper_2.account_key
+        user_account_2 = yield user_helper_2.get_user_account()
+        user_account_2.routing_table = self.get_routing_table()
+        yield user_account_2.save()
+
+        cache = AccountRoutingTableCache(self.clock, 5)
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+        })
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        self.clock.advance(3)
+        rt2 = yield cache.get_routing_table(user_helper_2.user_api)
+        self.assertEqual(cache._routing_tables, {
+            self.user_account_key: rt,
+            account_key_2: rt2,
+        })
+        self.assertEqual(
+            set(cache._evictors.keys()),
+            set([self.user_account_key, account_key_2]))
+
+        self.clock.advance(3)
+        self.assertEqual(cache._routing_tables, {
+            account_key_2: rt2,
+        })
+        self.assertEqual(cache._evictors.keys(), [account_key_2])
+
+        self.clock.advance(3)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_get_routing_table_no_caching(self):
+        """
+        When caching is disabled, we always fetch the routing table and never
+        store it.
+        """
+        cache = AccountRoutingTableCache(self.clock, 0)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+        rt = yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(rt, self.get_routing_table())
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+    @inlineCallbacks
+    def test_schedule_duplicate_eviction(self):
+        """
+        If we schedule an eviction that already exists, we keep the old one
+        instead.
+        """
+        cache = AccountRoutingTableCache(self.clock, 5)
+        yield cache.get_routing_table(self.user_helper.user_api)
+        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
+
+        delayed_call = cache._evictors[self.user_account_key]
+        self.clock.advance(1)
+
+        # Calling schedule_eviction() doesn't replace the existing one.
+        cache.schedule_eviction(self.user_account_key)
+        self.assertNotEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors[self.user_account_key], delayed_call)
+
+        # The existing eviction happens at the expected time.
+        self.clock.advance(4)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+        # Advance to the time the new eviction would have been schduled to make
+        # sure nothing breaks.
+        self.clock.advance(1)
+        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._evictors, {})
+
+
 class RoutingTableDispatcherTestCase(VumiTestCase):
     """Base class for ``AccountRoutingTableDispatcher`` test cases"""
 
@@ -315,6 +464,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
             "CONVERSATION:app1:conv1": {
                 "default": ["TRANSPORT_TAG:pool1:1234", "default"],
                 "other": ["TRANSPORT_TAG:pool1:5678", "default"],
+                "router": ["ROUTER:router:router1:OUTBOUND", "default"],
             },
             "CONVERSATION:app2:conv2": {
                 "default": ["TRANSPORT_TAG:pool1:9012", "default"],
@@ -443,7 +593,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
 
 class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
 
-    def get_dispatcher(self):
+    def get_dispatcher(self, **extra_config):
         config = self.vumi_helper.mk_config({
             "receive_inbound_connectors": [
                 "sphex", "router_ro"
@@ -464,6 +614,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             },
             "opt_out_connector": "optout",
         })
+        config.update(extra_config)
         return self.vumi_helper.get_worker_helper().get_worker(
             AccountRoutingTableDispatcher, config)
 
@@ -767,10 +918,85 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
+    @inlineCallbacks
+    def test_outbound_message_gets_stored_before_transport(self):
+        """
+        Outbound messages going to transports are stored.
+        """
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "1234"), hops=[
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+        ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, msg)
+
+    @inlineCallbacks
+    def test_outbound_message_does_not_get_stored_if_disabled(self):
+        """
+        Outbound messages going to transports are not stored when storing is
+        disabled.
+        """
+        yield self.get_dispatcher(store_messages_to_transports=False)
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "1234"), hops=[
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+        ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+    @inlineCallbacks
+    def test_outbound_message_does_not_get_stored_before_router(self):
+        """
+        Outbound messages going to routers are not stored.
+        """
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'),
+            endpoint="router")
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'router_ro.outbound')
+        self.with_md(
+            msg, router=("router", "router1"), endpoint="default", hops=[
+                ['CONVERSATION:app1:conv1', 'router'],
+                ['ROUTER:router:router1:OUTBOUND', 'default'],
+            ])
+        self.assertEqual([msg], self.get_dispatched_outbound('router_ro'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
 
 class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
 
-    def get_dispatcher(self):
+    def get_dispatcher(self, **extra_config):
         config = self.vumi_helper.mk_config({
             "receive_inbound_connectors": [
                 "sphex", "router_ro", "billing_dispatcher_ro"
@@ -795,6 +1021,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             "opt_out_connector": "optout",
             "default_unroutable_inbound_reply": "Eep!",
         })
+        config.update(extra_config)
         return self.vumi_helper.get_worker_helper().get_worker(
             AccountRoutingTableDispatcher, config)
 
@@ -1007,6 +1234,91 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         self.assert_unroutable_reply(
             'billing_dispatcher_ro', msg, "Eep!", tag=("pool1", "unowned-tag"))
 
+    @inlineCallbacks
+    def test_outbound_message_gets_stored_before_transport(self):
+        """
+        Outbound messages going to transports are stored.
+        """
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), tag=("pool1", "1234"),
+            conv=('app1', 'conv1'), is_paid=True)
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ri.outbound', 'sphex.outbound')
+
+        hops = [
+            ['BILLING:INBOUND', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default']
+        ]
+        self.with_md(msg, hops=hops)
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, msg)
+
+    @inlineCallbacks
+    def test_outbound_message_does_not_get_stored_if_disabled(self):
+        """
+        Outbound messages going to transports are not stored when storing is
+        disabled.
+        """
+        yield self.get_dispatcher(store_messages_to_transports=False)
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), tag=("pool1", "1234"),
+            conv=('app1', 'conv1'), is_paid=True)
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
+        self.assert_rkeys_used(
+            'billing_dispatcher_ri.outbound', 'sphex.outbound')
+
+        hops = [
+            ['BILLING:INBOUND', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default']
+        ]
+        self.with_md(msg, hops=hops)
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+    @inlineCallbacks
+    def test_outbound_message_does_not_get_stored_before_billing(self):
+        """
+        Outbound messages going to billing are not stored.
+        """
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
+
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used(
+            'app1.outbound', 'billing_dispatcher_ro.outbound')
+
+        hops = [
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['BILLING:OUTBOUND', 'default'],
+        ]
+        self.with_md(msg, tag=("pool1", "1234"), hops=hops)
+        self.assertEqual(
+            [msg], self.get_dispatched_outbound('billing_dispatcher_ro'))
+
+        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        self.assertEqual(stored_msg, None)
+
 
 class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
 
@@ -1188,3 +1500,23 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         self.assert_rkeys_used('sphex.event')
         [orig_ack] = self.get_dispatched_events('sphex')
         self.assertEqual(ack, orig_ack)
+
+    @inlineCallbacks
+    def test_reply_for_unroutable_inbound_gets_stored(self):
+        """
+        Replies to unroutable messages are stored.
+        """
+        yield self.mk_unroutable_tagpool(u"pool1")
+        yield self.get_dispatcher()
+        msg = self.with_md(
+            self.msg_helper.make_inbound("foo", session_event='new'),
+            tag=("pool1", "1234"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_unroutable_reply(
+            'sphex', msg, "Eep!", tag=("pool1", "1234"),
+            user_account=self.user_helper.account_key)
+
+        [reply] = self.get_dispatched_outbound('sphex')
+        mdb = self.vumi_helper.get_vumi_api().mdb
+        stored_msg = yield mdb.get_outbound_message(reply["message_id"])
+        self.assertEqual(stored_msg, reply)
