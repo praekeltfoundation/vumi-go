@@ -127,7 +127,7 @@ class MsgCheckHelpers(object):
         if length_limit is not None:
             content_length = len(payload["content"])
             if content_length > length_limit:
-                return"Payload content too long: %s > %s" % (
+                return "Payload content too long: %s > %s" % (
                     content_length, length_limit)
         return None
 
