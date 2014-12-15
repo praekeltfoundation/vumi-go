@@ -38,41 +38,57 @@ def month_range(months_ago=1, today=None):
     return from_date, to_date
 
 
-def get_message_transactions(account, from_date, to_date):
-    transactions = Transaction.objects.filter(
+def get_transactions(account, statement):
+    return Transaction.objects.filter(
         account_number=account.account_number,
-        created__gte=from_date,
-        created__lt=(to_date + relativedelta(days=1)))
+        created__gte=statement.from_date,
+        created__lt=(statement.to_date + relativedelta(days=1)))
 
+
+def get_message_transactions(transactions):
     transactions = transactions.values(
         'tag_pool_name',
         'tag_name',
         'message_direction',
         'message_cost',
+        'message_credits',
         'markup_percent')
 
     transactions = transactions.annotate(
-        count=Count('id'), total_message_cost=Sum('message_cost'))
+        count=Count('id'),
+        total_message_cost=Sum('message_cost'),
+        total_message_credits=Sum('message_credits'))
 
     return transactions
 
 
-def get_session_transactions(account, from_date, to_date):
-    transactions = Transaction.objects.filter(
-        account_number=account.account_number,
-        created__gte=from_date,
-        created__lt=(to_date + relativedelta(days=1)))
+def get_storage_transactions(transactions):
+    transactions = transactions.values(
+        'storage_cost',
+        'storage_credits')
 
+    transactions = transactions.annotate(
+        count=Count('id'),
+        total_storage_cost=Sum('storage_cost'),
+        total_storage_credits=Sum('storage_credits'))
+
+    return transactions
+
+
+def get_session_transactions(transactions):
     transactions = transactions.filter(session_created=True)
 
     transactions = transactions.values(
         'tag_pool_name',
         'tag_name',
         'session_cost',
+        'session_credits',
         'markup_percent')
 
     transactions = transactions.annotate(
-        count=Count('id'), total_session_cost=Sum('session_cost'))
+        count=Count('id'),
+        total_session_cost=Sum('session_cost'),
+        total_session_credits=Sum('session_credits'))
 
     return transactions
 
@@ -93,6 +109,10 @@ def get_message_cost(transaction):
     return cost if cost is not None else 0
 
 
+def get_storage_cost(transaction):
+    return transaction['total_storage_cost']
+
+
 def get_session_cost(transaction):
     cost = transaction['total_session_cost']
     return cost if cost is not None else 0
@@ -108,6 +128,12 @@ def get_message_unit_cost(transaction):
     return get_message_cost(transaction) / count
 
 
+def get_storage_unit_cost(transaction):
+    count = get_count(transaction)
+    # count should never be 0 since we count by id
+    return get_storage_cost(transaction) / count
+
+
 def get_session_unit_cost(transaction):
     count = get_count(transaction)
     # count should never be 0 since we count by id
@@ -115,19 +141,15 @@ def get_session_unit_cost(transaction):
 
 
 def get_message_credits(transaction):
-    cost = transaction['total_message_cost']
-    markup = transaction['markup_percent']
-    if cost is None or markup is None:
-        return None
-    return MessageCost.calculate_message_credit_cost(cost, markup)
+    return transaction['total_message_credits']
+
+
+def get_storage_credits(transaction):
+    return transaction['total_storage_credits']
 
 
 def get_session_credits(transaction):
-    cost = transaction['total_session_cost']
-    markup = transaction['markup_percent']
-    if cost is None or markup is None:
-        return None
-    return MessageCost.calculate_session_credit_cost(cost, markup)
+    return transaction['total_session_credits']
 
 
 def get_channel_type(transaction, tagpools):
@@ -147,8 +169,8 @@ def get_message_description(transaction):
 
 def make_message_item(statement, transaction, tagpools):
     return LineItem(
-        units=get_count(transaction),
         statement=statement,
+        units=get_count(transaction),
         cost=get_message_cost(transaction),
         credits=get_message_credits(transaction),
         channel=get_channel_name(transaction, tagpools),
@@ -158,10 +180,21 @@ def make_message_item(statement, transaction, tagpools):
         description=get_message_description(transaction))
 
 
+def make_storage_item(statement, transaction, tagpools):
+    return LineItem(
+        billed_by=settings.SYSTEM_BILLER_NAME,
+        statement=statement,
+        units=get_count(transaction),
+        cost=get_storage_cost(transaction),
+        credits=get_storage_credits(transaction),
+        unit_cost=get_storage_unit_cost(transaction),
+        description='Storage cost')
+
+
 def make_session_item(statement, transaction, tagpools):
     return LineItem(
-        units=get_count(transaction),
         statement=statement,
+        units=get_count(transaction),
         cost=get_session_cost(transaction),
         credits=get_session_credits(transaction),
         channel=get_channel_name(transaction, tagpools),
@@ -171,33 +204,42 @@ def make_session_item(statement, transaction, tagpools):
         description='Sessions')
 
 
-def make_message_items(account, statement, tagpools):
-    transactions = get_message_transactions(
-        account, statement.from_date, statement.to_date)
-
+def make_message_items(statement, transactions, tagpools):
     return [
         make_message_item(statement, transaction, tagpools)
-        for transaction in transactions]
+        for transaction in get_message_transactions(transactions)]
 
 
-def make_session_items(account, statement, tagpools):
-    transactions = get_session_transactions(
-        account, statement.from_date, statement.to_date)
+def make_storage_items(statement, transactions, tagpools):
+    return [
+        make_storage_item(statement, transaction, tagpools)
+        for transaction in get_storage_transactions(transactions)]
 
+
+def make_session_items(statement, transactions, tagpools):
     return [
         make_session_item(statement, transaction, tagpools)
-        for transaction in transactions]
+        for transaction in get_session_transactions(transactions)]
 
 
-def make_account_fee_item(account, statement):
+def make_account_fee_item(statement):
     return LineItem(
         units=1,
         statement=statement,
         credits=None,
         cost=settings.ACCOUNT_FEE,
-        billed_by='Vumi',
+        billed_by=settings.SYSTEM_BILLER_NAME,
         unit_cost=settings.ACCOUNT_FEE,
-        description='Account Fee')
+        description='Account fee')
+
+
+def generate_statement_items(statement, transactions, tagpools):
+    items = []
+    items.extend(make_message_items(statement, transactions, tagpools))
+    items.extend(make_session_items(statement, transactions, tagpools))
+    items.extend(make_storage_items(statement, transactions, tagpools))
+    statement.lineitem_set.bulk_create(items)
+    return items
 
 
 @task()
@@ -217,11 +259,11 @@ def generate_monthly_statement(account_id, from_date, to_date):
 
     statement.save()
 
-    items = []
-    items.extend(make_message_items(account, statement, tagpools))
-    items.extend(make_session_items(account, statement, tagpools))
+    transactions = get_transactions(account, statement)
 
-    statement.lineitem_set.bulk_create(items)
+    if transactions:
+        generate_statement_items(statement, transactions, tagpools)
+
     return statement
 
 
