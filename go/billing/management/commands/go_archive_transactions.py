@@ -28,7 +28,6 @@ class Command(BaseGoCommand):
             help=("Allow transactions to be archived even if no equivalent "
                   "billing statement is found. Default: FALSE.")))
 
-
     def statement_exists(self, account, from_date, to_date):
         statements = Statement.objects.filter(
             account=account,
@@ -45,12 +44,12 @@ class Command(BaseGoCommand):
     def archive_month_transactions(self, account, month, delete):
         from_date, to_date = month_range(0, month)
 
-        archive = archive_transactions(
-            account.id, from_date, to_date, delete=delete)
-
         self.stdout.write(
             "Archiving transactions that occured in %s..."
             % (datetime.strftime(month, '%Y-%m'),))
+
+        archive = archive_transactions(
+            account.id, from_date, to_date, delete=delete)
 
         self.stdout.write("Archived to S3 as %s." % (archive.filename,))
         self.stdout.write("Archive status is: %s." % (archive.status,))
