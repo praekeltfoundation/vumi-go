@@ -131,7 +131,7 @@ class TestCreditLoadForm(GoDjangoTestCase):
         return formset
 
     def test_load_credits(self):
-        self.account.alert_threshold = Decimal('10.0')
+        self.account.last_topup_balance = Decimal('20.0')
         self.account.save()
 
         formset = self.mk_formset()
@@ -139,13 +139,13 @@ class TestCreditLoadForm(GoDjangoTestCase):
         [form] = list(formset)
 
         self.assertEqual(self.account.credit_balance, Decimal('0.0'))
-        self.assertEqual(self.account.alert_credit_balance, Decimal('0.0'))
+        self.assertEqual(self.account.last_topup_balance, Decimal('20.0'))
 
         form.load_credits()
 
         account = Account.objects.get(user=self.user)
         self.assertEqual(account.credit_balance, Decimal('10.0'))
-        self.assertEqual(account.alert_credit_balance, Decimal('1.0'))
+        self.assertEqual(account.last_topup_balance, Decimal('10.0'))
 
         [transaction] = Transaction.objects.filter(
             account_number=self.account.account_number).all()
