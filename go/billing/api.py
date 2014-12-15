@@ -575,6 +575,8 @@ class TransactionResource(BaseResource):
     """Expose a REST interface for a transaction"""
 
     isLeaf = True
+    credit_notification_levels = (
+        app_settings.LOW_CREDIT_NOTIFICATION_LEVELS.sort(reverse=True))
 
     def render_GET(self, request):
         """Handle an HTTP GET request"""
@@ -808,15 +810,37 @@ class TransactionResource(BaseResource):
                     account_number, message_direction, tag_pool_name))
 
         credit_balance = result.get('credit_balance')
-        alert_credit_balance = result.get('alert_credit_balance')
-        if (app_settings.ENABLE_LOW_CREDIT_NOTIFICATION and
-            self.notification_threshold_crossed(
-                credit_balance, credit_amount, alert_credit_balance)):
-            yield spawn_celery_task_via_thread(
-                create_low_credit_notification,
-                account_number, result.get('alert_threshold'), credit_balance)
+        last_topup_balance = result.get('last_topup_balance')
+        if app_settings.ENABLE_LOW_CREDIT_NOTIFICATION:
+            yield self.check_all_low_credit_thresholds(
+                credit_balance, credit_amount, last_topup_balance,
+                account_number)
 
         defer.returnValue(transaction)
+
+    @defer.inlineCallbacks
+    def check_all_low_credit_thresholds(
+            self, credit_balance, credit_amount, last_topup_balance,
+            account_number):
+        """
+        Checks the current balance percentage against all those stored within
+        the settings. Sends the notification email if it is required.
+
+        :param credit_balance: The current balance (after the transaction)
+        :param credit_amount: The amount of credits used in the transaction
+        :param last_topup_balance: The account credit balance at the last topup
+        :param account_number: The account number of the associated account
+        """
+        for level in self.notification_levels:
+            alert_credit_balance = last_topup_balance * level
+            if self.notification_threshold_crossed(
+                    credit_balance, credit_amount, alert_credit_balance):
+                yield spawn_celery_task_via_thread(
+                    create_low_credit_notification,
+                    account_number, level, credit_balance)
+                break
+            if credit_balance < alert_credit_balance:
+                break
 
     @staticmethod
     def notification_threshold_crossed(
