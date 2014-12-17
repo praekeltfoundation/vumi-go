@@ -832,7 +832,6 @@ class TransactionResource(BaseResource):
             alert_credit_balance = float(last_topup_balance) * level
             if self.notification_threshold_crossed(
                     credit_balance, credit_amount, alert_credit_balance):
-                print 'here'
                 yield spawn_celery_task_via_thread(
                     create_low_credit_notification,
                     account_number, level, credit_balance)

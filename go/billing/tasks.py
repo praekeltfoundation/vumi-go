@@ -322,11 +322,11 @@ def low_credit_notification_confirm_sent(res, notification_id):
 
 
 @task()
-def create_low_credit_notification(account_id, threshold, balance):
+def create_low_credit_notification(account_number, threshold, balance):
     """
     Sends a low credit notification. Returns (model instance id, email_task).
     """
-    account = Account.objects.get(pk=account_id)
+    account = Account.objects.get(account_number=account_number)
     notification = LowCreditNotification(
         account=account, threshold=threshold, credit_balance=balance)
     notification.save()
