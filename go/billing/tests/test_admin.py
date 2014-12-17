@@ -38,7 +38,8 @@ class TestStatementAdmin(GoDjangoTestCase):
         response = client.get(reverse('admin:billing_statement_changelist'))
         self.assertContains(response, "1 statement")
         self.assertContains(
-            response, '<a href="/billing/statement/%s">html</a>' % statement.id)
+            response,
+            '<a href="/billing/statement/%s">html</a>' % statement.id)
 
     def test_statement_admin_view(self):
         mk_transaction(self.account)

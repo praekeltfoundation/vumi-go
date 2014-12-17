@@ -137,7 +137,7 @@ class BillingApiTestCase(VumiTestCase):
         return self.call_api('post', 'costs', content=content)
 
     def get_api_costs(self, account_number=None, tag_pool_name=None,
-                     message_direction=''):
+                      message_direction=''):
         """
         Retrieve message costs by some combination of account number,
         tag pool name and message direction.
