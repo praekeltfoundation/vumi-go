@@ -1,5 +1,4 @@
 from datetime import date, datetime
-from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
 
@@ -328,7 +327,6 @@ def create_low_credit_notification(account_number, threshold, balance):
     Sends a low credit notification. Returns (model instance id, email_task).
     """
     account = Account.objects.get(account_number=account_number)
-    threshold = Decimal(str(threshold))
     notification = LowCreditNotification(
         account=account, threshold=threshold, credit_balance=balance)
     notification.save()

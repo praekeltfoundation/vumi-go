@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
+from decimal import Decimal
 import gzip
 import json
 import StringIO
@@ -448,6 +449,8 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
     def mk_notification(self, percent, balance):
         self.django_user = self.user_helper.get_django_user()
         self.acc = Account.objects.get(user=self.django_user)
+        percent = Decimal(percent)
+        balance = Decimal(balance)
         return tasks.create_low_credit_notification(
             self.acc.account_number, percent, balance)
 
