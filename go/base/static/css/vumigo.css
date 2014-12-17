@@ -360,29 +360,32 @@ img {
 .registration .logo-large {
   margin: 1em auto 2em auto;
 }
-.registration .registration-content {
+.registration label {
+  display: block;
+  font-weight: normal;
+}
+.registration-content {
   text-align: left;
   margin: 0 auto 5em auto;
   max-width: 20em;
 }
-.registration .registration label {
-  display: block;
-  font-weight: normal;
-}
 .registration-sign-in,
 .registration-register {
   margin-bottom: 4em;
+  width: 100%;
 }
-@media screen and (min-width: 45em) {
+@media screen and (min-width: 70em) {
   .registration-content {
-    max-width: 40em;
+    max-width: 60em;
   }
   .registration-sign-in {
     float: left;
     clear: left;
+    width: 45%;
   }
   .registration-register {
     float: right;
+    width: 45%;
   }
 }
 .confirm .details table th:first-child {
@@ -862,3 +865,4 @@ table tbody.loading td {
   padding: 6px;
   font-size: 16px;
 }
+/*# sourceMappingURL=vumigo.css.map */

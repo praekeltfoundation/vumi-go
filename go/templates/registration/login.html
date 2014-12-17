@@ -12,13 +12,13 @@
 
     <div class="form-group">
         <label for="{{ form.username.name }}">Your email address
-            <input type="email" name="{{ form.username.name }}" id="{{ form.username.name }}" class="form-control input-md">
+            <input type="email" name="{{ form.username.name }}" id="{{ form.username.name }}" class="form-control">
         </label>           
     </div>
 
     <div class="form-group">
         <label for="{{ form.password.name }}">Your password
-            <input type="password" name="{{ form.password.name }}" id="{{ form.password.name }}" class="form-control input-md">            
+            <input type="password" name="{{ form.password.name }}" id="{{ form.password.name }}" class="form-control">            
         </label>
     </div>
 
@@ -39,29 +39,35 @@
 
 {% block registration_form %}
 
-<h2>Register</h2>
+<h2>Request an account</h2>
 
 <form action="" method="post">
     <div class="form-group">
         <label for="register-name">Your full name
-            <input type="text" id="register-name" name="register-name" class="form-control input-md">
+            <input type="text" id="register-name" name="register-name" class="form-control" required>
         </label>
     </div>
 
     <div class="form-group">
         <label for="register-email">Your email address
-            <input type="email" id="register-email" name="register-email" class="form-control input-md">
+            <input type="email" id="register-email" name="register-email" class="form-control" required>
         </label>
     </div>
 
     <div class="form-group">
         <label for="register-country">The country you'll be using Vumi in
-            <input type="country" id="register-country" name="register-country" class="form-control input-md">
+            <input type="text" id="register-country" name="register-country" class="form-control" required>
         </label>
     </div>
 
     <div class="form-group">
-        <button type="submit" class="btn btn-primary">Register</button>
+        <label for="register-more">Tell us more about how you'd like to use Vumi
+            <textarea type="more" id="register-more" name="register-more" class="form-control" rows="3" placeholder="What is your project about? How much messaging do you expect to do?" required></textarea>
+        </label>
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Request an account</button>
     </div>
 </form>
 {% endblock %}
