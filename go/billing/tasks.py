@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
 
@@ -331,6 +332,7 @@ def create_low_credit_notification(account_number, threshold, balance):
         account=account, threshold=threshold, credit_balance=balance)
     notification.save()
     # Send email
+    threshold = Decimal(threshold)
     subject = 'Vumi Go account %s (%s) at %s%% of available credits' % (
         account.user.email, account.user.get_full_name(), threshold * 100)
     email_from = settings.STATEMENT_CONTACT_DETAILS.get('email')
