@@ -373,7 +373,7 @@ class LowCreditNotification(models.Model):
         help_text=_("The credit balance when the notification was sent."))
 
     def __unicode__(self):
-        return u"%s%% threshold for %s" % (self.threshold, self.account)
+        return u"%s%% threshold for %s" % (self.threshold * 100, self.account)
 
 
 class TransactionArchive(models.Model):
