@@ -366,7 +366,7 @@ class TestTransaction(BillingApiTestCase):
         # Create account
         yield self.create_api_user(email="test4@example.com")
         account = yield self.create_api_account(
-            email="test4@example.com", account_number="11111")
+            email="test4@example.com", account_number="11112")
 
         # Load credits
         yield self.load_api_account_credits(
