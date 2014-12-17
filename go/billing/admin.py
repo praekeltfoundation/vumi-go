@@ -9,7 +9,8 @@ from django.contrib import admin
 from django.contrib import messages
 
 from go.billing.models import (
-    TagPool, Account, MessageCost, Transaction, Statement, LineItem)
+    TagPool, Account, MessageCost, Transaction, Statement, LineItem,
+    LowCreditNotification, TransactionArchive)
 from go.billing.forms import (
     CreditLoadForm, BaseCreditLoadFormSet, MessageCostForm, TagPoolForm)
 
@@ -156,3 +157,5 @@ admin.site.register(Account, AccountAdmin)
 admin.site.register(MessageCost, MessageCostAdmin)
 admin.site.register(Transaction, TransactionAdmin)
 admin.site.register(Statement, StatementAdmin)
+admin.site.register(LowCreditNotification)
+admin.site.register(TransactionArchive)
