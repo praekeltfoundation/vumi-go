@@ -328,11 +328,11 @@ def create_low_credit_notification(account_number, threshold, balance):
     Sends a low credit notification. Returns (model instance id, email_task).
     """
     account = Account.objects.get(account_number=account_number)
+    threshold = Decimal(str(threshold))
     notification = LowCreditNotification(
         account=account, threshold=threshold, credit_balance=balance)
     notification.save()
     # Send email
-    threshold = Decimal(threshold)
     subject = 'Vumi Go account %s (%s) at %s%% of available credits' % (
         account.user.email, account.user.get_full_name(), threshold * 100)
     email_from = settings.STATEMENT_CONTACT_DETAILS.get('email')

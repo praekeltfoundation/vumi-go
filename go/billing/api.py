@@ -1,5 +1,7 @@
 import json
 
+from decimal import Decimal
+
 from twisted.python import log
 from twisted.internet import defer
 from twisted.internet.threads import deferToThread
@@ -829,7 +831,7 @@ class TransactionResource(BaseResource):
         :param account_number: The account number of the associated account
         """
         for level in self.credit_notification_levels:
-            alert_credit_balance = float(last_topup_balance) * level
+            alert_credit_balance = last_topup_balance * Decimal(str(level))
             if self.notification_threshold_crossed(
                     credit_balance, credit_amount, alert_credit_balance):
                 yield spawn_celery_task_via_thread(

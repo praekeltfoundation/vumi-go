@@ -445,7 +445,7 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
                                  + 'EmailBackend')
         self.user_helper = self.vumi_helper.make_django_user()
 
-    def mk_notification(self,  percent, balance):
+    def mk_notification(self, percent, balance):
         self.django_user = self.user_helper.get_django_user()
         self.acc = Account.objects.get(user=self.django_user)
         return tasks.create_low_credit_notification(
