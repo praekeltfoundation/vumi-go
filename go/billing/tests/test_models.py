@@ -201,5 +201,5 @@ class TestLowCreditNotification(GoDjangoTestCase):
     def test_fields(self):
         notification = self.mk_notification('0.55', '27.17')
         self.assertEqual(notification.account, self.acc)
-        self.assertEqual(notification.threshold, decimal.Decimal('55.0'))
+        self.assertEqual(notification.threshold, decimal.Decimal('0.55'))
         self.assertEqual(notification.credit_balance, decimal.Decimal('27.17'))
