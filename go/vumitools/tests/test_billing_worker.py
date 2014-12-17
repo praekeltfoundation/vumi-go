@@ -47,11 +47,17 @@ class BillingApiMock(object):
         }
 
 
+class MockNetworkError(Exception):
+    pass
+
+
 class HttpRequestMock(object):
 
-    def __init__(self, response=None):
+    def __init__(self, response=None, fail_times=0):
         self.request = None
         self.response = response
+        self.fail_times = fail_times
+        self.failed_times = 0
 
     def _mk_request(self, uri, method='POST', headers={}, data=None):
         return Request(method, uri, mkheaders(headers),
@@ -61,6 +67,9 @@ class HttpRequestMock(object):
                                 method='POST', timeout=None,
                                 data_limit=None, context_factory=None,
                                 agent_class=Agent):
+        if self.failed_times < self.fail_times:
+            self.failed_times += 1
+            raise MockNetworkError("I can't do that, Dave.")
         self.request = self._mk_request(url, method, headers, data)
         return self.response
 
@@ -71,7 +80,7 @@ class TestBillingApi(VumiTestCase):
     def setUp(self):
         yield super(TestBillingApi, self).setUp()
         self.api_url = "http://localhost:9090/"
-        self.billing_api = BillingApi(self.api_url)
+        self.billing_api = BillingApi(self.api_url, 0.01)
 
     def _mk_response(self, code=200, phrase='OK', headers={},
                      delivered_body='{}'):
@@ -137,7 +146,7 @@ class TestBillingApi(VumiTestCase):
         self.assertEqual(result, delivered_body)
 
     @inlineCallbacks
-    def test_create_transaction_error(self):
+    def test_create_transaction_http_error(self):
         response = self._mk_response(code=500, phrase="Internal Server Error",
                                      delivered_body="")
 
@@ -155,6 +164,62 @@ class TestBillingApi(VumiTestCase):
         }
         d = self.billing_api.create_transaction(**kwargs)
         yield self.assertFailure(d, BillingError)
+
+    @inlineCallbacks
+    def test_create_transaction_network_error(self):
+        delivered_body = {
+            "id": 1,
+            "account_number": "test-account",
+            "tag_pool_name": "pool1",
+            "tag_name": "1234",
+            "message_direction": "Inbound",
+            "message_cost": 80,
+            "session_created": False,
+            "session_cost": 30,
+            "markup_percent": decimal.Decimal('10.0'),
+            "credit_amount": -35,
+            "credit_factor": decimal.Decimal('0.4'),
+            "created": "2013-10-30T10:42:51.144745+02:00",
+            "last_modified": "2013-10-30T10:42:51.144745+02:00",
+            "status": "Completed"
+        }
+        response = self._mk_response(
+            delivered_body=json.dumps(delivered_body, cls=JSONEncoder))
+
+        hrm = HttpRequestMock(response, fail_times=1)
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'message_id': 'msg-id-1',
+            'tag_pool_name': "pool1",
+            'tag_name': "1234",
+            'message_direction': "Inbound",
+            'session_created': False,
+        }
+        result = yield self.billing_api.create_transaction(**kwargs)
+        self.assertEqual(result, delivered_body)
+
+    @inlineCallbacks
+    def test_create_transaction_network_error_on_retry(self):
+        """
+        If a retry doesn't help, we pass on the exception.
+        """
+        hrm = HttpRequestMock(self._mk_response(), fail_times=2)
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'message_id': 'msg-id-1',
+            'tag_pool_name': "pool1",
+            'tag_name': "1234",
+            'message_direction': "Inbound",
+            'session_created': False,
+        }
+        d = self.billing_api.create_transaction(**kwargs)
+        yield self.assertFailure(d, MockNetworkError)
 
 
 class TestBillingDispatcher(VumiTestCase):
