@@ -193,13 +193,13 @@ class TestLowCreditNotification(GoDjangoTestCase):
         return notification
 
     def test_unicode(self):
-        notification = self.mk_notification('50.0', '314.1')
+        notification = self.mk_notification('0.5', '314.1')
         self.assertEqual(
             unicode(notification),
             u'50.0%% threshold for %s' % self.acc)
 
     def test_fields(self):
-        notification = self.mk_notification('55.0', '27.17')
+        notification = self.mk_notification('0.55', '27.17')
         self.assertEqual(notification.account, self.acc)
         self.assertEqual(notification.threshold, decimal.Decimal('55.0'))
         self.assertEqual(notification.credit_balance, decimal.Decimal('27.17'))
