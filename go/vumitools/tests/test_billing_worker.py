@@ -330,3 +330,95 @@ class TestBillingDispatcher(VumiTestCase):
         yield self.ri_helper.dispatch_event(ack)
         self.assertEqual([ack], self.ro_helper.get_dispatched_events())
         self.assert_no_transactions()
+
+    @inlineCallbacks
+    def test_inbound_message_billing_error(self):
+        """
+        If we get a billing error, we ignore billing and forward the message.
+        """
+        dispatcher = yield self.get_dispatcher()
+
+        def create_transaction(*args, **kw):
+            raise BillingError("Insert coin.")
+
+        dispatcher.billing_api.create_transaction = create_transaction
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound", user_account="12345", tag=("pool1", "1234"))
+
+        self.assert_no_transactions()
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors], ["Insert coin."])
+
+    @inlineCallbacks
+    def test_outbound_message_billing_error(self):
+        """
+        If we get a billing error, we ignore billing and forward the message.
+        """
+        dispatcher = yield self.get_dispatcher()
+
+        def create_transaction(*args, **kw):
+            raise BillingError("Insert coin.")
+
+        dispatcher.billing_api.create_transaction = create_transaction
+
+        msg = yield self.make_dispatch_outbound(
+            "hi", user_account="12345", tag=("pool1", "1234"))
+
+        self.assert_no_transactions()
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors], ["Insert coin."])
+
+    @inlineCallbacks
+    def test_inbound_message_other_error(self):
+        """
+        If we get a non-billing error, we shouldn't drop the message on the
+        floor.
+        """
+        dispatcher = yield self.get_dispatcher()
+
+        def create_transaction(*args, **kw):
+            raise Exception("I can't do that, Dave.")
+
+        dispatcher.billing_api.create_transaction = create_transaction
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound", user_account="12345", tag=("pool1", "1234"))
+
+        self.assert_no_transactions()
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors],
+            ["I can't do that, Dave."])
+
+    @inlineCallbacks
+    def test_outbound_message_other_error(self):
+        """
+        If we get a non-billing error, we shouldn't drop the message on the
+        floor.
+        """
+        dispatcher = yield self.get_dispatcher()
+
+        def create_transaction(*args, **kw):
+            raise Exception("I can't do that, Dave.")
+
+        dispatcher.billing_api.create_transaction = create_transaction
+
+        msg = yield self.make_dispatch_outbound(
+            "hi", user_account="12345", tag=("pool1", "1234"))
+
+        self.assert_no_transactions()
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors],
+            ["I can't do that, Dave."])
