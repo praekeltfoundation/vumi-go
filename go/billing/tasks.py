@@ -276,7 +276,7 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
         created__gte=from_date,
         created__lt=(to_date + relativedelta(days=1)))
 
-    def generate_chunks(item_iter, items_per_chunk=10000, sep="\n"):
+    def generate_chunks(item_iter, items_per_chunk=1000, sep="\n"):
         data = []
         for i, item in enumerate(item_iter):
             data.append(item)
