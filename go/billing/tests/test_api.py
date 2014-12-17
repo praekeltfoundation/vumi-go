@@ -47,8 +47,9 @@ class BillingApiTestCase(VumiTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        for table in ('billing_transaction', 'billing_messagecost',
-                      'billing_tagpool', 'billing_account'):
+        for table in ('billing_lowcreditnotification', 'billing_transaction',
+                      'billing_messagecost', 'billing_tagpool',
+                      'billing_account'):
             yield self.connection_pool.runOperation(
                 'DELETE FROM %s' % (table,))
         self.connection_pool.close()
