@@ -174,10 +174,14 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             yield self.create_transaction_for_inbound(msg)
             msg_mdh.set_paid()
         except BillingError:
-            log.warning("BillingError for inbound message: %r" % (msg,))
+            log.warning(
+                "BillingError for inbound message, sending without billing:"
+                " %r" % (msg,))
             log.err()
         except Exception:
-            log.warning("Error processing inbound message: %r" % (msg,))
+            log.warning(
+                "Error processing inbound message, sending without billing:"
+                " %r" % (msg,))
             log.err()
         yield self.publish_inbound(msg, self.receive_outbound_connector, None)
 
@@ -194,10 +198,14 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             yield self.create_transaction_for_outbound(msg)
             msg_mdh.set_paid()
         except BillingError:
-            log.warning("BillingError for outbound message: %r" % (msg,))
+            log.warning(
+                "BillingError for outbound message, sending without billing:"
+                " %r" % (msg,))
             log.err()
         except Exception:
-            log.warning("Error processing outbound message: %r" % (msg,))
+            log.warning(
+                "Error processing outbound message, sending without billing:"
+                " %r" % (msg,))
             log.err()
         yield self.publish_outbound(msg, self.receive_inbound_connector, None)
 
