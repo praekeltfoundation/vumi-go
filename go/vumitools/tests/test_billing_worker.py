@@ -459,7 +459,7 @@ class TestBillingDispatcher(VumiTestCase):
         self.assert_no_transactions()
         self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
 
-        errors = self.flushLoggedErrors(BillingError)
+        errors = self.flushLoggedErrors(Exception)
         self.assertEqual(
             [err.getErrorMessage() for err in errors],
             ["I can't do that, Dave."])
@@ -483,7 +483,7 @@ class TestBillingDispatcher(VumiTestCase):
         self.assert_no_transactions()
         self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
 
-        errors = self.flushLoggedErrors(BillingError)
+        errors = self.flushLoggedErrors(Exception)
         self.assertEqual(
             [err.getErrorMessage() for err in errors],
             ["I can't do that, Dave."])
