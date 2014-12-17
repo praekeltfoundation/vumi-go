@@ -377,8 +377,8 @@ class TestTransaction(BillingApiTestCase):
         yield self.create_api_cost(
             tag_pool_name="test_pool2",
             message_direction="Inbound",
-            message_cost=0.6, session_cost=0.3,
-            markup_percent=10.0)
+            message_cost=0.1, session_cost=0.1,
+            markup_percent=0.1)
 
         # Create a transaction
         yield self.create_api_transaction(
@@ -389,7 +389,63 @@ class TestTransaction(BillingApiTestCase):
             message_direction="Inbound",
             session_created=False)
 
-        print LowCreditNotification.objects.all()
+        # It should create the first notification
+        [notification] = LowCreditNotification.objects.all()
+        account = yield self.get_api_account(account["account_number"])
+        self.assertEqual(notification.threshold, decimal.Decimal('0.9'))
+        self.assertEqual(
+            notification.account.account_number, account['account_number'])
+        self.assertEqual(
+            notification.credit_balance, account['credit_balance'])
+
+        # Create another transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-2',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        # It should create the second notification
+        [_, notification] = LowCreditNotification.objects.all()
+        account = yield self.get_api_account(account["account_number"])
+        self.assertEqual(notification.threshold, decimal.Decimal('0.8'))
+        self.assertEqual(
+            notification.account.account_number, account['account_number'])
+        self.assertEqual(
+            notification.credit_balance, account['credit_balance'])
+
+        # Create a third transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-2',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        # It should create the third notification
+        [_, _, notification] = LowCreditNotification.objects.all()
+        account = yield self.get_api_account(account["account_number"])
+        self.assertEqual(notification.threshold, decimal.Decimal('0.7'))
+        self.assertEqual(
+            notification.account.account_number, account['account_number'])
+        self.assertEqual(
+            notification.credit_balance, account['credit_balance'])
+
+        # Create a fourth transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-2',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        # It should not create any more notifications
+        notifications = LowCreditNotification.objects.all()
+        self.assertEqual(len(notifications), 3)
 
     @inlineCallbacks
     def test_transaction(self):

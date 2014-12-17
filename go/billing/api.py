@@ -572,7 +572,7 @@ class TransactionResource(BaseResource):
 
     isLeaf = True
     credit_notification_levels = sorted(
-        app_settings.LOW_CREDIT_NOTIFICATION_LEVELS, reverse=True)
+        app_settings.LOW_CREDIT_NOTIFICATION_LEVELS)
 
     def render_GET(self, request):
         """Handle an HTTP GET request"""
