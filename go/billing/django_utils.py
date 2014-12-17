@@ -11,8 +11,9 @@ class TransactionSerializer(object):
     """ Helper for serializing transaction objects to JSON. """
 
     def __init__(self):
-        self._simplifier = serializers.get_serializer("python")()
+        self._simplifier_cls = serializers.get_serializer("python")
 
     def to_json(self, transactions):
+        simplifier = self._simplifier_cls()
         return (json.dumps(t, cls=JSONEncoder)
-                for t in self._simplifier.serialize(transactions))
+                for t in simplifier.serialize(transactions))
