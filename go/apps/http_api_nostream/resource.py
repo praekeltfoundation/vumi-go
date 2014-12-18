@@ -124,7 +124,7 @@ class MsgCheckHelpers(object):
         Check that the message content is within the configured length limit.
         """
         length_limit = api_config.get("content_length_limit")
-        if length_limit is not None:
+        if (length_limit is not None) and (payload["content"] is not None):
             content_length = len(payload["content"])
             if content_length > length_limit:
                 return "Payload content too long: %s > %s" % (
