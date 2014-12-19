@@ -75,8 +75,9 @@ class MsgOptions(object):
     """Helper for sanitizing msg options from clients."""
 
     WHITELIST = {}
+    VALIDATION = ()
 
-    def __init__(self, payload):
+    def __init__(self, payload, api_config):
         self.errors = []
         for key, checker in sorted(self.WHITELIST.iteritems()):
             value = payload.get(key)
@@ -85,6 +86,11 @@ class MsgOptions(object):
                     "Invalid or missing value for payload key %r" % (key,))
             else:
                 setattr(self, key, value)
+
+        for checker in self.VALIDATION:
+            error = checker(payload, api_config)
+            if error is not None:
+                self.errors.append(error)
 
     @property
     def is_valid(self):
@@ -109,6 +115,22 @@ class MsgCheckHelpers(object):
     def is_session_event(value):
         return value in TransportUserMessage.SESSION_EVENTS
 
+    # The following checkers perform more complex validation based on the
+    # entire payload and the API config.
+
+    @staticmethod
+    def is_within_content_length_limit(payload, api_config):
+        """
+        Check that the message content is within the configured length limit.
+        """
+        length_limit = api_config.get("content_length_limit")
+        if (length_limit is not None) and (payload["content"] is not None):
+            content_length = len(payload["content"])
+            if content_length > length_limit:
+                return "Payload content too long: %s > %s" % (
+                    content_length, length_limit)
+        return None
+
 
 class SendToOptions(MsgOptions):
     """Payload options for messages sent with `.send_to(...)`."""
@@ -118,6 +140,10 @@ class SendToOptions(MsgOptions):
         'to_addr': MsgCheckHelpers.is_unicode_or_none,
     }
 
+    VALIDATION = (
+        MsgCheckHelpers.is_within_content_length_limit,
+    )
+
 
 class ReplyToOptions(MsgOptions):
     """Payload options for messages sent with `.reply_to(...)`."""
@@ -126,6 +152,10 @@ class ReplyToOptions(MsgOptions):
         'content': MsgCheckHelpers.is_unicode_or_none,
         'session_event': MsgCheckHelpers.is_session_event,
     }
+
+    VALIDATION = (
+        MsgCheckHelpers.is_within_content_length_limit,
+    )
 
 
 class MessageResource(BaseResource):
@@ -197,7 +227,8 @@ class MessageResource(BaseResource):
             self.client_error_response(request, 'Invalid in_reply_to value')
             return
 
-        msg_options = ReplyToOptions(payload)
+        msg_options = ReplyToOptions(
+            payload, self.worker.get_all_api_config(conversation))
         if not msg_options.is_valid:
             self.client_error_response(request, msg_options.error_msg)
             return
@@ -218,7 +249,8 @@ class MessageResource(BaseResource):
         user_account = request.getUser()
         conversation = yield self.get_conversation(user_account)
 
-        msg_options = SendToOptions(payload)
+        msg_options = SendToOptions(
+            payload, self.worker.get_all_api_config(conversation))
         if not msg_options.is_valid:
             self.client_error_response(request, msg_options.error_msg)
             return
