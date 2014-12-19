@@ -1,6 +1,6 @@
 import json
 import decimal
-
+import mock
 import pytest
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -358,10 +358,11 @@ class TestTransaction(BillingApiTestCase):
 
     @inlineCallbacks
     def test_check_all_low_credit_thresholds_function(self):
-        app_settings.EMAIL_BACKEND = (
-            'djcelery_email.backends.CeleryEmailBackend')
-        app_settings.CELERY_EMAIL_BACKEND = (
-            'django.core.mail.backends.locmem.EmailBackend')
+        import go.billing.api
+        go.billing.api.create_low_credit_notification.delay = mock.Mock()
+        mocked_notification = (
+            go.billing.api.create_low_credit_notification.delay)
+
         app_settings.ENABLE_LOW_CREDIT_NOTIFICATION = True
 
         # Create account
@@ -390,13 +391,13 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         # It should create the first notification
-        [notification] = LowCreditNotification.objects.all()
+        [call] = mocked_notification.mock_calls
+
         account = yield self.get_api_account(account["account_number"])
-        self.assertEqual(notification.threshold, decimal.Decimal('0.9'))
         self.assertEqual(
-            notification.account.account_number, account['account_number'])
-        self.assertEqual(
-            notification.credit_balance, account['credit_balance'])
+            call, mock.call(
+                account['account_number'], decimal.Decimal('0.9'),
+                account['credit_balance']))
 
         # Create another transaction
         yield self.create_api_transaction(
@@ -408,13 +409,12 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         # It should create the second notification
-        [_, notification] = LowCreditNotification.objects.all()
+        [_, call] = mocked_notification.mock_calls
         account = yield self.get_api_account(account["account_number"])
-        self.assertEqual(notification.threshold, decimal.Decimal('0.8'))
         self.assertEqual(
-            notification.account.account_number, account['account_number'])
-        self.assertEqual(
-            notification.credit_balance, account['credit_balance'])
+            call, mock.call(
+                account['account_number'], decimal.Decimal('0.8'),
+                account['credit_balance']))
 
         # Create a third transaction
         yield self.create_api_transaction(
@@ -426,13 +426,12 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         # It should create the third notification
-        [_, _, notification] = LowCreditNotification.objects.all()
+        [_, _, call] = mocked_notification.mock_calls
         account = yield self.get_api_account(account["account_number"])
-        self.assertEqual(notification.threshold, decimal.Decimal('0.7'))
         self.assertEqual(
-            notification.account.account_number, account['account_number'])
-        self.assertEqual(
-            notification.credit_balance, account['credit_balance'])
+            call, mock.call(
+                account['account_number'], decimal.Decimal('0.7'),
+                account['credit_balance']))
 
         # Create a fourth transaction
         yield self.create_api_transaction(
@@ -444,7 +443,7 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         # It should not create any more notifications
-        notifications = LowCreditNotification.objects.all()
+        notifications = mocked_notification.mock_calls
         self.assertEqual(len(notifications), 3)
 
     @inlineCallbacks
