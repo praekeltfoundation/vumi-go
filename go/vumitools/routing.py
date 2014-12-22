@@ -369,8 +369,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield super(AccountRoutingTableDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
         config = self.get_static_config()
-        self.account_cache = AccountCache(
-            reactor, config.account_cache_ttl)
+        self.account_cache = AccountCache(reactor, config.account_cache_ttl)
 
         # Opt out and billing connectors
         self.opt_out_connector = config.opt_out_connector
