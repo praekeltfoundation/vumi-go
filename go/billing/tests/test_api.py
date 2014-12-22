@@ -2,6 +2,7 @@ import json
 import decimal
 import mock
 import pytest
+import functools
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -9,7 +10,7 @@ from vumi.tests.helpers import VumiTestCase
 
 from go.billing import settings as app_settings
 from go.billing import api
-from go.billing.models import MessageCost, LowCreditNotification
+from go.billing.models import MessageCost
 from go.billing.utils import DummySite, DictRowConnectionPool, JSONDecoder
 
 DB_SUPPORTED = False
@@ -30,6 +31,19 @@ class ApiCallError(Exception):
     def __init__(self, response):
         super(ApiCallError, self).__init__(response.value())
         self.response = response
+
+
+def patch_deferred(*patch_args, **patch_kw):
+    """ Apply mock.patch to a function that returns a deferred. """
+    def decorator(f):
+        @functools.wraps(f)
+        @inlineCallbacks
+        def wrapper(*f_args):
+            with mock.patch(*patch_args, **patch_kw) as value:
+                args = f_args + (value,)
+                yield f(*args)
+        return wrapper
+    return decorator
 
 
 @skipif_unsupported_db
@@ -356,15 +370,11 @@ class TestTransaction(BillingApiTestCase):
         self.assertTrue(notification_threshold_crossed(9, 2, 10))    # 11 -> 9
         self.assertFalse(notification_threshold_crossed(11, 1, 10))  # 12 -> 11
 
+    @patch_deferred('go.billing.api.create_low_credit_notification.delay')
+    @patch_deferred('go.billing.settings.ENABLE_LOW_CREDIT_NOTIFICATION', True)
     @inlineCallbacks
-    def test_check_all_low_credit_thresholds_function(self):
-        import go.billing.api
-        go.billing.api.create_low_credit_notification.delay = mock.Mock()
-        mocked_notification = (
-            go.billing.api.create_low_credit_notification.delay)
-
-        app_settings.ENABLE_LOW_CREDIT_NOTIFICATION = True
-
+    def test_check_all_low_credit_thresholds_function(
+            self, mock_task_delay, mock_enable):
         # Create account
         yield self.create_api_user(email="test4@example.com")
         account = yield self.create_api_account(
@@ -391,13 +401,11 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         # It should create the first notification
-        [call] = mocked_notification.mock_calls
-
         account = yield self.get_api_account(account["account_number"])
-        self.assertEqual(
-            call, mock.call(
-                account['account_number'], decimal.Decimal('0.9'),
-                account['credit_balance']))
+        mock_task_delay.assert_called_once_with(
+            account['account_number'], decimal.Decimal('0.9'),
+            account['credit_balance'])
+        mock_task_delay.reset_mock()
 
         # Create another transaction
         yield self.create_api_transaction(
@@ -409,12 +417,11 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         # It should create the second notification
-        [_, call] = mocked_notification.mock_calls
         account = yield self.get_api_account(account["account_number"])
-        self.assertEqual(
-            call, mock.call(
-                account['account_number'], decimal.Decimal('0.8'),
-                account['credit_balance']))
+        mock_task_delay.assert_called_once_with(
+            account['account_number'], decimal.Decimal('0.8'),
+            account['credit_balance'])
+        mock_task_delay.reset_mock()
 
         # Create a third transaction
         yield self.create_api_transaction(
@@ -426,12 +433,11 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         # It should create the third notification
-        [_, _, call] = mocked_notification.mock_calls
         account = yield self.get_api_account(account["account_number"])
-        self.assertEqual(
-            call, mock.call(
-                account['account_number'], decimal.Decimal('0.7'),
-                account['credit_balance']))
+        mock_task_delay.assert_called_once_with(
+            account['account_number'], decimal.Decimal('0.7'),
+            account['credit_balance'])
+        mock_task_delay.reset_mock()
 
         # Create a fourth transaction
         yield self.create_api_transaction(
@@ -443,8 +449,7 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         # It should not create any more notifications
-        notifications = mocked_notification.mock_calls
-        self.assertEqual(len(notifications), 3)
+        self.assertFalse(mock_task_delay.called)
 
     @inlineCallbacks
     def test_transaction(self):
