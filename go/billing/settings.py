@@ -51,7 +51,7 @@ ENABLE_LOW_CREDIT_NOTIFICATION = getattr(
     settings, 'GO_ENABLE_LOW_CREDIT_NOTIFICATION', False)
 
 LOW_CREDIT_NOTIFICATION_LEVELS = getattr(
-    settings, 'LOW_CREDIT_NOTIFICATION_LEVELS', [])
+    settings, 'GO_LOW_CREDIT_NOTIFICATION_LEVELS', [])
 
 
 def get_user_table():
