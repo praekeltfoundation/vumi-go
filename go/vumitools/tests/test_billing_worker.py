@@ -47,11 +47,17 @@ class BillingApiMock(object):
         }
 
 
+class MockNetworkError(Exception):
+    pass
+
+
 class HttpRequestMock(object):
 
-    def __init__(self, response=None):
+    def __init__(self, response=None, fail_times=0):
         self.request = None
         self.response = response
+        self.fail_times = fail_times
+        self.failed_times = 0
 
     def _mk_request(self, uri, method='POST', headers={}, data=None):
         return Request(method, uri, mkheaders(headers),
@@ -61,6 +67,9 @@ class HttpRequestMock(object):
                                 method='POST', timeout=None,
                                 data_limit=None, context_factory=None,
                                 agent_class=Agent):
+        if self.failed_times < self.fail_times:
+            self.failed_times += 1
+            raise MockNetworkError("I can't do that, Dave.")
         self.request = self._mk_request(url, method, headers, data)
         return self.response
 
@@ -71,7 +80,7 @@ class TestBillingApi(VumiTestCase):
     def setUp(self):
         yield super(TestBillingApi, self).setUp()
         self.api_url = "http://localhost:9090/"
-        self.billing_api = BillingApi(self.api_url)
+        self.billing_api = BillingApi(self.api_url, 0.01)
 
     def _mk_response(self, code=200, phrase='OK', headers={},
                      delivered_body='{}'):
@@ -137,7 +146,7 @@ class TestBillingApi(VumiTestCase):
         self.assertEqual(result, delivered_body)
 
     @inlineCallbacks
-    def test_create_transaction_error(self):
+    def test_create_transaction_http_error(self):
         response = self._mk_response(code=500, phrase="Internal Server Error",
                                      delivered_body="")
 
@@ -155,6 +164,62 @@ class TestBillingApi(VumiTestCase):
         }
         d = self.billing_api.create_transaction(**kwargs)
         yield self.assertFailure(d, BillingError)
+
+    @inlineCallbacks
+    def test_create_transaction_network_error(self):
+        delivered_body = {
+            "id": 1,
+            "account_number": "test-account",
+            "tag_pool_name": "pool1",
+            "tag_name": "1234",
+            "message_direction": "Inbound",
+            "message_cost": 80,
+            "session_created": False,
+            "session_cost": 30,
+            "markup_percent": decimal.Decimal('10.0'),
+            "credit_amount": -35,
+            "credit_factor": decimal.Decimal('0.4'),
+            "created": "2013-10-30T10:42:51.144745+02:00",
+            "last_modified": "2013-10-30T10:42:51.144745+02:00",
+            "status": "Completed"
+        }
+        response = self._mk_response(
+            delivered_body=json.dumps(delivered_body, cls=JSONEncoder))
+
+        hrm = HttpRequestMock(response, fail_times=1)
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'message_id': 'msg-id-1',
+            'tag_pool_name': "pool1",
+            'tag_name': "1234",
+            'message_direction': "Inbound",
+            'session_created': False,
+        }
+        result = yield self.billing_api.create_transaction(**kwargs)
+        self.assertEqual(result, delivered_body)
+
+    @inlineCallbacks
+    def test_create_transaction_network_error_on_retry(self):
+        """
+        If a retry doesn't help, we pass on the exception.
+        """
+        hrm = HttpRequestMock(self._mk_response(), fail_times=2)
+        self.patch(billing_worker, 'http_request_full',
+                   hrm.dummy_http_request_full)
+
+        kwargs = {
+            'account_number': "test-account",
+            'message_id': 'msg-id-1',
+            'tag_pool_name': "pool1",
+            'tag_name': "1234",
+            'message_direction': "Inbound",
+            'session_created': False,
+        }
+        d = self.billing_api.create_transaction(**kwargs)
+        yield self.assertFailure(d, MockNetworkError)
 
 
 class TestBillingDispatcher(VumiTestCase):
@@ -330,3 +395,95 @@ class TestBillingDispatcher(VumiTestCase):
         yield self.ri_helper.dispatch_event(ack)
         self.assertEqual([ack], self.ro_helper.get_dispatched_events())
         self.assert_no_transactions()
+
+    @inlineCallbacks
+    def test_inbound_message_billing_error(self):
+        """
+        If we get a billing error, we ignore billing and forward the message.
+        """
+        dispatcher = yield self.get_dispatcher()
+
+        def create_transaction(*args, **kw):
+            raise BillingError("Insert coin.")
+
+        dispatcher.billing_api.create_transaction = create_transaction
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound", user_account="12345", tag=("pool1", "1234"))
+
+        self.assert_no_transactions()
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors], ["Insert coin."])
+
+    @inlineCallbacks
+    def test_outbound_message_billing_error(self):
+        """
+        If we get a billing error, we ignore billing and forward the message.
+        """
+        dispatcher = yield self.get_dispatcher()
+
+        def create_transaction(*args, **kw):
+            raise BillingError("Insert coin.")
+
+        dispatcher.billing_api.create_transaction = create_transaction
+
+        msg = yield self.make_dispatch_outbound(
+            "hi", user_account="12345", tag=("pool1", "1234"))
+
+        self.assert_no_transactions()
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+
+        errors = self.flushLoggedErrors(BillingError)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors], ["Insert coin."])
+
+    @inlineCallbacks
+    def test_inbound_message_other_error(self):
+        """
+        If we get a non-billing error, we shouldn't drop the message on the
+        floor.
+        """
+        dispatcher = yield self.get_dispatcher()
+
+        def create_transaction(*args, **kw):
+            raise Exception("I can't do that, Dave.")
+
+        dispatcher.billing_api.create_transaction = create_transaction
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound", user_account="12345", tag=("pool1", "1234"))
+
+        self.assert_no_transactions()
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+
+        errors = self.flushLoggedErrors(Exception)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors],
+            ["I can't do that, Dave."])
+
+    @inlineCallbacks
+    def test_outbound_message_other_error(self):
+        """
+        If we get a non-billing error, we shouldn't drop the message on the
+        floor.
+        """
+        dispatcher = yield self.get_dispatcher()
+
+        def create_transaction(*args, **kw):
+            raise Exception("I can't do that, Dave.")
+
+        dispatcher.billing_api.create_transaction = create_transaction
+
+        msg = yield self.make_dispatch_outbound(
+            "hi", user_account="12345", tag=("pool1", "1234"))
+
+        self.assert_no_transactions()
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+
+        errors = self.flushLoggedErrors(Exception)
+        self.assertEqual(
+            [err.getErrorMessage() for err in errors],
+            ["I can't do that, Dave."])

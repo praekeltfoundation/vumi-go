@@ -89,11 +89,13 @@ def get_channel_name(transaction, tagpools):
 
 
 def get_message_cost(transaction):
-    return transaction['total_message_cost']
+    cost = transaction['total_message_cost']
+    return cost if cost is not None else 0
 
 
 def get_session_cost(transaction):
-    return transaction['total_session_cost']
+    cost = transaction['total_session_cost']
+    return cost if cost is not None else 0
 
 
 def get_count(transaction):
@@ -113,14 +115,18 @@ def get_session_unit_cost(transaction):
 
 
 def get_message_credits(transaction):
-    cost = get_message_cost(transaction)
+    cost = transaction['total_message_cost']
     markup = transaction['markup_percent']
+    if cost is None or markup is None:
+        return None
     return MessageCost.calculate_message_credit_cost(cost, markup)
 
 
 def get_session_credits(transaction):
-    cost = get_session_cost(transaction)
+    cost = transaction['total_session_cost']
     markup = transaction['markup_percent']
+    if cost is None or markup is None:
+        return None
     return MessageCost.calculate_session_credit_cost(cost, markup)
 
 
@@ -265,12 +271,12 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
             "to": to_date,
         })
 
-    transaction_list = Transaction.objects.filter(
+    transaction_query = Transaction.objects.filter(
         account_number=account.account_number,
         created__gte=from_date,
         created__lt=(to_date + relativedelta(days=1)))
 
-    def generate_chunks(item_iter, items_per_chunk=10000, sep="\n"):
+    def generate_chunks(item_iter, items_per_chunk=1000, sep="\n"):
         data = []
         for i, item in enumerate(item_iter):
             data.append(item)
@@ -283,7 +289,7 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
             yield sep
 
     bucket = Bucket('billing.archive')
-    chunks = generate_chunks(transaction_list)
+    chunks = generate_chunks(transaction_query.iterator())
 
     archive = TransactionArchive(
         account=account, filename=filename,
@@ -299,7 +305,7 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
     archive.save()
 
     if delete:
-        transaction_list.delete()
+        transaction_query.delete()
         archive.status = TransactionArchive.STATUS_ARCHIVE_COMPLETED
         archive.save()
 

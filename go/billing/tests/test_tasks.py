@@ -285,6 +285,70 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         [item] = get_line_items(statement).filter(channel=u'tag2.1')
         self.assertEqual(item.billed_by, 'Pool 2')
 
+    def test_generate_monthly_statement_messages_none_message_cost(self):
+        mk_transaction(
+            self.account,
+            message_cost=None)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(
+            description='Messages received')
+
+        self.assertEqual(item.credits, None)
+        self.assertEqual(item.unit_cost, 0)
+        self.assertEqual(item.cost, 0)
+
+    def test_generate_monthly_statement_messages_none_markup(self):
+        mk_transaction(
+            self.account,
+            message_cost=100,
+            markup_percent=None)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(
+            description='Messages received')
+
+        self.assertEqual(item.credits, None)
+        self.assertEqual(item.unit_cost, 100)
+        self.assertEqual(item.cost, 100)
+
+    def test_generate_monthly_statement_sessions_none_session_cost(self):
+        mk_transaction(
+            self.account,
+            session_cost=None,
+            session_created=True)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(
+            description='Sessions')
+
+        self.assertEqual(item.credits, None)
+        self.assertEqual(item.unit_cost, 0)
+        self.assertEqual(item.cost, 0)
+
+    def test_generate_monthly_statement_sessions_none_markup(self):
+        mk_transaction(
+            self.account,
+            session_cost=100,
+            markup_percent=None,
+            session_created=True)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        [item] = get_line_items(statement).filter(
+            description='Sessions')
+
+        self.assertEqual(item.credits, None)
+        self.assertEqual(item.unit_cost, 100)
+        self.assertEqual(item.cost, 100)
+
 
 class TestArchiveTransactionsTask(GoDjangoTestCase):
 

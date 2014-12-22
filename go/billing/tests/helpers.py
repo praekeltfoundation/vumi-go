@@ -30,6 +30,10 @@ def this_month(day=None):
     return [start_of_month(day), end_of_month(day)]
 
 
+def maybe_decimal(v):
+    return Decimal(str(v)) if v is not None else None
+
+
 def get_billing_account(user_account):
     return Account.objects.get(user=user_account)
 
@@ -37,7 +41,7 @@ def get_billing_account(user_account):
 def mk_transaction(account, tag_pool_name='pool1',
                    tag_name="tag1",
                    message_direction=MessageCost.DIRECTION_INBOUND,
-                   message_cost=100, markup_percent=10.0,
+                   message_cost=100, session_cost=0, markup_percent=10.0,
                    credit_factor=0.25, credit_amount=28,
                    status=Transaction.STATUS_COMPLETED,
                    created=None, **kwargs):
@@ -46,9 +50,10 @@ def mk_transaction(account, tag_pool_name='pool1',
         tag_pool_name=tag_pool_name,
         tag_name=tag_name,
         message_direction=message_direction,
-        message_cost=message_cost,
-        markup_percent=Decimal(str(markup_percent)),
-        credit_factor=Decimal(str(credit_factor)),
+        message_cost=maybe_decimal(message_cost),
+        session_cost=maybe_decimal(session_cost),
+        markup_percent=maybe_decimal(markup_percent),
+        credit_factor=maybe_decimal(credit_factor),
         credit_amount=credit_amount,
         status=status, **kwargs)
 
