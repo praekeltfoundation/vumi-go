@@ -8,17 +8,23 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Deleting field 'Account.alert_credit_balance'
-        db.delete_column(u'billing_account', 'alert_credit_balance')
-
-        # Deleting field 'Account.alert_threshold'
-        db.delete_column(u'billing_account', 'alert_threshold')
-
         # Adding field 'Account.last_topup_balance'
         db.add_column(u'billing_account', 'last_topup_balance',
                       self.gf('django.db.models.fields.DecimalField')(default='0.0', max_digits=20, decimal_places=6),
                       keep_default=False)
 
+        # Populate the last_topup_balance fields with values
+        db.execute(
+            """
+            UPDATE billing_account SET last_topup_balance =
+            alert_credit_balance / alert_threshold
+            """)
+
+        # Deleting field 'Account.alert_credit_balance'
+        db.delete_column(u'billing_account', 'alert_credit_balance')
+
+        # Deleting field 'Account.alert_threshold'
+        db.delete_column(u'billing_account', 'alert_threshold')
 
     def backwards(self, orm):
         # Adding field 'Account.alert_credit_balance'
