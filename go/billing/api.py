@@ -573,9 +573,8 @@ class TransactionResource(BaseResource):
     """Expose a REST interface for a transaction"""
 
     isLeaf = True
-    credit_notification_levels = sorted(map(
-        lambda i: Decimal(str(i)), app_settings.LOW_CREDIT_NOTIFICATION_LEVELS
-        ))
+    credit_notification_levels = sorted(
+        Decimal(str(i)) for i in app_settings.LOW_CREDIT_NOTIFICATION_LEVELS)
 
     def render_GET(self, request):
         """Handle an HTTP GET request"""
