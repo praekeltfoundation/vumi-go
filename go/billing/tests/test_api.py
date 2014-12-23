@@ -2,7 +2,6 @@ import json
 import decimal
 import mock
 import pytest
-import functools
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -31,19 +30,6 @@ class ApiCallError(Exception):
     def __init__(self, response):
         super(ApiCallError, self).__init__(response.value())
         self.response = response
-
-
-def patch_deferred(*patch_args, **patch_kw):
-    """ Apply mock.patch to a function that returns a deferred. """
-    def decorator(f):
-        @functools.wraps(f)
-        @inlineCallbacks
-        def wrapper(*f_args):
-            with mock.patch(*patch_args, **patch_kw) as value:
-                args = f_args + (value,)
-                yield f(*args)
-        return wrapper
-    return decorator
 
 
 @skipif_unsupported_db
@@ -357,6 +343,11 @@ class TestCost(BillingApiTestCase):
 
 class TestTransaction(BillingApiTestCase):
 
+    def setUp(self):
+        self.patch(app_settings, 'LOW_CREDIT_NOTIFICATION_PERCENTAGES',
+                   [70, 90, 80])
+        return BillingApiTestCase.setUp(self)
+
     def test_check_all_low_credit_thresholds(self):
         """
         Tests various combinations of parameters for
@@ -383,11 +374,13 @@ class TestTransaction(BillingApiTestCase):
         self.assertEqual(crossed(-5, 1, 100), None)
         self.assertEqual(crossed(105, 1, 100), None)
 
-    @patch_deferred('go.billing.api.create_low_credit_notification.delay')
-    @patch_deferred('go.billing.settings.ENABLE_LOW_CREDIT_NOTIFICATION', True)
     @inlineCallbacks
-    def test_low_credit_threshold_notifications(
-            self, mock_task_delay, mock_enable):
+    def test_low_credit_threshold_notifications(self):
+        # patch settings and task
+        mock_task_delay = mock.MagicMock()
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_NOTIFICATION', True)
+        self.patch(
+            api.create_low_credit_notification, 'delay', mock_task_delay)
         # Create account
         yield self.create_api_user(email="test4@example.com")
         account = yield self.create_api_account(
