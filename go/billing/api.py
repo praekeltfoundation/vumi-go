@@ -574,8 +574,34 @@ class TransactionResource(BaseResource):
     """Expose a REST interface for a transaction"""
 
     isLeaf = True
-    credit_notification_percentages = frozenset(
-        int(i) for i in app_settings.LOW_CREDIT_NOTIFICATION_PERCENTAGES)
+
+    def __init__(self, connection_pool):
+        BaseResource.__init__(self, connection_pool)
+        self._notification_mapping = self._create_notification_mapping()
+
+    def _create_notification_mapping(self):
+        """
+        Constructs a mapping from precentage of credits used to the
+        notification percentage immediately above it.
+
+        Only percentages from 0 to 100 (inclusive) are entered in the
+        mapping. Percentages above the highest notification precentage
+        are mapped to ``None``.
+        """
+        levels = sorted(
+            int(i) for i in app_settings.LOW_CREDIT_NOTIFICATION_PERCENTAGES)
+
+        def get_level_value(idx):
+            return levels[idx] if idx < len(levels) else None
+
+        mapping = {}
+        level_idx = 0
+        for i in range(0, 101):
+            mapping[i] = get_level_value(level_idx)
+            if mapping[i] == i:
+                level_idx += 1
+
+        return mapping
 
     def render_GET(self, request):
         """Handle an HTTP GET request"""
@@ -837,9 +863,8 @@ class TransactionResource(BaseResource):
                 create_low_credit_notification, account_number,
                 level, credit_balance)
 
-    @classmethod
     def check_all_low_credit_thresholds(
-            cls, credit_balance, credit_amount, last_topup_balance):
+            self, credit_balance, credit_amount, last_topup_balance):
         """
         Checks the current balance percentage against all those stored within
         the settings.
@@ -856,15 +881,19 @@ class TransactionResource(BaseResource):
             or ``None`` if no threshold was crossed.
         """
         def ceil_percent(n):
-            return int(math.ceil(n * 100 / last_topup_balance))
+            return min(
+                100, max(
+                    0, int(math.ceil(n * 100 / last_topup_balance))))
 
         current_percentage = ceil_percent(credit_balance)
-        if current_percentage not in cls.credit_notification_percentages:
-            return
+        current_notification_level = self._notification_mapping.get(
+            current_percentage)
         previous_percentage = ceil_percent(credit_balance + credit_amount)
-        if previous_percentage == current_percentage:
-            return
-        return Decimal(str(current_percentage / 100.0))  # level crossed
+        previous_notification_level = self._notification_mapping.get(
+            previous_percentage)
+
+        if current_notification_level != previous_notification_level:
+            return Decimal(str(current_notification_level / 100.0))
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,

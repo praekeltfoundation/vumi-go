@@ -362,15 +362,26 @@ class TestTransaction(BillingApiTestCase):
         Tests various combinations of parameters for
         TransactionResource.check_all_low_credit_thresholds.
         """
-        crossed = api.TransactionResource.check_all_low_credit_thresholds
+        resource = api.TransactionResource(None)
+        crossed = resource.check_all_low_credit_thresholds
         # Argument order: credit_balance, credit_amount, last_topup_balance
         # Thresholds are: 70%, 80% and 90%
+        # simple notification level crossings
         self.assertEqual(crossed(90, 1, 100), decimal.Decimal('0.9'))
         self.assertEqual(crossed(80, 1, 100), decimal.Decimal('0.8'))
         self.assertEqual(crossed(70, 1, 100), decimal.Decimal('0.7'))
+        # simple non-crossings
         self.assertEqual(crossed(60, 1, 100), None)
         self.assertEqual(crossed(91, 1, 100), None)
         self.assertEqual(crossed(89, 1, 100), None)
+        # crossing multiple percentages in one go
+        self.assertEqual(crossed(89, 2, 100), decimal.Decimal('0.9'))
+        self.assertEqual(crossed(65, 10, 100), decimal.Decimal('0.7'))
+        # non-crossings around 0 and 100
+        self.assertEqual(crossed(0, 0, 100), None)
+        self.assertEqual(crossed(100, 0, 100), None)
+        self.assertEqual(crossed(-5, 1, 100), None)
+        self.assertEqual(crossed(105, 1, 100), None)
 
     @patch_deferred('go.billing.api.create_low_credit_notification.delay')
     @patch_deferred('go.billing.settings.ENABLE_LOW_CREDIT_NOTIFICATION', True)
