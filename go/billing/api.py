@@ -1,4 +1,5 @@
 import json
+import math
 
 from decimal import Decimal
 
@@ -573,8 +574,8 @@ class TransactionResource(BaseResource):
     """Expose a REST interface for a transaction"""
 
     isLeaf = True
-    credit_notification_levels = sorted(
-        Decimal(str(i)) for i in app_settings.LOW_CREDIT_NOTIFICATION_LEVELS)
+    credit_notification_percentages = frozenset(
+        int(i) for i in app_settings.LOW_CREDIT_NOTIFICATION_PERCENTAGES)
 
     def render_GET(self, request):
         """Handle an HTTP GET request"""
@@ -810,14 +811,13 @@ class TransactionResource(BaseResource):
         credit_balance = result.get('credit_balance')
         last_topup_balance = result.get('last_topup_balance')
         if app_settings.ENABLE_LOW_CREDIT_NOTIFICATION:
-            yield self.check_all_low_credit_thresholds(
+            yield self.check_and_notify_low_credit_threshold(
                 credit_balance, credit_amount, last_topup_balance,
                 account_number)
 
         defer.returnValue(transaction)
 
-    @defer.inlineCallbacks
-    def check_all_low_credit_thresholds(
+    def check_and_notify_low_credit_threshold(
             self, credit_balance, credit_amount, last_topup_balance,
             account_number):
         """
@@ -830,29 +830,41 @@ class TransactionResource(BaseResource):
         :param last_topup_balance: The account credit balance at the last topup
         :param account_number: The account number of the associated account
         """
-        for level in self.credit_notification_levels:
-            alert_credit_balance = last_topup_balance * level
-            if self.notification_threshold_crossed(
-                    credit_balance, credit_amount, alert_credit_balance):
-                yield spawn_celery_task_via_thread(
-                    create_low_credit_notification,
-                    account_number, level, credit_balance)
-                break
-            if credit_balance < alert_credit_balance:
-                break
+        level = self.check_all_low_credit_thresholds(
+            credit_balance, credit_amount, last_topup_balance)
+        if level is not None:
+            return spawn_celery_task_via_thread(
+                create_low_credit_notification, account_number,
+                level, credit_balance)
 
-    @staticmethod
-    def notification_threshold_crossed(
-            credit_balance, credit_amount, alert_credit_balance):
+    @classmethod
+    def check_all_low_credit_thresholds(
+            cls, credit_balance, credit_amount, last_topup_balance):
         """
-        Given the current balance (afther the transaction) ``credit_balance``,
-        the transaction amount ``credit_amount``, and the alert threshold
-        ``alert_credit_balance``, will return ``True`` if the transaction
-        caused the alert threshold to be crossed, and false if not.
+        Checks the current balance percentage against all those stored within
+        the settings.
+
+        :param credit_balance:
+            The current balance (after the transaction)
+        :param credit_amount:
+            The amount of credits used in the transaction
+        :param last_topup_balance:
+            The account credit balance at the last topup
+
+        :return:
+            A :class:`Decimal` percentage for the alert threshold crossed
+            or ``None`` if no threshold was crossed.
         """
-        return (
-            credit_balance <= alert_credit_balance <
-            credit_amount + credit_balance)
+        def ceil_percent(n):
+            return int(math.ceil(n * 100 / last_topup_balance))
+
+        current_percentage = ceil_percent(credit_balance)
+        if current_percentage not in cls.credit_notification_percentages:
+            return
+        previous_percentage = ceil_percent(credit_balance + credit_amount)
+        if previous_percentage == current_percentage:
+            return
+        return Decimal(str(current_percentage / 100.0))  # level crossed
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,

@@ -58,7 +58,7 @@ CELERY_DB_REUSE_MAX = 100
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 CELERY_EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
-GO_LOW_CREDIT_NOTIFICATION_LEVELS = [0.7, 0.9, 0.8]
+GO_LOW_CREDIT_NOTIFICATION_PERCENTAGES = [70, 90, 80]
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'

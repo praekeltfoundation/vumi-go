@@ -357,23 +357,25 @@ class TestCost(BillingApiTestCase):
 
 class TestTransaction(BillingApiTestCase):
 
-    def test_notification_threshold_crossed_function(self):
+    def test_check_all_low_credit_thresholds(self):
         """
         Tests various combinations of parameters for
-        notification_threshold_crossed
+        TransactionResource.check_all_low_credit_thresholds.
         """
-        notification_threshold_crossed = (
-            api.TransactionResource.notification_threshold_crossed)
-        # Argument order: credit_balance, credit_amount, alert_credit_balance
-        self.assertFalse(notification_threshold_crossed(9, 1, 10))   # 10 -> 9
-        self.assertTrue(notification_threshold_crossed(10, 1, 10))   # 11 -> 10
-        self.assertTrue(notification_threshold_crossed(9, 2, 10))    # 11 -> 9
-        self.assertFalse(notification_threshold_crossed(11, 1, 10))  # 12 -> 11
+        crossed = api.TransactionResource.check_all_low_credit_thresholds
+        # Argument order: credit_balance, credit_amount, last_topup_balance
+        # Thresholds are: 70%, 80% and 90%
+        self.assertEqual(crossed(90, 1, 100), decimal.Decimal('0.9'))
+        self.assertEqual(crossed(80, 1, 100), decimal.Decimal('0.8'))
+        self.assertEqual(crossed(70, 1, 100), decimal.Decimal('0.7'))
+        self.assertEqual(crossed(60, 1, 100), None)
+        self.assertEqual(crossed(91, 1, 100), None)
+        self.assertEqual(crossed(89, 1, 100), None)
 
     @patch_deferred('go.billing.api.create_low_credit_notification.delay')
     @patch_deferred('go.billing.settings.ENABLE_LOW_CREDIT_NOTIFICATION', True)
     @inlineCallbacks
-    def test_check_all_low_credit_thresholds_function(
+    def test_low_credit_threshold_notifications(
             self, mock_task_delay, mock_enable):
         # Create account
         yield self.create_api_user(email="test4@example.com")
