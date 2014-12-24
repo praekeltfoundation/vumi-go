@@ -5,7 +5,8 @@ from vumi.tests.utils import UTCNearNow
 
 from go.vumitools.account.models import AccountStore
 from go.vumitools.account.old_models import (
-    AccountStoreVNone, AccountStoreV1, AccountStoreV2)
+    AccountStoreVNone, AccountStoreV1, AccountStoreV2,
+    AccountStoreV4)
 from go.vumitools.routing_table import RoutingTable
 
 
@@ -18,9 +19,16 @@ class TestUserAccount(VumiTestCase):
         self.store = AccountStore(riak_manager)
 
         # Some old stores for testing migrations.
+        self.store_v4 = AccountStoreV4(riak_manager)
         self.store_v2 = AccountStoreV2(riak_manager)
         self.store_v1 = AccountStoreV1(riak_manager)
         self.store_vnone = AccountStoreVNone(riak_manager)
+
+    def store_user_version(self, version):
+        # Configure the manager to save the older message version.
+        modelcls = self.store.users._modelcls
+        model_name = "%s.%s" % (modelcls.__module__, modelcls.__name__)
+        self.store.manager.store_versions[model_name] = 4
 
     def assert_user(self, user, **fields):
         def assert_field(value, name, default):
@@ -34,6 +42,26 @@ class TestUserAccount(VumiTestCase):
         assert_field(user.msisdn, 'msisdn', None)
         assert_field(user.confirm_start_conversation,
                      'confirm_start_conversation', False)
+        assert_field(user.can_manage_optouts, 'can_manage_optouts', False)
+        assert_field(user.disable_optouts, 'disable_optouts', False)
+        assert_field(user.email_summary, 'email_summary', None)
+        assert_field(user.tags, 'tags', [])
+        assert_field(user.routing_table, 'routing_table', RoutingTable({}))
+
+    def assert_user_v4(self, user, **fields):
+        def assert_field(value, name, default):
+            self.assertEqual(fields.get(name, default), value, name)
+
+        assert_field(user.username, 'username', u'testuser')
+        assert_field(user.tagpools.keys(), 'tagpools', [])
+        assert_field(user.applications.keys(), 'applications', [])
+        assert_field(user.created_at, 'created_at', UTCNearNow())
+        assert_field(user.event_handler_config, 'event_handler_config', [])
+        assert_field(user.msisdn, 'msisdn', None)
+        assert_field(user.confirm_start_conversation,
+                     'confirm_start_conversation', False)
+        assert_field(user.can_manage_optouts, 'can_manage_optouts', False)
+        assert_field(user.email_summary, 'email_summary', None)
         assert_field(user.tags, 'tags', [])
         assert_field(user.routing_table, 'routing_table', RoutingTable({}))
 
@@ -104,3 +132,27 @@ class TestUserAccount(VumiTestCase):
         self.assert_user_vnone(user_vnone)
         user = yield self.store.get_user(user_vnone.key)
         self.assert_user(user)
+
+    @inlineCallbacks
+    def test_migrate_new_from_4(self):
+        """
+        A v4 model can be migrated to the current model version.
+        """
+        user_v4 = yield self.store_v4.new_user(u'testuser')
+        self.assert_user_v4(user_v4)
+        user = yield self.store.get_user(user_v4.key)
+        self.assert_user(user)
+
+    @inlineCallbacks
+    def test_reverse_4_from_new(self):
+        """
+        The current model version can be migrated to a v4 model.
+        """
+        user = yield self.store.new_user(u'testuser')
+        self.assert_user(user)
+
+        self.store_user_version(4)
+        yield user.save()
+
+        user_v4 = yield self.store_v4.get_user(user.key)
+        self.assert_user_v4(user_v4)
