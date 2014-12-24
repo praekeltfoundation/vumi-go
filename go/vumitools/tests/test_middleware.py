@@ -13,7 +13,7 @@ from vumi.worker import BaseWorker
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.middleware import (
-    NormalizeMsisdnMiddleware, OptOutMiddleware, MetricsMiddleware,
+    NormalizeMsisdnMiddleware, MetricsMiddleware,
     ConversationStoringMiddleware, RouterStoringMiddleware)
 from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
 
@@ -92,89 +92,6 @@ class TestNormalizeMisdnMiddleware(VumiTestCase):
             "foo", to_addr='0123456789', from_addr='8007')
         msg = self.mw.handle_outbound(msg, 'dummy_endpoint')
         self.assertEqual(msg['to_addr'], '+256123456789')
-
-
-class TestOptOutMiddleware(VumiTestCase):
-
-    @inlineCallbacks
-    def setUp(self):
-        self.mw_helper = self.add_helper(MiddlewareHelper(OptOutMiddleware))
-        yield self.mw_helper.setup_vumi_api()
-        self.config = {
-            'optout_keywords': ['STOP', 'HALT', 'QUIT']
-        }
-
-    @inlineCallbacks
-    def get_middleware(self, extra_config={}, extra_tagpool_metadata={}):
-        config = self.config.copy()
-        config.update(extra_config)
-        mw = yield self.mw_helper.create_middleware(config)
-        tagpool_metadata = {
-            "transport_type": "other",
-            "msg_options": {"transport_name": "other_transport"},
-        }
-        tagpool_metadata.update(extra_tagpool_metadata)
-        yield self.mw_helper.setup_tagpool(
-            "pool", ["tag1"], metadata=tagpool_metadata)
-        returnValue(mw)
-
-    @inlineCallbacks
-    def send_keyword(self, mw, word, expected_response):
-        msg = self.mw_helper.make_inbound(
-            word, to_addr='to@domain.org', from_addr='from@domain.org')
-        TaggingMiddleware.add_tag_to_msg(msg, ("pool", "tag1"))
-        yield mw.handle_inbound(msg, 'dummy_endpoint')
-        expected_response = dict(expected_response,
-                                 tag={'tag': ['pool', 'tag1']})
-        # MessageMetadataHelper can add 'go' metadata and we want to ignore it.
-        if 'go' in msg['helper_metadata']:
-            expected_response['go'] = msg['helper_metadata']['go']
-        self.assertEqual(msg['helper_metadata'], expected_response)
-
-    @inlineCallbacks
-    def test_optout_flag(self):
-        mw = yield self.get_middleware()
-        for keyword in self.config['optout_keywords']:
-            yield self.send_keyword(mw, keyword, {
-                'optout': {
-                    'optout': True,
-                    'optout_keyword': keyword.lower(),
-                }
-            })
-
-    @inlineCallbacks
-    def test_non_optout_keywords(self):
-        mw = yield self.get_middleware()
-        for keyword in ['THESE', 'DO', 'NOT', 'OPT', 'OUT']:
-            yield self.send_keyword(mw, keyword, {
-                'optout': {'optout': False},
-            })
-
-    @inlineCallbacks
-    def test_disabled_by_tagpool(self):
-        mw = yield self.get_middleware(extra_tagpool_metadata={
-            "disable_global_opt_out": True,
-        })
-        yield self.send_keyword(mw, 'STOP', {
-            'optout': {'optout': False},
-        })
-
-    @inlineCallbacks
-    def test_case_sensitivity(self):
-        mw = yield self.get_middleware({'case_sensitive': True})
-
-        yield self.send_keyword(mw, 'STOP', {
-            'optout': {
-                'optout': True,
-                'optout_keyword': 'STOP',
-            }
-        })
-
-        yield self.send_keyword(mw, 'stop', {
-            'optout': {
-                'optout': False,
-            }
-        })
 
 
 class TestMetricsMiddleware(VumiTestCase):
