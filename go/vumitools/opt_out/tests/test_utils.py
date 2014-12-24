@@ -113,6 +113,15 @@ class TestOptOutHelper(VumiTestCase):
         yield optouts.process_message(self.account, msg)
         self.assertEqual(msg['helper_metadata']['optout'], {'optout': False})
 
+    @inlineCallbacks
+    def test_process_message_already_checked(self):
+        optouts = OptOutHelper(self.vumi_api, {'keywords': ['stop']})
+
+        msg = self.msg_helper.make_inbound('stop')
+        msg['helper_metadata']['optout'] = {'optout': False}
+        yield optouts.process_message(self.account, msg)
+        self.assertEqual(msg['helper_metadata']['optout'], {'optout': False})
+
     def test_is_optout_message(self):
         msg = self.msg_helper.make_inbound('hi')
         self.assertFalse(OptOutHelper.is_optout_message(msg))

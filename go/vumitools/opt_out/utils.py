@@ -52,12 +52,14 @@ class OptOutHelper(object):
     @inlineCallbacks
     def process_message(self, account, message):
         helper_metadata = message['helper_metadata']
-        optout_metadata = helper_metadata.setdefault(
-            'optout', {'optout': False})
 
-        if (yield self._is_optout(account, message)):
-            optout_metadata['optout'] = True
-            optout_metadata['optout_keyword'] = self.keyword(message)
+        if 'optout' not in helper_metadata:
+            optout_metadata = {'optout': False}
+            helper_metadata['optout'] = optout_metadata
+
+            if (yield self._is_optout(account, message)):
+                optout_metadata['optout'] = True
+                optout_metadata['optout_keyword'] = self.keyword(message)
 
         returnValue(message)
 
