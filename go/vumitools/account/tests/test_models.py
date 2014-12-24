@@ -24,6 +24,12 @@ class TestUserAccount(VumiTestCase):
         self.store_v1 = AccountStoreV1(riak_manager)
         self.store_vnone = AccountStoreVNone(riak_manager)
 
+    def store_user_version(self, version):
+        # Configure the manager to save the older message version.
+        modelcls = self.store.users._modelcls
+        model_name = "%s.%s" % (modelcls.__module__, modelcls.__name__)
+        self.store.manager.store_versions[model_name] = 4
+
     def assert_user(self, user, **fields):
         def assert_field(value, name, default):
             self.assertEqual(fields.get(name, default), value, name)
@@ -136,3 +142,17 @@ class TestUserAccount(VumiTestCase):
         self.assert_user_v4(user_v4)
         user = yield self.store.get_user(user_v4.key)
         self.assert_user(user)
+
+    @inlineCallbacks
+    def test_reverse_4_from_new(self):
+        """
+        The current model version can be migrated to a v4 model.
+        """
+        user = yield self.store.new_user(u'testuser')
+        self.assert_user(user)
+
+        self.store_user_version(4)
+        yield user.save()
+
+        user_v4 = yield self.store_v4.get_user(user.key)
+        self.assert_user_v4(user_v4)
