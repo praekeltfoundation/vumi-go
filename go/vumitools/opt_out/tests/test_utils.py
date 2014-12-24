@@ -18,6 +18,10 @@ class TestOptOutHelper(VumiTestCase):
 
     @inlineCallbacks
     def test_process_message_opt_out(self):
+        """
+        If the message input matches an opt out keyword, it should add the
+        appropriate opt out metadata to the message to mark it as an opt out.
+        """
         optouts = OptOutHelper(self.vumi_api, {'keywords': ['stop', 'halt']})
 
         msg = self.msg_helper.make_inbound('stop')
@@ -38,6 +42,11 @@ class TestOptOutHelper(VumiTestCase):
 
     @inlineCallbacks
     def test_process_message_non_opt_out(self):
+        """
+        If the message input does not match an opt out keyword, it should add
+        the appropriate opt out metadata to the message to mark it as not an
+        opt out.
+        """
         optouts = OptOutHelper(self.vumi_api, {'keywords': ['stop', 'halt']})
 
         msg = self.msg_helper.make_inbound('hi')
@@ -46,6 +55,10 @@ class TestOptOutHelper(VumiTestCase):
 
     @inlineCallbacks
     def test_process_message_case_insensitive(self):
+        """
+        If the helper is configured to be case insensitive, should match
+        message input to opt out keywords regardless of the casing.
+        """
         optouts = OptOutHelper(self.vumi_api, {
             'case_sensitive': False,
             'keywords': ['STOP']
@@ -77,6 +90,10 @@ class TestOptOutHelper(VumiTestCase):
 
     @inlineCallbacks
     def test_process_message_case_sensitive(self):
+        """
+        If the helper is configured to be case sensitive, should only match
+        message input to opt out keywords if their casing matches.
+        """
         optouts = OptOutHelper(self.vumi_api, {
             'case_sensitive': True,
             'keywords': ['STOP']
@@ -100,6 +117,10 @@ class TestOptOutHelper(VumiTestCase):
 
     @inlineCallbacks
     def test_process_message_disabled_by_tagpool(self):
+        """
+        If the message is being sent using a tag in a tagpool with global opt
+        outs disabled, it should process the message as a non-opt out.
+        """
         optouts = OptOutHelper(self.vumi_api, {'keywords': ['stop']})
 
         yield self.vumi_helper.setup_tagpool(u'pool1', [u'tag1'], {
@@ -114,7 +135,11 @@ class TestOptOutHelper(VumiTestCase):
         self.assertEqual(msg['helper_metadata']['optout'], {'optout': False})
 
     @inlineCallbacks
-    def test_process_message_already_checked(self):
+    def test_process_message_already_processed(self):
+        """
+        If the message has already been processed as an opt out or non-opt out,
+        it should not be reprocessed.
+        """
         optouts = OptOutHelper(self.vumi_api, {'keywords': ['stop']})
 
         msg = self.msg_helper.make_inbound('stop')
@@ -123,6 +148,10 @@ class TestOptOutHelper(VumiTestCase):
         self.assertEqual(msg['helper_metadata']['optout'], {'optout': False})
 
     def test_is_optout_message(self):
+        """
+        It should return True if the message contains the relevant metadata for
+        it to count as an opt out, otherwise False.
+        """
         msg = self.msg_helper.make_inbound('hi')
         self.assertFalse(OptOutHelper.is_optout_message(msg))
 
