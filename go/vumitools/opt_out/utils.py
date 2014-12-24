@@ -20,7 +20,7 @@ class OptOutHelper(object):
     def __init__(self, vumi_api, config):
         self.vumi_api = vumi_api
         self.config = OptOutHelperConfig(config)
-        self.opt_out_keywords = set([
+        self.optout_keywords = set([
             self.casing(word) for word in self.config.keywords])
 
     def casing(self, word):
@@ -33,7 +33,7 @@ class OptOutHelper(object):
         return self.casing(keyword)
 
     @inlineCallbacks
-    def _opt_out_disabled(self, account, message):
+    def _optout_disabled(self, account, message):
         msg_mdh = MessageMetadataHelper(self.vumi_api, message)
 
         if msg_mdh.tag is not None:
@@ -43,24 +43,24 @@ class OptOutHelper(object):
             returnValue(False)
 
     @inlineCallbacks
-    def _is_opt_out(self, account, message):
-        if (yield self._opt_out_disabled(account, message)):
+    def _is_optout(self, account, message):
+        if (yield self._optout_disabled(account, message)):
             returnValue(False)
         else:
-            returnValue(self.keyword(message) in self.opt_out_keywords)
+            returnValue(self.keyword(message) in self.optout_keywords)
 
     @inlineCallbacks
     def process_message(self, account, message):
         helper_metadata = message['helper_metadata']
-        opt_out_metadata = helper_metadata.setdefault(
-            'opt_out', {'opt_out': False})
+        optout_metadata = helper_metadata.setdefault(
+            'optout', {'optout': False})
 
-        if (yield self._is_opt_out(account, message)):
-            opt_out_metadata['opt_out'] = True
-            opt_out_metadata['opt_out_keyword'] = self.keyword(message)
+        if (yield self._is_optout(account, message)):
+            optout_metadata['optout'] = True
+            optout_metadata['optout_keyword'] = self.keyword(message)
 
         returnValue(message)
 
     @staticmethod
-    def is_opt_out_message(message):
-        return message['helper_metadata'].get('opt_out', {}).get('opt_out')
+    def is_optout_message(message):
+        return message['helper_metadata'].get('optout', {}).get('optout')
