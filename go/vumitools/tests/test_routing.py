@@ -461,8 +461,8 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
 
     def with_md(self, msg, user_account=None, conv=None, router=None,
                 endpoint=None, tag=None, hops=None, outbound_hops_from=None,
-                is_paid=False, is_reply_to_unroutable=False):
-        msg.payload.setdefault('helper_metadata', {})
+                is_paid=False, is_reply_to_unroutable=False, optout=None):
+        helper_metadata = msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_helper.get_vumi_api(), msg)
         if user_account is not None:
             md.set_user_account(user_account)
@@ -492,6 +492,8 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
         if is_reply_to_unroutable:
             rmeta = RoutingMetadata(msg)
             rmeta.set_unroutable_reply()
+        if optout is not None:
+            helper_metadata['optout'] = optout
         return msg
 
     def assert_rkeys_used(self, *rkeys):
@@ -591,6 +593,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
                 "router": "router_ri",
             },
             "opt_out_connector": "optout",
+            "optouts": {"keywords": ["stop"]}
         })
         config.update(extra_config)
         return self.vumi_helper.get_worker_helper().get_worker(
@@ -603,7 +606,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
-        self.with_md(msg, conv=('app1', 'conv1'),
+        self.with_md(msg, conv=('app1', 'conv1'), optout={'optout': False},
                      hops=[
                          ['TRANSPORT_TAG:pool1:1234', 'default'],
                          ['CONVERSATION:app1:conv1', 'default'],
@@ -617,7 +620,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             self.msg_helper.make_inbound("foo"), tag=("pool1", "9012"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app2.inbound')
-        self.with_md(msg, conv=('app2', 'conv2'),
+        self.with_md(msg, conv=('app2', 'conv2'), optout={'optout': False},
                      hops=[
                          ['TRANSPORT_TAG:pool1:9012', 'default'],
                          ['CONVERSATION:app2:conv2', 'default'],
@@ -632,7 +635,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
         self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
-                     hops=[
+                     optout={'optout': False}, hops=[
                          ['TRANSPORT_TAG:pool1:5678', 'default'],
                          ['CONVERSATION:app1:conv1', 'other'],
                      ])
@@ -642,22 +645,29 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_transport_to_optout(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
-        msg = self.with_md(self.msg_helper.make_inbound("foo"), tag=tag)
-        msg['helper_metadata']['optout'] = {'optout': True}
+        msg = self.with_md(self.msg_helper.make_inbound("stop"), tag=tag)
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
-        self.with_md(msg, user_account=self.user_account_key,
-                     hops=[
-                         ['TRANSPORT_TAG:pool1:1234', 'default'],
-                         ['OPT_OUT', 'default'],
-                     ])
+        self.with_md(
+            msg,
+            user_account=self.user_account_key,
+            optout={
+                'optout': True,
+                'optout_keyword': 'stop'
+            },
+            hops=[
+                ['TRANSPORT_TAG:pool1:1234', 'default'],
+                ['OPT_OUT', 'default'],
+            ])
         self.assertEqual([msg], self.get_dispatched_inbound('optout'))
 
     @inlineCallbacks
     def test_inbound_message_from_router(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_inbound("foo"), router=('router', 'router1'))
+            self.msg_helper.make_inbound("foo"),
+            optout={'optout': False},
+            router=('router', 'router1'))
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
         self.with_md(msg, conv=("app1", "conv1"),
@@ -671,7 +681,9 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_router_to_custom_endpoint(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_outbound("foo"), router=('router', 'router1'),
+            self.msg_helper.make_outbound("foo"),
+            optout={'optout': False}, 
+            router=('router', 'router1'),
             endpoint='other')
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app2.inbound')
@@ -998,6 +1010,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             },
             "opt_out_connector": "optout",
             "default_unroutable_inbound_reply": "Eep!",
+            "optouts": {"keywords": ["stop"]}
         })
         config.update(extra_config)
         return self.vumi_helper.get_worker_helper().get_worker(
@@ -1016,7 +1029,8 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             ['TRANSPORT_TAG:pool1:1234', 'default'],
             ['BILLING:INBOUND', 'default']
         ]
-        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.with_md(msg, user_account=self.user_account_key,
+                     hops=hops, optout={'optout': False})
         self.assertEqual(
             [msg], self.get_dispatched_inbound('billing_dispatcher_ri'))
 
@@ -1026,6 +1040,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         msg = self.with_md(
             self.msg_helper.make_inbound("foo"),
             user_account=self.user_account_key,
+            optout={'optout': False},
             tag=("pool1", "1234"), hops=[
                 ['TRANSPORT_TAG:pool1:1234', 'default'],
                 ['BILLING:INBOUND', 'default']
@@ -1035,10 +1050,11 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         self.assert_rkeys_used(
             'billing_dispatcher_ro.inbound', 'app1.inbound')
 
-        self.with_md(msg, conv=('app1', 'conv1'), hops=[
-            ['BILLING:OUTBOUND', 'default'],
-            ['CONVERSATION:app1:conv1', 'default'],
-        ])
+        self.with_md(msg, conv=('app1', 'conv1'),
+                     hops=[
+                         ['BILLING:OUTBOUND', 'default'],
+                         ['CONVERSATION:app1:conv1', 'default'],
+                     ])
         self.assertEqual(
             [msg], self.get_dispatched_inbound('app1'))
 
@@ -1046,8 +1062,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     def test_inbound_optout_message_from_transport_to_billing(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
-        msg['helper_metadata']['optout'] = {'optout': True}
+            self.msg_helper.make_inbound("stop"), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used(
             'sphex.inbound', 'billing_dispatcher_ri.inbound')
@@ -1055,7 +1070,11 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             ['TRANSPORT_TAG:pool1:1234', 'default'],
             ['BILLING:INBOUND', 'default'],
         ]
-        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.with_md(msg, user_account=self.user_account_key,
+                     hops=hops, optout={
+                         'optout': True,
+                         'optout_keyword': 'stop'
+                     })
         self.assertEqual(
             [msg], self.get_dispatched_inbound('billing_dispatcher_ri'))
 
@@ -1063,8 +1082,9 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_billing_to_optout(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
-        msg['helper_metadata']['optout'] = {'optout': True}
+            self.msg_helper.make_inbound("stop"),
+            tag=("pool1", "1234"),
+            optout={'optout': True})
         yield self.dispatch_inbound(msg, 'billing_dispatcher_ro')
         self.assert_rkeys_used(
             'billing_dispatcher_ro.inbound', 'optout.inbound')
@@ -1081,7 +1101,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_outbound("foo"), router=('router', 'router1'),
-            is_paid=True)
+            is_paid=True, optout={'optout': False})
 
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
@@ -1378,7 +1398,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
             'sphex', msg, "Eep!", tag=("pool1", "1234"),
-            user_account=self.user_helper.account_key)
+            user_account=self.user_helper.account_key,
+            optout={'optout': False})
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_default_reply_no_session(self):
@@ -1389,7 +1410,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
             'sphex', msg, "Eep!", tag=("pool1", "1234"),
-            user_account=self.user_helper.account_key)
+            user_account=self.user_helper.account_key,
+            optout={'optout': False})
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_custom_reply(self):
@@ -1402,7 +1424,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
             'sphex', msg, "Custom Eep!", tag=("pool1", "1234"),
-            user_account=self.user_helper.account_key)
+            user_account=self.user_helper.account_key,
+            optout={'optout': False})
 
     @inlineCallbacks
     def test_unroutable_inbound_from_router_no_config(self):
@@ -1422,7 +1445,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("pool1", "1234"), router=('router', 'badrouter'))
+            optout={'optout': False}, tag=("pool1", "1234"),
+            router=('router', 'badrouter'))
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_unroutable_reply(
             'router_ro', msg, "Eep!", router=("router", "badrouter"))
@@ -1492,7 +1516,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
             'sphex', msg, "Eep!", tag=("pool1", "1234"),
-            user_account=self.user_helper.account_key)
+            user_account=self.user_helper.account_key,
+            optout={'optout': False})
 
         [reply] = self.get_dispatched_outbound('sphex')
         mdb = self.vumi_helper.get_vumi_api().mdb
