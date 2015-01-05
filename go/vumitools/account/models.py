@@ -29,11 +29,19 @@ class UserAppPermission(Model):
 class UserAccount(Model):
     """A user account."""
 
-    VERSION = 5
+    VERSION = 6
     MIGRATOR = UserAccountMigrator
+
+    ACCOUNT_TYPE_NORMAL = u'normal'
+    ACCOUNT_TYPE_DEVELOPER = u'developer'
+
+    ACCOUNT_TYPES = (
+        (ACCOUNT_TYPE_NORMAL, u'Normal'),
+        (ACCOUNT_TYPE_DEVELOPER, u'Developer'))
 
     # key is uuid
     username = Unicode(max_length=255)
+    account_type = Unicode(max_length=255, default=ACCOUNT_TYPE_NORMAL)
     # TODO: tagpools can be made OneToMany once vumi.persist.fields
     #       gains a OneToMany field
     tagpools = ManyToMany(UserTagPermission)

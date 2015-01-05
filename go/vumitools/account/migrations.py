@@ -109,3 +109,42 @@ class UserAccountMigrator(ModelMigrator):
         mdata.set_value('$VERSION', 4)
 
         return mdata
+
+    def migrate_from_5(self, mdata):
+        """
+        Add the account_types field and default it to `ACCOUNT_TYPE_NORMAL`
+        """
+
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table',
+            'can_manage_optouts', 'disable_optouts')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # import here to avoid circular import
+        from go.vumitools.account.models import UserAccount
+
+        # set the default `disable_optouts` value
+        mdata.set_value('account_type', UserAccount.ACCOUNT_TYPE_NORMAL)
+
+        # increment version counter
+        mdata.set_value('$VERSION', 6)
+
+        return mdata
+
+    def reverse_from_6(self, mdata):
+        """
+        Remove account_type field.
+        """
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table',
+            'can_manage_optouts', 'disable_optouts')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # decrement version counter
+        mdata.set_value('$VERSION', 5)
+
+        return mdata
