@@ -873,14 +873,13 @@ class TransactionResource(BaseResource):
         :return:
             An int representing the current notification level.
         """
-        try:
-            minimum = self._notification_mapping[0]
-            maximum = self._notification_mapping[-1]
-        except IndexError:
+        if not self._notification_mapping:
             return None
+
+        minimum = self._notification_mapping[0]
         if percentage < minimum:
             return minimum
-        if percentage > maximum:
+        if percentage > self._notification_mapping[-1]:
             return None
         return self._notification_mapping[percentage - minimum]
 
