@@ -584,21 +584,23 @@ class TransactionResource(BaseResource):
         Constructs a mapping from precentage of credits used to the
         notification percentage immediately above it.
 
-        Only percentages from 0 to 100 (inclusive) are entered in the
-        mapping. Percentages above the highest notification precentage
-        are mapped to ``None``.
+        Only percentages from the lowest percentage to the highest percentage
+        (inclusive) are entered in the mapping.
         """
         levels = sorted(
             int(i) for i in app_settings.LOW_CREDIT_NOTIFICATION_PERCENTAGES)
 
-        def get_level_value(idx):
-            return levels[idx] if idx < len(levels) else None
-
-        mapping = {}
+        mapping = []
         level_idx = 0
-        for i in range(0, 101):
-            mapping[i] = get_level_value(level_idx)
-            if mapping[i] == i:
+        try:
+            minimum = levels[0]
+            maximum = levels[-1]
+        except IndexError:
+            return mapping
+
+        for i in range(minimum, maximum + 1):
+            mapping.append(levels[level_idx])
+            if mapping[i - minimum] == i:
                 level_idx += 1
 
         return mapping
@@ -863,6 +865,27 @@ class TransactionResource(BaseResource):
                 create_low_credit_notification, account_number,
                 level, credit_balance)
 
+    def _get_notification_level(self, percentage):
+        """
+        Fetches the value of the notification level for the given percentage.
+
+        :param int percentage:
+            The percentage to get the notification level for
+
+        :return:
+            An int representing the current notification level.
+        """
+        try:
+            minimum = self._notification_mapping[0]
+            maximum = self._notification_mapping[-1]
+        except IndexError:
+            return None
+        if percentage < minimum:
+            return minimum
+        if percentage > maximum:
+            return None
+        return self._notification_mapping[percentage - minimum]
+
     def check_all_low_credit_thresholds(
             self, credit_balance, credit_amount, last_topup_balance):
         """
@@ -881,15 +904,13 @@ class TransactionResource(BaseResource):
             or ``None`` if no threshold was crossed.
         """
         def ceil_percent(n):
-            return min(
-                100, max(
-                    0, int(math.ceil(n * 100 / last_topup_balance))))
+            return int(math.ceil(n * 100 / last_topup_balance))
 
         current_percentage = ceil_percent(credit_balance)
-        current_notification_level = self._notification_mapping.get(
+        current_notification_level = self._get_notification_level(
             current_percentage)
         previous_percentage = ceil_percent(credit_balance + credit_amount)
-        previous_notification_level = self._notification_mapping.get(
+        previous_notification_level = self._get_notification_level(
             previous_percentage)
 
         if current_notification_level != previous_notification_level:
