@@ -28,7 +28,7 @@ class TestUserAccount(VumiTestCase):
         # Configure the manager to save the older message version.
         modelcls = self.store.users._modelcls
         model_name = "%s.%s" % (modelcls.__module__, modelcls.__name__)
-        self.store.manager.store_versions[model_name] = 4
+        self.store.manager.store_versions[model_name] = version
 
     def assert_user(self, user, **fields):
         def assert_field(value, name, default):
