@@ -590,17 +590,15 @@ class TransactionResource(BaseResource):
         levels = sorted(
             int(i) for i in app_settings.LOW_CREDIT_NOTIFICATION_PERCENTAGES)
 
+        if not levels:
+            return []
+
         mapping = []
         level_idx = 0
-        try:
-            minimum = levels[0]
-            maximum = levels[-1]
-        except IndexError:
-            return mapping
 
-        for i in range(minimum, maximum + 1):
+        for i in range(levels[0], levels[-1] + 1):
             mapping.append(levels[level_idx])
-            if mapping[i - minimum] == i:
+            if mapping[i - levels[0]] == i:
                 level_idx += 1
 
         return mapping
