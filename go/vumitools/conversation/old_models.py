@@ -46,7 +46,6 @@ class ConversationVNone(Model):
     metadata = Json(null=True)
 
     def started(self):
-        # TODO: Better way to tell if we've started than looking for batches.
         return bool(self.batches.keys())
 
     def ended(self):
@@ -197,7 +196,6 @@ class ConversationV2(Model):
         return self.archive_status == CONVERSATION_ARCHIVED
 
     def ended(self):
-        # TODO: Get rid of this once the old UI finally goes away.
         return self.archived()
 
     def starting(self):
@@ -213,7 +211,6 @@ class ConversationV2(Model):
         return self.status == CONVERSATION_STOPPED
 
     def is_draft(self):
-        # TODO: Get rid of this once the old UI finally goes away.
         return self.active() and self.status == CONVERSATION_STOPPED
 
     def get_status(self):

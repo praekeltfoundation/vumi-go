@@ -192,7 +192,8 @@ class TestArchiveTransactions(GoDjangoTestCase):
             delete=True)
 
         self.assertEqual(cmd.stderr.getvalue().splitlines(), [
-            'Aborting archiving, no statements found for the following months:',
+            ('Aborting archiving, no statements found for the following'
+             ' months:'),
             '2014-10',
             '2014-12'
         ])
@@ -211,7 +212,7 @@ class TestArchiveTransactions(GoDjangoTestCase):
             from_date=datetime(2014, 12, 1),
             to_date=datetime(2014, 12, 31))
 
-        transactions = self.mk_monthly_transactions(
+        self.mk_monthly_transactions(
             datetime(2014, 11, 1),
             datetime(2014, 12, 1))
 

@@ -20,9 +20,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.service import Publisher
 from vumi import log
 
-from go.config import (
-    configured_conversations,
-    configured_routers)
+from go.config import configured_conversations, configured_routers
 from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
@@ -181,9 +179,10 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def draft_conversations(self):
-        # TODO: Get rid of this once the old UI finally goes away.
+        # TODO: This should probably be `stopped_conversations` instead, but we
+        #       still apparently use `draft` in the UI in places.
         conversations = yield self.active_conversations()
-        returnValue([c for c in conversations if c.is_draft()])
+        returnValue([c for c in conversations if c.stopped()])
 
     @Manager.calls_manager
     def active_routers(self):
@@ -248,12 +247,11 @@ class VumiUserApi(object):
         for permissions in user_account.applications.load_all_bunches():
             app_permissions.extend((yield permissions))
         applications = [permission.application for permission
-                            in app_permissions]
+                        in app_permissions]
         app_settings = configured_conversations()
-        returnValue(SortedDict([(application,
-                        app_settings[application])
-                        for application in sorted(applications)
-                        if application in app_settings]))
+        returnValue(SortedDict([(application, app_settings[application])
+                                for application in sorted(applications)
+                                if application in app_settings]))
 
     @Manager.calls_manager
     def router_types(self):
@@ -518,11 +516,11 @@ class VumiApi(object):
         self.redis = redis
 
         self.tpm = TagpoolManager(self.redis.sub_manager('tagpool_store'))
-        self.mdb = MessageStore(self.manager,
-                                self.redis.sub_manager('message_store'))
+        self.mdb = MessageStore(
+            self.manager, self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
         self.token_manager = TokenManager(
-                                self.redis.sub_manager('token_manager'))
+            self.redis.sub_manager('token_manager'))
         self.session_manager = SessionManager(
             self.redis.sub_manager('session_manager'))
         self.mapi = sender
