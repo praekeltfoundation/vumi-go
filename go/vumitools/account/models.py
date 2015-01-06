@@ -29,7 +29,7 @@ class UserAppPermission(Model):
 class UserAccount(Model):
     """A user account."""
 
-    VERSION = 4
+    VERSION = 5
     MIGRATOR = UserAccountMigrator
 
     # key is uuid
@@ -42,6 +42,7 @@ class UserAccount(Model):
     event_handler_config = Json(default=list)
     msisdn = Unicode(max_length=255, null=True)
     confirm_start_conversation = Boolean(default=False)
+    disable_optouts = Boolean(default=False)
     can_manage_optouts = Boolean(default=False)
     email_summary = Unicode(max_length=255, null=True)
     tags = Json(default=[])
