@@ -135,6 +135,22 @@ class TestOptOutHelper(VumiTestCase):
         self.assertEqual(msg['helper_metadata']['optout'], {'optout': False})
 
     @inlineCallbacks
+    def test_process_message_disabled_by_account(self):
+        """
+        If the message is being sent using a tag in a tagpool with global opt
+        outs disabled, it should process the message as a non-opt out.
+        """
+        optouts = OptOutHelper(self.vumi_api, {'keywords': ['stop']})
+
+        msg = self.msg_helper.make_inbound('stop')
+        md = MessageMetadataHelper(self.vumi_api, msg)
+        md.set_tag((u'pool1', u'tag1'))
+
+        self.account.disable_optouts = True
+        yield optouts.process_message(self.account, msg)
+        self.assertEqual(msg['helper_metadata']['optout'], {'optout': False})
+
+    @inlineCallbacks
     def test_process_message_already_processed(self):
         """
         If the message has already been processed as an opt out or non-opt out,
