@@ -36,7 +36,9 @@ class OptOutHelper(object):
     def _optout_disabled(self, account, message):
         msg_mdh = MessageMetadataHelper(self.vumi_api, message)
 
-        if msg_mdh.tag is not None:
+        if account.disable_optouts:
+            returnValue(True)
+        elif msg_mdh.tag is not None:
             tagpool_metadata = yield msg_mdh.get_tagpool_metadata()
             returnValue(tagpool_metadata.get('disable_global_opt_out', False))
         else:
