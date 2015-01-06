@@ -168,8 +168,8 @@ class MessageMetadataHelper(MessageMetadataDictHelper):
 
     def is_optout_message(self):
         # To avoid circular imports.
-        from go.vumitools.middleware import OptOutMiddleware
-        return OptOutMiddleware.is_optout_message(self.message)
+        from go.vumitools.opt_out.utils import OptOutHelper
+        return OptOutHelper.is_optout_message(self.message)
 
     def get_router(self):
         return self._get_if_not_stashed(
