@@ -23,8 +23,8 @@ class TestStatementView(GoDjangoTestCase):
 
     def get_statement(self, username, statement):
         client = self.vumi_helper.get_client(username=username)
-        return client.get(
-            reverse('billing:html_statement', kwargs={'statement_id': statement.id}))
+        return client.get(reverse('billing:html_statement',
+                                  kwargs={'statement_id': statement.id}))
 
     def check_statement_accessible_by(self, username, statement):
         response = self.get_statement(username, statement)

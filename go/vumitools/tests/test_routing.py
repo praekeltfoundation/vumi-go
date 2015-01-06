@@ -649,14 +649,13 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
         self.with_md(msg, user_account=self.user_account_key,
-            optout={
-                'optout': True,
-                'optout_keyword': 'stop'
-            },
-            hops=[
-                ['TRANSPORT_TAG:pool1:1234', 'default'],
-                ['OPT_OUT', 'default'],
-            ])
+                     optout={
+                         'optout': True,
+                         'optout_keyword': 'stop'
+                     }, hops=[
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
+                         ['OPT_OUT', 'default'],
+                     ])
         self.assertEqual([msg], self.get_dispatched_inbound('optout'))
 
     @inlineCallbacks
@@ -1048,7 +1047,8 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         self.assert_rkeys_used(
             'billing_dispatcher_ro.inbound', 'app1.inbound')
 
-        self.with_md(msg, conv=('app1', 'conv1'), hops=[
+        self.with_md(msg, conv=('app1', 'conv1'),
+                     hops=[
                          ['BILLING:OUTBOUND', 'default'],
                          ['CONVERSATION:app1:conv1', 'default'],
                      ])
