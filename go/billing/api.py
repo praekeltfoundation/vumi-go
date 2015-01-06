@@ -900,6 +900,9 @@ class TransactionResource(BaseResource):
             A :class:`Decimal` percentage for the alert threshold crossed
             or ``None`` if no threshold was crossed.
         """
+        if not last_topup_balance:
+            return None
+
         def ceil_percent(n):
             return int(math.ceil(n * 100 / last_topup_balance))
 
