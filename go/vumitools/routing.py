@@ -10,6 +10,7 @@ from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.routing_table import GoConnector
+from go.vumitools.opt_out.utils import OptOutHelper
 
 
 class RoutingError(Exception):
@@ -292,6 +293,9 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         "If true (the default), outbound messages to transports will be"
         " written to the message store.",
         static=True, default=True)
+    optouts = ConfigDict(
+        "Configuration options for the opt out helper",
+        static=True, default={})
 
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
@@ -400,6 +404,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         self.transport_connectors = set(config.receive_inbound_connectors)
         self.transport_connectors -= self.router_connectors
         self.transport_connectors -= self.billing_connectors
+
+        self.optouts = OptOutHelper(self.vumi_api, config.optouts)
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -773,6 +779,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         * the billing worker
         """
         log.debug("Processing inbound: %r" % (msg,))
+
+        user_api = self.get_user_api(config.user_account_key)
+        account = yield self.account_cache.get_account(user_api)
+        yield self.optouts.process_message(account, msg)
+
         msg_mdh = self.get_metadata_helper(msg)
         msg_mdh.set_user_account(config.user_account_key)
 
