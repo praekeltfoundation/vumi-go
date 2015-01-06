@@ -3,11 +3,12 @@ import urllib
 
 from urlparse import urljoin
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
+from twisted.internet import reactor
 
 from vumi import log
 from vumi.dispatchers.endpoint_dispatchers import Dispatcher
-from vumi.config import ConfigText
+from vumi.config import ConfigText, ConfigFloat
 from vumi.utils import http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
@@ -18,8 +19,26 @@ from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 class BillingApi(object):
     """Proxy to the billing REST API"""
 
-    def __init__(self, base_url):
+    def __init__(self, base_url, retry_delay):
         self.base_url = base_url
+        self.retry_delay = retry_delay
+
+    @inlineCallbacks
+    def _call_with_retry(self, url, data, headers, method):
+        """
+        Make an HTTP request and retry after a delay if it raises an exception.
+        """
+        try:
+            response = yield http_request_full(
+                url, data, headers=headers, method=method)
+        except Exception:
+            # Wait a bit and then retry. Only one retry here.
+            d = Deferred()
+            reactor.callLater(self.retry_delay, d.callback, None)
+            yield d
+            response = yield http_request_full(
+                url, data, headers=headers, method=method)
+        returnValue(response)
 
     @inlineCallbacks
     def _call_api(self, path, query=None, data=None, method='GET'):
@@ -34,8 +53,8 @@ class BillingApi(object):
         data = json.dumps(data, cls=JSONEncoder)
         headers = {'Content-Type': 'application/json'}
         log.debug("Sending billing request to %r: %r" % (url, data))
-        response = yield http_request_full(url, data, headers=headers,
-                                           method=method)
+        response = yield self._call_with_retry(
+            url, data, headers=headers, method=method)
 
         log.debug("Got billing response: %r" % (response.delivered_body,))
         if response.code != 200:
@@ -62,6 +81,9 @@ class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
     api_url = ConfigText(
         "Base URL of the billing REST API",
         static=True, required=True)
+    retry_delay = ConfigFloat(
+        "Delay before retrying failed API calls, default 0.5s",
+        static=True, default=0.5)
 
     def post_validate(self):
         if len(self.receive_inbound_connectors) != 1:
@@ -95,7 +117,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             self.get_configured_ro_connectors()[0]
 
         self.api_url = config.api_url
-        self.billing_api = BillingApi(self.api_url)
+        self.billing_api = BillingApi(self.api_url, config.retry_delay)
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -152,6 +174,14 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             yield self.create_transaction_for_inbound(msg)
             msg_mdh.set_paid()
         except BillingError:
+            log.warning(
+                "BillingError for inbound message, sending without billing:"
+                " %r" % (msg,))
+            log.err()
+        except Exception:
+            log.warning(
+                "Error processing inbound message, sending without billing:"
+                " %r" % (msg,))
             log.err()
         yield self.publish_inbound(msg, self.receive_outbound_connector, None)
 
@@ -168,6 +198,14 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             yield self.create_transaction_for_outbound(msg)
             msg_mdh.set_paid()
         except BillingError:
+            log.warning(
+                "BillingError for outbound message, sending without billing:"
+                " %r" % (msg,))
+            log.err()
+        except Exception:
+            log.warning(
+                "Error processing outbound message, sending without billing:"
+                " %r" % (msg,))
             log.err()
         yield self.publish_outbound(msg, self.receive_inbound_connector, None)
 

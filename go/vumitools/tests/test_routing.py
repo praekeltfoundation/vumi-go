@@ -5,7 +5,7 @@ from vumi.tests.helpers import VumiTestCase, MessageHelper
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata, AccountRoutingTableCache,
+    AccountRoutingTableDispatcher, RoutingMetadata, AccountCache,
     RoutingError, UnroutableMessageError, NoTargetError)
 from go.vumitools.routing_table import RoutingTable
 from go.vumitools.tests.helpers import VumiApiHelper
@@ -278,122 +278,100 @@ class TestRoutingMetadata(VumiTestCase):
         self.assertEqual(rmeta.unroutable_event_done(), True)
 
 
-class TestAccountRoutingTableCache(VumiTestCase):
+class TestAccountCache(VumiTestCase):
     @inlineCallbacks
     def setUp(self):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.make_user(u'testuser')
         self.user_account_key = self.user_helper.account_key
 
-        user_account = yield self.user_helper.get_user_account()
-        user_account.routing_table = self.get_routing_table()
-        yield user_account.save()
+        self.user_account = yield self.user_helper.get_user_account()
         self.clock = Clock()
 
-    def get_routing_table(self):
-        return RoutingTable({
-            # Transport side
-            "TRANSPORT_TAG:pool1:1234": {
-                "default": ["CONVERSATION:app1:conv1", "default"]},
-            # Application side
-            "CONVERSATION:app1:conv1": {
-                "default": ["TRANSPORT_TAG:pool1:1234", "default"],
-            },
-        })
-
     @inlineCallbacks
-    def test_get_routing_table_not_cached(self):
+    def test_get_account_not_cached(self):
         """
-        When fetching an uncached routing table, we cache it.
+        When fetching an uncached account, we cache it.
         """
-        cache = AccountRoutingTableCache(self.clock, 5)
-        self.assertEqual(cache._routing_tables, {})
+        cache = AccountCache(self.clock, 5)
+        self.assertEqual(cache._accounts, {})
         self.assertEqual(cache._evictors, {})
 
-        rt = yield cache.get_routing_table(self.user_helper.user_api)
-        self.assertEqual(rt, self.get_routing_table())
-        self.assertEqual(cache._routing_tables, {
-            self.user_account_key: rt,
-        })
+        account = yield cache.get_account(self.user_helper.user_api)
+        self.assertEqual(account.key, self.user_account_key)
+        self.assertEqual(cache._accounts, {self.user_account_key: account})
         self.assertEqual(cache._evictors.keys(), [self.user_account_key])
 
         # Clean up remaining state.
         cache.cleanup()
-        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._accounts, {})
         self.assertEqual(cache._evictors, {})
 
     @inlineCallbacks
     def test_cache_eviction(self):
         """
-        When the TTL is reached, the routing table is removed from the cache.
+        When the TTL is reached, the account is removed from the cache.
         """
-        cache = AccountRoutingTableCache(self.clock, 5)
-        rt = yield cache.get_routing_table(self.user_helper.user_api)
-        self.assertEqual(rt, self.get_routing_table())
-        self.assertEqual(cache._routing_tables, {
-            self.user_account_key: rt,
-        })
+        cache = AccountCache(self.clock, 5)
+        account = yield cache.get_account(self.user_helper.user_api)
+        self.assertEqual(account.key, self.user_account_key)
+        self.assertEqual(cache._accounts, {self.user_account_key: account})
         self.assertEqual(cache._evictors.keys(), [self.user_account_key])
 
         self.clock.advance(4.9)
-        self.assertNotEqual(cache._routing_tables, {})
+        self.assertNotEqual(cache._accounts, {})
         self.assertNotEqual(cache._evictors, {})
 
         self.clock.advance(0.5)
-        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._accounts, {})
         self.assertEqual(cache._evictors, {})
 
     @inlineCallbacks
     def test_multiple_cache_eviction(self):
         """
-        Each routing table has its own TTL.
+        Each account has its own TTL.
         """
         user_helper_2 = yield self.vumi_helper.make_user(u'testuser')
         account_key_2 = user_helper_2.account_key
-        user_account_2 = yield user_helper_2.get_user_account()
-        user_account_2.routing_table = self.get_routing_table()
-        yield user_account_2.save()
 
-        cache = AccountRoutingTableCache(self.clock, 5)
-        rt = yield cache.get_routing_table(self.user_helper.user_api)
-        self.assertEqual(cache._routing_tables, {
-            self.user_account_key: rt,
-        })
+        cache = AccountCache(self.clock, 5)
+        account = yield cache.get_account(self.user_helper.user_api)
+        self.assertEqual(cache._accounts, {self.user_account_key: account})
         self.assertEqual(cache._evictors.keys(), [self.user_account_key])
 
         self.clock.advance(3)
-        rt2 = yield cache.get_routing_table(user_helper_2.user_api)
-        self.assertEqual(cache._routing_tables, {
-            self.user_account_key: rt,
-            account_key_2: rt2,
+        account2 = yield cache.get_account(user_helper_2.user_api)
+        self.assertEqual(cache._accounts, {
+            self.user_account_key: account,
+            account_key_2: account2,
         })
         self.assertEqual(
             set(cache._evictors.keys()),
             set([self.user_account_key, account_key_2]))
 
         self.clock.advance(3)
-        self.assertEqual(cache._routing_tables, {
-            account_key_2: rt2,
+        self.assertEqual(cache._accounts, {
+            account_key_2: account2,
         })
         self.assertEqual(cache._evictors.keys(), [account_key_2])
 
         self.clock.advance(3)
-        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._accounts, {})
         self.assertEqual(cache._evictors, {})
 
     @inlineCallbacks
-    def test_get_routing_table_no_caching(self):
+    def test_get_account_no_caching(self):
         """
-        When caching is disabled, we always fetch the routing table and never
+        When caching is disabled, we always fetch the account and never
         store it.
         """
-        cache = AccountRoutingTableCache(self.clock, 0)
-        self.assertEqual(cache._routing_tables, {})
+        cache = AccountCache(self.clock, 0)
+        self.assertEqual(cache._accounts, {})
         self.assertEqual(cache._evictors, {})
 
-        rt = yield cache.get_routing_table(self.user_helper.user_api)
-        self.assertEqual(rt, self.get_routing_table())
-        self.assertEqual(cache._routing_tables, {})
+        account = yield cache.get_account(self.user_helper.user_api)
+        self.assertEqual(account.key, self.user_account_key)
+        self.assertEqual(cache._accounts, {})
         self.assertEqual(cache._evictors, {})
 
     @inlineCallbacks
@@ -402,8 +380,8 @@ class TestAccountRoutingTableCache(VumiTestCase):
         If we schedule an eviction that already exists, we keep the old one
         instead.
         """
-        cache = AccountRoutingTableCache(self.clock, 5)
-        yield cache.get_routing_table(self.user_helper.user_api)
+        cache = AccountCache(self.clock, 5)
+        yield cache.get_account(self.user_helper.user_api)
         self.assertEqual(cache._evictors.keys(), [self.user_account_key])
 
         delayed_call = cache._evictors[self.user_account_key]
@@ -411,18 +389,18 @@ class TestAccountRoutingTableCache(VumiTestCase):
 
         # Calling schedule_eviction() doesn't replace the existing one.
         cache.schedule_eviction(self.user_account_key)
-        self.assertNotEqual(cache._routing_tables, {})
+        self.assertNotEqual(cache._accounts, {})
         self.assertEqual(cache._evictors[self.user_account_key], delayed_call)
 
         # The existing eviction happens at the expected time.
         self.clock.advance(4)
-        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._accounts, {})
         self.assertEqual(cache._evictors, {})
 
         # Advance to the time the new eviction would have been schduled to make
         # sure nothing breaks.
         self.clock.advance(1)
-        self.assertEqual(cache._routing_tables, {})
+        self.assertEqual(cache._accounts, {})
         self.assertEqual(cache._evictors, {})
 
 
@@ -483,8 +461,8 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
 
     def with_md(self, msg, user_account=None, conv=None, router=None,
                 endpoint=None, tag=None, hops=None, outbound_hops_from=None,
-                is_paid=False, is_reply_to_unroutable=False):
-        msg.payload.setdefault('helper_metadata', {})
+                is_paid=False, is_reply_to_unroutable=False, optout=None):
+        helper_metadata = msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_helper.get_vumi_api(), msg)
         if user_account is not None:
             md.set_user_account(user_account)
@@ -514,6 +492,8 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
         if is_reply_to_unroutable:
             rmeta = RoutingMetadata(msg)
             rmeta.set_unroutable_reply()
+        if optout is not None:
+            helper_metadata['optout'] = optout
         return msg
 
     def assert_rkeys_used(self, *rkeys):
@@ -613,6 +593,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
                 "router": "router_ri",
             },
             "opt_out_connector": "optout",
+            "optouts": {"keywords": ["stop"]}
         })
         config.update(extra_config)
         return self.vumi_helper.get_worker_helper().get_worker(
@@ -625,7 +606,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
-        self.with_md(msg, conv=('app1', 'conv1'),
+        self.with_md(msg, conv=('app1', 'conv1'), optout={'optout': False},
                      hops=[
                          ['TRANSPORT_TAG:pool1:1234', 'default'],
                          ['CONVERSATION:app1:conv1', 'default'],
@@ -639,7 +620,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             self.msg_helper.make_inbound("foo"), tag=("pool1", "9012"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app2.inbound')
-        self.with_md(msg, conv=('app2', 'conv2'),
+        self.with_md(msg, conv=('app2', 'conv2'), optout={'optout': False},
                      hops=[
                          ['TRANSPORT_TAG:pool1:9012', 'default'],
                          ['CONVERSATION:app2:conv2', 'default'],
@@ -654,7 +635,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
         self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
-                     hops=[
+                     optout={'optout': False}, hops=[
                          ['TRANSPORT_TAG:pool1:5678', 'default'],
                          ['CONVERSATION:app1:conv1', 'other'],
                      ])
@@ -664,12 +645,14 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_transport_to_optout(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
-        msg = self.with_md(self.msg_helper.make_inbound("foo"), tag=tag)
-        msg['helper_metadata']['optout'] = {'optout': True}
+        msg = self.with_md(self.msg_helper.make_inbound("stop"), tag=tag)
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
         self.with_md(msg, user_account=self.user_account_key,
-                     hops=[
+                     optout={
+                         'optout': True,
+                         'optout_keyword': 'stop'
+                     }, hops=[
                          ['TRANSPORT_TAG:pool1:1234', 'default'],
                          ['OPT_OUT', 'default'],
                      ])
@@ -679,7 +662,9 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_router(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_inbound("foo"), router=('router', 'router1'))
+            self.msg_helper.make_inbound("foo"),
+            optout={'optout': False},
+            router=('router', 'router1'))
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
         self.with_md(msg, conv=("app1", "conv1"),
@@ -693,7 +678,9 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_router_to_custom_endpoint(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_outbound("foo"), router=('router', 'router1'),
+            self.msg_helper.make_outbound("foo"),
+            optout={'optout': False},
+            router=('router', 'router1'),
             endpoint='other')
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app2.inbound')
@@ -1020,6 +1007,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             },
             "opt_out_connector": "optout",
             "default_unroutable_inbound_reply": "Eep!",
+            "optouts": {"keywords": ["stop"]}
         })
         config.update(extra_config)
         return self.vumi_helper.get_worker_helper().get_worker(
@@ -1038,7 +1026,8 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             ['TRANSPORT_TAG:pool1:1234', 'default'],
             ['BILLING:INBOUND', 'default']
         ]
-        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.with_md(msg, user_account=self.user_account_key,
+                     hops=hops, optout={'optout': False})
         self.assertEqual(
             [msg], self.get_dispatched_inbound('billing_dispatcher_ri'))
 
@@ -1048,6 +1037,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         msg = self.with_md(
             self.msg_helper.make_inbound("foo"),
             user_account=self.user_account_key,
+            optout={'optout': False},
             tag=("pool1", "1234"), hops=[
                 ['TRANSPORT_TAG:pool1:1234', 'default'],
                 ['BILLING:INBOUND', 'default']
@@ -1057,10 +1047,11 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         self.assert_rkeys_used(
             'billing_dispatcher_ro.inbound', 'app1.inbound')
 
-        self.with_md(msg, conv=('app1', 'conv1'), hops=[
-            ['BILLING:OUTBOUND', 'default'],
-            ['CONVERSATION:app1:conv1', 'default'],
-        ])
+        self.with_md(msg, conv=('app1', 'conv1'),
+                     hops=[
+                         ['BILLING:OUTBOUND', 'default'],
+                         ['CONVERSATION:app1:conv1', 'default'],
+                     ])
         self.assertEqual(
             [msg], self.get_dispatched_inbound('app1'))
 
@@ -1068,8 +1059,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     def test_inbound_optout_message_from_transport_to_billing(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
-        msg['helper_metadata']['optout'] = {'optout': True}
+            self.msg_helper.make_inbound("stop"), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used(
             'sphex.inbound', 'billing_dispatcher_ri.inbound')
@@ -1077,7 +1067,11 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             ['TRANSPORT_TAG:pool1:1234', 'default'],
             ['BILLING:INBOUND', 'default'],
         ]
-        self.with_md(msg, user_account=self.user_account_key, hops=hops)
+        self.with_md(msg, user_account=self.user_account_key, hops=hops,
+                     optout={
+                         'optout': True,
+                         'optout_keyword': 'stop'
+                     })
         self.assertEqual(
             [msg], self.get_dispatched_inbound('billing_dispatcher_ri'))
 
@@ -1085,8 +1079,9 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
     def test_inbound_message_from_billing_to_optout(self):
         yield self.get_dispatcher()
         msg = self.with_md(
-            self.msg_helper.make_inbound("foo"), tag=("pool1", "1234"))
-        msg['helper_metadata']['optout'] = {'optout': True}
+            self.msg_helper.make_inbound("stop"),
+            tag=("pool1", "1234"),
+            optout={'optout': True})
         yield self.dispatch_inbound(msg, 'billing_dispatcher_ro')
         self.assert_rkeys_used(
             'billing_dispatcher_ro.inbound', 'optout.inbound')
@@ -1103,7 +1098,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_outbound("foo"), router=('router', 'router1'),
-            is_paid=True)
+            is_paid=True, optout={'optout': False})
 
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
@@ -1400,7 +1395,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
             'sphex', msg, "Eep!", tag=("pool1", "1234"),
-            user_account=self.user_helper.account_key)
+            user_account=self.user_helper.account_key,
+            optout={'optout': False})
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_default_reply_no_session(self):
@@ -1411,7 +1407,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
             'sphex', msg, "Eep!", tag=("pool1", "1234"),
-            user_account=self.user_helper.account_key)
+            user_account=self.user_helper.account_key,
+            optout={'optout': False})
 
     @inlineCallbacks
     def test_unroutable_inbound_from_transport_custom_reply(self):
@@ -1424,7 +1421,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
             'sphex', msg, "Custom Eep!", tag=("pool1", "1234"),
-            user_account=self.user_helper.account_key)
+            user_account=self.user_helper.account_key,
+            optout={'optout': False})
 
     @inlineCallbacks
     def test_unroutable_inbound_from_router_no_config(self):
@@ -1444,7 +1442,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.get_dispatcher()
         msg = self.with_md(
             self.msg_helper.make_inbound("foo", session_event='new'),
-            tag=("pool1", "1234"), router=('router', 'badrouter'))
+            optout={'optout': False}, tag=("pool1", "1234"),
+            router=('router', 'badrouter'))
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_unroutable_reply(
             'router_ro', msg, "Eep!", router=("router", "badrouter"))
@@ -1487,8 +1486,7 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.get_dispatcher()
         msg, ack = yield self.mk_msg_ack(
             tag=('pool1', '1234'), is_reply_to_unroutable=True,
-            user_account=self.user_account_key,
-            hops=[
+            user_account=self.user_account_key, hops=[
                 ['ROUTER:router:router1:INBOUND', 'other'],
                 ['TRANSPORT_TAG:pool1:1234', 'default'],
             ])
@@ -1514,7 +1512,8 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_unroutable_reply(
             'sphex', msg, "Eep!", tag=("pool1", "1234"),
-            user_account=self.user_helper.account_key)
+            user_account=self.user_helper.account_key,
+            optout={'optout': False})
 
         [reply] = self.get_dispatched_outbound('sphex')
         mdb = self.vumi_helper.get_vumi_api().mdb

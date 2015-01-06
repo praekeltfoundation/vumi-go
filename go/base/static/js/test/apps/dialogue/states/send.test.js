@@ -1,5 +1,5 @@
 describe("go.apps.dialogue.states.send", function() {
-  var dialogue = go.apps.dialogue;
+ var dialogue = go.apps.dialogue;
 
   var setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,
@@ -13,23 +13,24 @@ describe("go.apps.dialogue.states.send", function() {
 
     diagram = newDialogueDiagram();
     
-    diagram.model.set('channel_types', [{
+    diagram.model.set({
+      channel_types: [{
         name: 'sms',
         label: 'SMS'
-    }, {
+      }, {
         name: 'ussd',
         label: 'USSD'
-    }]);
-
-    diagram.model.set('states', [{
-      uuid: 'foo',
-      name: 'Foo',
-      type: 'send',
-      channel_type: 'sms',
-      entry_endpoint: {uuid: 'endpoint-a'},
-      exit_endpoint: {uuid: 'endpoint-b'},
-      text: 'Hello over SMS'
-    }]);
+      }],
+      states: [{
+        uuid: 'foo',
+        name: 'Foo',
+        type: 'send',
+        channel_type: 'sms',
+        entry_endpoint: {uuid: 'endpoint-a'},
+        exit_endpoint: {uuid: 'endpoint-b'},
+        text: 'Hello over SMS'
+      }]
+    }, {silent: true})
 
     state = diagram.states.get('foo');
   });

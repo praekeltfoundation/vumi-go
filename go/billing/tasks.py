@@ -314,12 +314,12 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
             "to": to_date,
         })
 
-    transaction_list = Transaction.objects.filter(
+    transaction_query = Transaction.objects.filter(
         account_number=account.account_number,
         created__gte=from_date,
         created__lt=(to_date + relativedelta(days=1)))
 
-    def generate_chunks(item_iter, items_per_chunk=10000, sep="\n"):
+    def generate_chunks(item_iter, items_per_chunk=1000, sep="\n"):
         data = []
         for i, item in enumerate(item_iter):
             data.append(item)
@@ -332,7 +332,7 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
             yield sep
 
     bucket = Bucket('billing.archive')
-    chunks = generate_chunks(transaction_list)
+    chunks = generate_chunks(transaction_query.iterator())
 
     archive = TransactionArchive(
         account=account, filename=filename,
@@ -348,7 +348,7 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
     archive.save()
 
     if delete:
-        transaction_list.delete()
+        transaction_query.delete()
         archive.status = TransactionArchive.STATUS_ARCHIVE_COMPLETED
         archive.save()
 

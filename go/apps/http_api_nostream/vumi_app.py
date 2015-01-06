@@ -195,6 +195,7 @@ class ConcurrencyLimitManager(object):
         self._get_limiter(key).stop()
         self._cleanup_limiter(key)
 
+
 class NoStreamingHTTPWorker(GoApplicationWorker):
 
     worker_name = 'http_api_nostream_worker'
@@ -228,9 +229,11 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         yield super(NoStreamingHTTPWorker, self).teardown_application()
         yield self.webserver.loseConnection()
 
+    def get_all_api_config(self, conversation):
+        return conversation.config.get('http_api_nostream', {})
+
     def get_api_config(self, conversation, key, default=None):
-        return conversation.config.get(
-            'http_api_nostream', {}).get(key, default)
+        return self.get_all_api_config(conversation).get(key, default)
 
     @inlineCallbacks
     def consume_user_message(self, message):
