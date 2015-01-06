@@ -458,9 +458,42 @@ class TestTransaction(BillingApiTestCase):
         self.assertFalse(mock_task_delay.called)
 
     @inlineCallbacks
-    def test_transaction(self):
+    def test_low_credit_notification_zero_last_topup_value(self):
+        # patch settings and task
+        mock_task_delay = mock.MagicMock()
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_NOTIFICATION', True)
+        self.patch(
+            api.create_low_credit_notification, 'delay', mock_task_delay)
+
+        # Create account
         yield self.create_api_user(email="test5@example.com")
-        account = yield self.create_api_account(email="test5@example.com",
+        account = yield self.create_api_account(
+            email="test5@example.com", account_number="11113")
+
+        self.assertEqual(account['last_topup_balance'], decimal.Decimal('0.0'))
+
+        # Set the message cost
+        yield self.create_api_cost(
+            tag_pool_name="test_pool2",
+            message_direction="Inbound",
+            message_cost=0.1, session_cost=0.1,
+            markup_percent=0.1)
+
+        # Create a transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-1',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        self.assertFalse(mock_task_delay.called)
+
+    @inlineCallbacks
+    def test_transaction(self):
+        yield self.create_api_user(email="test6@example.com")
+        account = yield self.create_api_account(email="test6@example.com",
                                                 account_number="11111")
 
         # Set the message cost
@@ -588,9 +621,9 @@ class TestTransaction(BillingApiTestCase):
             message_cost=0.1, session_cost=0.2,
             markup_percent=12.0)
 
-        yield self.create_api_user(email="test6@example.com")
+        yield self.create_api_user(email="test7@example.com")
         account = yield self.create_api_account(
-            email="test6@example.com", account_number="arbitrary-user")
+            email="test7@example.com", account_number="arbitrary-user")
 
         transaction = yield self.create_api_transaction(
             account_number="arbitrary-user",
