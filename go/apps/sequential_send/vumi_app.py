@@ -86,7 +86,7 @@ class SequentialSendApplication(GoApplicationWorker):
     @inlineCallbacks
     def get_conversations(self, conv_pointers):
         results = yield gatherResults([
-            self.get_conversation_fallback(account_key, conv_key)
+            self.get_conversation(account_key, conv_key)
             for account_key, conv_key in conv_pointers])
         conversations = []
         for pointer, conv in zip(conv_pointers, results):
@@ -96,30 +96,6 @@ class SequentialSendApplication(GoApplicationWorker):
             else:
                 conversations.append(conv)
         returnValue(conversations)
-
-    @inlineCallbacks
-    def get_conversation_fallback(self, account_key_or_batch_id, conv_key):
-        # HACK: If we can't find a conversation, we might have an old entry
-        # that uses a batch_id.
-        conv = yield self.get_conversation(account_key_or_batch_id, conv_key)
-        if conv is None:
-            log.info("Trying to find conversation '%s' by batch_id." % (
-                    conv_key,))
-            batch = yield self.vumi_api.mdb.get_batch(account_key_or_batch_id)
-            if batch is None:
-                log.warning('Cannot find batch for batch_id %s' % (
-                        account_key_or_batch_id,))
-                return
-            user_account_key = batch.metadata["user_account"]
-            if user_account_key is None:
-                log.warning("No account key in batch metadata: %r" % (batch,))
-                return
-            yield self.redis.srem('scheduled_conversations', json.dumps(
-                    [account_key_or_batch_id, conv_key]))
-            yield self.redis.sadd('scheduled_conversations', json.dumps(
-                    [user_account_key, conv_key]))
-            conv = yield self.get_conversation(user_account_key, conv_key)
-        returnValue(conv)
 
     def _get_scheduled_conversations(self):
         return self.redis.smembers('scheduled_conversations')
