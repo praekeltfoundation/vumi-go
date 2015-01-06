@@ -274,43 +274,6 @@ class ContactStore(PerAccountStore):
         else:
             return self.contacts.index_lookup('groups', group.key).get_count()
 
-    @Manager.calls_manager
-    def filter_contacts_on_surname(self, letter, group=None):
-        # FIXME: This does a mapreduce over a bucket, which means hitting every
-        #        key in riak.
-        # TODO: vumi.persist needs to have better ways of supporting
-        #       generic map reduce functions. There's a bunch of boilerplate
-        #       around getting bucket names and indexes that I'm doing
-        #       manually that could be automated.
-        mr = self.manager.riak_map_reduce()
-        bucket = self.manager.bucket_name(Contact)
-        mr.add_bucket(bucket)
-        if group is not None:
-            mr.index(bucket, 'groups_bin', group.key)
-        # Deleted values hang around with tombstone markers in Riak for a while
-        # before they get removed, and this happens a lot in tests. We need to
-        # find the real values amongst the deleted ones here.
-        # TODO: Make this a general thing?
-        js_function = """function(value, keyData, arg){
-            for (i in value.values) {
-                var val = value.values[i]
-                if (!val.metadata['X-Riak-Deleted']) {
-                    var data = JSON.parse(val.data);
-                    if (data.surname) {
-                        if (data.surname.toLowerCase()[0] === arg) {
-                            return [[value.key, val]];
-                        }
-                    }
-                }
-            }
-            return [];
-        }"""
-        mr.map(js_function, {'arg': letter.lower()})
-        contacts = yield self.manager.run_map_reduce(mr,
-            lambda manager, result: Contact.load(
-                manager, result[0], result[1]))
-        returnValue(contacts)
-
     def list_contacts(self):
         return self.list_keys(self.contacts)
 

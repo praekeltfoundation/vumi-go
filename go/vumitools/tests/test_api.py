@@ -38,9 +38,8 @@ class TestTxVumiApi(VumiTestCase):
     def test_send_command(self):
         for addr in ["+12", "+34"]:
             yield self.vumi_api.send_command(
-                    "dummy_worker", "send",
-                    batch_id="b123", content="Hello!",
-                    msg_options={'from_addr': '+56'}, to_addr=addr)
+                "dummy_worker", "send", batch_id="b123", content="Hello!",
+                msg_options={'from_addr': '+56'}, to_addr=addr)
 
         [cmd1, cmd2] = self.vumi_helper.get_dispatched_commands()
         self.assertEqual(cmd1.payload['kwargs']['to_addr'], '+12')
@@ -280,6 +279,9 @@ class TestTxVumiUserApi(VumiTestCase):
 
     @inlineCallbacks
     def test_get_routing_table(self):
+        """
+        .get_routing_table() returns the correct routing table data.
+        """
         conv = yield self._setup_routing_table_test_new_conv()
         channel = yield self.user_api.get_channel((u'pool1', u'1234'))
         user = yield self.user_api.get_user_account()
@@ -294,7 +296,19 @@ class TestTxVumiUserApi(VumiTestCase):
                     u'CONVERSATION:bulk_message:%s' % conv.key, u'default']},
         }))
 
-        # TODO: This belongs in a different test.
+    @inlineCallbacks
+    def test_archived_routing_table(self):
+        """
+        Archiving a conversation removes routing entries for that conversation.
+        """
+        conv = yield self._setup_routing_table_test_new_conv()
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
+        user = yield self.user_api.get_user_account()
+        self._set_routing_table(user, [(conv, channel), (channel, conv)])
+        yield user.save()
+        routing_table = yield self.user_api.get_routing_table()
+        self.assertNotEqual(routing_table, RoutingTable())
+
         yield conv.archive_conversation()
 
         routing_table = yield self.user_api.get_routing_table()
@@ -451,7 +465,7 @@ class TestTxVumiRouterApi(VumiTestCase):
         self.user_api = self.user_helper.user_api
 
     def create_router(self, **kw):
-        # TODO: Fix test infrastructe to avoid duplicating this stuff.
+        # TODO: Fix test infrastructure to avoid duplicating this stuff.
         router_type = kw.pop('router_type', u'keyword')
         name = kw.pop('name', u'routername')
         description = kw.pop('description', u'')

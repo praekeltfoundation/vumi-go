@@ -3,7 +3,6 @@
 
 """Vumi application worker for the vumitools API."""
 
-import json
 import logging
 
 from twisted.internet.defer import inlineCallbacks

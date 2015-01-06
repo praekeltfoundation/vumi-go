@@ -55,10 +55,6 @@ class Conversation(Model):
     def archived(self):
         return self.archive_status == CONVERSATION_ARCHIVED
 
-    def ended(self):
-        # TODO: Get rid of this once the old UI finally goes away.
-        return self.archived()
-
     def starting(self):
         return self.status == CONVERSATION_STARTING
 
@@ -70,10 +66,6 @@ class Conversation(Model):
 
     def stopped(self):
         return self.status == CONVERSATION_STOPPED
-
-    def is_draft(self):
-        # TODO: Get rid of this once the old UI finally goes away.
-        return self.active() and self.status == CONVERSATION_STOPPED
 
     def get_status(self):
         """Get the status of this conversation.
