@@ -109,7 +109,7 @@ class SequentialSendApplication(GoApplicationWorker):
         log.debug("Processing %s to %s: %s" % (
             then, now, [c.key for c in conversations]))
         for conv in conversations:
-            if not conv.ended():
+            if conv.active():
                 yield self.process_conversation_schedule(then, now, conv)
 
     @inlineCallbacks
@@ -162,7 +162,7 @@ class SequentialSendApplication(GoApplicationWorker):
 
         log.debug("Scheduling conversation: %s" % (conversation_key,))
         yield self.redis.sadd('scheduled_conversations', json.dumps(
-                [user_account_key, conversation_key]))
+            [user_account_key, conversation_key]))
 
     @inlineCallbacks
     def process_command_stop(self, user_account_key, conversation_key):
@@ -171,4 +171,4 @@ class SequentialSendApplication(GoApplicationWorker):
 
         log.debug("Unscheduling conversation: %s" % (conversation_key,))
         yield self.redis.srem('scheduled_conversations', json.dumps(
-                [user_account_key, conversation_key]))
+            [user_account_key, conversation_key]))
