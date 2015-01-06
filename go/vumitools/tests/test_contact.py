@@ -102,23 +102,6 @@ class TestContactStore(VumiTestCase):
         self.assert_models_equal(group1, g1)
         self.assert_models_equal(group2, g2)
 
-    # TODO: Either implement unique group names or delete this test.
-    # @inlineCallbacks
-    # def test_new_group_exists(self):
-    #     self.assertEqual(None, (yield self.store.get_group(u'group1')))
-
-    #     group = yield self.store.new_group(u'group1')
-    #     self.assertEqual(u'group1', group.name)
-
-    #     try:
-    #         yield self.store.new_group(u'group1')
-    #         self.fail("Expected ValueError.")
-    #     except ValueError:
-    #         pass
-
-    #     dbgroup = yield self.store.get_group(u'group1')
-    #     self.assert_models_equal(group, dbgroup)
-
     @inlineCallbacks
     def test_per_user_groups(self):
         group = yield self.store.new_group(u'group1')
