@@ -73,3 +73,39 @@ class UserAccountMigrator(ModelMigrator):
         mdata.set_value('$VERSION', 4)
 
         return mdata
+
+    def migrate_from_4(self, mdata):
+        """
+        Add the disable_optouts boolean and default it to ``False``
+        """
+
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table',
+            'can_manage_optouts')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # set the default `disable_optouts` value
+        mdata.set_value('disable_optouts', False)
+
+        # increment version counter
+        mdata.set_value('$VERSION', 5)
+
+        return mdata
+
+    def reverse_from_5(self, mdata):
+        """
+        Remove disable_optouts boolean.
+        """
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table',
+            'can_manage_optouts')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # decrement version counter
+        mdata.set_value('$VERSION', 4)
+
+        return mdata
