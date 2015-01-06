@@ -102,7 +102,8 @@ class TestAccountViews(GoDjangoTestCase):
                 'existing_password': 'password',
                 '_account': True,
                 })
-            self.assertFormError(response, 'account_form', 'msisdn',
+            self.assertFormError(
+                response, 'account_form', 'msisdn',
                 'Please provide a valid phone number.')
             self.assertEqual([], mail.outbox)
             user_account = self.user_helper.get_user_account()
@@ -174,7 +175,8 @@ class TestAccountViews(GoDjangoTestCase):
             'existing_password': 'password',
             '_account': True,
             })
-        self.assertFormError(response, 'account_form', 'msisdn',
+        self.assertFormError(
+            response, 'account_form', 'msisdn',
             'Please provide a valid phone number.')
         self.assertEqual([], mail.outbox)
 
@@ -223,8 +225,8 @@ class TestEmail(GoDjangoTestCase):
         self.assertEqual(email.from_email, settings.DEFAULT_FROM_EMAIL)
         self.assertEqual(email.recipients(), [django_user.email])
         self.assertTrue('number of contacts: 2' in email.body)
-        self.assertTrue('number of unique contacts by contact number: 1'
-                            in email.body)
+        self.assertTrue(
+            'number of unique contacts by contact number: 1' in email.body)
         self.assertTrue('number of messages sent: 5' in email.body)
         self.assertTrue('number of messages received: 5' in email.body)
         self.assertTrue('Group Message' in email.body)
@@ -235,7 +237,6 @@ class TestEmail(GoDjangoTestCase):
         # TODO fix once we support uniques properly again
         self.assertTrue('Sent: 5 to 0 uniques.' in email.body)
         self.assertTrue('Received: 5 from 0 uniques.' in email.body)
-
 
     def test_send_scheduled_account_summary_task(self):
         user_account = self.user_helper.get_user_account()

@@ -59,8 +59,7 @@ class Command(BaseCommand):
         user = get_user_by_email(email=email_address)
         api = self.get_api(user)
 
-        handler = getattr(self, 'handle_%s' % (command,),
-            self.unknown_command)
+        handler = getattr(self, 'handle_%s' % (command,), self.unknown_command)
         handler(user, api, args[2:])
 
     def get_api(self, user):
@@ -74,8 +73,7 @@ class Command(BaseCommand):
 
     def print_command_summary(self):
         self.out(u'Known commands:\n')
-        handlers = [func for func in dir(self)
-                        if func.startswith('handle_')]
+        handlers = [func for func in dir(self) if func.startswith('handle_')]
         for handler in sorted(handlers):
             command = handler.split('_', 1)[1]
             func = getattr(self, handler)
@@ -95,14 +93,15 @@ class Command(BaseCommand):
 
         Appending 'active' limits the list to only active conversations.
         """
-        conversations = sorted(map(api.get_wrapped_conversation,
-                            api.conversation_store.list_conversations()),
-                            key=lambda c: c.created_at)
+        conversations = sorted(
+            map(api.get_wrapped_conversation,
+                api.conversation_store.list_conversations()),
+            key=lambda c: c.created_at)
         if 'active' in options:
-            conversations = [c for c in conversations if not c.ended()]
+            conversations = [c for c in conversations if c.active()]
         for index, conversation in enumerate(conversations):
-            self.out(u'%s. %s (%s) [%s]\n' % (index,
-                conversation.name, conversation.created_at,
+            self.out(u'%s. %s (%s) [%s]\n' % (
+                index, conversation.name, conversation.created_at,
                 conversation.key))
 
     def handle_stats(self, user, api, options):

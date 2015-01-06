@@ -253,8 +253,8 @@ class Command(BaseCommand):
                 conversations.append(conv)
         self.outln(
             u'%s %s <%s> [%s]\n  Migrating %d of %d conversations ...' % (
-            user.first_name, user.last_name, user.email,
-            user_api.user_account_key, len(conversations), len(all_keys)))
+                user.first_name, user.last_name, user.email,
+                user_api.user_account_key, len(conversations), len(all_keys)))
         for conv in conversations:
             self.outln(u'    Migrating conversation: %s [%s] ...'
                        % (conv.key, conv.name), ending='')

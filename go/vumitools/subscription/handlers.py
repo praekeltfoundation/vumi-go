@@ -36,7 +36,7 @@ class SubscriptionHandler(EventHandler):
 
         log.info(
             "SubscriptionHandler handling event: %s with config: %s" % (
-            event, handler_config))
+                event, handler_config))
         user_api = self.get_user_api(event.payload['account_key'])
         fields = event.payload['content']
 
