@@ -60,6 +60,9 @@ class UserAccount(Model):
     routing_table = RoutingTableField(default=RoutingTable({}))
     flags = SetOf(Unicode(), index=True)
 
+    # Flag properties aren't the same as normal fields. Instead, they are just
+    # some sugar for modifying the model's `flags` field. For this reason, we
+    # don't need to bump the model version when adding a new flag property.
     can_manage_optouts = flag_property(u'can_manage_optouts')
     disable_optouts = flag_property(u'disable_optouts')
 
