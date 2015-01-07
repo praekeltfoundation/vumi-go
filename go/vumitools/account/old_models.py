@@ -5,7 +5,7 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
-    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
+    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean, ListOf)
 
 from go.vumitools.account.fields import RoutingTableField
 from go.vumitools.account.migrations import UserAccountMigrator
@@ -212,8 +212,6 @@ class UserAccountV5(Model):
 
     # key is uuid
     username = Unicode(max_length=255)
-    # TODO: tagpools can be made OneToMany once vumi.persist.fields
-    #       gains a OneToMany field
     tagpools = ManyToMany(UserTagPermissionVNone)
     applications = ManyToMany(UserAppPermissionVNone)
     created_at = Timestamp(default=datetime.utcnow)
@@ -225,6 +223,43 @@ class UserAccountV5(Model):
     email_summary = Unicode(max_length=255, null=True)
     tags = Json(default=[])
     routing_table = RoutingTableField(default=RoutingTable({}))
+
+    @Manager.calls_manager
+    def has_tagpool_permission(self, tagpool):
+        for tp_bunch in self.tagpools.load_all_bunches():
+            for tp in (yield tp_bunch):
+                if tp.tagpool == tagpool:
+                    returnValue(True)
+        returnValue(False)
+
+
+class UserAccountV6(Model):
+    """A user account."""
+
+    bucket = "useraccount"
+    VERSION = 6
+    MIGRATOR = UserAccountMigrator
+
+    # key is uuid
+    username = Unicode(max_length=255)
+    tagpools = ManyToMany(UserTagPermissionVNone)
+    applications = ManyToMany(UserAppPermissionVNone)
+    created_at = Timestamp(default=datetime.utcnow)
+    event_handler_config = Json(default=list)
+    msisdn = Unicode(max_length=255, null=True)
+    confirm_start_conversation = Boolean(default=False)
+    email_summary = Unicode(max_length=255, null=True)
+    tags = Json(default=[])
+    routing_table = RoutingTableField(default=RoutingTable({}))
+    flags = ListOf(Unicode())
+
+    @property
+    def can_manage_optouts(self):
+        return u'can_manage_optouts' in self.flags
+
+    @property
+    def disable_optouts(self):
+        return u'disable_optouts' in self.flags
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):
@@ -277,6 +312,25 @@ class AccountStoreV5(object):
     def __init__(self, manager):
         self.manager = manager
         self.users = self.manager.proxy(UserAccountV5)
+        self.tag_permissions = self.manager.proxy(UserTagPermissionVNone)
+        self.application_permissions = self.manager.proxy(
+            UserAppPermissionVNone)
+
+    @Manager.calls_manager
+    def new_user(self, username):
+        key = uuid4().get_hex()
+        user = self.users(key, username=username)
+        yield user.save()
+        returnValue(user)
+
+    def get_user(self, key):
+        return self.users.load(key)
+
+
+class AccountStoreV6(object):
+    def __init__(self, manager):
+        self.manager = manager
+        self.users = self.manager.proxy(UserAccountV6)
         self.tag_permissions = self.manager.proxy(UserTagPermissionVNone)
         self.application_permissions = self.manager.proxy(
             UserAppPermissionVNone)

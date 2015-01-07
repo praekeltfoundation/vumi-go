@@ -7,7 +7,7 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
-    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
+    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean, ListOf)
 
 from go.vumitools.account.fields import RoutingTableField
 from go.vumitools.account.migrations import UserAccountMigrator
@@ -29,7 +29,7 @@ class UserAppPermission(Model):
 class UserAccount(Model):
     """A user account."""
 
-    VERSION = 5
+    VERSION = 6
     MIGRATOR = UserAccountMigrator
 
     # key is uuid
@@ -42,11 +42,18 @@ class UserAccount(Model):
     event_handler_config = Json(default=list)
     msisdn = Unicode(max_length=255, null=True)
     confirm_start_conversation = Boolean(default=False)
-    disable_optouts = Boolean(default=False)
-    can_manage_optouts = Boolean(default=False)
     email_summary = Unicode(max_length=255, null=True)
     tags = Json(default=[])
     routing_table = RoutingTableField(default=RoutingTable({}))
+    flags = ListOf(Unicode())
+
+    @property
+    def can_manage_optouts(self):
+        return u'can_manage_optouts' in self.flags
+
+    @property
+    def disable_optouts(self):
+        return u'disable_optouts' in self.flags
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):
