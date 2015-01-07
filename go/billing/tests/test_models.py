@@ -35,8 +35,7 @@ class TestAccount(GoDjangoTestCase):
         self.assertEqual(acc.user, django_user)
         self.assertEqual(acc.account_number, profile.user_account)
         self.assertEqual(acc.credit_balance, Decimal('0.0'))
-        self.assertEqual(acc.alert_threshold, Decimal('0.0'))
-        self.assertEqual(acc.alert_credit_balance, Decimal('0.0'))
+        self.assertEqual(acc.last_topup_balance, Decimal('0.0'))
 
     def test_post_save_hook_not_created(self):
         django_user = self.user_helper.get_django_user()
@@ -231,13 +230,13 @@ class TestLowCreditNotification(GoDjangoTestCase):
         return notification
 
     def test_unicode(self):
-        notification = self.mk_notification('50.0', '314.1')
+        notification = self.mk_notification('0.5', '314.1')
         self.assertEqual(
             unicode(notification),
             u'50.0%% threshold for %s' % self.acc)
 
     def test_fields(self):
-        notification = self.mk_notification('55.0', '27.17')
+        notification = self.mk_notification('0.55', '27.17')
         self.assertEqual(notification.account, self.acc)
-        self.assertEqual(notification.threshold, Decimal('55.0'))
         self.assertEqual(notification.credit_balance, Decimal('27.17'))
+        self.assertEqual(notification.threshold, Decimal('0.55'))

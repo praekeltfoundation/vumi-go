@@ -1,4 +1,7 @@
 import json
+import math
+
+from decimal import Decimal
 
 from twisted.python import log
 from twisted.internet import defer
@@ -205,8 +208,7 @@ class AccountResource(BaseResource):
         """Fetch the account with the given ``account_number``"""
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
             AND a.account_number = %%(account_number)s
@@ -224,8 +226,7 @@ class AccountResource(BaseResource):
         """Fetch all accounts"""
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
         """ % self._auth_user_table
@@ -282,9 +283,9 @@ class AccountResource(BaseResource):
         query = """
             INSERT INTO billing_account
                 (user_id, account_number, description, credit_balance,
-                 alert_threshold, alert_credit_balance)
+                 last_topup_balance)
             VALUES
-                (%(user_id)s, %(account_number)s, %(description)s, 0, 0.0, 0)
+                (%(user_id)s, %(account_number)s, %(description)s, 0, 0.0)
             RETURNING id
         """
 
@@ -300,8 +301,7 @@ class AccountResource(BaseResource):
         # Fetch the newly created account
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
             AND a.id = %%(id)s
@@ -342,8 +342,7 @@ class AccountResource(BaseResource):
         query = """
             UPDATE billing_account
             SET credit_balance = credit_balance + %(credit_amount)s,
-                alert_credit_balance = (credit_balance + %(credit_amount)s)
-                                       * alert_threshold / 100.0
+                last_topup_balance = credit_balance + %(credit_amount)s
             WHERE account_number = %(account_number)s
         """
 
@@ -356,7 +355,7 @@ class AccountResource(BaseResource):
 
         # Fetch the latest account information
         query = """SELECT account_number, description, credit_balance,
-                          alert_threshold, alert_credit_balance
+                          last_topup_balance
                    FROM billing_account
                    WHERE account_number = %(account_number)s"""
 
@@ -583,6 +582,34 @@ class TransactionResource(BaseResource):
 
     isLeaf = True
 
+    def __init__(self, connection_pool):
+        BaseResource.__init__(self, connection_pool)
+        self._notification_mapping = self._create_notification_mapping()
+
+    def _create_notification_mapping(self):
+        """
+        Constructs a mapping from precentage of credits used to the
+        notification percentage immediately above it.
+
+        Only percentages from the lowest percentage to the highest percentage
+        (inclusive) are entered in the mapping.
+        """
+        levels = sorted(
+            int(i) for i in app_settings.LOW_CREDIT_NOTIFICATION_PERCENTAGES)
+
+        if not levels:
+            return []
+
+        mapping = []
+        level_idx = 0
+
+        for i in range(levels[0], levels[-1] + 1):
+            mapping.append(levels[level_idx])
+            if mapping[i - levels[0]] == i:
+                level_idx += 1
+
+        return mapping
+
     def render_GET(self, request):
         """Handle an HTTP GET request"""
         account_number = request.args.get('account_number', [])
@@ -732,7 +759,6 @@ class TransactionResource(BaseResource):
         # Get the message cost
         result = yield self.get_cost(account_number, tag_pool_name,
                                      message_direction, session_created)
-
         if result is None:
             raise BillingError(
                 "Unable to determine %s message cost for account %s"
@@ -818,7 +844,7 @@ class TransactionResource(BaseResource):
 
         # Check the account's credit balance and raise an
         # alert if it has gone below the credit balance threshold
-        query = """SELECT credit_balance, alert_credit_balance
+        query = """SELECT credit_balance, last_topup_balance
                    FROM billing_account
                    WHERE account_number = %(account_number)s"""
 
@@ -833,28 +859,86 @@ class TransactionResource(BaseResource):
                     account_number, message_direction, tag_pool_name))
 
         credit_balance = result.get('credit_balance')
-        alert_credit_balance = result.get('alert_credit_balance')
-        if (app_settings.ENABLE_LOW_CREDIT_NOTIFICATION and
-            self.notification_threshold_crossed(
-                credit_balance, credit_amount, alert_credit_balance)):
-            yield spawn_celery_task_via_thread(
-                create_low_credit_notification,
-                account_number, result.get('alert_threshold'), credit_balance)
+        last_topup_balance = result.get('last_topup_balance')
+        if app_settings.ENABLE_LOW_CREDIT_NOTIFICATION:
+            yield self.check_and_notify_low_credit_threshold(
+                credit_balance, credit_amount, last_topup_balance,
+                account_number)
 
         defer.returnValue(transaction)
 
-    @staticmethod
-    def notification_threshold_crossed(
-            credit_balance, credit_amount, alert_credit_balance):
+    def check_and_notify_low_credit_threshold(
+            self, credit_balance, credit_amount, last_topup_balance,
+            account_number):
         """
-        Given the current balance (afther the transaction) ``credit_balance``,
-        the transaction amount ``credit_amount``, and the alert threshold
-        ``alert_credit_balance``, will return ``True`` if the transaction
-        caused the alert threshold to be crossed, and false if not.
+        Checks the current balance percentage against all those stored within
+        the settings. Sends the notification email if it is required. Returns
+        the alert percent if email was sent, or ``None`` if no email was sent.
+
+        :param credit_balance: The current balance (after the transaction)
+        :param credit_amount: The amount of credits used in the transaction
+        :param last_topup_balance: The account credit balance at the last topup
+        :param account_number: The account number of the associated account
         """
-        return (
-            credit_balance <= alert_credit_balance <
-            credit_amount + credit_balance)
+        level = self.check_all_low_credit_thresholds(
+            credit_balance, credit_amount, last_topup_balance)
+        if level is not None:
+            return spawn_celery_task_via_thread(
+                create_low_credit_notification, account_number,
+                level, credit_balance)
+
+    def _get_notification_level(self, percentage):
+        """
+        Fetches the value of the notification level for the given percentage.
+
+        :param int percentage:
+            The percentage to get the notification level for
+
+        :return:
+            An int representing the current notification level.
+        """
+        if not self._notification_mapping:
+            return None
+
+        minimum = self._notification_mapping[0]
+        if percentage < minimum:
+            return minimum
+        if percentage > self._notification_mapping[-1]:
+            return None
+        return self._notification_mapping[percentage - minimum]
+
+    def check_all_low_credit_thresholds(
+            self, credit_balance, credit_amount, last_topup_balance):
+        """
+        Checks the current balance percentage against all those stored within
+        the settings.
+
+        :param credit_balance:
+            The current balance (after the transaction)
+        :param credit_amount:
+            The amount of credits used in the transaction
+        :param last_topup_balance:
+            The account credit balance at the last topup
+
+        :return:
+            A :class:`Decimal` percentage for the alert threshold crossed
+            or ``None`` if no threshold was crossed.
+        """
+        if not last_topup_balance:
+            return None
+
+        def ceil_percent(n):
+            return int(math.ceil(n * 100 / last_topup_balance))
+
+        current_percentage = ceil_percent(credit_balance)
+        current_notification_level = self._get_notification_level(
+            current_percentage)
+        previous_percentage = ceil_percent(credit_balance + credit_amount)
+        previous_notification_level = self._get_notification_level(
+            previous_percentage)
+
+        if current_notification_level != previous_notification_level:
+            return Decimal(str(current_notification_level / 100.0))
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,

@@ -50,6 +50,9 @@ STATEMENT_CONTACT_DETAILS = getattr(
 ENABLE_LOW_CREDIT_NOTIFICATION = getattr(
     settings, 'GO_ENABLE_LOW_CREDIT_NOTIFICATION', False)
 
+LOW_CREDIT_NOTIFICATION_PERCENTAGES = getattr(
+    settings, 'GO_LOW_CREDIT_NOTIFICATION_PERCENTAGES', [])
+
 
 def get_user_table():
     """Return the name of the table used by the user model."""

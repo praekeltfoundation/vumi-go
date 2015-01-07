@@ -8,8 +8,23 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        # Adding field 'MessageCost.storage_cost'
+        db.add_column(u'billing_messagecost', 'storage_cost',
+                      self.gf('django.db.models.fields.DecimalField')(default='0.0', max_digits=10, decimal_places=3),
+                      keep_default=False)
+
+        # Adding field 'Transaction.storage_cost'
+        db.add_column(u'billing_transaction', 'storage_cost',
+                      self.gf('django.db.models.fields.DecimalField')(default='0.0', null=True, max_digits=10, decimal_places=3),
+                      keep_default=False)
+
         # Adding field 'Transaction.message_credits'
         db.add_column(u'billing_transaction', 'message_credits',
+                      self.gf('django.db.models.fields.DecimalField')(default='0.0', null=True, max_digits=20, decimal_places=6),
+                      keep_default=False)
+
+        # Adding field 'Transaction.storage_credits'
+        db.add_column(u'billing_transaction', 'storage_credits',
                       self.gf('django.db.models.fields.DecimalField')(default='0.0', null=True, max_digits=20, decimal_places=6),
                       keep_default=False)
 
@@ -20,8 +35,17 @@ class Migration(SchemaMigration):
 
 
     def backwards(self, orm):
+        # Deleting field 'MessageCost.storage_cost'
+        db.delete_column(u'billing_messagecost', 'storage_cost')
+
+        # Deleting field 'Transaction.storage_cost'
+        db.delete_column(u'billing_transaction', 'storage_cost')
+
         # Deleting field 'Transaction.message_credits'
         db.delete_column(u'billing_transaction', 'message_credits')
+
+        # Deleting field 'Transaction.storage_credits'
+        db.delete_column(u'billing_transaction', 'storage_credits')
 
         # Deleting field 'Transaction.session_credits'
         db.delete_column(u'billing_transaction', 'session_credits')
@@ -59,11 +83,10 @@ class Migration(SchemaMigration):
         u'billing.account': {
             'Meta': {'object_name': 'Account'},
             'account_number': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'}),
-            'alert_credit_balance': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'max_digits': '20', 'decimal_places': '6'}),
-            'alert_threshold': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'max_digits': '10', 'decimal_places': '2'}),
             'credit_balance': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'max_digits': '20', 'decimal_places': '6'}),
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'last_topup_balance': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'max_digits': '20', 'decimal_places': '6'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['base.GoUser']"})
         },
         u'billing.lineitem': {
@@ -78,6 +101,15 @@ class Migration(SchemaMigration):
             'statement': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['billing.Statement']"}),
             'unit_cost': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'max_digits': '20', 'decimal_places': '6'}),
             'units': ('django.db.models.fields.IntegerField', [], {'default': '0'})
+        },
+        u'billing.lowcreditnotification': {
+            'Meta': {'object_name': 'LowCreditNotification'},
+            'account': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['billing.Account']"}),
+            'created': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'credit_balance': ('django.db.models.fields.DecimalField', [], {'max_digits': '20', 'decimal_places': '6'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'success': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
+            'threshold': ('django.db.models.fields.DecimalField', [], {'max_digits': '10', 'decimal_places': '2'})
         },
         u'billing.messagecost': {
             'Meta': {'unique_together': "[['account', 'tag_pool', 'message_direction']]", 'object_name': 'MessageCost', 'index_together': "[['account', 'tag_pool', 'message_direction']]"},
