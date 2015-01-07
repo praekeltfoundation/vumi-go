@@ -353,10 +353,29 @@ class TestCost(BillingApiTestCase):
             u'tag_pool_name': None,
         })
 
+        # test that zero costs are allowed
+        zero_cost = yield self.create_api_cost(
+            account_number=None,
+            tag_pool_name=None,
+            message_direction="Outbound",
+            message_cost=0.0,
+            storage_cost=0.0,
+            session_cost=0.0,
+            markup_percent=0.0)
+        self.assertEqual(zero_cost, {
+            u'account_number': None,
+            u'tag_pool_name': None,
+            u'message_direction': u'Outbound',
+            u'markup_percent': Decimal('0.0'),
+            u'message_cost': Decimal('0.0'),
+            u'storage_cost': Decimal('0.0'),
+            u'session_cost': Decimal('0.0'),
+        })
+
         # Test that we retrieve all the message costs
         all_costs = yield self.get_api_costs()
         self.assertEqual(
-            all_costs, [cost_override, base_cost, fallback_cost])
+            all_costs, [cost_override, base_cost, fallback_cost, zero_cost])
 
 
 class TestTransaction(BillingApiTestCase):

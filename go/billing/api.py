@@ -31,6 +31,10 @@ def spawn_celery_task_via_thread(t, *args, **kw):
     return deferToThread(t.delay, *args, **kw)
 
 
+def pluck(data, keys):
+    return (data[k] for k in keys)
+
+
 class BaseResource(Resource):
     """Base class for the APIs ``Resource``s"""
 
@@ -378,6 +382,11 @@ class CostResource(BaseResource):
 
     isLeaf = True
 
+    FIELDS = (
+        'account_number', 'tag_pool_name', 'message_direction',
+        'message_cost', 'storage_cost', 'session_cost',
+        'markup_percent')
+
     def render_GET(self, request):
         """Handle an HTTP GET request"""
         account_number = request.args.get('account_number', [None])
@@ -393,31 +402,27 @@ class CostResource(BaseResource):
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
-        data = self._parse_json(request)
-        if data:
-            account_number = data.get('account_number', None)
-            tag_pool_name = data.get('tag_pool_name', None)
-            message_direction = data.get('message_direction', None)
-            message_cost = data.get('message_cost', None)
-            storage_cost = data.get('storage_cost', None)
-            session_cost = data.get('session_cost', None)
-            markup_percent = data.get('markup_percent', None)
-            if all((message_direction, message_cost, storage_cost,
-                    session_cost, markup_percent,
-                    tag_pool_name or not account_number)):
-                d = self.create_cost(account_number, tag_pool_name,
-                                     message_direction, message_cost,
-                                     storage_cost, session_cost,
-                                     markup_percent)
+        data = self._parse_json(request) or {}
+        data = dict((k, data.get(k)) for k in self.FIELDS)
 
-                d.addCallbacks(self._render_to_json, self._handle_error,
-                               callbackArgs=[request], errbackArgs=[request])
-
-            else:
-                self._handle_bad_request(request)
-        else:
+        if not self._check_data(data):
             self._handle_bad_request(request)
+        else:
+            d = self.create_cost(*pluck(data, self.FIELDS))
+            d.addCallbacks(self._render_to_json, self._handle_error,
+                           callbackArgs=[request], errbackArgs=[request])
+
         return NOT_DONE_YET
+
+    def _check_data(self, data):
+        account_number = data['account_number']
+        tag_pool_name = data['tag_pool_name']
+
+        if account_number is not None and tag_pool_name is None:
+            return False
+
+        remaining = set(self.FIELDS) - set(['account_number', 'tag_pool_name'])
+        return all(data[k] is not None for k in remaining)
 
     @defer.inlineCallbacks
     def get_cost_list(self, account_number, tag_pool_name,
