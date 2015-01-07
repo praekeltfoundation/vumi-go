@@ -34,7 +34,7 @@ def flag_method(name):
         if value:
             self.flags.add(name)
         else:
-            self.flags.remove(name)
+            self.flags.discard(name)
 
     return property(fget, fset)
 

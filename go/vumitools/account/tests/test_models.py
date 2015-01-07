@@ -288,3 +288,5 @@ class TestFlagMethod(VumiTestCase):
         self.assertTrue(u'foo' in user.flags)
         user.foo = False
         self.assertFalse(u'foo' in user.flags)
+        user.foo = False
+        self.assertFalse(u'foo' in user.flags)
