@@ -7,7 +7,7 @@ from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
     Integer, Unicode, Timestamp, ManyToMany, Json, Boolean, ListOf)
 
-from go.vumitools.account.models import flag_method
+from go.vumitools.account.models import flag_property
 from go.vumitools.account.fields import RoutingTableField
 from go.vumitools.account.migrations import UserAccountMigrator
 from go.vumitools.routing_table import RoutingTable

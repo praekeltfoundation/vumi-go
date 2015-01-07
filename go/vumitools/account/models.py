@@ -26,7 +26,7 @@ class UserAppPermission(Model):
     application = Unicode(max_length=255)
 
 
-def flag_method(name):
+def flag_property(name):
     def fget(self):
         return name in self.flags
 
@@ -60,8 +60,8 @@ class UserAccount(Model):
     routing_table = RoutingTableField(default=RoutingTable({}))
     flags = SetOf(Unicode(), index=True)
 
-    can_manage_optouts = flag_method(u'can_manage_optouts')
-    disable_optouts = flag_method(u'disable_optouts')
+    can_manage_optouts = flag_property(u'can_manage_optouts')
+    disable_optouts = flag_property(u'disable_optouts')
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):

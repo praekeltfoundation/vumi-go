@@ -3,7 +3,7 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 from vumi.tests.utils import UTCNearNow
 
-from go.vumitools.account.models import UserAccount, AccountStore, flag_method
+from go.vumitools.account.models import UserAccount, AccountStore, flag_property
 from go.vumitools.account.old_models import (
     AccountStoreVNone, AccountStoreV1, AccountStoreV2,
     AccountStoreV4, AccountStoreV5)
@@ -254,10 +254,10 @@ class TestUserAccountMigrations(VumiTestCase):
 
 
 class ToyUserAccount(UserAccount):
-    foo = flag_method(u'foo')
+    foo = flag_property(u'foo')
 
 
-class TestFlagMethod(VumiTestCase):
+class TestFlagProperty(VumiTestCase):
     def setUp(self):
         self.persistence_helper = self.add_helper(
             PersistenceHelper(use_riak=True))
