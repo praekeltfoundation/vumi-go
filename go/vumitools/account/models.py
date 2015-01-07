@@ -7,7 +7,7 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
-    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean, ListOf)
+    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean, SetOf)
 
 from go.vumitools.account.fields import RoutingTableField
 from go.vumitools.account.migrations import UserAccountMigrator
@@ -32,9 +32,9 @@ def flag_method(name):
 
     def fset(self, value):
         if value:
-            self.flags.append(name)
+            self.flags.add(name)
         else:
-            del self.flags[list(self.flags).index(name)]
+            self.flags.remove(name)
 
     return property(fget, fset)
 
@@ -58,7 +58,7 @@ class UserAccount(Model):
     email_summary = Unicode(max_length=255, null=True)
     tags = Json(default=[])
     routing_table = RoutingTableField(default=RoutingTable({}))
-    flags = ListOf(Unicode())
+    flags = SetOf(Unicode(), index=True)
 
     can_manage_optouts = flag_method(u'can_manage_optouts')
     disable_optouts = flag_method(u'disable_optouts')

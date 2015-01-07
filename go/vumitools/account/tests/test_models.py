@@ -229,7 +229,7 @@ class TestUserAccountMigrations(VumiTestCase):
         The current model version can be migrated to a v5 model.
         """
         user = yield self.store.new_user(u'testuser')
-        user.flags.append(u'disable_optouts')
+        user.flags.add(u'disable_optouts')
         yield user.save()
 
         self.store_user_version(5)
@@ -244,7 +244,7 @@ class TestUserAccountMigrations(VumiTestCase):
         The current model version can be migrated to a v5 model.
         """
         user = yield self.store.new_user(u'testuser')
-        user.flags.append(u'can_manage_optouts')
+        user.flags.add(u'can_manage_optouts')
 
         self.store_user_version(5)
         yield user.save()
@@ -271,8 +271,10 @@ class TestFlagMethod(VumiTestCase):
         user = model('123', username=u'testuser')
 
         self.assertFalse(user.foo)
-        user.flags.append(u'foo')
+        user.flags.add(u'foo')
         self.assertTrue(user.foo)
+        user.flags.remove(u'foo')
+        self.assertFalse(user.foo)
 
     def test_setter(self):
         """
