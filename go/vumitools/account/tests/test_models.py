@@ -3,14 +3,14 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 from vumi.tests.utils import UTCNearNow
 
-from go.vumitools.account.models import AccountStore
+from go.vumitools.account.models import UserAccount, AccountStore, flag_method
 from go.vumitools.account.old_models import (
     AccountStoreVNone, AccountStoreV1, AccountStoreV2,
     AccountStoreV4, AccountStoreV5)
 from go.vumitools.routing_table import RoutingTable
 
 
-class TestUserAccount(VumiTestCase):
+class TestUserAccountMigrations(VumiTestCase):
 
     def setUp(self):
         self.persistence_helper = self.add_helper(
@@ -200,16 +200,6 @@ class TestUserAccount(VumiTestCase):
         self.assert_user_v5(user_v5)
 
     @inlineCallbacks
-    def test_migrate_new_from_5(self):
-        """
-        A v5 model can be migrated to the current model version.
-        """
-        user_v5 = yield self.store_v5.new_user(u'testuser')
-        self.assert_user_v5(user_v5)
-        user = yield self.store.get_user(user_v5.key)
-        self.assert_user(user)
-
-    @inlineCallbacks
     def test_migrate_new_from_5_disable_optouts(self):
         """
         A v5 model can be migrated to the current model version.
@@ -234,20 +224,6 @@ class TestUserAccount(VumiTestCase):
         self.assertTrue(u'can_manage_optouts' in user.flags)
 
     @inlineCallbacks
-    def test_reverse_5_from_new(self):
-        """
-        The current model version can be migrated to a v5 model.
-        """
-        user = yield self.store.new_user(u'testuser')
-        self.assert_user(user)
-
-        self.store_user_version(5)
-        yield user.save()
-
-        user_v5 = yield self.store_v5.get_user(user.key)
-        self.assert_user_v5(user_v5)
-
-    @inlineCallbacks
     def test_reverse_5_from_new_disable_optouts(self):
         """
         The current model version can be migrated to a v5 model.
@@ -257,7 +233,6 @@ class TestUserAccount(VumiTestCase):
         yield user.save()
 
         self.store_user_version(5)
-        print self.store.manager.store_versions
         yield user.save()
 
         user_v5 = yield self.store_v5.get_user(user.key)
@@ -276,3 +251,38 @@ class TestUserAccount(VumiTestCase):
 
         user_v5 = yield self.store_v5.get_user(user.key)
         self.assertTrue(user_v5.can_manage_optouts)
+
+
+class ToyUserAccount(UserAccount):
+    foo = flag_method(u'foo')
+
+
+class TestFlagMethod(VumiTestCase):
+    def setUp(self):
+        self.persistence_helper = self.add_helper(
+            PersistenceHelper(use_riak=True))
+        self.manager = self.persistence_helper.get_riak_manager()
+
+    def test_getter(self):
+        """
+        Determining whether a flag exists should be possible.
+        """
+        model = self.manager.proxy(ToyUserAccount)
+        user = model('123', username=u'testuser')
+
+        self.assertFalse(user.foo)
+        user.flags.append(u'foo')
+        self.assertTrue(user.foo)
+
+    def test_setter(self):
+        """
+        Setting and unsetting a flag should be possible.
+        """
+        model = self.manager.proxy(ToyUserAccount)
+        user = model('123', username=u'testuser')
+
+        self.assertFalse(u'foo' in user.flags)
+        user.foo = True
+        self.assertTrue(u'foo' in user.flags)
+        user.foo = False
+        self.assertFalse(u'foo' in user.flags)
