@@ -7,6 +7,7 @@ from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
     Integer, Unicode, Timestamp, ManyToMany, Json, Boolean, ListOf)
 
+from go.vumitools.account.models import flag_method
 from go.vumitools.account.fields import RoutingTableField
 from go.vumitools.account.migrations import UserAccountMigrator
 from go.vumitools.routing_table import RoutingTable
@@ -242,6 +243,8 @@ class UserAccountV6(Model):
 
     # key is uuid
     username = Unicode(max_length=255)
+    # TODO: tagpools can be made OneToMany once vumi.persist.fields
+    #       gains a OneToMany field
     tagpools = ManyToMany(UserTagPermissionVNone)
     applications = ManyToMany(UserAppPermissionVNone)
     created_at = Timestamp(default=datetime.utcnow)
@@ -253,13 +256,8 @@ class UserAccountV6(Model):
     routing_table = RoutingTableField(default=RoutingTable({}))
     flags = ListOf(Unicode())
 
-    @property
-    def can_manage_optouts(self):
-        return u'can_manage_optouts' in self.flags
-
-    @property
-    def disable_optouts(self):
-        return u'disable_optouts' in self.flags
+    can_manage_optopts = flag_method(u'can_manage_optopts')
+    disable_optouts = flag_method(u'disable_optouts')
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):
