@@ -60,7 +60,7 @@ class UserAccount(Model):
     routing_table = RoutingTableField(default=RoutingTable({}))
     flags = ListOf(Unicode())
 
-    can_manage_optopts = flag_method(u'can_manage_optopts')
+    can_manage_optouts = flag_method(u'can_manage_optouts')
     disable_optouts = flag_method(u'disable_optouts')
 
     @Manager.calls_manager
