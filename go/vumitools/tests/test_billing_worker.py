@@ -1,10 +1,12 @@
 import json
 import decimal
+import logging
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.web.client import Agent, Request, Response
 
 from vumi.tests.helpers import VumiTestCase
+from vumi.tests.utils import LogCatcher
 from vumi.utils import mkheaders, StringProducer
 
 from go.vumitools import billing_worker
@@ -342,11 +344,17 @@ class TestBillingDispatcher(VumiTestCase):
     @inlineCallbacks
     def test_inbound_message_with_billing_disabled(self):
         yield self.get_dispatcher(disable_billing=True)
-        msg = yield self.make_dispatch_inbound(
-            "inbound", user_account="12345", tag=("pool1", "1234"))
+        with LogCatcher(message="Not billing for",
+                        log_level=logging.INFO) as lc:
+            msg = yield self.make_dispatch_inbound(
+                "inbound", user_account="12345", tag=("pool1", "1234"))
 
         self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
         self.assert_no_transactions()
+
+        [info] = lc.messages()
+        self.assertTrue(info.startswith("Not billing for inbound message: "))
+        self.assertTrue(msg['message_id'] in info)
 
     @inlineCallbacks
     def test_outbound_message(self):
@@ -400,11 +408,17 @@ class TestBillingDispatcher(VumiTestCase):
     @inlineCallbacks
     def test_outbound_message_with_billing_disabled(self):
         yield self.get_dispatcher(disable_billing=True)
-        msg = yield self.make_dispatch_outbound(
-            "hi", user_account="12345", tag=("pool1", "1234"))
+        with LogCatcher(message="Not billing for outbound",
+                        log_level=logging.INFO) as lc:
+            msg = yield self.make_dispatch_outbound(
+                "hi", user_account="12345", tag=("pool1", "1234"))
 
         self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
         self.assert_no_transactions()
+
+        [info] = lc.messages()
+        self.assertTrue(info.startswith("Not billing for outbound message: "))
+        self.assertTrue(msg['message_id'] in info)
 
     @inlineCallbacks
     def test_event_message(self):
