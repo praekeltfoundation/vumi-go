@@ -46,6 +46,7 @@ class TestMessageCostForm(GoDjangoTestCase):
             'tag_pool': self.tag_pool.pk,
             'message_direction': 'Inbound',
             'message_cost': '0.0',
+            'storage_cost': '0.0',
             'session_cost': '0.0',
             'markup_percent': '0.0',
         }
@@ -69,6 +70,22 @@ class TestMessageCostForm(GoDjangoTestCase):
             '__all__': [
                 'The resulting cost per message (in credits) was rounded'
                 ' to 0.',
+            ],
+        })
+
+    def test_validate_storage_cost_not_rounded_to_zero(self):
+        mc = self.mk_form(storage_cost='1.0', markup_percent='10.0')
+        self.assertTrue(mc.is_valid())
+
+    def test_validate_storage_cost_rounded_to_zero(self):
+        self.patch_quantization(Decimal('0.1'))
+        mc = self.mk_form(storage_cost='0.001',
+                          markup_percent='0.1')
+        self.assertFalse(mc.is_valid())
+        self.assertEqual(mc.errors, {
+            '__all__': [
+                'The resulting storage cost per message (in credits) was'
+                ' rounded to 0.',
             ],
         })
 

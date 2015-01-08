@@ -1,4 +1,4 @@
-import decimal
+from decimal import Decimal, Context, Inexact, Rounded
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import (
@@ -34,8 +34,8 @@ class TestAccount(GoDjangoTestCase):
         acc = Account.objects.get(user=django_user)
         self.assertEqual(acc.user, django_user)
         self.assertEqual(acc.account_number, profile.user_account)
-        self.assertEqual(acc.credit_balance, decimal.Decimal('0.0'))
-        self.assertEqual(acc.last_topup_balance, decimal.Decimal('0.0'))
+        self.assertEqual(acc.credit_balance, Decimal('0.0'))
+        self.assertEqual(acc.last_topup_balance, Decimal('0.0'))
 
     def test_post_save_hook_not_created(self):
         django_user = self.user_helper.get_django_user()
@@ -64,99 +64,136 @@ class TestMessageCost(GoDjangoTestCase):
     def test_apply_markup_and_convert_to_credits(self):
         self.assertEqual(
             MessageCost.apply_markup_and_convert_to_credits(
-                decimal.Decimal('1.0'), decimal.Decimal('50.0')),
-            decimal.Decimal('15.0'))
+                Decimal('1.0'), Decimal('50.0')),
+            Decimal('15.0'))
 
     def test_apply_markup_and_convert_to_credits_with_context(self):
-        context = decimal.Context()
+        context = Context()
         self.assertEqual(
             MessageCost.apply_markup_and_convert_to_credits(
-                decimal.Decimal('1.0'), QUANTIZATION_EXPONENT,
+                Decimal('1.0'), QUANTIZATION_EXPONENT,
                 context=context),
-            decimal.Decimal('10.0'))
-        self.assertEqual(context.flags[decimal.Inexact], 1)
-        self.assertEqual(context.flags[decimal.Rounded], 1)
+            Decimal('10.0'))
+        self.assertEqual(context.flags[Inexact], 1)
+        self.assertEqual(context.flags[Rounded], 1)
 
     def test_calculate_message_credit_cost(self):
         self.assertEqual(
             MessageCost.calculate_message_credit_cost(
-                decimal.Decimal('1.0'), decimal.Decimal('50.0')),
-            decimal.Decimal('15.0'))
+                Decimal('1.0'), Decimal('50.0')),
+            Decimal('15.0'))
 
     def test_calculate_message_credit_cost_with_context(self):
-        context = decimal.Context()
+        context = Context()
         self.assertEqual(
             MessageCost.calculate_message_credit_cost(
-                decimal.Decimal('1.0'), QUANTIZATION_EXPONENT,
+                Decimal('1.0'), QUANTIZATION_EXPONENT,
                 context=context),
-            decimal.Decimal('10.0'))
-        self.assertEqual(context.flags[decimal.Inexact], 1)
-        self.assertEqual(context.flags[decimal.Rounded], 1)
+            Decimal('10.0'))
+        self.assertEqual(context.flags[Inexact], 1)
+        self.assertEqual(context.flags[Rounded], 1)
+
+    def test_calculate_storage_credit_cost(self):
+        self.assertEqual(
+            MessageCost.calculate_storage_credit_cost(
+                Decimal('1.0'), Decimal('50.0')),
+            Decimal('15.0'))
+
+    def test_calculate_storage_credit_cost_with_context(self):
+        context = Context()
+        self.assertEqual(
+            MessageCost.calculate_storage_credit_cost(
+                Decimal('1.0'), QUANTIZATION_EXPONENT,
+                context=context),
+            Decimal('10.0'))
+        self.assertEqual(context.flags[Inexact], 1)
+        self.assertEqual(context.flags[Rounded], 1)
 
     def test_calculate_session_credit_cost(self):
         self.assertEqual(
             MessageCost.calculate_session_credit_cost(
-                decimal.Decimal('1.0'), decimal.Decimal('50.0')),
-            decimal.Decimal('15.0'))
+                Decimal('1.0'), Decimal('50.0')),
+            Decimal('15.0'))
 
     def test_calculate_session_credit_cost_with_context(self):
-        context = decimal.Context()
+        context = Context()
         self.assertEqual(
             MessageCost.calculate_session_credit_cost(
-                decimal.Decimal('1.0'), QUANTIZATION_EXPONENT,
+                Decimal('1.0'), QUANTIZATION_EXPONENT,
                 context=context),
-            decimal.Decimal('10.0'))
-        self.assertEqual(context.flags[decimal.Inexact], 1)
-        self.assertEqual(context.flags[decimal.Rounded], 1)
+            Decimal('10.0'))
+        self.assertEqual(context.flags[Inexact], 1)
+        self.assertEqual(context.flags[Rounded], 1)
 
     def test_calculate_credit_cost(self):
         self.assertEqual(
             MessageCost.calculate_credit_cost(
-                decimal.Decimal('1.0'), decimal.Decimal('10.0'),
-                decimal.Decimal('2.0'), session_created=False),
-            decimal.Decimal('11.0'))
+                message_cost=Decimal('1.0'),
+                storage_cost=Decimal('3.0'),
+                session_cost=Decimal('2.0'),
+                markup_percent=Decimal('10.0'),
+                session_created=False),
+            Decimal('44.0'))
+
         self.assertEqual(
             MessageCost.calculate_credit_cost(
-                decimal.Decimal('5.0'), decimal.Decimal('20.0'),
-                decimal.Decimal('2.0'), session_created=False),
-            decimal.Decimal('60.0'))
+                message_cost=Decimal('5.0'),
+                storage_cost=Decimal('3.0'),
+                session_cost=Decimal('2.0'),
+                markup_percent=Decimal('10.0'),
+                session_created=False),
+            Decimal('88.0'))
 
     def test_calculate_credit_cost_for_new_session(self):
         self.assertEqual(
             MessageCost.calculate_credit_cost(
-                decimal.Decimal('1.0'), decimal.Decimal('10.0'),
-                decimal.Decimal('2.0'), session_created=True),
-            decimal.Decimal('33.0'))
+                message_cost=Decimal('1.0'),
+                storage_cost=Decimal('3.0'),
+                session_cost=Decimal('2.0'),
+                markup_percent=Decimal('10.0'),
+                session_created=True),
+            Decimal('66.0'))
+
         self.assertEqual(
             MessageCost.calculate_credit_cost(
-                decimal.Decimal('5.0'), decimal.Decimal('20.0'),
-                decimal.Decimal('2.0'), session_created=True),
-            decimal.Decimal('84.0'))
+                message_cost=Decimal('5.0'),
+                storage_cost=Decimal('3.0'),
+                session_cost=Decimal('2.0'),
+                markup_percent=Decimal('20.0'),
+                session_created=True),
+            Decimal('120.0'))
 
     def test_calculate_credit_cost_with_context(self):
-        context = decimal.Context()
+        context = Context()
+
         self.assertEqual(
             MessageCost.calculate_credit_cost(
-                decimal.Decimal('1.0'), QUANTIZATION_EXPONENT,
-                decimal.Decimal('2.0'), session_created=True,
+                message_cost=Decimal('1.0'),
+                storage_cost=Decimal('1.0'),
+                markup_percent=QUANTIZATION_EXPONENT,
+                session_cost=Decimal('2.0'),
+                session_created=True,
                 context=context),
-            decimal.Decimal('30.0'))
-        self.assertEqual(context.flags[decimal.Inexact], 1)
-        self.assertEqual(context.flags[decimal.Rounded], 1)
+            Decimal('40.0'))
+
+        self.assertEqual(context.flags[Inexact], 1)
+        self.assertEqual(context.flags[Rounded], 1)
 
     def test_message_credit_cost(self):
         mc = self.mk_msg_cost(
-            message_cost=decimal.Decimal('5.0'),
-            markup_percent=decimal.Decimal('50.0'),
-            session_cost=decimal.Decimal('100.0'))
-        self.assertEqual(mc.message_credit_cost, decimal.Decimal('75.0'))
+            message_cost=Decimal('5.0'),
+            storage_cost=Decimal('3.0'),
+            markup_percent=Decimal('50.0'),
+            session_cost=Decimal('100.0'))
+        self.assertEqual(mc.message_credit_cost, Decimal('75.0'))
 
     def test_session_credit_cost(self):
         mc = self.mk_msg_cost(
-            message_cost=decimal.Decimal('100.0'),
-            markup_percent=decimal.Decimal('50.0'),
-            session_cost=decimal.Decimal('6.0'))
-        self.assertEqual(mc.session_credit_cost, decimal.Decimal('90.0'))
+            message_cost=Decimal('100.0'),
+            storage_cost=Decimal('3.0'),
+            markup_percent=Decimal('50.0'),
+            session_cost=Decimal('6.0'))
+        self.assertEqual(mc.session_credit_cost, Decimal('90.0'))
 
     def test_unicode(self):
         mc = self.mk_msg_cost(message_direction='inbound')
@@ -187,8 +224,8 @@ class TestLowCreditNotification(GoDjangoTestCase):
         self.django_user = self.user_helper.get_django_user()
         self.acc = Account.objects.get(user=self.django_user)
         notification = LowCreditNotification(
-            account=self.acc, threshold=decimal.Decimal(percent),
-            credit_balance=decimal.Decimal(balance))
+            account=self.acc, threshold=Decimal(percent),
+            credit_balance=Decimal(balance))
         notification.save()
         return notification
 
@@ -201,5 +238,5 @@ class TestLowCreditNotification(GoDjangoTestCase):
     def test_fields(self):
         notification = self.mk_notification('0.55', '27.17')
         self.assertEqual(notification.account, self.acc)
-        self.assertEqual(notification.threshold, decimal.Decimal('0.55'))
-        self.assertEqual(notification.credit_balance, decimal.Decimal('27.17'))
+        self.assertEqual(notification.credit_balance, Decimal('27.17'))
+        self.assertEqual(notification.threshold, Decimal('0.55'))
