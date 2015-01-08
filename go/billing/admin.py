@@ -90,7 +90,7 @@ class MessageCostAdmin(admin.ModelAdmin):
     list_display = ('id', 'account', 'tag_pool', 'message_direction',
                     'message_cost', 'storage_cost', 'session_cost',
                     'markup_percent', 'message_credit_cost',
-                    'session_credit_cost')
+                    'storage_credit_cost', 'session_credit_cost')
 
     search_fields = ('tag_pool__name', 'account__account_number')
     list_filter = ('tag_pool', 'message_direction')
