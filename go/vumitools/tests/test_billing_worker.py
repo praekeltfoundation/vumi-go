@@ -340,6 +340,15 @@ class TestBillingDispatcher(VumiTestCase):
         self.assert_no_transactions()
 
     @inlineCallbacks
+    def test_inbound_message_with_billing_disabled(self):
+        yield self.get_dispatcher(disable_billing=True)
+        msg = yield self.make_dispatch_inbound(
+            "inbound", user_account="12345", tag=("pool1", "1234"))
+
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+        self.assert_no_transactions()
+
+    @inlineCallbacks
     def test_outbound_message(self):
         yield self.get_dispatcher()
         msg = yield self.make_dispatch_outbound(
@@ -384,6 +393,15 @@ class TestBillingDispatcher(VumiTestCase):
             [err.getErrorMessage() for err in errors],
             ["No tag found for message %s" %
                 (msg.get('message_id'))])
+
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+        self.assert_no_transactions()
+
+    @inlineCallbacks
+    def test_outbound_message_with_billing_disabled(self):
+        yield self.get_dispatcher(disable_billing=True)
+        msg = yield self.make_dispatch_outbound(
+            "hi", user_account="12345", tag=("pool1", "1234"))
 
         self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
         self.assert_no_transactions()
