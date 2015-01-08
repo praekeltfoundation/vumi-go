@@ -2,6 +2,8 @@ from datetime import date, datetime
 
 from dateutil.relativedelta import relativedelta
 
+from decimal import Decimal
+
 from celery.task import task, group
 
 from django.db.models import Sum, Count
@@ -328,17 +330,18 @@ def low_credit_notification_confirm_sent(res, notification_id):
 
 
 @task()
-def create_low_credit_notification(account_id, threshold, balance):
+def create_low_credit_notification(account_number, threshold, balance):
     """
     Sends a low credit notification. Returns (model instance id, email_task).
     """
-    account = Account.objects.get(pk=account_id)
+    account = Account.objects.get(account_number=account_number)
     notification = LowCreditNotification(
         account=account, threshold=threshold, credit_balance=balance)
     notification.save()
     # Send email
-    subject = 'Vumi Go account %s (%s) at %s%% of available credits' % (
-        account.user.email, account.user.get_full_name(), threshold)
+    threshold_percent = Decimal(100) - (threshold * Decimal(100))
+    subject = 'Vumi Go account %s (%s) at %s%% left of available credits' % (
+        account.user.email, account.user.get_full_name(), threshold_percent)
     email_from = settings.STATEMENT_CONTACT_DETAILS.get('email')
     email_to = account.user.email
     message = render_to_string(
@@ -346,7 +349,7 @@ def create_low_credit_notification(account_id, threshold, balance):
         {
             'user': account.user,
             'account': account,
-            'threshold_percent': threshold,
+            'threshold_percent': threshold_percent,
             'credit_balance': balance,
             'reference': notification.id,
         })

@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
+from decimal import Decimal
 import gzip
 import json
 import StringIO
@@ -512,17 +513,19 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
     def mk_notification(self, percent, balance):
         self.django_user = self.user_helper.get_django_user()
         self.acc = Account.objects.get(user=self.django_user)
+        percent = Decimal(percent)
+        balance = Decimal(balance)
         return tasks.create_low_credit_notification(
-            self.acc.pk, percent, balance)
+            self.acc.account_number, percent, balance)
 
     def test_confirm_sent(self):
-        notification_id, res = self.mk_notification('60.0', '31.41')
+        notification_id, res = self.mk_notification('0.60', '31.41')
         notification = LowCreditNotification.objects.get(pk=notification_id)
         timestamp = res.get()
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
-        notification_id, res = self.mk_notification('70.1', '12.34')
+        notification_id, res = self.mk_notification('0.701', '12.34')
         notification = LowCreditNotification.objects.get(pk=notification_id)
         self.assertTrue(res.get() is not None)
         self.assertEqual(len(mail.outbox), 1)
@@ -530,11 +533,11 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
 
         self.assertEqual(email.recipients(), [self.django_user.email])
         self.assertEqual(
-            'Vumi Go account %s (%s) at %s%% of available credits' % (
+            'Vumi Go account %s (%s) at %s%% left of available credits' % (
                 str(self.acc.user.email), str(self.acc.user.get_full_name()),
-                '70.1'),
+                '29.900'),
             email.subject)
-        self.assertTrue('70.1%' in email.body)
+        self.assertTrue('29.900%' in email.body)
         self.assertTrue('12.34' in email.body)
         self.assertTrue(self.django_user.get_full_name() in email.body)
         self.assertTrue(str(notification.pk) in email.body)
