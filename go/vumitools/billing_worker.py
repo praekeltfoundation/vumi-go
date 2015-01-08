@@ -175,7 +175,10 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         log.debug("Processing inbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
         try:
-            if not self.disable_billing:
+            if self.disable_billing:
+                log.info(
+                    "Not billing for inbound message: %r" % msg.to_json())
+            else:
                 yield self.create_transaction_for_inbound(msg)
                 msg_mdh.set_paid()
         except BillingError:
@@ -200,7 +203,10 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         log.debug("Processing outbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
         try:
-            if not self.disable_billing:
+            if self.disable_billing:
+                log.info(
+                    "Not billing for outbound message: %r" % msg.to_json())
+            else:
                 yield self.create_transaction_for_outbound(msg)
                 msg_mdh.set_paid()
         except BillingError:
