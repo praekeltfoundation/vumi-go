@@ -8,7 +8,7 @@ from twisted.internet import reactor
 
 from vumi import log
 from vumi.dispatchers.endpoint_dispatchers import Dispatcher
-from vumi.config import ConfigText, ConfigFloat
+from vumi.config import ConfigText, ConfigFloat, ConfigBool
 from vumi.utils import http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
@@ -84,6 +84,9 @@ class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
     retry_delay = ConfigFloat(
         "Delay before retrying failed API calls, default 0.5s",
         static=True, default=0.5)
+    disable_billing = ConfigBool(
+        "Disable calling the billing API and just pass through all messages.",
+        static=True, default=False)
 
     def post_validate(self):
         if len(self.receive_inbound_connectors) != 1:
@@ -118,6 +121,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
         self.api_url = config.api_url
         self.billing_api = BillingApi(self.api_url, config.retry_delay)
+        self.disable_billing = config.disable_billing
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -171,8 +175,12 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         log.debug("Processing inbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
         try:
-            yield self.create_transaction_for_inbound(msg)
-            msg_mdh.set_paid()
+            if self.disable_billing:
+                log.info(
+                    "Not billing for inbound message: %r" % msg.to_json())
+            else:
+                yield self.create_transaction_for_inbound(msg)
+                msg_mdh.set_paid()
         except BillingError:
             log.warning(
                 "BillingError for inbound message, sending without billing:"
@@ -195,8 +203,12 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         log.debug("Processing outbound: %r" % (msg,))
         msg_mdh = self.get_metadata_helper(msg)
         try:
-            yield self.create_transaction_for_outbound(msg)
-            msg_mdh.set_paid()
+            if self.disable_billing:
+                log.info(
+                    "Not billing for outbound message: %r" % msg.to_json())
+            else:
+                yield self.create_transaction_for_outbound(msg)
+                msg_mdh.set_paid()
         except BillingError:
             log.warning(
                 "BillingError for outbound message, sending without billing:"
