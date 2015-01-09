@@ -384,8 +384,9 @@ def create_low_credit_notification(account_number, threshold, balance):
     # Send email
     threshold_percent = Decimal(100) - (threshold * Decimal(100))
     subject = 'Vumi Go account %s (%s) at %s%% left of available credits' % (
-        account.user.email, account.user.get_full_name(), threshold_percent)
-    email_from = settings.STATEMENT_CONTACT_DETAILS.get('email')
+        account.user.email, account.user.get_full_name(),
+        Decimal(100) - threshold_percent)
+    email_from = settings.LOW_CREDIT_NOTIFICATION_EMAIL
     email_to = account.user.email
     message = render_to_string(
         'billing/low_credit_notification_email.txt',

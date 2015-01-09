@@ -43,7 +43,7 @@ STATEMENTS_DEFAULT_ORDER_BY = getattr(
 STATEMENT_CONTACT_DETAILS = getattr(
     settings, 'BILLING_STATEMENT_CONTACT_DETAILS', {
         'tel': '27.11.482.8684',
-        'email': 'http://accounts@praekelt.com',
+        'email': 'accounts@praekelt.com',
         'website': 'www.praekeltfoundation.org',
     })
 
@@ -52,6 +52,9 @@ ENABLE_LOW_CREDIT_NOTIFICATION = getattr(
 
 LOW_CREDIT_NOTIFICATION_PERCENTAGES = getattr(
     settings, 'GO_LOW_CREDIT_NOTIFICATION_PERCENTAGES', [])
+
+LOW_CREDIT_NOTIFICATION_EMAIL = getattr(
+    settings, 'GO_LOW_CREDIT_NOTIFICATION_EMAIL', 'support@vumi.org')
 
 
 def get_user_table():
