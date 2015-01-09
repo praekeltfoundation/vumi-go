@@ -42,9 +42,9 @@ STATEMENTS_DEFAULT_ORDER_BY = getattr(
 
 STATEMENT_CONTACT_DETAILS = getattr(
     settings, 'BILLING_STATEMENT_CONTACT_DETAILS', {
-        'tel': '27.11.482.8684',
-        'email': 'accounts@praekelt.com',
-        'website': 'www.praekeltfoundation.org',
+        'tel': '27.11.123.4567',
+        'email': 'foo@example.com',
+        'website': 'www.example.com',
     })
 
 ENABLE_LOW_CREDIT_NOTIFICATION = getattr(

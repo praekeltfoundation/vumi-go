@@ -37,17 +37,17 @@ class TestStatementView(GoDjangoTestCase):
 
     @mock.patch('go.billing.settings.STATEMENT_CONTACT_DETAILS', {
         'tel': '27.11.123.4567',
-        'website': 'www.foo.org',
-        'email': 'http://foo@bar.com',
+        'website': 'www.example.com',
+        'email': 'http://foo@example.com',
     })
     def test_statement_contact_details(self):
         statement = self.mk_statement()
         user = self.user_helper.get_django_user()
         response = self.get_statement(user, statement)
 
-        self.assertContains(response, '>www.foo.org<')
+        self.assertContains(response, '>www.example.com<')
         self.assertContains(response, '>27.11.123.4567<')
-        self.assertContains(response, '>http://foo@bar.com<')
+        self.assertContains(response, '>http://foo@example.com<')
 
     def test_statement_biller_title(self):
         statement = self.mk_statement(items=[{
