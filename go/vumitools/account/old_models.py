@@ -212,8 +212,6 @@ class UserAccountV5(Model):
 
     # key is uuid
     username = Unicode(max_length=255)
-    # TODO: tagpools can be made OneToMany once vumi.persist.fields
-    #       gains a OneToMany field
     tagpools = ManyToMany(UserTagPermissionVNone)
     applications = ManyToMany(UserAppPermissionVNone)
     created_at = Timestamp(default=datetime.utcnow)
