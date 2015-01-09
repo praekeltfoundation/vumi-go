@@ -53,6 +53,9 @@ ENABLE_LOW_CREDIT_NOTIFICATION = getattr(
 LOW_CREDIT_NOTIFICATION_PERCENTAGES = getattr(
     settings, 'GO_LOW_CREDIT_NOTIFICATION_PERCENTAGES', [])
 
+LOW_CREDIT_NOTIFICATION_EMAIL = getattr(
+    settings, 'GO_LOW_CREDIT_NOTIFICATION_EMAIL', 'support@vumi.org')
+
 
 def get_user_table():
     """Return the name of the table used by the user model."""
