@@ -133,7 +133,7 @@ class UserAccountMigrator(ModelMigrator):
         if mdata.old_data.get('disable_optouts'):
             flags.add(u'disable_optouts')
 
-        mdata.set_value('flags', flags)
+        mdata.set_value('flags', sorted(flags))
 
         # increment version counter
         mdata.set_value('$VERSION', 6)
