@@ -639,10 +639,10 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertEqual(
             'Vumi Go account %s (%s) at %s%% left of available credits' % (
                 str(self.acc.user.email), str(self.acc.user.get_full_name()),
-                '29.900'),
+                '70.100'),
             email.subject)
         self.assertTrue('29.900%' in email.body)
         self.assertTrue('12.34' in email.body)
         self.assertTrue(self.django_user.get_full_name() in email.body)
         self.assertTrue(str(notification.pk) in email.body)
-        self.assertTrue(str(self.acc) in email.body)
+        self.assertTrue(str(self.acc.user.email) in email.body)
