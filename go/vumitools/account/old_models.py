@@ -5,9 +5,8 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
-    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean, ListOf)
+    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
 
-from go.vumitools.account.models import flag_property
 from go.vumitools.account.fields import RoutingTableField
 from go.vumitools.account.migrations import UserAccountMigrator
 from go.vumitools.routing_table import RoutingTable
