@@ -44,18 +44,11 @@ class Account(models.Model):
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The current credit balance."))
 
-    alert_threshold = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal('0.0'),
-        help_text=_("Low-credits notification will be sent when the "
-                    "credit balance reaches the alert threshold percentage "
-                    "of the balance after the last credit purchase."))
-
-    alert_credit_balance = models.DecimalField(
+    last_topup_balance = models.DecimalField(
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
-        help_text=_("Low-credits notification will be sent when the credit "
-                    "balance goes below this value. This value is updated to "
-                    "(alert_threshold * current balance) when credits are "
-                    "loaded."))
+        help_text=_("The credits balance after the last credit top up. Used "
+                    "in the calculation to determine when low-credits "
+                    "notifications should be sent."))
 
     def __unicode__(self):
         return u"{0} ({1})".format(self.account_number, self.user.email)
@@ -109,6 +102,15 @@ class MessageCost(models.Model):
             message_cost, markup_percent, context=context)
 
     @classmethod
+    def calculate_storage_credit_cost(cls, storage_cost, markup_percent,
+                                      context=None):
+        """
+        Return the storage cost per message (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            storage_cost, markup_percent, context=context)
+
+    @classmethod
     def calculate_session_credit_cost(cls, session_cost, markup_percent,
                                       context=None):
         """
@@ -118,13 +120,13 @@ class MessageCost(models.Model):
             session_cost, markup_percent, context=context)
 
     @classmethod
-    def calculate_credit_cost(cls, message_cost, markup_percent,
+    def calculate_credit_cost(cls, message_cost, storage_cost, markup_percent,
                               session_cost, session_created, context=None):
         """
         Return the total cost for both the message and the session, if any,
         in credits.
         """
-        base_cost = message_cost
+        base_cost = message_cost + storage_cost
         if session_created:
             base_cost += session_cost
         return cls.apply_markup_and_convert_to_credits(
@@ -159,6 +161,10 @@ class MessageCost(models.Model):
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The base message cost in cents."))
 
+    storage_cost = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The base message storage cost in cents."))
+
     session_cost = models.DecimalField(
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The base cost per session in cents."))
@@ -172,6 +178,12 @@ class MessageCost(models.Model):
         """Return the calculated cost per message (in credits)."""
         return self.calculate_message_credit_cost(
             self.message_cost, self.markup_percent)
+
+    @property
+    def storage_credit_cost(self):
+        """Return the calculated cost per session (in credits)."""
+        return self.calculate_storage_credit_cost(
+            self.storage_cost, self.markup_percent)
 
     @property
     def session_credit_cost(self):
@@ -227,6 +239,12 @@ class Transaction(models.Model):
         help_text=_("The message cost (in cents) used to calculate"
                     " credit_amount."))
 
+    storage_cost = models.DecimalField(
+        null=True,
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The message storage cost (in cents) used to calculate"
+                    " credit_amount."))
+
     session_created = models.NullBooleanField(
         blank=True, null=True,
         help_text=_("Whether the message being billed started a new session ("
@@ -241,6 +259,21 @@ class Transaction(models.Model):
     markup_percent = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True,
         help_text=_("The markup percentage used to calculate credit_amount."))
+
+    message_credits = models.DecimalField(
+        null=True,
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The message cost (in credits)."))
+
+    storage_credits = models.DecimalField(
+        null=True,
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The message storage cost (in credits)."))
+
+    session_credits = models.DecimalField(
+        null=True,
+        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The session cost (in credits)."))
 
     credit_factor = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True,
@@ -380,7 +413,7 @@ class LowCreditNotification(models.Model):
         help_text=_("The credit balance when the notification was sent."))
 
     def __unicode__(self):
-        return u"%s%% threshold for %s" % (self.threshold, self.account)
+        return u"%s%% threshold for %s" % (self.threshold * 100, self.account)
 
 
 class TransactionArchive(models.Model):

@@ -1,6 +1,7 @@
 import json
-import decimal
+from decimal import Decimal
 
+import mock
 import pytest
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -11,7 +12,8 @@ from go.billing import settings as app_settings
 from go.billing import api
 from go.billing.models import MessageCost
 from go.billing.utils import DummySite, DictRowConnectionPool, JSONDecoder
-
+from go.billing.tests.helpers import (
+    get_message_credits, get_storage_credits, get_session_credits)
 
 DB_SUPPORTED = False
 try:
@@ -48,8 +50,9 @@ class BillingApiTestCase(VumiTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        for table in ('billing_transaction', 'billing_messagecost',
-                      'billing_tagpool', 'billing_account'):
+        for table in ('billing_lowcreditnotification', 'billing_transaction',
+                      'billing_messagecost', 'billing_tagpool',
+                      'billing_account'):
             yield self.connection_pool.runOperation(
                 'DELETE FROM %s' % (table,))
         self.connection_pool.close()
@@ -122,7 +125,8 @@ class BillingApiTestCase(VumiTestCase):
 
     def create_api_cost(self, account_number=None, tag_pool_name=None,
                         message_direction='', message_cost=0.0,
-                        session_cost=0.0, markup_percent=0.0):
+                        storage_cost=0.0, session_cost=0.0,
+                        markup_percent=0.0):
         """
         Create a message cost record via the billing API.
         """
@@ -131,13 +135,14 @@ class BillingApiTestCase(VumiTestCase):
             'tag_pool_name': tag_pool_name,
             'message_direction': message_direction,
             'message_cost': message_cost,
+            'storage_cost': storage_cost,
             'session_cost': session_cost,
             'markup_percent': markup_percent,
         }
         return self.call_api('post', 'costs', content=content)
 
     def get_api_costs(self, account_number=None, tag_pool_name=None,
-                     message_direction=''):
+                      message_direction=''):
         """
         Retrieve message costs by some combination of account number,
         tag pool name and message direction.
@@ -206,9 +211,8 @@ class TestAccount(BillingApiTestCase):
         new_account = yield self.create_api_account(email="test2@example.com")
         self.assertEqual(new_account, {
             "account_number": "12345",
-            "alert_credit_balance": decimal.Decimal('0.0'),
-            "alert_threshold": decimal.Decimal('0.0'),
-            "credit_balance": decimal.Decimal('0.0'),
+            "credit_balance": Decimal('0.0'),
+            "last_topup_balance": Decimal('0.0'),
             "description": "Test account",
             "email": "test2@example.com",
         })
@@ -221,9 +225,8 @@ class TestAccount(BillingApiTestCase):
         account = yield self.get_api_account(new_account["account_number"])
         self.assertEqual(account, {
             "account_number": "12345",
-            "alert_credit_balance": decimal.Decimal('0.0'),
-            "alert_threshold": decimal.Decimal('0.0'),
-            "credit_balance": decimal.Decimal('100.0'),
+            "credit_balance": Decimal('100.0'),
+            "last_topup_balance": Decimal('100.0'),
             "description": "Test account",
             "email": "test2@example.com",
         })
@@ -252,14 +255,17 @@ class TestCost(BillingApiTestCase):
         base_cost = yield self.create_api_cost(
             tag_pool_name="test_pool",
             message_direction="Outbound",
-            message_cost=0.9, session_cost=0.7,
+            message_cost=0.9,
+            storage_cost=0.8,
+            session_cost=0.7,
             markup_percent=20.0)
         self.assertEqual(base_cost, {
             u'account_number': None,
-            u'markup_percent': decimal.Decimal('20.000000'),
-            u'message_cost': decimal.Decimal('0.900000'),
+            u'markup_percent': Decimal('20.000000'),
+            u'message_cost': Decimal('0.900000'),
+            u'storage_cost': Decimal('0.800000'),
             u'message_direction': u'Outbound',
-            u'session_cost': decimal.Decimal('0.700000'),
+            u'session_cost': Decimal('0.700000'),
             u'tag_pool_name': u'test_pool',
         })
 
@@ -269,10 +275,11 @@ class TestCost(BillingApiTestCase):
             message_direction="Outbound")
         self.assertEqual(message_cost, {
             u'account_number': None,
-            u'markup_percent': decimal.Decimal('20.000000'),
-            u'message_cost': decimal.Decimal('0.900000'),
+            u'markup_percent': Decimal('20.000000'),
+            u'message_cost': Decimal('0.900000'),
+            u'storage_cost': Decimal('0.800000'),
             u'message_direction': u'Outbound',
-            u'session_cost': decimal.Decimal('0.700000'),
+            u'session_cost': Decimal('0.700000'),
             u'tag_pool_name': u'test_pool'
         })
 
@@ -281,14 +288,17 @@ class TestCost(BillingApiTestCase):
             account_number=account['account_number'],
             tag_pool_name="test_pool",
             message_direction="Outbound",
-            message_cost=0.5, session_cost=0.3,
+            message_cost=0.5,
+            storage_cost=0.4,
+            session_cost=0.3,
             markup_percent=10.0)
         self.assertEqual(cost_override, {
             u'account_number': account['account_number'],
-            u'markup_percent': decimal.Decimal('10.000000'),
-            u'message_cost': decimal.Decimal('0.500000'),
+            u'markup_percent': Decimal('10.000000'),
+            u'message_cost': Decimal('0.500000'),
+            u'storage_cost': Decimal('0.400000'),
             u'message_direction': u'Outbound',
-            u'session_cost': decimal.Decimal('0.300000'),
+            u'session_cost': Decimal('0.300000'),
             u'tag_pool_name': u'test_pool',
         })
 
@@ -299,10 +309,11 @@ class TestCost(BillingApiTestCase):
             message_direction="Outbound")
         self.assertEqual(message_cost, {
             u'account_number': account['account_number'],
-            u'markup_percent': decimal.Decimal('10.000000'),
-            u'message_cost': decimal.Decimal('0.500000'),
+            u'markup_percent': Decimal('10.000000'),
+            u'message_cost': Decimal('0.500000'),
+            u'storage_cost': Decimal('0.400000'),
             u'message_direction': u'Outbound',
-            u'session_cost': decimal.Decimal('0.300000'),
+            u'session_cost': Decimal('0.300000'),
             u'tag_pool_name': u'test_pool'
         })
 
@@ -313,9 +324,11 @@ class TestCost(BillingApiTestCase):
                 account_number=account['account_number'],
                 tag_pool_name=None,
                 message_direction="Outbound",
-                message_cost=0.5, session_cost=0.3,
+                message_cost=0.5,
+                storage_cost=0.4,
+                session_cost=0.3,
                 markup_percent=10.0)
-        except ApiCallError, e:
+        except ApiCallError as e:
             self.assertEqual(e.response.responseCode, 400)
             self.assertEqual(e.message, "")
         else:
@@ -326,58 +339,222 @@ class TestCost(BillingApiTestCase):
             account_number=None,
             tag_pool_name=None,
             message_direction="Outbound",
-            message_cost=0.1, session_cost=0.1,
+            message_cost=0.1,
+            storage_cost=0.1,
+            session_cost=0.1,
             markup_percent=10.0)
         self.assertEqual(fallback_cost, {
             u'account_number': None,
-            u'markup_percent': decimal.Decimal('10.0'),
-            u'message_cost': decimal.Decimal('0.1'),
+            u'markup_percent': Decimal('10.0'),
+            u'message_cost': Decimal('0.1'),
+            u'storage_cost': Decimal('0.1'),
             u'message_direction': u'Outbound',
-            u'session_cost': decimal.Decimal('0.1'),
+            u'session_cost': Decimal('0.1'),
             u'tag_pool_name': None,
+        })
+
+        # test that zero costs are allowed
+        zero_cost = yield self.create_api_cost(
+            account_number=None,
+            tag_pool_name=None,
+            message_direction="Outbound",
+            message_cost=0.0,
+            storage_cost=0.0,
+            session_cost=0.0,
+            markup_percent=0.0)
+        self.assertEqual(zero_cost, {
+            u'account_number': None,
+            u'tag_pool_name': None,
+            u'message_direction': u'Outbound',
+            u'markup_percent': Decimal('0.0'),
+            u'message_cost': Decimal('0.0'),
+            u'storage_cost': Decimal('0.0'),
+            u'session_cost': Decimal('0.0'),
         })
 
         # Test that we retrieve all the message costs
         all_costs = yield self.get_api_costs()
         self.assertEqual(
-            all_costs, [cost_override, base_cost, fallback_cost])
+            all_costs, [cost_override, base_cost, fallback_cost, zero_cost])
 
 
 class TestTransaction(BillingApiTestCase):
 
-    def test_notification_threshold_crossed_function(self):
+    def setUp(self):
+        self.patch(app_settings, 'LOW_CREDIT_NOTIFICATION_PERCENTAGES',
+                   [70, 90, 80])
+        return BillingApiTestCase.setUp(self)
+
+    def test_check_all_low_credit_thresholds(self):
         """
         Tests various combinations of parameters for
-        notification_threshold_crossed
+        TransactionResource.check_all_low_credit_thresholds.
         """
-        notification_threshold_crossed = (
-            api.TransactionResource.notification_threshold_crossed)
-        # Argument order: credit_balance, credit_amount, alert_credit_balance
-        self.assertFalse(notification_threshold_crossed(9, 1, 10))   # 10 -> 9
-        self.assertTrue(notification_threshold_crossed(10, 1, 10))   # 11 -> 10
-        self.assertTrue(notification_threshold_crossed(9, 2, 10))    # 11 -> 9
-        self.assertFalse(notification_threshold_crossed(11, 1, 10))  # 12 -> 11
+        resource = api.TransactionResource(None)
+        crossed = resource.check_all_low_credit_thresholds
+        # Argument order: credit_balance, credit_amount, last_topup_balance
+        # Thresholds are: 70%, 80% and 90%
+        # simple notification level crossings
+        self.assertEqual(crossed(90, 1, 100), Decimal('0.9'))
+        self.assertEqual(crossed(80, 1, 100), Decimal('0.8'))
+        self.assertEqual(crossed(70, 1, 100), Decimal('0.7'))
+        # simple non-crossings
+        self.assertEqual(crossed(60, 1, 100), None)
+        self.assertEqual(crossed(91, 1, 100), None)
+        self.assertEqual(crossed(89, 1, 100), None)
+        # crossing multiple percentages in one go
+        self.assertEqual(crossed(89, 2, 100), Decimal('0.9'))
+        self.assertEqual(crossed(65, 10, 100), Decimal('0.7'))
+        # non-crossings around 0 and 100
+        self.assertEqual(crossed(0, 0, 100), None)
+        self.assertEqual(crossed(100, 0, 100), None)
+        self.assertEqual(crossed(-5, 1, 100), None)
+        self.assertEqual(crossed(105, 1, 100), None)
+
+    @inlineCallbacks
+    def test_low_credit_threshold_notifications(self):
+        # patch settings and task
+        mock_task_delay = mock.MagicMock()
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_NOTIFICATION', True)
+        self.patch(
+            api.create_low_credit_notification, 'delay', mock_task_delay)
+        # Create account
+        yield self.create_api_user(email="test4@example.com")
+        account = yield self.create_api_account(
+            email="test4@example.com", account_number="11112")
+
+        # Load credits
+        yield self.load_api_account_credits(
+            account['account_number'], 10)
+
+        # Set the message cost
+        yield self.create_api_cost(
+            tag_pool_name="test_pool2",
+            message_direction="Inbound",
+            message_cost=0.1, session_cost=0.1,
+            markup_percent=0.1)
+
+        # Create a transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-1',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        # It should create the first notification
+        account = yield self.get_api_account(account["account_number"])
+        mock_task_delay.assert_called_once_with(
+            account['account_number'], Decimal('0.9'),
+            account['credit_balance'])
+        mock_task_delay.reset_mock()
+
+        # Create another transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-2',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        # It should create the second notification
+        account = yield self.get_api_account(account["account_number"])
+        mock_task_delay.assert_called_once_with(
+            account['account_number'], Decimal('0.8'),
+            account['credit_balance'])
+        mock_task_delay.reset_mock()
+
+        # Create a third transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-2',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        # It should create the third notification
+        account = yield self.get_api_account(account["account_number"])
+        mock_task_delay.assert_called_once_with(
+            account['account_number'], Decimal('0.7'),
+            account['credit_balance'])
+        mock_task_delay.reset_mock()
+
+        # Create a fourth transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-2',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        # It should not create any more notifications
+        self.assertFalse(mock_task_delay.called)
+
+    @inlineCallbacks
+    def test_low_credit_notification_zero_last_topup_value(self):
+        # patch settings and task
+        mock_task_delay = mock.MagicMock()
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_NOTIFICATION', True)
+        self.patch(
+            api.create_low_credit_notification, 'delay', mock_task_delay)
+
+        # Create account
+        yield self.create_api_user(email="test5@example.com")
+        account = yield self.create_api_account(
+            email="test5@example.com", account_number="11113")
+
+        self.assertEqual(account['last_topup_balance'], Decimal('0.0'))
+
+        # Set the message cost
+        yield self.create_api_cost(
+            tag_pool_name="test_pool2",
+            message_direction="Inbound",
+            message_cost=0.1, session_cost=0.1,
+            markup_percent=0.1)
+
+        # Create a transaction
+        yield self.create_api_transaction(
+            account_number=account['account_number'],
+            message_id='msg-id-1',
+            tag_pool_name="test_pool2",
+            tag_name="12345",
+            message_direction="Inbound",
+            session_created=False)
+
+        self.assertFalse(mock_task_delay.called)
 
     @inlineCallbacks
     def test_transaction(self):
-        yield self.create_api_user(email="test4@example.com")
-        account = yield self.create_api_account(email="test4@example.com",
+        yield self.create_api_user(email="test6@example.com")
+        account = yield self.create_api_account(email="test6@example.com",
                                                 account_number="11111")
 
         # Set the message cost
         yield self.create_api_cost(
             tag_pool_name="test_pool2",
             message_direction="Inbound",
-            message_cost=0.6, session_cost=0.3,
+            message_cost=0.6,
+            storage_cost=0.5,
+            session_cost=0.3,
             markup_percent=10.0)
 
         credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal('0.6'), decimal.Decimal('10.0'),
-            decimal.Decimal('0.3'), session_created=False)
+            Decimal('0.6'),
+            Decimal('0.5'),
+            Decimal('10.0'),
+            Decimal('0.3'),
+            session_created=False)
 
         credit_amount_for_session = MessageCost.calculate_credit_cost(
-            decimal.Decimal('0.6'), decimal.Decimal('10.0'),
-            decimal.Decimal('0.3'), session_created=True)
+            Decimal('0.6'),
+            Decimal('0.5'),
+            Decimal('10.0'),
+            Decimal('0.3'),
+            session_created=True)
 
         # Create a transaction
         yield self.create_api_transaction(
@@ -397,12 +574,16 @@ class TestTransaction(BillingApiTestCase):
             u'account_number': account['account_number'],
             u'message_id': 'msg-id-1',
             u'credit_amount': -credit_amount,
-            u'credit_factor': decimal.Decimal('10.000000'),
-            u'markup_percent': decimal.Decimal('10.000000'),
-            u'message_cost': decimal.Decimal('0.6'),
+            u'credit_factor': Decimal('10.000000'),
+            u'markup_percent': Decimal('10.000000'),
+            u'message_cost': Decimal('0.6'),
+            u'storage_cost': Decimal('0.5'),
             u'message_direction': u'Inbound',
-            u'session_cost': decimal.Decimal('0.3'),
+            u'session_cost': Decimal('0.3'),
             u'session_created': False,
+            u'message_credits': get_message_credits(0.6, 10.0),
+            u'storage_credits': get_storage_credits(0.5, 10.0),
+            u'session_credits': get_session_credits(0.3, 10.0),
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2'
@@ -430,12 +611,16 @@ class TestTransaction(BillingApiTestCase):
             u'account_number': account['account_number'],
             u'message_id': 'msg-id-2',
             u'credit_amount': -credit_amount_for_session,
-            u'credit_factor': decimal.Decimal('10.000000'),
-            u'markup_percent': decimal.Decimal('10.000000'),
-            u'message_cost': decimal.Decimal('0.6'),
+            u'credit_factor': Decimal('10.000000'),
+            u'markup_percent': Decimal('10.000000'),
+            u'message_cost': Decimal('0.6'),
+            u'storage_cost': Decimal('0.5'),
             u'message_direction': u'Inbound',
-            u'session_cost': decimal.Decimal('0.3'),
+            u'session_cost': Decimal('0.3'),
             u'session_created': True,
+            u'message_credits': get_message_credits(0.6, 10.0),
+            u'storage_credits': get_storage_credits(0.5, 10.0),
+            u'session_credits': get_session_credits(0.3, 10.0),
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2'
@@ -451,7 +636,9 @@ class TestTransaction(BillingApiTestCase):
             account_number=account["account_number"],
             tag_pool_name="test_pool2",
             message_direction="Inbound",
-            message_cost=9.0, session_cost=7.0,
+            message_cost=9.0,
+            storage_cost=8.0,
+            session_cost=7.0,
             markup_percent=11.0)
 
         transaction = yield self.create_api_transaction(
@@ -463,8 +650,11 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal('9.0'), decimal.Decimal('11.0'),
-            decimal.Decimal('7.0'), session_created=False)
+            Decimal('9.0'),
+            Decimal('8.0'),
+            Decimal('11.0'),
+            Decimal('7.0'),
+            session_created=False)
 
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
@@ -472,12 +662,16 @@ class TestTransaction(BillingApiTestCase):
             u'account_number': account['account_number'],
             u'message_id': 'msg-id-3',
             u'credit_amount': -credit_amount,
-            u'credit_factor': decimal.Decimal('10.0'),
-            u'markup_percent': decimal.Decimal('11.0'),
-            u'message_cost': decimal.Decimal('9.0'),
+            u'credit_factor': Decimal('10.0'),
+            u'markup_percent': Decimal('11.0'),
+            u'message_cost': Decimal('9.0'),
+            u'storage_cost': Decimal('8.0'),
             u'message_direction': u'Inbound',
-            u'session_cost': decimal.Decimal('7.0'),
+            u'session_cost': Decimal('7.0'),
             u'session_created': False,
+            u'message_credits': get_message_credits(9.0, 11.0),
+            u'storage_credits': get_storage_credits(8.0, 11.0),
+            u'session_credits': get_session_credits(7.0, 11.0),
             u'status': u'Completed',
             u'tag_name': u'12345',
             u'tag_pool_name': u'test_pool2',
@@ -486,12 +680,14 @@ class TestTransaction(BillingApiTestCase):
         # Test fallback to default cost
         yield self.create_api_cost(
             message_direction="Outbound",
-            message_cost=0.1, session_cost=0.2,
+            message_cost=0.1,
+            storage_cost=0.3,
+            session_cost=0.2,
             markup_percent=12.0)
 
-        yield self.create_api_user(email="test5@example.com")
+        yield self.create_api_user(email="test7@example.com")
         account = yield self.create_api_account(
-            email="test5@example.com", account_number="arbitrary-user")
+            email="test7@example.com", account_number="arbitrary-user")
 
         transaction = yield self.create_api_transaction(
             account_number="arbitrary-user",
@@ -502,8 +698,11 @@ class TestTransaction(BillingApiTestCase):
             session_created=False)
 
         credit_amount = MessageCost.calculate_credit_cost(
-            decimal.Decimal('0.1'), decimal.Decimal('12.0'),
-            decimal.Decimal('0.2'), session_created=False)
+            Decimal('0.1'),
+            Decimal('0.3'),
+            Decimal('12.0'),
+            Decimal('0.2'),
+            session_created=False)
 
         del (transaction['id'], transaction['created'],
              transaction['last_modified'])
@@ -511,12 +710,16 @@ class TestTransaction(BillingApiTestCase):
             u'account_number': 'arbitrary-user',
             u'message_id': 'msg-id-4',
             u'credit_amount': -credit_amount,
-            u'credit_factor': decimal.Decimal('10.0'),
-            u'markup_percent': decimal.Decimal('12.0'),
-            u'message_cost': decimal.Decimal('0.1'),
+            u'credit_factor': Decimal('10.0'),
+            u'markup_percent': Decimal('12.0'),
+            u'message_cost': Decimal('0.1'),
+            u'storage_cost': Decimal('0.3'),
             u'message_direction': u'Outbound',
-            u'session_cost': decimal.Decimal('0.2'),
+            u'session_cost': Decimal('0.2'),
             u'session_created': False,
+            u'message_credits': get_message_credits(0.1, 12.0),
+            u'storage_credits': get_storage_credits(0.3, 12.0),
+            u'session_credits': get_session_credits(0.2, 12.0),
             u'status': u'Completed',
             u'tag_name': u'erk',
             u'tag_pool_name': u'some-random-pool',
@@ -532,7 +735,7 @@ class TestTransaction(BillingApiTestCase):
                 tag_name="erk",
                 message_direction="Inbound",
                 session_created=False)
-        except ApiCallError, e:
+        except ApiCallError as e:
             self.assertEqual(e.response.responseCode, 500)
             self.assertEqual(
                 e.message,
@@ -556,7 +759,7 @@ class TestTransaction(BillingApiTestCase):
                 tag_name="erk",
                 message_direction="Outbound",
                 session_created=False)
-        except ApiCallError, e:
+        except ApiCallError as e:
             self.assertEqual(e.response.responseCode, 500)
             self.assertEqual(
                 e.message,

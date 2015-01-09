@@ -1,4 +1,7 @@
 import json
+import math
+
+from decimal import Decimal
 
 from twisted.python import log
 from twisted.internet import defer
@@ -26,6 +29,10 @@ def spawn_celery_task_via_thread(t, *args, **kw):
         Keyword arguments for the Celery task.
     """
     return deferToThread(t.delay, *args, **kw)
+
+
+def pluck(data, keys):
+    return (data[k] for k in keys)
 
 
 class BaseResource(Resource):
@@ -205,8 +212,7 @@ class AccountResource(BaseResource):
         """Fetch the account with the given ``account_number``"""
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
             AND a.account_number = %%(account_number)s
@@ -224,8 +230,7 @@ class AccountResource(BaseResource):
         """Fetch all accounts"""
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
         """ % self._auth_user_table
@@ -249,7 +254,7 @@ class AccountResource(BaseResource):
             else:
                 self._handle_bad_request(request)
         elif len(params) == 2 and data is not None:
-            (account_number, path), rest = params[:2], params[2:]
+            (account_number, path) = params[:2]
             if path == 'credits':
                 d = self.load_credits(account_number,
                                       data.get('credit_amount', 0))
@@ -282,9 +287,9 @@ class AccountResource(BaseResource):
         query = """
             INSERT INTO billing_account
                 (user_id, account_number, description, credit_balance,
-                 alert_threshold, alert_credit_balance)
+                 last_topup_balance)
             VALUES
-                (%(user_id)s, %(account_number)s, %(description)s, 0, 0.0, 0)
+                (%(user_id)s, %(account_number)s, %(description)s, 0, 0.0)
             RETURNING id
         """
 
@@ -300,8 +305,7 @@ class AccountResource(BaseResource):
         # Fetch the newly created account
         query = """
             SELECT u.email, a.account_number, a.description,
-                   a.credit_balance, a.alert_threshold,
-                   a.alert_credit_balance
+                   a.credit_balance, a.last_topup_balance
             FROM billing_account a, %s u
             WHERE a.user_id = u.id
             AND a.id = %%(id)s
@@ -342,8 +346,7 @@ class AccountResource(BaseResource):
         query = """
             UPDATE billing_account
             SET credit_balance = credit_balance + %(credit_amount)s,
-                alert_credit_balance = (credit_balance + %(credit_amount)s)
-                                       * alert_threshold / 100.0
+                last_topup_balance = credit_balance + %(credit_amount)s
             WHERE account_number = %(account_number)s
         """
 
@@ -356,7 +359,7 @@ class AccountResource(BaseResource):
 
         # Fetch the latest account information
         query = """SELECT account_number, description, credit_balance,
-                          alert_threshold, alert_credit_balance
+                          last_topup_balance
                    FROM billing_account
                    WHERE account_number = %(account_number)s"""
 
@@ -379,6 +382,11 @@ class CostResource(BaseResource):
 
     isLeaf = True
 
+    FIELDS = (
+        'account_number', 'tag_pool_name', 'message_direction',
+        'message_cost', 'storage_cost', 'session_cost',
+        'markup_percent')
+
     def render_GET(self, request):
         """Handle an HTTP GET request"""
         account_number = request.args.get('account_number', [None])
@@ -394,28 +402,27 @@ class CostResource(BaseResource):
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
-        data = self._parse_json(request)
-        if data:
-            account_number = data.get('account_number', None)
-            tag_pool_name = data.get('tag_pool_name', None)
-            message_direction = data.get('message_direction', None)
-            message_cost = data.get('message_cost', None)
-            session_cost = data.get('session_cost', None)
-            markup_percent = data.get('markup_percent', None)
-            if all((message_direction, message_cost, session_cost,
-                    markup_percent, tag_pool_name or not account_number)):
-                d = self.create_cost(account_number, tag_pool_name,
-                                     message_direction, message_cost,
-                                     session_cost, markup_percent)
+        data = self._parse_json(request) or {}
+        data = dict((k, data.get(k)) for k in self.FIELDS)
 
-                d.addCallbacks(self._render_to_json, self._handle_error,
-                               callbackArgs=[request], errbackArgs=[request])
-
-            else:
-                self._handle_bad_request(request)
-        else:
+        if not self._check_data(data):
             self._handle_bad_request(request)
+        else:
+            d = self.create_cost(*pluck(data, self.FIELDS))
+            d.addCallbacks(self._render_to_json, self._handle_error,
+                           callbackArgs=[request], errbackArgs=[request])
+
         return NOT_DONE_YET
+
+    def _check_data(self, data):
+        account_number = data['account_number']
+        tag_pool_name = data['tag_pool_name']
+
+        if account_number is not None and tag_pool_name is None:
+            return False
+
+        remaining = set(self.FIELDS) - set(['account_number', 'tag_pool_name'])
+        return all(data[k] is not None for k in remaining)
 
     @defer.inlineCallbacks
     def get_cost_list(self, account_number, tag_pool_name,
@@ -428,7 +435,7 @@ class CostResource(BaseResource):
         """
         query = """
             SELECT a.account_number, t.name AS tag_pool_name,
-                   c.message_direction, c.message_cost,
+                   c.message_direction, c.message_cost, c.storage_cost,
                    c.session_cost, c.markup_percent
             FROM billing_messagecost c
                  LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
@@ -468,7 +475,7 @@ class CostResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_cost_interaction(self, cursor, account_number, tag_pool_name,
-                                message_direction, message_cost,
+                                message_direction, message_cost, storage_cost,
                                 session_cost, markup_percent):
         """Create a new cost.
 
@@ -502,17 +509,17 @@ class CostResource(BaseResource):
             query = """
                 INSERT INTO billing_messagecost
                     (account_id, tag_pool_id, message_direction,
-                     message_cost, session_cost, markup_percent)
-                VALUES
+                     message_cost, storage_cost, session_cost, markup_percent)
+               VALUES
                     ((SELECT id FROM billing_account
                       WHERE account_number = %(account_number)s),
                      %(tag_pool_id)s, %(message_direction)s,
-                     %(message_cost)s, %(session_cost)s,
+                     %(message_cost)s, %(storage_cost)s, %(session_cost)s,
                      %(markup_percent)s)
                 RETURNING
                     %(account_number)s AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
-                    message_direction, message_cost,
+                    message_direction, message_cost, storage_cost,
                     session_cost, markup_percent
             """
 
@@ -522,6 +529,7 @@ class CostResource(BaseResource):
                 'tag_pool_name': tag_pool_name,
                 'message_direction': message_direction,
                 'message_cost': message_cost,
+                'storage_cost': storage_cost,
                 'session_cost': session_cost,
                 'markup_percent': markup_percent
             }
@@ -529,14 +537,16 @@ class CostResource(BaseResource):
             query = """
                 INSERT INTO billing_messagecost
                     (account_id, tag_pool_id, message_direction,
-                     message_cost, session_cost, markup_percent)
+                     message_cost, storage_cost, session_cost, markup_percent)
                 VALUES
                     (NULL, %(tag_pool_id)s, %(message_direction)s,
-                     %(message_cost)s, %(session_cost)s, %(markup_percent)s)
+                     %(message_cost)s, %(storage_cost)s,
+                     %(session_cost)s, %(markup_percent)s)
                 RETURNING
                     NULL AS account_number,
                     %(tag_pool_name)s AS tag_pool_name,
-                    message_direction, message_cost, session_cost,
+                    message_direction, message_cost,
+                    storage_cost, session_cost,
                     markup_percent
             """
 
@@ -545,6 +555,7 @@ class CostResource(BaseResource):
                 'tag_pool_name': tag_pool_name,
                 'message_direction': message_direction,
                 'message_cost': message_cost,
+                'storage_cost': storage_cost,
                 'session_cost': session_cost,
                 'markup_percent': markup_percent
             }
@@ -556,7 +567,7 @@ class CostResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_cost(self, account_number, tag_pool_name, message_direction,
-                    message_cost, session_cost, markup_percent):
+                    message_cost, storage_cost, session_cost, markup_percent):
         """Create a new cost.
 
         If an ``account_number`` is given create a message cost override,
@@ -565,8 +576,8 @@ class CostResource(BaseResource):
         """
         result = yield self._connection_pool.runInteraction(
             self.create_cost_interaction, account_number,
-            tag_pool_name, message_direction, message_cost, session_cost,
-            markup_percent)
+            tag_pool_name, message_direction, message_cost,
+            storage_cost, session_cost, markup_percent)
 
         defer.returnValue(result)
 
@@ -575,6 +586,34 @@ class TransactionResource(BaseResource):
     """Expose a REST interface for a transaction"""
 
     isLeaf = True
+
+    def __init__(self, connection_pool):
+        BaseResource.__init__(self, connection_pool)
+        self._notification_mapping = self._create_notification_mapping()
+
+    def _create_notification_mapping(self):
+        """
+        Constructs a mapping from precentage of credits used to the
+        notification percentage immediately above it.
+
+        Only percentages from the lowest percentage to the highest percentage
+        (inclusive) are entered in the mapping.
+        """
+        levels = sorted(
+            int(i) for i in app_settings.LOW_CREDIT_NOTIFICATION_PERCENTAGES)
+
+        if not levels:
+            return []
+
+        mapping = []
+        level_idx = 0
+
+        for i in range(levels[0], levels[-1] + 1):
+            mapping.append(levels[level_idx])
+            if mapping[i - levels[0]] == i:
+                level_idx += 1
+
+        return mapping
 
     def render_GET(self, request):
         """Handle an HTTP GET request"""
@@ -622,9 +661,10 @@ class TransactionResource(BaseResource):
         """Return the message cost"""
         query = """
             SELECT t.account_number, t.tag_pool_name, t.message_direction,
-                   t.message_cost, t.session_cost, t.markup_percent
+                   t.message_cost, t.storage_cost, t.session_cost,
+                   t.markup_percent
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
-                         c.message_direction, c.message_cost,
+                         c.message_direction, c.message_cost, c.storage_cost,
                          c.session_cost, c.markup_percent
                   FROM billing_messagecost c
                   INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
@@ -634,7 +674,7 @@ class TransactionResource(BaseResource):
                   AND c.message_direction = %(message_direction)s
                   UNION
                   SELECT NULL AS account_number, t.name AS tag_pool_name,
-                         c.message_direction, c.message_cost,
+                         c.message_direction, c.message_cost, c.storage_cost,
                          c.session_cost, c.markup_percent
                   FROM billing_messagecost c
                   INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
@@ -643,7 +683,7 @@ class TransactionResource(BaseResource):
                   AND c.message_direction = %(message_direction)s
                   UNION
                   SELECT NULL AS account_number, NULL AS tag_pool_name,
-                         c.message_direction, c.message_cost,
+                         c.message_direction, c.message_cost, c.storage_cost,
                          c.session_cost, c.markup_percent
                   FROM billing_messagecost c
                   WHERE c.account_id IS NULL
@@ -665,6 +705,7 @@ class TransactionResource(BaseResource):
             message_cost = result[0]
             message_cost['credit_amount'] = MessageCost.calculate_credit_cost(
                 message_cost['message_cost'],
+                message_cost['storage_cost'],
                 message_cost['markup_percent'],
                 message_cost['session_cost'],
                 session_created=session_created)
@@ -680,10 +721,10 @@ class TransactionResource(BaseResource):
         query = """
             SELECT id, account_number, message_id,
                    tag_pool_name, tag_name,
-                   message_direction, message_cost,
-                   session_created, session_cost,
-                   markup_percent, credit_factor, credit_amount,
-                   status, created, last_modified
+                   message_direction, message_cost, storage_cost,
+                   session_created, session_cost, markup_percent,
+                   message_credits, storage_credits, session_credits,
+                   credit_factor, credit_amount, status,created, last_modified
             FROM billing_transaction
             WHERE account_number = %(account_number)s
             ORDER BY created DESC
@@ -723,7 +764,6 @@ class TransactionResource(BaseResource):
         # Get the message cost
         result = yield self.get_cost(account_number, tag_pool_name,
                                      message_direction, session_created)
-
         if result is None:
             raise BillingError(
                 "Unable to determine %s message cost for account %s"
@@ -732,31 +772,43 @@ class TransactionResource(BaseResource):
 
         message_cost = result.get('message_cost', 0)
         session_cost = result.get('session_cost', 0)
+        storage_cost = result.get('storage_cost', 0)
         markup_percent = result.get('markup_percent', 0)
         credit_amount = result.get('credit_amount', 0)
+
+        message_credits = MessageCost.calculate_message_credit_cost(
+            message_cost, markup_percent)
+
+        storage_credits = MessageCost.calculate_storage_credit_cost(
+            storage_cost, markup_percent)
+
+        session_credits = MessageCost.calculate_session_credit_cost(
+            session_cost, markup_percent)
 
         # Create a new transaction
         query = """
             INSERT INTO billing_transaction
                 (account_number, message_id,
                  tag_pool_name, tag_name,
-                 message_direction, message_cost,
-                 session_created, session_cost,
-                 markup_percent, credit_factor,
-                 credit_amount, status, created, last_modified)
+                 message_direction, message_cost, storage_cost,
+                 session_created, session_cost, markup_percent,
+                 message_credits, storage_credits, session_credits,
+                 credit_factor, credit_amount, status, created, last_modified)
             VALUES
                 (%(account_number)s, %(message_id)s,
                  %(tag_pool_name)s, %(tag_name)s,
-                 %(message_direction)s, %(message_cost)s,
-                 %(session_created)s, %(session_cost)s,
-                 %(markup_percent)s, %(credit_factor)s,
-                 %(credit_amount)s, 'Completed', now(),
+                 %(message_direction)s, %(message_cost)s, %(storage_cost)s,
+                 %(session_created)s, %(session_cost)s, %(markup_percent)s, 
+                 %(message_credits)s, %(storage_credits)s, %(session_credits)s,
+                 %(credit_factor)s, %(credit_amount)s,
+                 'Completed', now(),
                  now())
             RETURNING id, account_number, message_id,
                       tag_pool_name, tag_name,
-                      message_direction, message_cost,
-                      session_cost, session_created,
-                      markup_percent, credit_factor, credit_amount, status,
+                      message_direction, message_cost, storage_cost,
+                      session_cost, session_created, markup_percent,
+                      message_credits, storage_credits, session_credits,
+                      credit_factor, credit_amount, status,
                       created, last_modified
         """
 
@@ -767,9 +819,13 @@ class TransactionResource(BaseResource):
             'tag_name': tag_name,
             'message_direction': message_direction,
             'message_cost': message_cost,
+            'storage_cost': storage_cost,
             'session_created': session_created,
             'session_cost': session_cost,
             'markup_percent': markup_percent,
+            'message_credits': message_credits,
+            'storage_credits': storage_credits,
+            'session_credits': session_credits,
             'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
             'credit_amount': -credit_amount
         }
@@ -793,7 +849,7 @@ class TransactionResource(BaseResource):
 
         # Check the account's credit balance and raise an
         # alert if it has gone below the credit balance threshold
-        query = """SELECT credit_balance, alert_credit_balance
+        query = """SELECT credit_balance, last_topup_balance
                    FROM billing_account
                    WHERE account_number = %(account_number)s"""
 
@@ -808,28 +864,86 @@ class TransactionResource(BaseResource):
                     account_number, message_direction, tag_pool_name))
 
         credit_balance = result.get('credit_balance')
-        alert_credit_balance = result.get('alert_credit_balance')
-        if (app_settings.ENABLE_LOW_CREDIT_NOTIFICATION and
-            self.notification_threshold_crossed(
-                credit_balance, credit_amount, alert_credit_balance)):
-            yield spawn_celery_task_via_thread(
-                create_low_credit_notification,
-                account_number, result.get('alert_threshold'), credit_balance)
+        last_topup_balance = result.get('last_topup_balance')
+        if app_settings.ENABLE_LOW_CREDIT_NOTIFICATION:
+            yield self.check_and_notify_low_credit_threshold(
+                credit_balance, credit_amount, last_topup_balance,
+                account_number)
 
         defer.returnValue(transaction)
 
-    @staticmethod
-    def notification_threshold_crossed(
-            credit_balance, credit_amount, alert_credit_balance):
+    def check_and_notify_low_credit_threshold(
+            self, credit_balance, credit_amount, last_topup_balance,
+            account_number):
         """
-        Given the current balance (afther the transaction) ``credit_balance``,
-        the transaction amount ``credit_amount``, and the alert threshold
-        ``alert_credit_balance``, will return ``True`` if the transaction
-        caused the alert threshold to be crossed, and false if not.
+        Checks the current balance percentage against all those stored within
+        the settings. Sends the notification email if it is required. Returns
+        the alert percent if email was sent, or ``None`` if no email was sent.
+
+        :param credit_balance: The current balance (after the transaction)
+        :param credit_amount: The amount of credits used in the transaction
+        :param last_topup_balance: The account credit balance at the last topup
+        :param account_number: The account number of the associated account
         """
-        return (
-            credit_balance <= alert_credit_balance <
-            credit_amount + credit_balance)
+        level = self.check_all_low_credit_thresholds(
+            credit_balance, credit_amount, last_topup_balance)
+        if level is not None:
+            return spawn_celery_task_via_thread(
+                create_low_credit_notification, account_number,
+                level, credit_balance)
+
+    def _get_notification_level(self, percentage):
+        """
+        Fetches the value of the notification level for the given percentage.
+
+        :param int percentage:
+            The percentage to get the notification level for
+
+        :return:
+            An int representing the current notification level.
+        """
+        if not self._notification_mapping:
+            return None
+
+        minimum = self._notification_mapping[0]
+        if percentage < minimum:
+            return minimum
+        if percentage > self._notification_mapping[-1]:
+            return None
+        return self._notification_mapping[percentage - minimum]
+
+    def check_all_low_credit_thresholds(
+            self, credit_balance, credit_amount, last_topup_balance):
+        """
+        Checks the current balance percentage against all those stored within
+        the settings.
+
+        :param credit_balance:
+            The current balance (after the transaction)
+        :param credit_amount:
+            The amount of credits used in the transaction
+        :param last_topup_balance:
+            The account credit balance at the last topup
+
+        :return:
+            A :class:`Decimal` percentage for the alert threshold crossed
+            or ``None`` if no threshold was crossed.
+        """
+        if not last_topup_balance:
+            return None
+
+        def ceil_percent(n):
+            return int(math.ceil(n * 100 / last_topup_balance))
+
+        current_percentage = ceil_percent(credit_balance)
+        current_notification_level = self._get_notification_level(
+            current_percentage)
+        previous_percentage = ceil_percent(credit_balance + credit_amount)
+        previous_notification_level = self._get_notification_level(
+            previous_percentage)
+
+        if current_notification_level != previous_notification_level:
+            return Decimal(str(current_notification_level / 100.0))
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,

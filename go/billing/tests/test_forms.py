@@ -46,6 +46,7 @@ class TestMessageCostForm(GoDjangoTestCase):
             'tag_pool': self.tag_pool.pk,
             'message_direction': 'Inbound',
             'message_cost': '0.0',
+            'storage_cost': '0.0',
             'session_cost': '0.0',
             'markup_percent': '0.0',
         }
@@ -69,6 +70,22 @@ class TestMessageCostForm(GoDjangoTestCase):
             '__all__': [
                 'The resulting cost per message (in credits) was rounded'
                 ' to 0.',
+            ],
+        })
+
+    def test_validate_storage_cost_not_rounded_to_zero(self):
+        mc = self.mk_form(storage_cost='1.0', markup_percent='10.0')
+        self.assertTrue(mc.is_valid())
+
+    def test_validate_storage_cost_rounded_to_zero(self):
+        self.patch_quantization(Decimal('0.1'))
+        mc = self.mk_form(storage_cost='0.001',
+                          markup_percent='0.1')
+        self.assertFalse(mc.is_valid())
+        self.assertEqual(mc.errors, {
+            '__all__': [
+                'The resulting storage cost per message (in credits) was'
+                ' rounded to 0.',
             ],
         })
 
@@ -131,7 +148,7 @@ class TestCreditLoadForm(GoDjangoTestCase):
         return formset
 
     def test_load_credits(self):
-        self.account.alert_threshold = Decimal('10.0')
+        self.account.last_topup_balance = Decimal('20.0')
         self.account.save()
 
         formset = self.mk_formset()
@@ -139,13 +156,13 @@ class TestCreditLoadForm(GoDjangoTestCase):
         [form] = list(formset)
 
         self.assertEqual(self.account.credit_balance, Decimal('0.0'))
-        self.assertEqual(self.account.alert_credit_balance, Decimal('0.0'))
+        self.assertEqual(self.account.last_topup_balance, Decimal('20.0'))
 
         form.load_credits()
 
         account = Account.objects.get(user=self.user)
         self.assertEqual(account.credit_balance, Decimal('10.0'))
-        self.assertEqual(account.alert_credit_balance, Decimal('1.0'))
+        self.assertEqual(account.last_topup_balance, Decimal('10.0'))
 
         [transaction] = Transaction.objects.filter(
             account_number=self.account.account_number).all()

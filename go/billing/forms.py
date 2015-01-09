@@ -34,6 +34,7 @@ class MessageCostForm(ModelForm):
         """
         cleaned_data = super(MessageCostForm, self).clean()
         message_cost = cleaned_data.get('message_cost')
+        storage_cost = cleaned_data.get('storage_cost')
         session_cost = cleaned_data.get('session_cost')
         markup_percent = cleaned_data.get('markup_percent')
 
@@ -45,6 +46,15 @@ class MessageCostForm(ModelForm):
                 raise forms.ValidationError(
                     "The resulting cost per message (in credits) was rounded"
                     " to 0.")
+
+        if storage_cost and markup_percent:
+            context = Context()
+            credit_cost = MessageCost.calculate_storage_credit_cost(
+                storage_cost, markup_percent, context=context)
+            if cost_rounded_to_zero(credit_cost, context):
+                raise forms.ValidationError(
+                    "The resulting storage cost per message (in credits) was "
+                    "rounded to 0.")
 
         if session_cost and markup_percent:
             context = Context()
@@ -90,8 +100,7 @@ class CreditLoadForm(ModelForm):
 
         # Update the selected account's credit balance
         account.credit_balance += transaction.credit_amount
-        account.alert_credit_balance = account.credit_balance * \
-            account.alert_threshold / Decimal('100.0')
+        account.last_topup_balance = account.credit_balance
 
         account.save()
 
