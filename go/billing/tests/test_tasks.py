@@ -604,6 +604,150 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
             bucket, archive.filename, transactions_within)
 
 
+class TestGenStatementThenArchiveMonthlyTask(GoDjangoTestCase):
+
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+
+        user1_helper = self.vumi_helper.make_django_user('user1')
+        user2_helper = self.vumi_helper.make_django_user('user2')
+
+        self.account1 = Account.objects.get(
+            user=user1_helper.get_django_user())
+
+        self.account2 = Account.objects.get(
+            user=user2_helper.get_django_user())
+
+    def mk_bucket(self):
+        bucket = self.vumi_helper.patch_s3_bucket_settings(
+            'billing.archive', s3_bucket_name='billing')
+        bucket.create()
+        return bucket
+
+    @moto.mock_s3
+    def test_gen_statement_then_archive_monthly(self):
+        self.mk_bucket()
+
+        tasks.gen_statement_then_archive_monthly()
+        [statement1] = Statement.objects.filter(account=self.account1)
+        [statement2] = Statement.objects.filter(account=self.account2)
+        [archive1] = TransactionArchive.objects.filter(account=self.account1)
+        [archive2] = TransactionArchive.objects.filter(account=self.account2)
+
+        from_date, to_date = tasks.month_range(months_ago=1)
+        self.assertEqual(statement1.from_date, from_date)
+        self.assertEqual(statement1.to_date, to_date)
+
+        self.assertEqual(statement2.from_date, from_date)
+        self.assertEqual(statement2.to_date, to_date)
+
+        self.assertEqual(archive1.from_date, from_date)
+        self.assertEqual(archive1.to_date, to_date)
+
+        self.assertEqual(archive2.from_date, from_date)
+        self.assertEqual(archive2.to_date, to_date)
+
+    @moto.mock_s3
+    def test_gen_statement_then_archive_monthly_existing_statement(self):
+        self.mk_bucket()
+
+        from_date, to_date = tasks.month_range(months_ago=1)
+        tasks.generate_monthly_statement(self.account1.id, from_date, to_date)
+        tasks.generate_monthly_statement(self.account2.id, from_date, to_date)
+
+        statements = Statement.objects
+        self.assertEqual(len(statements.filter(account=self.account1)), 1)
+        self.assertEqual(len(statements.filter(account=self.account2)), 1)
+
+        tasks.gen_statement_then_archive_monthly()
+        self.assertEqual(len(statements.filter(account=self.account1)), 1)
+        self.assertEqual(len(statements.filter(account=self.account2)), 1)
+
+    @moto.mock_s3
+    def test_gen_statement_then_archive_monthly_existing_archive(self):
+        self.mk_bucket()
+
+        from_date, to_date = tasks.month_range(months_ago=1)
+        tasks.archive_transactions(
+            self.account1.id, from_date, to_date, delete=False)
+        tasks.archive_transactions(
+            self.account2.id, from_date, to_date, delete=False)
+
+        archives = TransactionArchive.objects
+        self.assertEqual(len(archives.filter(account=self.account1)), 1)
+        self.assertEqual(len(archives.filter(account=self.account2)), 1)
+
+        tasks.gen_statement_then_archive_monthly()
+        self.assertEqual(len(archives.filter(account=self.account1)), 1)
+        self.assertEqual(len(archives.filter(account=self.account2)), 1)
+
+
+class TestGenStatementThenArchiveTask(GoDjangoTestCase):
+
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+
+        self.account = Account.objects.get(
+            user=self.user_helper.get_django_user())
+
+    def mk_bucket(self):
+        bucket = self.vumi_helper.patch_s3_bucket_settings(
+            'billing.archive', s3_bucket_name='billing')
+        bucket.create()
+        return bucket
+
+    @moto.mock_s3
+    def test_gen_statement_then_archive(self):
+        self.mk_bucket()
+
+        from_date, to_date = tasks.month_range(months_ago=3)
+        tasks.gen_statement_then_archive(self.account.id, from_date, to_date)
+
+        [statement] = Statement.objects.filter(account=self.account)
+        [archive] = TransactionArchive.objects.filter(account=self.account)
+
+        self.assertEqual(statement.from_date, from_date)
+        self.assertEqual(statement.to_date, to_date)
+
+        self.assertEqual(archive.from_date, from_date)
+        self.assertEqual(archive.to_date, to_date)
+
+    @moto.mock_s3
+    def test_gen_statement_then_archive_delete(self):
+        self.mk_bucket()
+        from_date, to_date = tasks.month_range(months_ago=3)
+
+        mk_transaction(
+            self.account,
+            created=from_date,
+            last_modified=from_date)
+
+        self.assertEqual(len(Transaction.objects.all()), 1)
+        tasks.gen_statement_then_archive(self.account.id, from_date, to_date)
+        self.assertEqual(len(Transaction.objects.all()), 0)
+
+    @moto.mock_s3
+    def test_gen_statement_then_archive_no_delete(self):
+        self.mk_bucket()
+        from_date, to_date = tasks.month_range(months_ago=3)
+
+        mk_transaction(
+            self.account,
+            created=from_date,
+            last_modified=from_date)
+
+        self.assertEqual(len(Transaction.objects.all()), 1)
+
+        tasks.gen_statement_then_archive(
+            self.account.id,
+            from_date,
+            to_date,
+            delete=True)
+
+        self.assertEqual(len(Transaction.objects.all()), 0)
+
+
 class TestLowCreditNotificationTask(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
