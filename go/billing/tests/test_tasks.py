@@ -743,9 +743,9 @@ class TestGenStatementThenArchiveTask(GoDjangoTestCase):
             self.account.id,
             from_date,
             to_date,
-            delete=True)
+            delete=False)
 
-        self.assertEqual(len(Transaction.objects.all()), 0)
+        self.assertEqual(len(Transaction.objects.all()), 1)
 
 
 class TestLowCreditNotificationTask(GoDjangoTestCase):
