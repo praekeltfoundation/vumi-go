@@ -79,8 +79,8 @@ def make_read_only_form(form):
     """turn all fields in a form readonly"""
     for field_name, field in form.fields.items():
         widget = field.widget
-        if isinstance(widget,
-                (forms.RadioSelect, forms.CheckboxSelectMultiple)):
+        if isinstance(
+                widget, (forms.RadioSelect, forms.CheckboxSelectMultiple)):
             widget.attrs.update({
                 'disabled': 'disabled'
             })
@@ -103,7 +103,8 @@ def page_range_window(page, padding):
     elif current_page - padding < 1:
         return range(1, (padding * 2))
     elif current_page + padding > page.paginator.num_pages:
-        return range(page.paginator.num_pages - (padding * 2) + 2,
+        return range(
+            page.paginator.num_pages - (padding * 2) + 2,
             page.paginator.num_pages + 1)
     else:
         return range(current_page - padding + 1, current_page + padding)
