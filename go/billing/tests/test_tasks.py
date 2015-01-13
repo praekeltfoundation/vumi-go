@@ -656,12 +656,16 @@ class TestGenStatementThenArchiveMonthlyTask(GoDjangoTestCase):
         tasks.generate_monthly_statement(self.account2.id, from_date, to_date)
 
         statements = Statement.objects
+        archives = TransactionArchive.objects
+
         self.assertEqual(len(statements.filter(account=self.account1)), 1)
         self.assertEqual(len(statements.filter(account=self.account2)), 1)
 
         tasks.gen_statement_then_archive_monthly()
         self.assertEqual(len(statements.filter(account=self.account1)), 1)
         self.assertEqual(len(statements.filter(account=self.account2)), 1)
+        self.assertEqual(len(archives.filter(account=self.account1)), 0)
+        self.assertEqual(len(archives.filter(account=self.account2)), 0)
 
     @moto.mock_s3
     def test_gen_statement_then_archive_monthly_existing_archive(self):
@@ -673,11 +677,15 @@ class TestGenStatementThenArchiveMonthlyTask(GoDjangoTestCase):
         tasks.archive_transactions(
             self.account2.id, from_date, to_date, delete=False)
 
+        statements = Statement.objects
         archives = TransactionArchive.objects
+
         self.assertEqual(len(archives.filter(account=self.account1)), 1)
         self.assertEqual(len(archives.filter(account=self.account2)), 1)
 
         tasks.gen_statement_then_archive_monthly()
+        self.assertEqual(len(statements.filter(account=self.account1)), 0)
+        self.assertEqual(len(statements.filter(account=self.account2)), 0)
         self.assertEqual(len(archives.filter(account=self.account1)), 1)
         self.assertEqual(len(archives.filter(account=self.account2)), 1)
 
