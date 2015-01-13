@@ -2,6 +2,7 @@
 """Test for go.base.utils."""
 
 import csv
+from decimal import Decimal
 from StringIO import StringIO
 from unittest import TestCase
 
@@ -10,7 +11,7 @@ from go.base.tests.helpers import GoDjangoTestCase
 import go.base.utils
 from go.base.utils import (
     get_conversation_view_definition, get_router_view_definition,
-    UnicodeDictWriter, extract_auth_from_url, sendfile)
+    UnicodeDictWriter, extract_auth_from_url, sendfile, format_currency)
 from go.errors import UnknownConversationType, UnknownRouterType
 
 
@@ -154,3 +155,46 @@ class TestRandomUtils(GoDjangoTestCase):
             resp = sendfile('/foo')
             self.assertEqual(resp['X-Accel-Redirect'], '/foo')
             self.assertEqual(resp.content, '')
+
+
+class TestFormatCurrency(GoDjangoTestCase):
+
+    def test_decimal_places(self):
+        self.assertEqual(format_currency(Decimal('0.1234'), places=2), '0.12')
+        self.assertEqual(
+            format_currency(Decimal('0.1234'), places=4), '0.1234')
+        self.assertEqual(
+            format_currency(Decimal('-0.1234'), places=2), '-0.12')
+        self.assertEqual(
+            format_currency(Decimal('-0.1234'), places=4), '-0.1234')
+        self.assertEqual(format_currency(Decimal('0.1234'), places=0), '0')
+        self.assertEqual(format_currency(Decimal('-1.1234'), places=0), '-1')
+
+    def test_currency_symbol(self):
+        self.assertEqual(format_currency(Decimal('0.1234'), curr='R'), 'R0.12')
+        self.assertEqual(
+            format_currency(Decimal('-0.1234'), curr='R'), '-R0.12')
+
+    def test_seperator(self):
+        self.assertEqual(
+            format_currency(Decimal('123456'), sep=' '), '123 456.00')
+        self.assertEqual(
+            format_currency(Decimal('-123456'), sep=' '), '-123 456.00')
+
+    def test_decimal_point(self):
+        self.assertEqual(
+            format_currency(Decimal('123456'), dp='*'), '123,456*00')
+        self.assertEqual(
+            format_currency(Decimal('-123456'), dp='*'), '-123,456*00')
+
+    def test_positive_symbol(self):
+        self.assertEqual(
+            format_currency(Decimal('123'), pos='+'), '+123.00')
+
+    def test_negative_symbol(self):
+        self.assertEqual(
+            format_currency(Decimal('-123'), neg='&'), '&123.00')
+
+    def test_trailing_neg(self):
+        self.assertEqual(
+            format_currency(Decimal('-123'), trailneg='&'), '-123.00&')
