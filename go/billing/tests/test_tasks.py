@@ -642,7 +642,6 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
                 str(self.acc.user.email), str(self.acc.user.get_full_name()),
                 '70.100'),
             email.subject)
-        print email.body
         self.assertTrue('29.900%' in email.body)
         self.assertTrue('1,234.56 credits' in email.body)
         self.assertTrue(self.django_user.get_full_name() in email.body)
