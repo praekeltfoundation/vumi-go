@@ -2,12 +2,12 @@
 
 from datetime import datetime
 
-import moto
-
 from django.core.management import call_command
 
+from go.base.s3utils import Bucket
 from go.base.tests.helpers import (
     GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
+from go.base.tests.s3_helpers import S3Helper
 from go.billing.models import Account, Transaction, TransactionArchive
 from go.billing.tests.helpers import mk_statement, mk_transaction, this_month
 
@@ -15,6 +15,7 @@ from go.billing.tests.helpers import mk_statement, mk_transaction, this_month
 class TestArchiveTransactions(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.s3_helper = self.add_helper(S3Helper(self.vumi_helper))
         self.user_helper = self.vumi_helper.make_django_user()
 
         user = self.user_helper.get_django_user()
@@ -47,10 +48,10 @@ class TestArchiveTransactions(GoDjangoTestCase):
 
         return transactions
 
-    @moto.mock_s3
     def test_archive_transactions_without_deletion(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
+        self.s3_helper.patch_settings(
             'billing.archive', s3_bucket_name='billing')
+        bucket = Bucket('billing.archive')
         bucket.create()
 
         mk_statement(
@@ -108,10 +109,10 @@ class TestArchiveTransactions(GoDjangoTestCase):
         self.assertEqual(nov_s3_key.key, nov_archive.filename)
         self.assertEqual(dec_s3_key.key, dec_archive.filename)
 
-    @moto.mock_s3
     def test_archive_transactions_with_deletion(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
+        self.s3_helper.patch_settings(
             'billing.archive', s3_bucket_name='billing')
+        bucket = Bucket('billing.archive')
         bucket.create()
 
         mk_statement(
@@ -170,10 +171,10 @@ class TestArchiveTransactions(GoDjangoTestCase):
         self.assertEqual(nov_s3_key.key, nov_archive.filename)
         self.assertEqual(dec_s3_key.key, dec_archive.filename)
 
-    @moto.mock_s3
     def test_archive_transactions_missing_statements(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
+        self.s3_helper.patch_settings(
             'billing.archive', s3_bucket_name='billing')
+        bucket = Bucket('billing.archive')
         bucket.create()
 
         mk_statement(
@@ -201,10 +202,10 @@ class TestArchiveTransactions(GoDjangoTestCase):
         self.assert_remaining_transactions(transactions)
         self.assertEqual(list(bucket.get_s3_bucket().list()), [])
 
-    @moto.mock_s3
     def test_archive_transactions_no_statement_option(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
+        self.s3_helper.patch_settings(
             'billing.archive', s3_bucket_name='billing')
+        bucket = Bucket('billing.archive')
         bucket.create()
 
         mk_statement(
