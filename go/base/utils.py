@@ -2,6 +2,7 @@
 
 import csv
 import codecs
+from decimal import Decimal, ROUND_DOWN
 from StringIO import StringIO
 from urlparse import urlparse, urlunparse
 
@@ -239,3 +240,47 @@ def extract_auth_from_url(url):
              parse_result.fragment))
         return auth, url
     return None, url
+
+
+def format_currency(
+        value, places=2, rounding=ROUND_DOWN, curr='', sep=',', dp='.', pos='',
+        neg='-', trailneg=''):
+    """
+    Takes a :class:`Decimal` object and returns a currency formatted
+    :class:`str`.
+
+    Modified from https://docs.python.org/2/library/decimal.html#recipes
+
+    :param value: the :class:`Decimal` to be formatted
+    :param places: required number of places after the decimal point
+    :param rounding: optional rounding direction, defaults to `ROUND_DOWN`
+    :param curr: optional currency symbol before the sign (may be blank)
+    :param sep: optional grouping separator, default ','.
+    :param dp: decimal point indicator default '.'.
+    :param pos: optional sign for positive numbers, default ''.
+    :param neg: optional sign for negative numbers, default '-'.
+    :param trailneg: optional trailing minus indicator
+    """
+    q = Decimal(10) ** -places
+    sign, digits, exp = value.quantize(q, rounding).as_tuple()
+    result = []
+    digits = map(str, digits)
+    build, next = result.append, digits.pop
+    if sign:
+        build(trailneg)
+    for i in range(places):
+        build(next() if digits else '0')
+    if places > 0:
+        build(dp)
+    if not digits:
+        build('0')
+    i = 0
+    while digits:
+        build(next())
+        i += 1
+        if i == 3 and digits:
+            i = 0
+            build(sep)
+    build(curr)
+    build(neg if sign else pos)
+    return ''.join(reversed(result))
