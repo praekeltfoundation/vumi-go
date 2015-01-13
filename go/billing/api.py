@@ -798,7 +798,7 @@ class TransactionResource(BaseResource):
                 (%(account_number)s, %(message_id)s,
                  %(tag_pool_name)s, %(tag_name)s,
                  %(message_direction)s, %(message_cost)s, %(storage_cost)s,
-                 %(session_created)s, %(session_cost)s, %(markup_percent)s, 
+                 %(session_created)s, %(session_cost)s, %(markup_percent)s,
                  %(message_credits)s, %(storage_credits)s, %(session_credits)s,
                  %(credit_factor)s, %(credit_amount)s,
                  'Completed', now(),

@@ -18,7 +18,7 @@ from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
     LowCreditNotification)
 from go.billing.django_utils import TransactionSerializer
-from go.base.utils import vumi_api
+from go.base.utils import vumi_api, format_currency
 
 
 def month_range(months_ago=1, today=None):
@@ -343,7 +343,7 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
     archive.save()
 
     bucket.upload(filename, chunks, gzip=True, headers={
-        'Content-Type': 'appliation/json; charset=utf-8',
+        'Content-Type': 'application/json; charset=utf-8',
     })
 
     archive.status = TransactionArchive.STATUS_TRANSACTIONS_UPLOADED
@@ -419,13 +419,14 @@ def create_low_credit_notification(account_number, threshold, balance):
         Decimal(100) - threshold_percent)
     email_from = settings.LOW_CREDIT_NOTIFICATION_EMAIL
     email_to = account.user.email
+    formatted_balance = format_currency(balance)
     message = render_to_string(
         'billing/low_credit_notification_email.txt',
         {
             'user': account.user,
             'account': account,
             'threshold_percent': threshold_percent,
-            'credit_balance': balance,
+            'credit_balance': formatted_balance,
             'reference': notification.id,
         })
 
