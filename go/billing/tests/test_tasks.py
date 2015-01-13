@@ -12,6 +12,7 @@ import moto
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
+from go.base.s3utils import Bucket
 from go.billing.models import (
     MessageCost, Account, Statement, Transaction, TransactionArchive,
     LowCreditNotification)
@@ -618,16 +619,9 @@ class TestGenStatementThenArchiveMonthlyTask(GoDjangoTestCase):
         self.account2 = Account.objects.get(
             user=user2_helper.get_django_user())
 
-    def mk_bucket(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
-            'billing.archive', s3_bucket_name='billing')
-        bucket.create()
-        return bucket
+        self.monkey_patch(Bucket, 'upload', lambda *a, **kw: None)
 
-    @moto.mock_s3
     def test_gen_statement_then_archive_monthly(self):
-        self.mk_bucket()
-
         tasks.gen_statement_then_archive_monthly()
         [statement1] = Statement.objects.filter(account=self.account1)
         [statement2] = Statement.objects.filter(account=self.account2)
@@ -647,10 +641,7 @@ class TestGenStatementThenArchiveMonthlyTask(GoDjangoTestCase):
         self.assertEqual(archive2.from_date, from_date)
         self.assertEqual(archive2.to_date, to_date)
 
-    @moto.mock_s3
     def test_gen_statement_then_archive_monthly_existing_statement(self):
-        self.mk_bucket()
-
         from_date, to_date = tasks.month_range(months_ago=1)
         tasks.generate_monthly_statement(self.account1.id, from_date, to_date)
         tasks.generate_monthly_statement(self.account2.id, from_date, to_date)
@@ -667,10 +658,7 @@ class TestGenStatementThenArchiveMonthlyTask(GoDjangoTestCase):
         self.assertEqual(len(archives.filter(account=self.account1)), 0)
         self.assertEqual(len(archives.filter(account=self.account2)), 0)
 
-    @moto.mock_s3
     def test_gen_statement_then_archive_monthly_existing_archive(self):
-        self.mk_bucket()
-
         from_date, to_date = tasks.month_range(months_ago=1)
         tasks.archive_transactions(
             self.account1.id, from_date, to_date, delete=False)
@@ -699,16 +687,9 @@ class TestGenStatementThenArchiveTask(GoDjangoTestCase):
         self.account = Account.objects.get(
             user=self.user_helper.get_django_user())
 
-    def mk_bucket(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
-            'billing.archive', s3_bucket_name='billing')
-        bucket.create()
-        return bucket
+        self.monkey_patch(Bucket, 'upload', lambda *a, **kw: None)
 
-    @moto.mock_s3
     def test_gen_statement_then_archive(self):
-        self.mk_bucket()
-
         from_date, to_date = tasks.month_range(months_ago=3)
         tasks.gen_statement_then_archive(self.account.id, from_date, to_date)
 
@@ -721,9 +702,7 @@ class TestGenStatementThenArchiveTask(GoDjangoTestCase):
         self.assertEqual(archive.from_date, from_date)
         self.assertEqual(archive.to_date, to_date)
 
-    @moto.mock_s3
     def test_gen_statement_then_archive_delete(self):
-        self.mk_bucket()
         from_date, to_date = tasks.month_range(months_ago=3)
 
         mk_transaction(
@@ -735,9 +714,7 @@ class TestGenStatementThenArchiveTask(GoDjangoTestCase):
         tasks.gen_statement_then_archive(self.account.id, from_date, to_date)
         self.assertEqual(len(Transaction.objects.all()), 0)
 
-    @moto.mock_s3
     def test_gen_statement_then_archive_no_delete(self):
-        self.mk_bucket()
         from_date, to_date = tasks.month_range(months_ago=3)
 
         mk_transaction(
