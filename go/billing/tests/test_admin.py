@@ -60,3 +60,15 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, "Credits")
         self.assertContains(response, "Unit cost")
         self.assertContains(response, "Cost")
+
+    def test_account_admin_view(self):
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_account_changelist'))
+        self.assertContains(response, 'Select account to change')
+        self.assertContains(response, 'Account number')
+        self.assertContains(response, 'User')
+        self.assertContains(response, 'Description')
+        self.assertContains(response, 'Credit balance')
+        self.assertContains(response, 'Last topup balance')

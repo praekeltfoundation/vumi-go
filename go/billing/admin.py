@@ -23,7 +23,7 @@ class TagPoolAdmin(admin.ModelAdmin):
 
 class AccountAdmin(admin.ModelAdmin):
     list_display = ('account_number', 'user', 'description',
-                    'credit_balance')
+                    'credit_balance', 'last_topup_balance')
 
     search_fields = ('account_number', 'user__email', 'description')
     readonly_fields = ('credit_balance',)
