@@ -12,6 +12,8 @@ from django.template.loader import render_to_string
 
 from djcelery_email.tasks import send_email
 
+from math import floor
+
 from go.base.s3utils import Bucket
 from go.billing import settings
 from go.billing.models import (
@@ -388,13 +390,14 @@ def create_low_credit_notification(account_number, threshold, balance):
         Decimal(100) - threshold_percent)
     email_from = settings.LOW_CREDIT_NOTIFICATION_EMAIL
     email_to = account.user.email
+    formatted_balance = str(floor(balance*100)/100)
     message = render_to_string(
         'billing/low_credit_notification_email.txt',
         {
             'user': account.user,
             'account': account,
             'threshold_percent': threshold_percent,
-            'credit_balance': balance,
+            'credit_balance': formatted_balance,
             'reference': notification.id,
         })
 
