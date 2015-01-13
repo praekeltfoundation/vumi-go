@@ -629,7 +629,7 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
-        notification_id, res = self.mk_notification('0.701', '12.3475')
+        notification_id, res = self.mk_notification('0.701', '1234.5678')
         notification = LowCreditNotification.objects.get(pk=notification_id)
         self.assertTrue(res.get() is not None)
         self.assertEqual(len(mail.outbox), 1)
@@ -642,8 +642,9 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
                 str(self.acc.user.email), str(self.acc.user.get_full_name()),
                 '70.100'),
             email.subject)
+        print email.body
         self.assertTrue('29.900%' in email.body)
-        self.assertTrue('12.34 credits' in email.body)
+        self.assertTrue('1,234.56 credits' in email.body)
         self.assertTrue(self.django_user.get_full_name() in email.body)
         self.assertTrue(str(notification.pk) in email.body)
         self.assertTrue(str(self.acc.user.email) in email.body)
