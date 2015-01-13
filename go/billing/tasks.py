@@ -357,13 +357,14 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
     return archive
 
 
-@task
+@task()
 def gen_statement_then_archive(account_id, from_date, to_date, delete=True):
     """Task to generate a monthly statement for the given account,
     then archive the account.
     """
-    generate_monthly_statement(account_id, from_date, to_date)
-    archive_transactions(account_id, from_date, to_date, delete)
+    s = generate_monthly_statement.si(account_id, from_date, to_date)
+    t = archive_transactions.si(account_id, from_date, to_date, delete)
+    return (s | t)()
 
 
 @task()
