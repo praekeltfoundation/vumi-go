@@ -21,7 +21,7 @@ class TestFormatCents(GoDjangoTestCase):
 
 class TestFormatCredits(GoDjangoTestCase):
     def test_format_credits(self):
-        self.assertEqual(format_credits(2), '2.00')
+        self.assertEqual(format_credits(Decimal('2.00'), '2.00')
         self.assertEqual(format_credits(Decimal('0.23')), '0.23')
         self.assertEqual(format_credits(Decimal('0.028')), '0.02')
 
