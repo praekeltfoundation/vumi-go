@@ -112,7 +112,7 @@ class TestStatementView(GoDjangoTestCase):
         user = self.user_helper.get_django_user()
         response = self.get_statement(user, statement)
 
-        self.assertContains(response, '>200<')
+        self.assertContains(response, '>200.000000<')
         self.assertContains(response, '>1.235<')
         self.assertContains(response, '>6.790<')
 
