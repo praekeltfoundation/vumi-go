@@ -22,10 +22,12 @@ def format_cents(v):
 @register.filter
 def format_credits(v):
     """Returns a formatted string representation of a number in dollars from a
-    decimal cents value (cents are the billing system's internal representation
-    for monetary amounts).
+    decimal or float cents value (cents are the billing system's
+    internal representation for monetary amounts).
     """
-    return format_currency(v)
+    if not isinstance(v, Decimal):
+        v = Decimal(str(v))
+    return format_currency(Decimal(str(v)))
 
 
 @register.simple_tag

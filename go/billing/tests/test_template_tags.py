@@ -19,15 +19,19 @@ class TestFormatCents(GoDjangoTestCase):
             '1,234,567.899')
 
 
-class TestCredits(GoDjangoTestCase):
-    def test_credits(self):
-        self.assertEqual(format_credits(Decimal('2')), '2.00')
+class TestFormatCredits(GoDjangoTestCase):
+    def test_format_credits(self):
+        self.assertEqual(format_credits(2), '2.00')
         self.assertEqual(format_credits(Decimal('0.23')), '0.23')
         self.assertEqual(format_credits(Decimal('0.028')), '0.02')
 
         self.assertEqual(
             format_credits(Decimal('123456789.9876')),
             '123,456,789.98')
+
+    def test_float_values(self):
+        self.assertEqual(format_credits(0.23), '0.23')
+        self.assertEqual(format_credits(0.028), '0.02')
 
 
 class TestCreditBalance(GoDjangoTestCase):
