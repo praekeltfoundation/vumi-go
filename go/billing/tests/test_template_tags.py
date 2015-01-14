@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 import mock
->>>>>>> feature/issue-1152-change-lineitem-credits-field-from-an-integer-to-a-decimal-field
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.templatetags.billing_tags import (
     format_cents, format_credits, credit_balance)
@@ -22,7 +21,7 @@ class TestFormatCents(GoDjangoTestCase):
 
 class TestFormatCredits(GoDjangoTestCase):
     def test_format_credits(self):
-        self.assertEqual(format_credits(Decimal('2.00'), '2.00'))
+        self.assertEqual(format_credits(Decimal('2.00')), '2.00')
         self.assertEqual(format_credits(Decimal('0.23')), '0.23')
         self.assertEqual(format_credits(Decimal('0.028')), '0.02')
 
