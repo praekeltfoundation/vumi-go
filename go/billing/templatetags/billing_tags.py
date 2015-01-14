@@ -11,7 +11,7 @@ register = template.Library()
 
 @register.filter
 def format_cents(v):
-    """returns a formatted string representation of a number in dollars from a
+    """Returns a formatted string representation of a number in dollars from a
     decimal cents value (cents are the billing system's internal representation
     for monetary amounts).
     """
@@ -21,9 +21,8 @@ def format_cents(v):
 
 @register.filter
 def format_credits(v):
-    """Returns a formatted string representation of a number in dollars from a
-    decimal or float cents value (cents are the billing system's
-    internal representation for monetary amounts).
+    """Returns a formatted string representation of a number in credits from a
+    decimal credits value.
     """
     return format_currency(v)
 
