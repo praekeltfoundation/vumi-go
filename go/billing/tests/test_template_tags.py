@@ -29,10 +29,6 @@ class TestFormatCredits(GoDjangoTestCase):
             format_credits(Decimal('123456789.9876')),
             '123,456,789.98')
 
-    def test_float_values(self):
-        self.assertEqual(format_credits(0.23), '0.23')
-        self.assertEqual(format_credits(0.028), '0.02')
-
 
 class TestCreditBalance(GoDjangoTestCase):
     def setUp(self):

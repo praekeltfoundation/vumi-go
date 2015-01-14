@@ -25,9 +25,7 @@ def format_credits(v):
     decimal or float cents value (cents are the billing system's
     internal representation for monetary amounts).
     """
-    if not isinstance(v, Decimal):
-        v = Decimal(str(v))
-    return format_currency(Decimal(str(v)))
+    return format_currency(v)
 
 
 @register.simple_tag

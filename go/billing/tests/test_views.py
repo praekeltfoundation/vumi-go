@@ -334,7 +334,7 @@ class TestStatementView(GoDjangoTestCase):
 
         self.assertEqual(response.context['totals'], {
             'cost': Decimal('350.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         })
 
     @mock.patch('go.billing.settings.SYSTEM_BILLER_NAME', 'Serenity')
