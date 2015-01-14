@@ -18,7 +18,7 @@ from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
     LowCreditNotification)
 from go.billing.django_utils import TransactionSerializer
-from go.base.utils import vumi_api
+from go.base.utils import vumi_api, format_currency
 
 
 def month_range(months_ago=1, today=None):
@@ -358,6 +358,37 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
 
 
 @task()
+def gen_statement_then_archive(account_id, from_date, to_date, delete=True):
+    """Task to generate a monthly statement for the given account,
+    then archive the account.
+    """
+    s = generate_monthly_statement.si(account_id, from_date, to_date)
+    t = archive_transactions.si(account_id, from_date, to_date, delete)
+    return (s | t)()
+
+
+@task()
+def gen_statement_then_archive_monthly(months_ago=1):
+    """Spawn sub-tasks to generate a monthly statement
+    then archive each account.
+    """
+    from_date, to_date = month_range(months_ago=months_ago)
+
+    account_list = Account.objects.exclude(
+        statement__type=Statement.TYPE_MONTHLY,
+        statement__from_date=from_date,
+        statement__to_date=to_date)
+
+    account_list = account_list.exclude(
+        transactionarchive__from_date=from_date,
+        transactionarchive__to_date=to_date)
+
+    return group([
+        gen_statement_then_archive.s(account.id, from_date, to_date)
+        for account in account_list])()
+
+
+@task()
 def low_credit_notification_confirm_sent(res, notification_id):
     """
     Confirms that the email has been sent. Returns the datetime that
@@ -388,13 +419,14 @@ def create_low_credit_notification(account_number, threshold, balance):
         Decimal(100) - threshold_percent)
     email_from = settings.LOW_CREDIT_NOTIFICATION_EMAIL
     email_to = account.user.email
+    formatted_balance = format_currency(balance)
     message = render_to_string(
         'billing/low_credit_notification_email.txt',
         {
             'user': account.user,
             'account': account,
             'threshold_percent': threshold_percent,
-            'credit_balance': balance,
+            'credit_balance': formatted_balance,
             'reference': notification.id,
         })
 
