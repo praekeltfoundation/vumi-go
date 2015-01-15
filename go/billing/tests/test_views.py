@@ -104,7 +104,7 @@ class TestStatementView(GoDjangoTestCase):
     @mock.patch('go.billing.settings.DOLLAR_FORMAT', '%.3f')
     def test_statement_costs(self):
         statement = self.mk_statement(items=[{
-            'credits': 200,
+            'credits': Decimal('200.0'),
             'unit_cost': Decimal('123.456'),
             'cost': Decimal('679.012'),
         }])
@@ -112,7 +112,7 @@ class TestStatementView(GoDjangoTestCase):
         user = self.user_helper.get_django_user()
         response = self.get_statement(user, statement)
 
-        self.assertContains(response, '>200<')
+        self.assertContains(response, '>200.000000<')
         self.assertContains(response, '>1.235<')
         self.assertContains(response, '>6.790<')
 
@@ -133,28 +133,28 @@ class TestStatementView(GoDjangoTestCase):
             'channel': 'Tag 1.1',
             'description': 'Messages Received',
             'cost': Decimal('150.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         }, {
             'billed_by': 'Pool 1',
             'channel_type': 'USSD',
             'channel': 'Tag 1.2',
             'description': 'Messages Received',
             'cost': Decimal('150.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         }, {
             'billed_by': 'Pool 2',
             'channel_type': 'SMS',
             'channel': 'Tag 2.1',
             'description': 'Messages Received',
             'cost': Decimal('200.0'),
-            'credits': 250,
+            'credits': Decimal('250.0'),
         }, {
             'billed_by': 'Pool 2',
             'channel_type': 'SMS',
             'channel': 'Tag 2.2',
             'description': 'Messages Received',
             'cost': Decimal('200.0'),
-            'credits': 250,
+            'credits': Decimal('250.0'),
         }])
 
         user = self.user_helper.get_django_user()
@@ -169,7 +169,7 @@ class TestStatementView(GoDjangoTestCase):
                     get_line_items(statement).filter(channel='Tag 1.1')),
                 'totals': {
                     'cost': Decimal('150.0'),
-                    'credits': 200,
+                    'credits': Decimal('200.0'),
                 }
             }, {
                 'name': u'Tag 1.2',
@@ -177,7 +177,7 @@ class TestStatementView(GoDjangoTestCase):
                     get_line_items(statement).filter(channel='Tag 1.2')),
                 'totals': {
                     'cost': Decimal('150.0'),
-                    'credits': 200,
+                    'credits': Decimal('200.0'),
                 }
             }]
         }, {
@@ -189,7 +189,7 @@ class TestStatementView(GoDjangoTestCase):
                     get_line_items(statement).filter(channel='Tag 2.1')),
                 'totals': {
                     'cost': Decimal('200.0'),
-                    'credits': 250,
+                    'credits': Decimal('250.0'),
                 }
             }, {
                 'name': u'Tag 2.2',
@@ -197,7 +197,7 @@ class TestStatementView(GoDjangoTestCase):
                     get_line_items(statement).filter(channel='Tag 2.2')),
                 'totals': {
                     'cost': Decimal('200.0 '),
-                    'credits': 250,
+                    'credits': Decimal('250.0'),
                 }
             }],
         }])
@@ -209,7 +209,7 @@ class TestStatementView(GoDjangoTestCase):
             'channel': 'Tag 1.1',
             'description': 'Messages Received',
             'cost': Decimal('150.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         }, {
             'billed_by': 'Pool 1',
             'channel_type': 'USSD',
@@ -223,7 +223,7 @@ class TestStatementView(GoDjangoTestCase):
             'channel': 'Tag 1.2',
             'description': 'Messages Received',
             'cost': Decimal('200.0'),
-            'credits': 250,
+            'credits': Decimal('250.0'),
         }, {
             'billed_by': 'Pool 1',
             'channel_type': 'SMS',
@@ -242,10 +242,10 @@ class TestStatementView(GoDjangoTestCase):
 
         self.assertEqual(totals, [{
             'cost': Decimal('300.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         }, {
             'cost': Decimal('400.0'),
-            'credits': 250,
+            'credits': Decimal('250.0'),
         }])
 
     def test_statement_section_totals_nones(self):
@@ -255,7 +255,7 @@ class TestStatementView(GoDjangoTestCase):
             'channel': 'Tag 1.1',
             'description': 'Messages Received',
             'cost': Decimal('150.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         }, {
             'billed_by': 'Pool 2',
             'channel_type': 'SMS',
@@ -270,7 +270,7 @@ class TestStatementView(GoDjangoTestCase):
 
         self.assertEqual(response.context['totals'], {
             'cost': Decimal('350.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         })
 
     def test_statement_grand_totals(self):
@@ -280,28 +280,28 @@ class TestStatementView(GoDjangoTestCase):
             'channel': 'Tag 1.1',
             'description': 'Messages Received',
             'cost': Decimal('150.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         }, {
             'billed_by': 'Pool 1',
             'channel_type': 'USSD',
             'channel': 'Tag 1.1',
             'description': 'Messages Sent',
             'cost': Decimal('150.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         }, {
             'billed_by': 'Pool 2',
             'channel_type': 'SMS',
             'channel': 'Tag 2.1',
             'description': 'Messages Received',
             'cost': Decimal('200.0'),
-            'credits': 250,
+            'credits': Decimal('250.0'),
         }, {
             'billed_by': 'Pool 2',
             'channel_type': 'SMS',
             'channel': 'Tag 2.1',
             'description': 'Messages Sent',
             'cost': Decimal('200.0'),
-            'credits': 250,
+            'credits': Decimal('250.0'),
         }])
 
         user = self.user_helper.get_django_user()
@@ -309,7 +309,7 @@ class TestStatementView(GoDjangoTestCase):
 
         self.assertEqual(response.context['totals'], {
             'cost': Decimal('700.0'),
-            'credits': 900,
+            'credits': Decimal('900.0'),
         })
 
     def test_statement_grand_totals_nones(self):
@@ -319,7 +319,7 @@ class TestStatementView(GoDjangoTestCase):
             'channel': 'Tag 1.1',
             'description': 'Messages Received',
             'cost': Decimal('150.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         }, {
             'billed_by': 'Pool 2',
             'channel_type': 'SMS',
@@ -334,7 +334,7 @@ class TestStatementView(GoDjangoTestCase):
 
         self.assertEqual(response.context['totals'], {
             'cost': Decimal('350.0'),
-            'credits': 200,
+            'credits': Decimal('200.0'),
         })
 
     @mock.patch('go.billing.settings.SYSTEM_BILLER_NAME', 'Serenity')

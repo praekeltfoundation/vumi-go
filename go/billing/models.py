@@ -369,8 +369,8 @@ class LineItem(models.Model):
         default=0,
         help_text=_("Number of units associated to the item"))
 
-    credits = models.IntegerField(
-        default=0, blank=True, null=True,
+    credits = models.DecimalField(
+        max_digits=20, decimal_places=6, default=Decimal('0.0'), null=True,
         help_text=_("Total cost of the item in credits, or null if there is "
                     "no associated credit amount"))
 
