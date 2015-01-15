@@ -4,10 +4,8 @@ import gzip
 import md5
 import StringIO
 
-import boto
-import moto
-
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.base.tests.s3_helpers import S3Helper
 
 from go.base.s3utils import (
     BucketConfig, Bucket, IMultipartWriter,
@@ -135,45 +133,36 @@ class TestGzipMultipartWriter(GoDjangoTestCase):
 class TestBucket(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.s3_helper = self.add_helper(S3Helper(self.vumi_helper))
 
-    def mk_bucket(self, config_name, defaults=None, **kw):
-        if defaults is None:
-            defaults = {
-                "aws_access_key_id": "AWS-DUMMY-ID",
-                "aws_secret_access_key": "AWS-DUMMY-SECRET",
-            }
-        go_s3_buckets = {config_name: defaults}
-        go_s3_buckets[config_name].update(kw)
-        self.vumi_helper.patch_settings(GO_S3_BUCKETS=go_s3_buckets)
+    def mk_bucket(self, config_name, **kw):
+        self.s3_helper.patch_settings(config_name, **kw)
         return Bucket(config_name)
 
     def get_s3_bucket(self, name):
-        conn = boto.connect_s3()
+        conn = self.s3_helper.connect_s3()
         return conn.get_bucket(name)
 
     def create_s3_bucket(self, name):
-        conn = boto.connect_s3()
+        conn = self.s3_helper.connect_s3()
         conn.create_bucket(name)
 
     def list_s3_buckets(self):
-        conn = boto.connect_s3()
+        conn = self.s3_helper.connect_s3()
         return [b.name for b in conn.get_all_buckets()]
 
-    @moto.mock_s3
     def test_get_s3_bucket(self):
         self.create_s3_bucket('s3_custom')
         bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
         b = bucket.get_s3_bucket()
         self.assertEqual(b.name, 's3_custom')
 
-    @moto.mock_s3
     def test_create(self):
         bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
         self.assertEqual(self.list_s3_buckets(), [])
         bucket.create()
         self.assertEqual(self.list_s3_buckets(), ["s3_custom"])
 
-    @moto.mock_s3
     def test_upload_single_part(self):
         self.create_s3_bucket('s3_custom')
         bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
@@ -184,7 +173,6 @@ class TestBucket(GoDjangoTestCase):
         self.assertEqual(
             s3_key.get_contents_as_string(), "chunk1:chunk2:chunk3")
 
-    @moto.mock_s3
     def test_upload_headers(self):
         self.create_s3_bucket('s3_custom')
         bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
@@ -206,7 +194,6 @@ class TestBucket(GoDjangoTestCase):
         from boto.s3.key import Key
         self.monkey_patch(Key, 'BufferSize', size)
 
-    @moto.mock_s3
     def test_upload_multiple_parts(self):
         self._patch_s3_key_buffer_size()
         self.create_s3_bucket('s3_custom')
@@ -223,7 +210,6 @@ class TestBucket(GoDjangoTestCase):
         [s3_key] = s3_bucket.get_all_keys()
         self.assertEqual(s3_key.get_contents_as_string(), data)
 
-    @moto.mock_s3
     def test_upload_part_fails(self):
         def bad_parts():
             yield "chunk1"
@@ -238,7 +224,6 @@ class TestBucket(GoDjangoTestCase):
         self.assertEqual(s3_bucket.get_all_multipart_uploads(), [])
         self.assertEqual(s3_bucket.get_all_keys(), [])
 
-    @moto.mock_s3
     def test_upload_gzip(self):
         self.create_s3_bucket('s3_custom')
         data = "ab" * (3 * 1024)  # 6KB
@@ -256,7 +241,6 @@ class TestBucket(GoDjangoTestCase):
         s3_data = s3_key.get_contents_as_string()
         self.assertEqual(gunzip(s3_data), data)
 
-    @moto.mock_s3
     def test_upload_gzip_headers(self):
         self.create_s3_bucket('s3_custom')
         bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
@@ -270,7 +254,6 @@ class TestBucket(GoDjangoTestCase):
         # self.assertEqual(
         #     s3_key.content_encoding, "gzip")
 
-    @moto.mock_s3
     def test_upload_to_existing_key_fails(self):
         self.create_s3_bucket('s3_custom')
         bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')
@@ -285,7 +268,6 @@ class TestBucket(GoDjangoTestCase):
         [s3_key] = s3_bucket.get_all_keys()
         self.assertEqual(s3_key.get_contents_as_string(), "box of chocolates")
 
-    @moto.mock_s3
     def test_upload_to_existing_key_succeeds_if_replace_is_true(self):
         self.create_s3_bucket('s3_custom')
         bucket = self.mk_bucket('custom', s3_bucket_name='s3_custom')

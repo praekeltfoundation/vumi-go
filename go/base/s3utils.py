@@ -28,7 +28,15 @@ class BucketConfig(object):
 
     def __getattr__(self, name):
         bucket_config = settings.GO_S3_BUCKETS.get(self.config_name, {})
-        defaults = settings.GO_S3_BUCKETS.get('defaults', {})
+        # We set defaults for "proxy", "proxy_port", and "is_secure" because we
+        # override them in tests to use an in-process moto fake instead of
+        # hitting S3 for real.
+        defaults = {
+            "proxy": None,
+            "proxy_port": None,
+            "is_secure": True,
+        }
+        defaults.update(settings.GO_S3_BUCKETS.get('defaults', {}))
         if name in bucket_config:
             return bucket_config[name]
         if name in defaults:
@@ -151,7 +159,9 @@ class Bucket(object):
 
     def _s3_conn(self):
         return boto.connect_s3(
-            self.config.aws_access_key_id, self.config.aws_secret_access_key)
+            self.config.aws_access_key_id, self.config.aws_secret_access_key,
+            proxy=self.config.proxy, proxy_port=self.config.proxy_port,
+            is_secure=self.config.is_secure)
 
     def get_s3_bucket(self):
         """ Return an S3 bucket object. """

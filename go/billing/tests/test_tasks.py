@@ -8,9 +8,10 @@ import StringIO
 from django.core import mail
 
 import mock
-import moto
 
+from go.base.s3utils import Bucket
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.base.tests.s3_helpers import S3Helper
 
 from go.base.s3utils import Bucket
 from go.billing.models import (
@@ -459,6 +460,7 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
 
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.s3_helper = self.add_helper(S3Helper(self.vumi_helper))
         self.user_helper = self.vumi_helper.make_django_user()
         self.account = Account.objects.get(
             user=self.user_helper.get_django_user())
@@ -510,10 +512,10 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         to_date = from_date + relativedelta(months=1, days=-1)
         s.assert_called_with(self.account.id, from_date, to_date)
 
-    @moto.mock_s3
     def test_archive_transactions(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
+        self.s3_helper.patch_settings(
             'billing.archive', s3_bucket_name='billing')
+        bucket = Bucket('billing.archive')
         bucket.create()
         from_time = datetime(2013, 11, 1)
         from_date, to_date = this_month(from_time.date())
@@ -537,10 +539,10 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         self.assert_remaining_transactions([])
         self.assert_archive_in_s3(bucket, archive.filename, [transaction])
 
-    @moto.mock_s3
     def test_archive_transactions_upload_only(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
+        self.s3_helper.patch_settings(
             'billing.archive', s3_bucket_name='billing')
+        bucket = Bucket('billing.archive')
         bucket.create()
         from_time = datetime(2013, 11, 1)
         from_date, to_date = this_month(from_time.date())
@@ -564,10 +566,10 @@ class TestArchiveTransactionsTask(GoDjangoTestCase):
         self.assert_remaining_transactions([transaction])
         self.assert_archive_in_s3(bucket, archive.filename, [transaction])
 
-    @moto.mock_s3
     def test_archive_transactions_complex(self):
-        bucket = self.vumi_helper.patch_s3_bucket_settings(
+        self.s3_helper.patch_settings(
             'billing.archive', s3_bucket_name='billing')
+        bucket = Bucket('billing.archive')
         bucket.create()
         from_time = datetime(2013, 11, 1)
         before_time = datetime(2013, 10, 31, 12, 59, 59)
