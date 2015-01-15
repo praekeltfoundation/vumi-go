@@ -1,3 +1,4 @@
+from decimal import Decimal
 from itertools import groupby as _groupby
 
 from django.contrib.auth.decorators import login_required
@@ -13,15 +14,21 @@ def groupby(values, fn):
     return sorted([(k, list(g)) for k, g in _groupby(values, fn)])
 
 
-def ensure_int(v):
-    return v if v is not None else 0
+def ensure_decimal(v):
+    return v if v is not None else Decimal('0.0')
 
 
 def totals_from_items(items):
-    return {
-        'cost': sum(ensure_int(item.cost) for item in items),
-        'credits': sum(ensure_int(item.credits) for item in items),
-    }
+    if not items:
+        return {
+            'cost': Decimal('0.0'),
+            'credits': Decimal('0.0')
+        }
+    else:
+        return {
+            'cost': sum(ensure_decimal(item.cost) for item in items),
+            'credits': sum(ensure_decimal(item.credits) for item in items),
+        }
 
 
 def sections_from_items(all_items):

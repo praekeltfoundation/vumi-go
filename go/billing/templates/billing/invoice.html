@@ -61,9 +61,9 @@
                         <tr>
                             <td>{% if item.description != None %}{{ item.description }}{% endif %}</th>
                             <td>{{ item.units }}</th>
-                            <td>{% if item.credits != None %}{{ item.credits }}{% endif %}</th>
-                            <td>{{ item.unit_cost|dollars }}</th>
-                            <td>{{ item.cost|dollars }}
+                            <td>{% if item.credits != None %}{{ item.credits|format_credits }}{% endif %}</th>
+                            <td>{{ item.unit_cost|format_cents }}</th>
+                            <td>{{ item.cost|format_cents }}
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -71,9 +71,9 @@
                         <tr>
                             <td>Total</td>
                             <td></td>
-                            <td>{{ section.totals.credits }}</td>
+                            <td>{{ section.totals.credits|format_credits }}</td>
                             <td></td>
-                            <td>{{ section.totals.cost|dollars }}</td>
+                            <td>{{ section.totals.cost|format_cents }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -93,9 +93,9 @@
                     <tfoot>
                         <td>Grand Total</td>
                         <td></td>
-                        <td>{{ totals.credits }}</td>
+                        <td>{{ totals.credits|format_credits }}</td>
                         <td></td>
-                        <td>{{ totals.cost|dollars }}</td>
+                        <td>{{ totals.cost|format_cents }}</td>
                     </tfoot>
                 </table>
             </div>

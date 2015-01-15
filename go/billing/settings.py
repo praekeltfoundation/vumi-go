@@ -8,8 +8,8 @@ from go.config import billing_quantization_exponent
 SYSTEM_BILLER_NAME = getattr(
     settings, 'BILLING_SYSTEM_BILLER_NAME', 'Vumi')
 
-DOLLAR_FORMAT = getattr(
-    settings, 'BILLING_DOLLAR_FORMAT', '%.3f')
+DOLLAR_DECIMAL_PLACES = getattr(
+    settings, 'BILLING_DOLLAR_DECIMAL_PLACES', 3)
 
 # 10 credits = 1 US cent
 CREDIT_CONVERSION_FACTOR = getattr(
