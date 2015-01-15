@@ -26,6 +26,7 @@ class S3Helper(object):
 
     def __init__(self, vumi_helper):
         self.vumi_helper = vumi_helper
+        self.server = None
 
     def setup(self):
         # Clear any leftover global state.
