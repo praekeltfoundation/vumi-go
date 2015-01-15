@@ -14,6 +14,7 @@ class TestS3Helper(GoDjangoTestCase):
         Helper setup starts a moto server and helper cleanup stops it.
         """
         s3_helper = S3Helper(self.vumi_helper)
+        self.add_cleanup(s3_helper.cleanup)
         self.assertEqual(s3_helper.server, None)
 
         s3_helper.setup()
@@ -28,12 +29,31 @@ class TestS3Helper(GoDjangoTestCase):
         # We can't check that the server is no longer listening because there's
         # no sane way to give boto suitable retry and timeout values.
 
+    def test_cleanup_when_not_running(self):
+        """
+        Helper is should be safe to call before setup and after setup+cleanup.
+        """
+        s3_helper = S3Helper(self.vumi_helper)
+        self.add_cleanup(s3_helper.cleanup)
+
+        self.assertEqual(s3_helper.server, None)
+        s3_helper.cleanup()
+        self.assertEqual(s3_helper.server, None)
+
+        s3_helper.setup()
+        self.assertEqual(s3_helper.server_thread.is_alive(), True)
+        s3_helper.cleanup()
+        self.assertEqual(s3_helper.server_thread.is_alive(), False)
+        s3_helper.cleanup()
+        self.assertEqual(s3_helper.server_thread.is_alive(), False)
+
     def test_setup_cleanup_resets_server_state(self):
         """
         Helper setup and cleanup reset server state so tests aren't coupled
         through S3.
         """
         s3_helper = S3Helper(self.vumi_helper)
+        self.add_cleanup(s3_helper.cleanup)
         s3_helper.setup()
 
         s3_client = s3_helper.connect_s3()

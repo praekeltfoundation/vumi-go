@@ -26,6 +26,7 @@ class S3Helper(object):
 
     def __init__(self, vumi_helper):
         self.vumi_helper = vumi_helper
+        self.server_thread = None
         self.server = None
 
     def setup(self):
@@ -38,10 +39,12 @@ class S3Helper(object):
         self.server_thread.start()
 
     def cleanup(self):
-        # Tell the server to stop.
-        self.server.shutdown()
-        # Wait for it to stop.
-        self.server_thread.join()
+        if self.server is not None:
+            # Tell the server to stop.
+            self.server.shutdown()
+        if self.server_thread is not None:
+            # Wait for it to stop.
+            self.server_thread.join()
         # Clear all the global state we modified.
         s3_backend.reset()
 
