@@ -12,7 +12,7 @@ setup(
     author_email='dev@praekeltfoundation.org',
     packages=find_packages(),
     install_requires=[
-        'vumi>=0.5.0',
+        'vumi>=0.5.7',
         'vxpolls',
         'vumi-wikipedia',
         'Django==1.5.8',
