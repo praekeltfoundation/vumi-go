@@ -72,29 +72,19 @@ class BillingApiTestCase(VumiTestCase):
         """
         Create a user by calling the billing API.
         """
+        # TODO use django queryset
         content = {
             'email': email, 'first_name': first_name,
             'last_name': last_name, 'password': password,
         }
         return self.call_api('post', 'users', content=content)
 
-    def get_api_user(self, user_id):
-        """
-        Retrieve a user by id.
-        """
-        return self.call_api('get', 'users/%s' % (user_id,))
-
-    def get_api_user_list(self):
-        """
-        Retrieve a list of all users.
-        """
-        return self.call_api('get', 'users')
-
     def create_api_account(self, email="test@example.com",
                            account_number="12345", description="Test account"):
         """
         Create an account by calling the billing API.
         """
+        # TODO use django queryset
         content = {
             'email': email, 'account_number': account_number,
             'description': description,
@@ -105,6 +95,7 @@ class BillingApiTestCase(VumiTestCase):
         """
         Retrieve an account by account number.
         """
+        # TODO use django queryset
         return self.call_api('get', 'accounts/%s' % (account_number,))
 
     def get_api_account_list(self):
@@ -117,6 +108,7 @@ class BillingApiTestCase(VumiTestCase):
         """
         Load credits to an account via the API.
         """
+        # TODO use django queryset
         content = {
             'credit_amount': credit_amount,
         }
@@ -130,6 +122,7 @@ class BillingApiTestCase(VumiTestCase):
         """
         Create a message cost record via the billing API.
         """
+        # TODO use django queryset
         content = {
             'account_number': account_number,
             'tag_pool_name': tag_pool_name,
@@ -141,24 +134,12 @@ class BillingApiTestCase(VumiTestCase):
         }
         return self.call_api('post', 'costs', content=content)
 
-    def get_api_costs(self, account_number=None, tag_pool_name=None,
-                      message_direction=''):
-        """
-        Retrieve message costs by some combination of account number,
-        tag pool name and message direction.
-        """
-        args = {
-            'account_number': account_number,
-            'tag_pool_name': tag_pool_name,
-            'message_direction': message_direction,
-        }
-        return self.call_api('get', 'costs', args=args)
-
     def create_api_transaction(self, account_number, message_id, tag_pool_name,
                                tag_name, message_direction, session_created):
         """
         Create a transaction record via the billing API.
         """
+        # TODO use django queryset
         content = {
             'account_number': account_number,
             'message_id': message_id,
@@ -173,209 +154,11 @@ class BillingApiTestCase(VumiTestCase):
         """
         Retrieve the list of transactions for a given account number.
         """
+        # TODO use django queryset
         args = {
             'account_number': account_number,
         }
         return self.call_api('get', 'transactions', args=args)
-
-
-class TestUser(BillingApiTestCase):
-
-    @inlineCallbacks
-    def test_user(self):
-        # test creating the user
-        new_user = yield self.create_api_user()
-        user_id = new_user['id']
-        self.assertTrue(user_id)
-        self.assertEqual(new_user, {
-            u'id': user_id,
-            u'email': u'test@example.com',
-            u'first_name': u'Test',
-            u'last_name': u'User'
-        })
-
-        # test retrieving the user
-        user = yield self.get_api_user(new_user['id'])
-        self.assertEqual(user, new_user)
-
-        # test retrieving all users
-        user_list = yield self.get_api_user_list()
-        self.assertEqual(user_list, [new_user])
-
-
-class TestAccount(BillingApiTestCase):
-
-    @inlineCallbacks
-    def test_account(self):
-        yield self.create_api_user(email="test2@example.com")
-        new_account = yield self.create_api_account(email="test2@example.com")
-        self.assertEqual(new_account, {
-            "account_number": "12345",
-            "credit_balance": Decimal('0.0'),
-            "last_topup_balance": Decimal('0.0'),
-            "description": "Test account",
-            "email": "test2@example.com",
-        })
-
-        # Load credits into the new account
-        yield self.load_api_account_credits(
-            new_account['account_number'], 100)
-
-        # Fetch the new account and make sure the credit balance is correct
-        account = yield self.get_api_account(new_account["account_number"])
-        self.assertEqual(account, {
-            "account_number": "12345",
-            "credit_balance": Decimal('100.0'),
-            "last_topup_balance": Decimal('100.0'),
-            "description": "Test account",
-            "email": "test2@example.com",
-        })
-
-        # Make sure there was a transaction created for the credit load
-        [transaction] = yield self.get_api_transaction_list(
-            account['account_number'])
-        self.assertEqual(transaction['account_number'], '12345')
-        self.assertEqual(transaction['credit_amount'], 100)
-        self.assertEqual(transaction['status'], 'Completed')
-
-        # Test listing all accounts
-        [my_account] = yield self.get_api_account_list()
-        self.assertEqual(my_account, account)
-
-
-class TestCost(BillingApiTestCase):
-
-    @inlineCallbacks
-    def test_cost(self):
-        yield self.create_api_user(email="test3@example.com")
-        account = yield self.create_api_account(email="test3@example.com",
-                                                account_number="67890")
-
-        # Create the message base cost
-        base_cost = yield self.create_api_cost(
-            tag_pool_name="test_pool",
-            message_direction="Outbound",
-            message_cost=0.9,
-            storage_cost=0.8,
-            session_cost=0.7,
-            markup_percent=20.0)
-        self.assertEqual(base_cost, {
-            u'account_number': None,
-            u'markup_percent': Decimal('20.000000'),
-            u'message_cost': Decimal('0.900000'),
-            u'storage_cost': Decimal('0.800000'),
-            u'message_direction': u'Outbound',
-            u'session_cost': Decimal('0.700000'),
-            u'tag_pool_name': u'test_pool',
-        })
-
-        # Get the message cost
-        [message_cost] = yield self.get_api_costs(
-            tag_pool_name="test_pool",
-            message_direction="Outbound")
-        self.assertEqual(message_cost, {
-            u'account_number': None,
-            u'markup_percent': Decimal('20.000000'),
-            u'message_cost': Decimal('0.900000'),
-            u'storage_cost': Decimal('0.800000'),
-            u'message_direction': u'Outbound',
-            u'session_cost': Decimal('0.700000'),
-            u'tag_pool_name': u'test_pool'
-        })
-
-        # Override the message cost for the account
-        cost_override = yield self.create_api_cost(
-            account_number=account['account_number'],
-            tag_pool_name="test_pool",
-            message_direction="Outbound",
-            message_cost=0.5,
-            storage_cost=0.4,
-            session_cost=0.3,
-            markup_percent=10.0)
-        self.assertEqual(cost_override, {
-            u'account_number': account['account_number'],
-            u'markup_percent': Decimal('10.000000'),
-            u'message_cost': Decimal('0.500000'),
-            u'storage_cost': Decimal('0.400000'),
-            u'message_direction': u'Outbound',
-            u'session_cost': Decimal('0.300000'),
-            u'tag_pool_name': u'test_pool',
-        })
-
-        # Get the message cost again
-        [message_cost] = yield self.get_api_costs(
-            account_number=account.get('account_number'),
-            tag_pool_name="test_pool",
-            message_direction="Outbound")
-        self.assertEqual(message_cost, {
-            u'account_number': account['account_number'],
-            u'markup_percent': Decimal('10.000000'),
-            u'message_cost': Decimal('0.500000'),
-            u'storage_cost': Decimal('0.400000'),
-            u'message_direction': u'Outbound',
-            u'session_cost': Decimal('0.300000'),
-            u'tag_pool_name': u'test_pool'
-        })
-
-        # Test that setting a message cost with an account number
-        # but no tag pool fails.
-        try:
-            yield self.create_api_cost(
-                account_number=account['account_number'],
-                tag_pool_name=None,
-                message_direction="Outbound",
-                message_cost=0.5,
-                storage_cost=0.4,
-                session_cost=0.3,
-                markup_percent=10.0)
-        except ApiCallError as e:
-            self.assertEqual(e.response.responseCode, 400)
-            self.assertEqual(e.message, "")
-        else:
-            self.fail("Expected cost creation to fail.")
-
-        # create a message cost with no account or tag pool
-        fallback_cost = yield self.create_api_cost(
-            account_number=None,
-            tag_pool_name=None,
-            message_direction="Outbound",
-            message_cost=0.1,
-            storage_cost=0.1,
-            session_cost=0.1,
-            markup_percent=10.0)
-        self.assertEqual(fallback_cost, {
-            u'account_number': None,
-            u'markup_percent': Decimal('10.0'),
-            u'message_cost': Decimal('0.1'),
-            u'storage_cost': Decimal('0.1'),
-            u'message_direction': u'Outbound',
-            u'session_cost': Decimal('0.1'),
-            u'tag_pool_name': None,
-        })
-
-        # test that zero costs are allowed
-        zero_cost = yield self.create_api_cost(
-            account_number=None,
-            tag_pool_name=None,
-            message_direction="Outbound",
-            message_cost=0.0,
-            storage_cost=0.0,
-            session_cost=0.0,
-            markup_percent=0.0)
-        self.assertEqual(zero_cost, {
-            u'account_number': None,
-            u'tag_pool_name': None,
-            u'message_direction': u'Outbound',
-            u'markup_percent': Decimal('0.0'),
-            u'message_cost': Decimal('0.0'),
-            u'storage_cost': Decimal('0.0'),
-            u'session_cost': Decimal('0.0'),
-        })
-
-        # Test that we retrieve all the message costs
-        all_costs = yield self.get_api_costs()
-        self.assertEqual(
-            all_costs, [cost_override, base_cost, fallback_cost, zero_cost])
 
 
 class TestTransaction(BillingApiTestCase):
