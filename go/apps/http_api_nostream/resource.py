@@ -247,6 +247,13 @@ class MessageResource(BaseResource):
     @inlineCallbacks
     def handle_PUT_send_to(self, request, payload):
         user_account = request.getUser()
+        optout_store = self.worker.vumi_api.get_user_api(user_account) \
+            .optout_store
+        optout = yield optout_store.get_opt_out(
+            payload.get('to_addr_type', 'msisdn'), payload.get('to_addr'))
+        if optout:
+            self.client_error_response(request, "Recipient has opted out")
+            return
         conversation = yield self.get_conversation(user_account)
 
         msg_options = SendToOptions(
