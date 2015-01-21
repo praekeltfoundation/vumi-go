@@ -8,6 +8,7 @@ from django.forms.models import BaseModelFormSet
 from go.vumitools.api import VumiApi
 
 from go.billing.models import Account, TagPool, MessageCost, Transaction
+from go.billing.django_utils import load_account_credits
 
 
 def cost_rounded_to_zero(a, context):
@@ -91,22 +92,8 @@ class CreditLoadForm(ModelForm):
         self.fields['account_number'].widget = forms.HiddenInput()
 
     def load_credits(self):
-        account = self.instance
-
-        # Create a new transaction
-        transaction = Transaction.objects.create(
-            account_number=account.account_number,
-            credit_amount=self.cleaned_data['credit_amount'])
-
-        # Update the selected account's credit balance
-        account.credit_balance += transaction.credit_amount
-        account.last_topup_balance = account.credit_balance
-
-        account.save()
-
-        # Update the transaction's status to Completed
-        transaction.status = Transaction.STATUS_COMPLETED
-        transaction.save()
+        return load_account_credits(
+            self.instance, self.cleaned_data['credit_amount'])
 
     class Meta:
         model = Account

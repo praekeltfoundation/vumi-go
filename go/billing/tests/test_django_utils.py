@@ -1,15 +1,15 @@
 """ Test for go.billing.django_utils. """
 
 import json
+from decimal import Decimal
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-
-from go.billing.models import Account
+from go.billing.models import Account, Transaction
 from go.billing.tests.helpers import (
     mk_transaction, get_message_credits, get_storage_credits,
     get_session_credits)
 
-from go.billing.django_utils import TransactionSerializer
+from go.billing.django_utils import TransactionSerializer, load_account_credits
 
 
 class TestTransactionSerializer(GoDjangoTestCase):
@@ -48,3 +48,29 @@ class TestTransactionSerializer(GoDjangoTestCase):
                 u"tag_name": u"tag1",
             },
         })
+
+
+class TestLoadAccountCredits(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.account = Account.objects.get(
+            user=self.user_helper.get_django_user())
+
+    def test_load_account_credits(self):
+        self.account.last_topup_balance = Decimal('20.0')
+        self.account.save()
+
+        self.assertEqual(self.account.credit_balance, Decimal('0.0'))
+        self.assertEqual(self.account.last_topup_balance, Decimal('20.0'))
+
+        load_account_credits(self.account, Decimal('10.0'))
+
+        account = Account.objects.get(id=self.account.id)
+        self.assertEqual(account.credit_balance, Decimal('10.0'))
+        self.assertEqual(account.last_topup_balance, Decimal('10.0'))
+
+        [transaction] = Transaction.objects.filter(
+            account_number=self.account.account_number).all()
+        self.assertEqual(transaction.status, Transaction.STATUS_COMPLETED)
+        self.assertEqual(transaction.credit_amount, Decimal('10.0'))
