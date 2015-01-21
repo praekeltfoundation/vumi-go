@@ -93,7 +93,7 @@ def mk_transaction(account, tag_pool_name='pool1',
 
 def mk_statement(account,
                  title=settings.MONTHLY_STATEMENT_TITLE,
-                 _type=Statement.TYPE_MONTHLY,
+                 statement_type=Statement.TYPE_MONTHLY,
                  from_date=None,
                  to_date=None,
                  items=()):
@@ -106,7 +106,7 @@ def mk_statement(account,
     statement = Statement(
         account=account,
         title=title,
-        type=_type,
+        type=statement_type,
         from_date=from_date,
         to_date=to_date)
 

@@ -132,7 +132,7 @@ class TestHelpers(GoDjangoTestCase):
         statement = mk_statement(
             account=self.account,
             title='Foo',
-            _type=Statement.TYPE_MONTHLY,
+            statement_type=Statement.TYPE_MONTHLY,
             from_date=date(2015, 3, 23),
             to_date=date(2015, 4, 23),
             items=[{
