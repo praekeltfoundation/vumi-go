@@ -446,7 +446,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             ['application/json; charset=utf-8'])
         put_msg = json.loads(response.delivered_body)
         self.assertEqual(put_msg['success'], False)
-        self.assertEqual(put_msg['reason'], 'Recipient has opted out')
+        self.assertEqual(
+            put_msg['reason'], 'Recipient with msisdn +5432 has opted out')
 
     @inlineCallbacks
     def test_send_to_opted_out_optouts_disabled(self):
