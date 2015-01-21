@@ -92,8 +92,7 @@ class CreditLoadForm(ModelForm):
         self.fields['account_number'].widget = forms.HiddenInput()
 
     def load_credits(self):
-        return load_account_credits(
-            self.instance, self.cleaned_data['credit_amount'])
+        load_account_credits(self.instance, self.cleaned_data['credit_amount'])
 
     class Meta:
         model = Account
