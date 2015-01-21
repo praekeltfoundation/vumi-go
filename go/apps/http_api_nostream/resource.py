@@ -256,8 +256,8 @@ class MessageResource(BaseResource):
             optout = yield optout_store.get_opt_out(to_addr_type, to_addr)
             if optout:
                 self.client_error_response(
-                    request, "Recipient with %s %s has opted out" % (
-                        to_addr_type, to_addr))
+                    request, 'Recipient with %s %s has opted out' % (
+                        str(to_addr_type), str(to_addr)))
                 return
         conversation = yield self.get_conversation(user_account)
 
