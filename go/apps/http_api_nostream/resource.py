@@ -251,10 +251,13 @@ class MessageResource(BaseResource):
         if not account.disable_optouts:
             optout_store = self.worker.vumi_api.get_user_api(user_account) \
                 .optout_store
-            optout = yield optout_store.get_opt_out(
-                payload.get('to_addr_type', 'msisdn'), payload.get('to_addr'))
+            to_addr_type = payload.get('to_addr_type', 'msisdn')
+            to_addr = payload.get('to_addr')
+            optout = yield optout_store.get_opt_out(to_addr_type, to_addr)
             if optout:
-                self.client_error_response(request, "Recipient has opted out")
+                self.client_error_response(
+                    request, "Recipient with %s %s has opted out" % (
+                        to_addr_type, to_addr))
                 return
         conversation = yield self.get_conversation(user_account)
 
