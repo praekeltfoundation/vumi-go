@@ -449,6 +449,37 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertEqual(put_msg['reason'], 'Recipient has opted out')
 
     @inlineCallbacks
+    def test_send_to_opted_out_optouts_disabled(self):
+        yield self.start_app_worker()
+        # Create optout for user
+        vumi_api = self.app_helper.vumi_helper.get_vumi_api()
+        user_api = vumi_api.get_user_api(self.conversation.user_account.key)
+        optout_store = user_api.optout_store
+        optout_store.new_opt_out('msisdn', '+5432', {'message_id': '111'})
+        msg = {
+            'to_addr': '+5432',
+            'content': 'foo',
+            'message_id': 'evil_id',
+        }
+
+        # Disable optouts
+        user_account = yield user_api.get_user_account()
+        user_account.disable_optouts = True
+        yield user_account.save()
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, json.dumps(msg),
+                                           self.auth_headers, method='PUT')
+
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(
+            response.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
+        put_msg = json.loads(response.delivered_body)
+        self.assertEqual(put_msg['to_addr'], msg['to_addr'])
+        self.assertEqual(put_msg['content'], msg['content'])
+
+    @inlineCallbacks
     def test_in_reply_to(self):
         yield self.start_app_worker()
         inbound_msg = yield self.app_helper.make_stored_inbound(
