@@ -116,22 +116,6 @@ class TransactionResource(BaseResource):
 
         return mapping
 
-    def render_GET(self, request):
-        """Handle an HTTP GET request"""
-        account_number = request.args.get('account_number', [])
-        page_number = request.args.get('page_number', [0])
-        items_per_page = request.args.get('items_per_page', [20])
-        if len(account_number) > 0:
-            d = self.get_transaction_list(
-                account_number[0], page_number[0], items_per_page[0])
-
-            d.addCallbacks(self._render_to_json, self._handle_error,
-                           callbackArgs=[request], errbackArgs=[request])
-
-        else:
-            self._handle_bad_request(request)
-        return NOT_DONE_YET
-
     def render_POST(self, request):
         """Handle an HTTP POST request"""
         data = self._parse_json(request)
@@ -211,48 +195,6 @@ class TransactionResource(BaseResource):
                 session_created=session_created)
 
             defer.returnValue(message_cost)
-        else:
-            defer.returnValue(None)
-
-    @defer.inlineCallbacks
-    def get_transaction_list(self, account_number, page_number,
-                             items_per_page):
-        """Return a paginated list of transactions"""
-        query = """
-            SELECT id, account_number, message_id,
-                   tag_pool_name, tag_name,
-                   message_direction, message_cost, storage_cost,
-                   session_created, session_cost, markup_percent,
-                   message_credits, storage_credits, session_credits,
-                   credit_factor, credit_amount, status,created, last_modified
-            FROM billing_transaction
-            WHERE account_number = %(account_number)s
-            ORDER BY created DESC
-            OFFSET %(offset)s
-            LIMIT %(limit)s
-        """
-
-        try:
-            offset = int(page_number) * int(items_per_page)
-        except ValueError:
-            offset = 0
-        except TypeError:
-            offset = 0
-        try:
-            limit = int(items_per_page)
-        except ValueError:
-            limit = 20
-        except TypeError:
-            limit = 20
-        params = {
-            'account_number': account_number,
-            'offset': offset,
-            'limit': limit
-        }
-
-        result = yield self._connection_pool.runQuery(query, params)
-        if len(result) > 0:
-            defer.returnValue(result)
         else:
             defer.returnValue(None)
 
