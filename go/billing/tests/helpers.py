@@ -27,7 +27,7 @@ def end_of_month(day=None):
 def this_month(day=None):
     if day is None:
         day = date.today()
-    return [start_of_month(day), end_of_month(day)]
+    return (start_of_month(day), end_of_month(day))
 
 
 def maybe_decimal(v):
@@ -93,7 +93,7 @@ def mk_transaction(account, tag_pool_name='pool1',
 
 def mk_statement(account,
                  title=settings.MONTHLY_STATEMENT_TITLE,
-                 type=Statement.TYPE_MONTHLY,
+                 _type=Statement.TYPE_MONTHLY,
                  from_date=None,
                  to_date=None,
                  items=()):
@@ -105,8 +105,8 @@ def mk_statement(account,
 
     statement = Statement(
         account=account,
-        title=settings.MONTHLY_STATEMENT_TITLE,
-        type=Statement.TYPE_MONTHLY,
+        title=title,
+        type=_type,
         from_date=from_date,
         to_date=to_date)
 
