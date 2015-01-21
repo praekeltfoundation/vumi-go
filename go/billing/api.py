@@ -41,7 +41,6 @@ class BaseResource(Resource):
     def __init__(self, connection_pool):
         Resource.__init__(self)
         self._connection_pool = connection_pool
-        self._auth_user_table = app_settings.get_user_table()
 
     def _handle_error(self, error, request, *args, **kwargs):
         """Log the error and return an HTTP 500 response"""
@@ -195,7 +194,6 @@ class TransactionResource(BaseResource):
             ORDER BY t.account_number
             LIMIT 1
             """
-
         params = {
             'account_number': account_number,
             'tag_pool_name': tag_pool_name,
