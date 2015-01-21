@@ -448,6 +448,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertEqual(put_msg['success'], False)
         self.assertEqual(
             put_msg['reason'], 'Recipient with msisdn +5432 has opted out')
+        self.assertEqual(self.app_helper.get_dispatched_outbound(), [])
 
     @inlineCallbacks
     def test_send_to_opted_out_optouts_disabled(self):
@@ -479,6 +480,10 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         put_msg = json.loads(response.delivered_body)
         self.assertEqual(put_msg['to_addr'], msg['to_addr'])
         self.assertEqual(put_msg['content'], msg['content'])
+
+        [sent_msg] = self.app_helper.get_dispatched_outbound()
+        self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
+        self.assertEqual(sent_msg['content'], msg['content'])
 
     @inlineCallbacks
     def test_in_reply_to(self):
