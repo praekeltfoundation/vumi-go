@@ -60,6 +60,12 @@ User messages are JSON objects of the following format:
 A reply to this message would put the value of the "message_id" in the
 "in_reply_to" field so as to link the two.
 
+The `from_addr_type` and `to_addr_type` fields describe the type of address
+declared in `from_addr` and `to_addr`. The default for `to_addr_type` is
+`msisdn`, and the default for `from_addr_type` is `null`, which is used to
+mark that the type is unspecified. The other valid values are `irc_nickname`,
+`twitter_handle`, `gtalk_id`, `jabber_id`, `mxit_id`, and `wechat_id`.
+
 The "session_event" field is used for transports that are session oriented,
 primarily USSD. This field will be either "null", "new", "resume" or "close".
 There are no guarantees that these will be set for USSD as it depends on
