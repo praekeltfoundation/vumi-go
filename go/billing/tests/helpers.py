@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from go.billing import settings
 from go.billing.models import (
-    Account, MessageCost, Transaction, Statement, LineItem)
+    TagPool, Account, MessageCost, Transaction, Statement, LineItem)
 
 
 def start_of_month(day=None):
@@ -27,7 +27,7 @@ def end_of_month(day=None):
 def this_month(day=None):
     if day is None:
         day = date.today()
-    return [start_of_month(day), end_of_month(day)]
+    return (start_of_month(day), end_of_month(day))
 
 
 def maybe_decimal(v):
@@ -36,6 +36,25 @@ def maybe_decimal(v):
 
 def get_billing_account(user_account):
     return Account.objects.get(user=user_account)
+
+
+def mk_tagpool(name):
+    tagpool = TagPool(name=name)
+    tagpool.save()
+    return tagpool
+
+
+def mk_message_cost(**fields):
+    fields['message_cost'] = maybe_decimal(fields.get('message_cost', 0.0))
+    fields['session_cost'] = maybe_decimal(fields.get('session_cost', 0.0))
+    fields['storage_cost'] = maybe_decimal(fields.get('storage_cost', 0.0))
+    fields['markup_percent'] = maybe_decimal(fields.get('markup_percent', 0.0))
+    fields.setdefault('message_direction', MessageCost.DIRECTION_INBOUND)
+
+    cost = MessageCost(**fields)
+    cost.save()
+
+    return cost
 
 
 def mk_transaction(account, tag_pool_name='pool1',
@@ -74,7 +93,7 @@ def mk_transaction(account, tag_pool_name='pool1',
 
 def mk_statement(account,
                  title=settings.MONTHLY_STATEMENT_TITLE,
-                 type=Statement.TYPE_MONTHLY,
+                 statement_type=Statement.TYPE_MONTHLY,
                  from_date=None,
                  to_date=None,
                  items=()):
@@ -86,8 +105,8 @@ def mk_statement(account,
 
     statement = Statement(
         account=account,
-        title=settings.MONTHLY_STATEMENT_TITLE,
-        type=Statement.TYPE_MONTHLY,
+        title=title,
+        type=statement_type,
         from_date=from_date,
         to_date=to_date)
 
@@ -104,8 +123,8 @@ def get_message_credits(cost, markup):
         return None
     else:
         return MessageCost.calculate_message_credit_cost(
-            Decimal(str(cost)),
-            Decimal(str(markup)))
+            maybe_decimal(cost),
+            maybe_decimal(markup))
 
 
 def get_session_credits(cost, markup):
@@ -113,8 +132,8 @@ def get_session_credits(cost, markup):
         return None
     else:
         return MessageCost.calculate_session_credit_cost(
-            Decimal(str(cost)),
-            Decimal(str(markup)))
+            maybe_decimal(cost),
+            maybe_decimal(markup))
 
 
 def get_storage_credits(cost, markup):
@@ -122,8 +141,8 @@ def get_storage_credits(cost, markup):
         return None
     else:
         return MessageCost.calculate_storage_credit_cost(
-            Decimal(str(cost)),
-            Decimal(str(markup)))
+            maybe_decimal(cost),
+            maybe_decimal(markup))
 
 
 def get_line_items(statement):
