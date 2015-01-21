@@ -41,9 +41,9 @@ User messages are JSON objects of the following format:
         "in_reply_to": null,
         "session_event": null,
         "to_addr": "1234",
-        "to_addr_type": "msisdn"
+        "to_addr_type": "msisdn",
         "from_addr": "27761234567",
-        "from_addr_type": "msisdn"
+        "from_addr_type": "msisdn",
         "content": "This is an incoming SMS!",
         "transport_name": "smpp_transport",
         "transport_type": "sms",
