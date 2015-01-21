@@ -98,6 +98,10 @@ The response to the PUT request is the complete Vumi Go user message
 and includes the generated Vumi ``message_id`` which should be stored
 if you wish to be able to associate events with the message later.
 
+If a message is sent to a recipient that has opted out, the response will be an
+HTTP 400 error, with the body detailing that the recipient has opted out.
+Messages sent as a reply will still go through to an opted out recipient.
+
 
 Receiving User Messages
 -----------------------
