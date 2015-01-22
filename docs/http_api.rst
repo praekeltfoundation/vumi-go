@@ -117,7 +117,7 @@ following is an example response of the error returned by the API:
     }
 
 This behaviour can be overridden by setting the `disable_optout` flag in the
-account to `True`.
+account to `True`. Ask a Vumi Go admin if you need to have optouts disabled.
 
 
 Receiving User Messages
