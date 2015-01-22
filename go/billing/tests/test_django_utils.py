@@ -31,6 +31,7 @@ class TestTransactionSerializer(GoDjangoTestCase):
                 u"created": unicode(transaction.created.isoformat()),
                 u"last_modified": unicode(
                     transaction.last_modified.isoformat()),
+                u"provider": None,
                 u"credit_amount": 28.0,
                 u"credit_factor": 0.25,
                 u"markup_percent": 10.0,
