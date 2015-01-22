@@ -106,7 +106,18 @@ if you wish to be able to associate events with the message later.
 
 If a message is sent to a recipient that has opted out, the response will be an
 HTTP 400 error, with the body detailing that the recipient has opted out.
-Messages sent as a reply will still go through to an opted out recipient.
+Messages sent as a reply will still go through to an opted out recipient. The
+following is an example response of the error returned by the API:
+
+.. code-block:: javascript
+
+    {
+        "success": false,
+        "reason": "Recipient with msisdn +12345 has opted out"
+    }
+
+This behaviour can be overridden by setting the `disable_optout` flag in the
+account to `True`.
 
 
 Receiving User Messages
