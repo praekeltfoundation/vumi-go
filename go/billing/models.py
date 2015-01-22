@@ -146,6 +146,12 @@ class MessageCost(models.Model):
         help_text=_("The account this cost entry is for. If null, this entry"
                     " is a fallback for all accounts."))
 
+    provider = models.CharField(
+        max_length=20, blank=True, null=True,
+        choices=app_settings.PROVIDERS, db_index=True,
+        help_text=_("This cost entry applies only to messages being sent to or"
+                    " received from an address that uses the given provider"))
+
     tag_pool = models.ForeignKey(
         TagPool, blank=True, null=True, db_index=True,
         help_text=_("The tag pool this cost entry is for. If null, this entry"
@@ -217,6 +223,11 @@ class Transaction(models.Model):
         max_length=100, blank=True,
         help_text=_("The tag pool of the message being billed (or null if "
                     "there is no associated message)."))
+
+    provider = models.CharField(
+        max_length=20, null=True, blank=True,
+        help_text=_("The network provider for the address that the message "
+                    "associated to this transaction was sent from or to."))
 
     tag_name = models.CharField(
         max_length=100, blank=True,
