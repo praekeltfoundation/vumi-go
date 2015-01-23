@@ -41,7 +41,9 @@ User messages are JSON objects of the following format:
         "in_reply_to": null,
         "session_event": null,
         "to_addr": "1234",
+        "to_addr_type": "msisdn",
         "from_addr": "27761234567",
+        "from_addr_type": "msisdn",
         "content": "This is an incoming SMS!",
         "transport_name": "smpp_transport",
         "transport_type": "sms",
@@ -57,6 +59,12 @@ User messages are JSON objects of the following format:
 
 A reply to this message would put the value of the "message_id" in the
 "in_reply_to" field so as to link the two.
+
+The `from_addr_type` and `to_addr_type` fields describe the type of address
+declared in `from_addr` and `to_addr`. The default for `to_addr_type` is
+`msisdn`, and the default for `from_addr_type` is `null`, which is used to
+mark that the type is unspecified. The other valid values are `irc_nickname`,
+`twitter_handle`, `gtalk_id`, `jabber_id`, `mxit_id`, and `wechat_id`.
 
 The "session_event" field is used for transports that are session oriented,
 primarily USSD. This field will be either "null", "new", "resume" or "close".
@@ -83,6 +91,7 @@ Sending Messages
            --user '<account-key>:<access-token>' \
            --data '{"in_reply_to": "59b37288d8d94e42ab804158bdbf53e5", \
                     "to_addr": "27761234567", \
+                    "to_addr_type": "msisdn", \
                     "content": "This is an outgoing SMS!"}' \
            http://go.vumi.org/api/v1/go/http_api_nostream/<conversation-key>/messages.json \
            -vvv
@@ -94,6 +103,21 @@ password.
 The response to the PUT request is the complete Vumi Go user message
 and includes the generated Vumi ``message_id`` which should be stored
 if you wish to be able to associate events with the message later.
+
+If a message is sent to a recipient that has opted out, the response will be an
+HTTP 400 error, with the body detailing that the recipient has opted out.
+Messages sent as a reply will still go through to an opted out recipient. The
+following is an example response of the error returned by the API:
+
+.. code-block:: javascript
+
+    {
+        "success": false,
+        "reason": "Recipient with msisdn +12345 has opted out"
+    }
+
+This behaviour can be overridden by setting the `disable_optout` flag in the
+account to `True`. Ask a Vumi Go admin if you need to have optouts disabled.
 
 
 Receiving User Messages
