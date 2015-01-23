@@ -216,9 +216,21 @@ class Transaction(models.Model):
         (STATUS_REVERSED, STATUS_REVERSED),
     )
 
+    TRANSACTION_TYPE_MESSAGE = 'Message'
+    TRANSACTION_TYPE_TOPUP = 'Top Up'
+    TRANSACTION_TYPE_CHOICES = (
+        (TRANSACTION_TYPE_TOPUP, TRANSACTION_TYPE_TOPUP),
+        (TRANSACTION_TYPE_MESSAGE, TRANSACTION_TYPE_MESSAGE),
+    )
+
     account_number = models.CharField(
         max_length=100,
         help_text=_("Account number the transaction is associated with."))
+
+    transaction_type = models.CharField(
+        max_length=100, null=True, blank=True,
+        help_text=_("The type of transaction. For example, a transaction "
+                    "might be a message transaction or a topup transaction."))
 
     tag_pool_name = models.CharField(
         max_length=100, blank=True,
