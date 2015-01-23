@@ -135,19 +135,19 @@ class TestStatementView(GoDjangoTestCase):
             'cost': Decimal('150.0'),
             'credits': Decimal('200.0'),
         }, {
-            'billed_by': 'Pool 1',
-            'channel_type': 'USSD',
-            'channel': 'Tag 1.2',
-            'description': 'Messages Received',
-            'cost': Decimal('150.0'),
-            'credits': Decimal('200.0'),
-        }, {
             'billed_by': 'Pool 2',
             'channel_type': 'SMS',
             'channel': 'Tag 2.1',
             'description': 'Messages Received',
             'cost': Decimal('200.0'),
             'credits': Decimal('250.0'),
+        }, {
+            'billed_by': 'Pool 1',
+            'channel_type': 'USSD',
+            'channel': 'Tag 1.2',
+            'description': 'Messages Received',
+            'cost': Decimal('150.0'),
+            'credits': Decimal('200.0'),
         }, {
             'billed_by': 'Pool 2',
             'channel_type': 'SMS',
