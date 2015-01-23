@@ -73,6 +73,11 @@ class TestLoadAccountCredits(GoDjangoTestCase):
         self.assertEqual(account.last_topup_balance, Decimal('10.0'))
 
         [transaction] = Transaction.objects.filter(
-            account_number=self.account.account_number).all()
+            account_number=self.account.account_number)
+
         self.assertEqual(transaction.status, Transaction.STATUS_COMPLETED)
         self.assertEqual(transaction.credit_amount, Decimal('10.0'))
+
+        self.assertEqual(
+            transaction.transaction_type,
+            Transaction.TRANSACTION_TYPE_TOPUP)
