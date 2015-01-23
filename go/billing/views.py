@@ -11,7 +11,8 @@ from go.billing.models import Statement
 
 
 def groupby(values, fn):
-    return sorted([(k, list(g)) for k, g in _groupby(values, fn)])
+    values = sorted(values, key=fn)
+    return [(k, list(g)) for k, g in _groupby(values, fn)]
 
 
 def ensure_decimal(v):
