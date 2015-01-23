@@ -99,6 +99,7 @@ class TestHelpers(GoDjangoTestCase):
             account=self.account,
             tag_pool_name='pool1',
             tag_name='tag1',
+            provider='mtn',
             message_direction=MessageCost.DIRECTION_INBOUND,
             message_cost=0.1,
             storage_cost=0.2,
@@ -111,6 +112,7 @@ class TestHelpers(GoDjangoTestCase):
 
         [found_transaction] = Transaction.objects.filter(
             account_number=self.account.account_number,
+            provider='mtn',
             tag_pool_name='pool1',
             tag_name='tag1',
             message_direction=MessageCost.DIRECTION_INBOUND,
