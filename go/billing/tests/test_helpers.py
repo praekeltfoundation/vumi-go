@@ -97,6 +97,7 @@ class TestHelpers(GoDjangoTestCase):
     def test_mk_transaction(self):
         transaction = mk_transaction(
             account=self.account,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE,
             tag_pool_name='pool1',
             tag_name='tag1',
             provider='mtn',
@@ -112,6 +113,7 @@ class TestHelpers(GoDjangoTestCase):
 
         [found_transaction] = Transaction.objects.filter(
             account_number=self.account.account_number,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE,
             provider='mtn',
             tag_pool_name='pool1',
             tag_name='tag1',
