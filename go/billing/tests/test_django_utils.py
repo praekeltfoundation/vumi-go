@@ -32,6 +32,7 @@ class TestTransactionSerializer(GoDjangoTestCase):
                 u"last_modified": unicode(
                     transaction.last_modified.isoformat()),
                 u"provider": None,
+                u"transaction_type": u"Message",
                 u"credit_amount": 28.0,
                 u"credit_factor": 0.25,
                 u"markup_percent": 10.0,
@@ -72,6 +73,11 @@ class TestLoadAccountCredits(GoDjangoTestCase):
         self.assertEqual(account.last_topup_balance, Decimal('10.0'))
 
         [transaction] = Transaction.objects.filter(
-            account_number=self.account.account_number).all()
+            account_number=self.account.account_number)
+
         self.assertEqual(transaction.status, Transaction.STATUS_COMPLETED)
         self.assertEqual(transaction.credit_amount, Decimal('10.0'))
+
+        self.assertEqual(
+            transaction.transaction_type,
+            Transaction.TRANSACTION_TYPE_TOPUP)

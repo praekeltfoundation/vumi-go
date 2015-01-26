@@ -98,21 +98,23 @@ class MessageCostAdmin(admin.ModelAdmin):
 
 
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'account_number', 'tag_pool_name', 'tag_name',
-                    'message_id', 'message_direction', 'session_created',
-                    'message_cost', 'storage_cost', 'session_cost',
-                    'message_credits', 'storage_credits', 'session_credits',
-                    'markup_percent', 'credit_factor', 'credit_amount',
-                    'status', 'created', 'last_modified')
+    list_display = ('id', 'account_number', 'transaction_type', 'tag_pool_name',
+                    'tag_name', 'message_id', 'message_direction',
+                    'session_created', 'message_cost', 'storage_cost',
+                    'session_cost', 'message_credits', 'storage_credits',
+                    'session_credits', 'markup_percent', 'credit_factor',
+                    'credit_amount', 'status', 'provider', 'created',
+                    'last_modified')
 
     search_fields = ('account__account_number', 'tag_pool_name', 'tag_name')
     list_filter = ('message_direction', 'status', 'created', 'last_modified')
-    readonly_fields = ('account_number', 'tag_pool_name', 'tag_name',
-                       'message_id', 'message_direction', 'session_created',
-                       'message_cost', 'storage_cost', 'session_cost',
-                       'message_credits', 'storage_credits', 'session_credits',
-                       'markup_percent', 'credit_factor', 'credit_amount',
-                       'status', 'created', 'last_modified')
+    readonly_fields = ('account_number', 'transaction_type', 'tag_pool_name',
+                       'tag_name', 'message_id', 'message_direction',
+                       'session_created', 'message_cost', 'storage_cost',
+                       'session_cost', 'message_credits', 'storage_credits',
+                       'session_credits', 'markup_percent', 'credit_factor',
+                       'credit_amount', 'status', 'provider', 'created',
+                       'last_modified')
 
     def has_add_permission(self, request):
         return False

@@ -59,6 +59,7 @@ def mk_message_cost(**fields):
 
 def mk_transaction(account, tag_pool_name='pool1',
                    tag_name="tag1",
+                   transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE,
                    message_direction=MessageCost.DIRECTION_INBOUND,
                    message_cost=100, storage_cost=50, session_cost=10,
                    markup_percent=10.0, credit_factor=0.25, credit_amount=28,
@@ -66,6 +67,7 @@ def mk_transaction(account, tag_pool_name='pool1',
                    created=None, **kwargs):
     transaction = Transaction(
         account_number=account.account_number,
+        transaction_type=transaction_type,
         tag_pool_name=tag_pool_name,
         tag_name=tag_name,
         provider=provider,
