@@ -48,6 +48,9 @@ def get_transactions(account, statement):
 
 
 def get_message_transactions(transactions):
+    transactions = transactions.filter(
+        transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
     transactions = transactions.values(
         'tag_pool_name',
         'tag_name',
@@ -65,6 +68,9 @@ def get_message_transactions(transactions):
 
 
 def get_storage_transactions(transactions):
+    transactions = transactions.filter(
+        transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
     transactions = transactions.values(
         'storage_cost',
         'storage_credits')
@@ -78,7 +84,9 @@ def get_storage_transactions(transactions):
 
 
 def get_session_transactions(transactions):
-    transactions = transactions.filter(session_created=True)
+    transactions = transactions.filter(
+        session_created=True,
+        transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
     transactions = transactions.values(
         'tag_pool_name',
@@ -166,8 +174,10 @@ def get_channel_type(transaction, tagpools):
 def get_message_description(transaction):
     if transaction['message_direction'] == MessageCost.DIRECTION_INBOUND:
         return 'Messages received'
-    else:
+    elif transaction['message_direction'] == MessageCost.DIRECTION_OUTBOUND:
         return 'Messages sent'
+    else:
+        return None
 
 
 def make_message_item(statement, transaction, tagpools):
