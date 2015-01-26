@@ -24,6 +24,7 @@ def load_account_credits(account, credit_amount):
     # Create a new transaction
     transaction = Transaction.objects.create(
         account_number=account.account_number,
+        transaction_type=Transaction.TRANSACTION_TYPE_TOPUP,
         credit_amount=credit_amount)
 
     # Update the selected account's credit balance
