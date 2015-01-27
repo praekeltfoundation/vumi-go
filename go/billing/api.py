@@ -231,14 +231,16 @@ class TransactionResource(BaseResource):
             INSERT INTO billing_transaction
                 (account_number, message_id,
                  tag_pool_name, tag_name,
-                 message_direction, message_cost, storage_cost,
+                 provider, message_direction,
+                 message_cost, storage_cost,
                  session_created, session_cost, markup_percent,
                  message_credits, storage_credits, session_credits,
                  credit_factor, credit_amount, status, created, last_modified)
             VALUES
                 (%(account_number)s, %(message_id)s,
                  %(tag_pool_name)s, %(tag_name)s,
-                 %(message_direction)s, %(message_cost)s, %(storage_cost)s,
+                 %(provider)s, %(message_direction)s,
+                 %(message_cost)s, %(storage_cost)s,
                  %(session_created)s, %(session_cost)s, %(markup_percent)s,
                  %(message_credits)s, %(storage_credits)s, %(session_credits)s,
                  %(credit_factor)s, %(credit_amount)s,
@@ -246,8 +248,9 @@ class TransactionResource(BaseResource):
                  now())
             RETURNING id, account_number, message_id,
                       tag_pool_name, tag_name,
-                      message_direction, message_cost, storage_cost,
-                      session_cost, session_created, markup_percent,
+                      provider, message_direction,
+                      message_cost, storage_cost, session_cost,
+                      session_created, markup_percent,
                       message_credits, storage_credits, session_credits,
                       credit_factor, credit_amount, status,
                       created, last_modified
@@ -258,6 +261,7 @@ class TransactionResource(BaseResource):
             'message_id': message_id,
             'tag_pool_name': tag_pool_name,
             'tag_name': tag_name,
+            'provider': provider,
             'message_direction': message_direction,
             'message_cost': message_cost,
             'storage_cost': storage_cost,

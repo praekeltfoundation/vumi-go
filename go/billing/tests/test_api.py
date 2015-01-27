@@ -484,6 +484,32 @@ class TestTransaction(BillingApiTestCase):
              " tag pool pool2.",))
 
     @inlineCallbacks
+    def test_transaction_provider(self):
+        mk_message_cost(tag_pool=self.pool1)
+
+        transaction = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            provider='mtn')
+
+        self.assertEqual(transaction['provider'], 'mtn')
+
+        self.assert_model(
+            model=Transaction.objects.latest('created'),
+            provider='mtn')
+
+    @inlineCallbacks
+    def test_transaction_provider_none(self):
+        mk_message_cost(tag_pool=self.pool1)
+
+        yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            provider=None)
+
+        self.assert_model(
+            model=Transaction.objects.latest('created'),
+            provider=None)
+
+    @inlineCallbacks
     def test_transaction_provider_cost(self):
         mk_message_cost(
             tag_pool=self.pool1,
