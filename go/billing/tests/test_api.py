@@ -88,21 +88,20 @@ class TestTransaction(BillingApiTestCase):
 
         return BillingApiTestCase.setUp(self)
 
-    def create_api_transaction(self, account_number, message_id, tag_pool_name,
-                               tag_name, message_direction, session_created,
-                               provider=None):
+    def create_api_transaction(self, **kwargs):
         """
         Create a transaction record via the billing API.
         """
         content = {
-            'account_number': account_number,
-            'message_id': message_id,
-            'tag_pool_name': tag_pool_name,
-            'tag_name': tag_name,
-            'provider': provider,
-            'message_direction': message_direction,
-            'session_created': session_created,
+            'account_number': self.account.account_number,
+            'message_id': 'msg-id-1',
+            'tag_pool_name': 'pool1',
+            'tag_name': 'tag1',
+            'message_direction': MessageCost.DIRECTION_INBOUND,
+            'session_created': False,
+            'provider': None
         }
+        content.update(kwargs)
         return self.call_api('post', 'transactions', content=content)
 
     def assert_model(self, model, **kw):
@@ -503,12 +502,7 @@ class TestTransaction(BillingApiTestCase):
 
         yield self.create_api_transaction(
             account_number=self.account.account_number,
-            message_id='msg-id-1',
-            tag_pool_name='pool1',
-            tag_name='tag1',
-            provider='mtn',
-            message_direction=MessageCost.DIRECTION_INBOUND,
-            session_created=False)
+            provider='mtn')
 
         self.assert_model(
             model=Transaction.objects.latest('created'),
@@ -516,12 +510,7 @@ class TestTransaction(BillingApiTestCase):
 
         yield self.create_api_transaction(
             account_number=self.account.account_number,
-            message_id='msg-id-2',
-            tag_pool_name='pool1',
-            tag_name='tag1',
-            provider='vodacom',
-            message_direction=MessageCost.DIRECTION_INBOUND,
-            session_created=False)
+            provider='vodacom')
 
         self.assert_model(
             model=Transaction.objects.latest('created'),
@@ -541,12 +530,7 @@ class TestTransaction(BillingApiTestCase):
 
         yield self.create_api_transaction(
             account_number=self.account.account_number,
-            message_id='msg-id-3',
-            tag_pool_name='pool1',
-            tag_name='tag1',
-            provider='unknown',
-            message_direction=MessageCost.DIRECTION_INBOUND,
-            session_created=False)
+            provider='unknown')
 
         self.assert_model(
             model=Transaction.objects.latest('created'),
@@ -554,12 +538,7 @@ class TestTransaction(BillingApiTestCase):
 
         yield self.create_api_transaction(
             account_number=self.account.account_number,
-            message_id='msg-id-3',
-            tag_pool_name='pool1',
-            tag_name='tag1',
-            provider=None,
-            message_direction=MessageCost.DIRECTION_INBOUND,
-            session_created=False)
+            provider=None)
 
         self.assert_model(
             model=Transaction.objects.latest('created'),
