@@ -152,30 +152,17 @@ class TransactionResource(BaseResource):
                          c.message_direction, c.message_cost, c.storage_cost,
                          c.session_cost, c.markup_percent
                   FROM billing_messagecost c
-                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
-                  INNER JOIN billing_account a ON (c.account_id = a.id)
-                  WHERE a.account_number = %(account_number)s
-                  AND t.name = %(tag_pool_name)s
-                  AND c.message_direction = %(message_direction)s
-                  UNION
-                  SELECT NULL AS account_number, t.name AS tag_pool_name,
-                         c.message_direction, c.message_cost, c.storage_cost,
-                         c.session_cost, c.markup_percent
-                  FROM billing_messagecost c
-                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
-                  WHERE c.account_id IS NULL
-                  AND t.name = %(tag_pool_name)s
-                  AND c.message_direction = %(message_direction)s
-                  UNION
-                  SELECT NULL AS account_number, NULL AS tag_pool_name,
-                         c.message_direction, c.message_cost, c.storage_cost,
-                         c.session_cost, c.markup_percent
-                  FROM billing_messagecost c
-                  WHERE c.account_id IS NULL
-                  AND c.tag_pool_id IS NULL
+                  LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
+                  LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
+                  WHERE (a.account_number = %(account_number)s
+                      OR c.account_id IS NULL)
+                  AND (t.name = %(tag_pool_name)s
+                    OR c.tag_pool_id IS NULL)
                   AND c.message_direction = %(message_direction)s
             ) as t
-            ORDER BY t.account_number
+            ORDER BY
+                t.account_number NULLS LAST,
+                t.tag_pool_name NULLS LAST
             LIMIT 1
             """
         params = {
