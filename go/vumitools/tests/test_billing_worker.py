@@ -296,7 +296,7 @@ class TestBillingDispatcher(VumiTestCase):
             "tag_name": md.tag[1],
             "message_direction": direction,
             "session_created": session_created,
-            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE
+            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }])
 
     def assert_no_transactions(self):
