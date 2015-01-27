@@ -145,16 +145,6 @@ class TransactionResource(BaseResource):
     def get_cost(self, account_number, tag_pool_name, provider,
                  message_direction, session_created):
         """Return the message cost"""
-        clauses = """
-            (a.account_number = %(account_number)s OR c.account_id IS NULL) AND
-            (t.name = %(tag_pool_name)s OR c.tag_pool_id IS NULL) AND
-            (c.message_direction = %(message_direction)s)
-        """
-
-        if provider is not None:
-            clauses = clauses + (
-                "AND (c.provider = %(provider)s OR c.provider IS NULL)")
-
         query = """
             SELECT t.account_number, t.tag_pool_name,
                    t.provider, t.message_direction,
@@ -167,13 +157,21 @@ class TransactionResource(BaseResource):
                   FROM billing_messagecost c
                   LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
                   LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
-                  WHERE %s
+                  WHERE
+                      (a.account_number = %(account_number)s OR
+                       c.account_id IS NULL)
+                      AND
+                      (t.name = %(tag_pool_name)s OR c.tag_pool_id IS NULL)
+                      AND
+                      (c.provider = %(provider)s OR c.provider IS NULL)
+                      AND
+                      (c.message_direction = %(message_direction)s)
             ) as t
             ORDER BY
                 t.account_number NULLS LAST,
                 t.tag_pool_name NULLS LAST
             LIMIT 1
-            """ % clauses
+        """
 
         params = {
             'account_number': account_number,
