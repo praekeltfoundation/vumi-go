@@ -124,13 +124,14 @@ class TransactionResource(BaseResource):
             message_id = data.get('message_id', None)
             tag_pool_name = data.get('tag_pool_name', None)
             tag_name = data.get('tag_name', None)
+            provider = data.get('provider', None)
             message_direction = data.get('message_direction', None)
             session_created = data.get('session_created', None)
             if all((account_number, message_id, tag_pool_name, tag_name,
                     message_direction, session_created is not None)):
                 d = self.create_transaction(
                     account_number, message_id, tag_pool_name, tag_name,
-                    message_direction, session_created)
+                    provider, message_direction, session_created)
 
                 d.addCallbacks(self._render_to_json, self._handle_error,
                                callbackArgs=[request], errbackArgs=[request])
@@ -141,34 +142,44 @@ class TransactionResource(BaseResource):
         return NOT_DONE_YET
 
     @defer.inlineCallbacks
-    def get_cost(self, account_number, tag_pool_name, message_direction,
-                 session_created):
+    def get_cost(self, account_number, tag_pool_name, provider,
+                 message_direction, session_created):
         """Return the message cost"""
+        clauses = """
+            (a.account_number = %(account_number)s OR c.account_id IS NULL) AND
+            (t.name = %(tag_pool_name)s OR c.tag_pool_id IS NULL) AND
+            (c.message_direction = %(message_direction)s)
+        """
+
+        if provider is not None:
+            clauses = clauses + (
+                "AND (c.provider = %(provider)s OR c.provider IS NULL)")
+
         query = """
-            SELECT t.account_number, t.tag_pool_name, t.message_direction,
+            SELECT t.account_number, t.tag_pool_name,
+                   t.provider, t.message_direction,
                    t.message_cost, t.storage_cost, t.session_cost,
                    t.markup_percent
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
-                         c.message_direction, c.message_cost, c.storage_cost,
-                         c.session_cost, c.markup_percent
+                         c.provider, c.message_direction,
+                         c.message_cost, c.storage_cost, c.session_cost,
+                         c.markup_percent
                   FROM billing_messagecost c
                   LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
                   LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
-                  WHERE (a.account_number = %(account_number)s
-                      OR c.account_id IS NULL)
-                  AND (t.name = %(tag_pool_name)s
-                    OR c.tag_pool_id IS NULL)
-                  AND c.message_direction = %(message_direction)s
+                  WHERE %s
             ) as t
             ORDER BY
                 t.account_number NULLS LAST,
                 t.tag_pool_name NULLS LAST
             LIMIT 1
-            """
+            """ % clauses
+
         params = {
             'account_number': account_number,
             'tag_pool_name': tag_pool_name,
-            'message_direction': message_direction
+            'provider': provider,
+            'message_direction': message_direction,
         }
 
         result = yield self._connection_pool.runQuery(query, params)
@@ -188,10 +199,11 @@ class TransactionResource(BaseResource):
     @defer.inlineCallbacks
     def create_transaction_interaction(self, cursor, account_number,
                                        message_id, tag_pool_name, tag_name,
-                                       message_direction, session_created):
+                                       provider, message_direction,
+                                       session_created):
         """Create a new transaction for the given ``account_number``"""
         # Get the message cost
-        result = yield self.get_cost(account_number, tag_pool_name,
+        result = yield self.get_cost(account_number, tag_pool_name, provider,
                                      message_direction, session_created)
         if result is None:
             raise BillingError(
@@ -376,11 +388,13 @@ class TransactionResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,
-                           tag_name, message_direction, session_created):
+                           tag_name, provider, message_direction,
+                           session_created):
         """Create a new transaction for the given ``account_number``"""
         result = yield self._connection_pool.runInteraction(
             self.create_transaction_interaction, account_number, message_id,
-            tag_pool_name, tag_name, message_direction, session_created)
+            tag_pool_name, tag_name, provider, message_direction,
+            session_created)
 
         defer.returnValue(result)
 
