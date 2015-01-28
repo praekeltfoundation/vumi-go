@@ -47,7 +47,7 @@ class BillingApiMock(object):
             "created": "2013-10-30T10:42:51.144745+02:00",
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
             "status": "Completed",
-            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE
+            "transaction_type": transaction_type
         }
 
 
