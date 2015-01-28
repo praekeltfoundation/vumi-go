@@ -513,8 +513,8 @@ class TestTransaction(BillingApiTestCase):
     def test_transaction_provider_cost(self):
         mk_message_cost(
             tag_pool=self.pool1,
-            message_cost=0.6,
-            provider='mtn')
+            message_cost=0.8,
+            provider=None)
 
         mk_message_cost(
             tag_pool=self.pool1,
@@ -523,8 +523,8 @@ class TestTransaction(BillingApiTestCase):
 
         mk_message_cost(
             tag_pool=self.pool1,
-            message_cost=0.8,
-            provider=None)
+            message_cost=0.6,
+            provider='mtn')
 
         yield self.create_api_transaction(
             account_number=self.account.account_number,
@@ -546,13 +546,13 @@ class TestTransaction(BillingApiTestCase):
     def test_transaction_provider_fallback_cost(self):
         mk_message_cost(
             tag_pool=self.pool1,
-            message_cost=0.6,
-            provider='mtn')
+            message_cost=0.8,
+            provider=None)
 
         mk_message_cost(
             tag_pool=self.pool1,
-            message_cost=0.8,
-            provider=None)
+            message_cost=0.6,
+            provider='mtn')
 
         yield self.create_api_transaction(
             account_number=self.account.account_number,
