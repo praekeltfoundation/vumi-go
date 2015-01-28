@@ -169,7 +169,8 @@ class TransactionResource(BaseResource):
             ) as t
             ORDER BY
                 t.account_number NULLS LAST,
-                t.tag_pool_name NULLS LAST
+                t.tag_pool_name NULLS LAST,
+                t.provider NULLS LAST
             LIMIT 1
         """
 
