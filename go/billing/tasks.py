@@ -95,7 +95,7 @@ def get_session_transactions(transactions):
     return transactions
 
 
-def get_provider_name(transaction, tagpools):
+def get_tagpool_name(transaction, tagpools):
     if transaction['tag_pool_name'] not in tagpools.pools():
         return transaction['tag_pool_name']
     else:
@@ -177,7 +177,7 @@ def make_message_item(statement, transaction, tagpools):
         cost=get_message_cost(transaction),
         credits=get_message_credits(transaction),
         channel=get_channel_name(transaction, tagpools),
-        billed_by=get_provider_name(transaction, tagpools),
+        billed_by=get_tagpool_name(transaction, tagpools),
         unit_cost=get_message_unit_cost(transaction),
         channel_type=get_channel_type(transaction, tagpools),
         description=get_message_description(transaction))
@@ -201,7 +201,7 @@ def make_session_item(statement, transaction, tagpools):
         cost=get_session_cost(transaction),
         credits=get_session_credits(transaction),
         channel=get_channel_name(transaction, tagpools),
-        billed_by=get_provider_name(transaction, tagpools),
+        billed_by=get_tagpool_name(transaction, tagpools),
         unit_cost=get_session_unit_cost(transaction),
         channel_type=get_channel_type(transaction, tagpools),
         description='Sessions')
