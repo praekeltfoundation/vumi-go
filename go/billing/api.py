@@ -124,6 +124,7 @@ class TransactionResource(BaseResource):
             message_id = data.get('message_id', None)
             tag_pool_name = data.get('tag_pool_name', None)
             tag_name = data.get('tag_name', None)
+            provider = data.get('provider', None)
             message_direction = data.get('message_direction', None)
             session_created = data.get('session_created', None)
             transaction_type = data.get('transaction_type', None)
@@ -132,7 +133,8 @@ class TransactionResource(BaseResource):
                     message_direction, session_created is not None)):
                 d = self.create_transaction(
                     account_number, message_id, tag_pool_name, tag_name,
-                    message_direction, session_created, transaction_type)
+                    provider, message_direction,
+                    session_created, transaction_type)
 
                 d.addCallbacks(self._render_to_json, self._handle_error,
                                callbackArgs=[request], errbackArgs=[request])
@@ -143,47 +145,43 @@ class TransactionResource(BaseResource):
         return NOT_DONE_YET
 
     @defer.inlineCallbacks
-    def get_cost(self, account_number, tag_pool_name, message_direction,
-                 session_created):
+    def get_cost(self, account_number, tag_pool_name, provider,
+                 message_direction, session_created):
         """Return the message cost"""
         query = """
-            SELECT t.account_number, t.tag_pool_name, t.message_direction,
+            SELECT t.account_number, t.tag_pool_name,
+                   t.provider, t.message_direction,
                    t.message_cost, t.storage_cost, t.session_cost,
                    t.markup_percent
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
-                         c.message_direction, c.message_cost, c.storage_cost,
-                         c.session_cost, c.markup_percent
+                         c.provider, c.message_direction,
+                         c.message_cost, c.storage_cost, c.session_cost,
+                         c.markup_percent
                   FROM billing_messagecost c
-                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
-                  INNER JOIN billing_account a ON (c.account_id = a.id)
-                  WHERE a.account_number = %(account_number)s
-                  AND t.name = %(tag_pool_name)s
-                  AND c.message_direction = %(message_direction)s
-                  UNION
-                  SELECT NULL AS account_number, t.name AS tag_pool_name,
-                         c.message_direction, c.message_cost, c.storage_cost,
-                         c.session_cost, c.markup_percent
-                  FROM billing_messagecost c
-                  INNER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
-                  WHERE c.account_id IS NULL
-                  AND t.name = %(tag_pool_name)s
-                  AND c.message_direction = %(message_direction)s
-                  UNION
-                  SELECT NULL AS account_number, NULL AS tag_pool_name,
-                         c.message_direction, c.message_cost, c.storage_cost,
-                         c.session_cost, c.markup_percent
-                  FROM billing_messagecost c
-                  WHERE c.account_id IS NULL
-                  AND c.tag_pool_id IS NULL
-                  AND c.message_direction = %(message_direction)s
+                  LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
+                  LEFT OUTER JOIN billing_account a ON (c.account_id = a.id)
+                  WHERE
+                      (a.account_number = %(account_number)s OR
+                       c.account_id IS NULL)
+                      AND
+                      (t.name = %(tag_pool_name)s OR c.tag_pool_id IS NULL)
+                      AND
+                      (c.provider = %(provider)s OR c.provider IS NULL)
+                      AND
+                      (c.message_direction = %(message_direction)s)
             ) as t
-            ORDER BY t.account_number
+            ORDER BY
+                t.account_number NULLS LAST,
+                t.tag_pool_name NULLS LAST,
+                t.provider NULLS LAST
             LIMIT 1
-            """
+        """
+
         params = {
             'account_number': account_number,
             'tag_pool_name': tag_pool_name,
-            'message_direction': message_direction
+            'provider': provider,
+            'message_direction': message_direction,
         }
 
         result = yield self._connection_pool.runQuery(query, params)
@@ -203,11 +201,11 @@ class TransactionResource(BaseResource):
     @defer.inlineCallbacks
     def create_transaction_interaction(self, cursor, account_number,
                                        message_id, tag_pool_name, tag_name,
-                                       message_direction, session_created,
-                                       transaction_type):
+                                       provider, message_direction,
+                                       session_created, transaction_type):
         """Create a new transaction for the given ``account_number``"""
         # Get the message cost
-        result = yield self.get_cost(account_number, tag_pool_name,
+        result = yield self.get_cost(account_number, tag_pool_name, provider,
                                      message_direction, session_created)
         if result is None:
             raise BillingError(
@@ -235,14 +233,16 @@ class TransactionResource(BaseResource):
             INSERT INTO billing_transaction
                 (account_number, message_id, transaction_type,
                  tag_pool_name, tag_name,
-                 message_direction, message_cost, storage_cost,
+                 provider, message_direction,
+                 message_cost, storage_cost,
                  session_created, session_cost, markup_percent,
                  message_credits, storage_credits, session_credits,
                  credit_factor, credit_amount, status, created, last_modified)
             VALUES
                 (%(account_number)s, %(message_id)s, %(transaction_type)s,
                  %(tag_pool_name)s, %(tag_name)s,
-                 %(message_direction)s, %(message_cost)s, %(storage_cost)s,
+                 %(provider)s, %(message_direction)s,
+                 %(message_cost)s, %(storage_cost)s,
                  %(session_created)s, %(session_cost)s, %(markup_percent)s,
                  %(message_credits)s, %(storage_credits)s, %(session_credits)s,
                  %(credit_factor)s, %(credit_amount)s,
@@ -250,8 +250,9 @@ class TransactionResource(BaseResource):
                  now())
             RETURNING id, account_number, message_id, transaction_type,
                       tag_pool_name, tag_name,
-                      message_direction, message_cost, storage_cost,
-                      session_cost, session_created, markup_percent,
+                      provider, message_direction,
+                      message_cost, storage_cost, session_cost,
+                      session_created, markup_percent,
                       message_credits, storage_credits, session_credits,
                       credit_factor, credit_amount, status,
                       created, last_modified
@@ -263,6 +264,7 @@ class TransactionResource(BaseResource):
             'transaction_type': transaction_type,
             'tag_pool_name': tag_pool_name,
             'tag_name': tag_name,
+            'provider': provider,
             'message_direction': message_direction,
             'message_cost': message_cost,
             'storage_cost': storage_cost,
@@ -393,13 +395,13 @@ class TransactionResource(BaseResource):
 
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,
-                           tag_name, message_direction, session_created,
-                           transaction_type):
+                           tag_name, provider, message_direction,
+                           session_created, transaction_type):
         """Create a new transaction for the given ``account_number``"""
         result = yield self._connection_pool.runInteraction(
             self.create_transaction_interaction, account_number, message_id,
-            tag_pool_name, tag_name, message_direction, session_created,
-            transaction_type)
+            tag_pool_name, tag_name, provider, message_direction,
+            session_created, transaction_type)
 
         defer.returnValue(result)
 
