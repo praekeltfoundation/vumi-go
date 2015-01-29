@@ -13,11 +13,8 @@ class Migration(SchemaMigration):
         topups = orm.Transaction.objects.filter(
             message_direction__isnull=True)
 
-        messages.update(
-            transaction_type='Message')
-
-        topups.update(
-            transaction_type='Top Up')
+        messages.update(transaction_type='Message')
+        topups.update(transaction_type='Top Up')
 
     def backwards(self, orm):
         orm.Transaction.objects.update(transaction_type=None)
