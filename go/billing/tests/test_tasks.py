@@ -13,7 +13,6 @@ from go.base.s3utils import Bucket
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.tests.s3_helpers import S3Helper
 
-from go.base.s3utils import Bucket
 from go.billing.models import (
     MessageCost, Account, Statement, Transaction, TransactionArchive,
     LowCreditNotification)
@@ -454,6 +453,28 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item.credits, None)
         self.assertEqual(item.unit_cost, 100)
         self.assertEqual(item.cost, 100)
+
+    def test_generate_monthly_statement_irrelevant_transaction_types(self):
+        mk_transaction(
+            self.account,
+            transaction_type=Transaction.TRANSACTION_TYPE_TOPUP,
+            message_cost=1.0,
+            storage_cost=2.0,
+            session_cost=3.0,
+            session_created=True)
+
+        mk_transaction(
+            self.account,
+            transaction_type=None,
+            message_cost=1.0,
+            storage_cost=2.0,
+            session_cost=3.0,
+            session_created=True)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        self.assertEqual(len(get_line_items(statement)), 0)
 
 
 class TestArchiveTransactionsTask(GoDjangoTestCase):
