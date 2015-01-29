@@ -28,7 +28,8 @@ class BillingApiMock(object):
         items.append(vars)
 
     def create_transaction(self, account_number, message_id, tag_pool_name,
-                           tag_name, message_direction, session_created):
+                           tag_name, message_direction, session_created,
+                           transaction_type):
         self._record(self.transactions, locals())
         return {
             "id": 1,
@@ -45,7 +46,8 @@ class BillingApiMock(object):
             "credit_factor": decimal.Decimal('0.4'),
             "created": "2013-10-30T10:42:51.144745+02:00",
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
-            "status": "Completed"
+            "status": "Completed",
+            "transaction_type": transaction_type
         }
 
 
@@ -105,6 +107,7 @@ class TestBillingApi(VumiTestCase):
             'tag_name': "1234",
             'message_direction': "Inbound",
             'session_created': False,
+            'transaction_type': BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }
         yield self.billing_api.create_transaction(**kwargs)
         self.assertEqual(hrm.request.uri, "%stransactions" % (self.api_url,))
@@ -127,7 +130,8 @@ class TestBillingApi(VumiTestCase):
             "credit_factor": decimal.Decimal('0.4'),
             "created": "2013-10-30T10:42:51.144745+02:00",
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
-            "status": "Completed"
+            "status": "Completed",
+            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }
         response = self._mk_response(
             delivered_body=json.dumps(delivered_body, cls=JSONEncoder))
@@ -143,6 +147,7 @@ class TestBillingApi(VumiTestCase):
             'tag_name': "1234",
             'message_direction': "Inbound",
             'session_created': False,
+            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }
         result = yield self.billing_api.create_transaction(**kwargs)
         self.assertEqual(result, delivered_body)
@@ -163,6 +168,7 @@ class TestBillingApi(VumiTestCase):
             'tag_name': "1234",
             'message_direction': "Inbound",
             'session_created': False,
+            'transaction_type': BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }
         d = self.billing_api.create_transaction(**kwargs)
         yield self.assertFailure(d, BillingError)
@@ -183,7 +189,8 @@ class TestBillingApi(VumiTestCase):
             "credit_factor": decimal.Decimal('0.4'),
             "created": "2013-10-30T10:42:51.144745+02:00",
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
-            "status": "Completed"
+            "status": "Completed",
+            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }
         response = self._mk_response(
             delivered_body=json.dumps(delivered_body, cls=JSONEncoder))
@@ -199,6 +206,7 @@ class TestBillingApi(VumiTestCase):
             'tag_name': "1234",
             'message_direction': "Inbound",
             'session_created': False,
+            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }
         result = yield self.billing_api.create_transaction(**kwargs)
         self.assertEqual(result, delivered_body)
@@ -219,6 +227,7 @@ class TestBillingApi(VumiTestCase):
             'tag_name': "1234",
             'message_direction': "Inbound",
             'session_created': False,
+            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }
         d = self.billing_api.create_transaction(**kwargs)
         yield self.assertFailure(d, MockNetworkError)
@@ -287,6 +296,7 @@ class TestBillingDispatcher(VumiTestCase):
             "tag_name": md.tag[1],
             "message_direction": direction,
             "session_created": session_created,
+            "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
         }])
 
     def assert_no_transactions(self):
