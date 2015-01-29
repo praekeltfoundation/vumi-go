@@ -8,10 +8,8 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        messages = orm.Transaction.objects.filter(
-            message_direction__isnull=False)
-        topups = orm.Transaction.objects.filter(
-            message_direction__isnull=True)
+        messages = orm.Transaction.objects.exclude(message_direction='')
+        topups = orm.Transaction.objects.filter(message_direction='')
 
         messages.update(transaction_type='Message')
         topups.update(transaction_type='Top Up')
