@@ -39,6 +39,8 @@ setup(
         'django-loginas==0.1.3',
         'boto',
         'moto',
+        # 'https://github.com/sehmaschine/django-grappelli/issues/407
+        'django-grappelli==2.4.8',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

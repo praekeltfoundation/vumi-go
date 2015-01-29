@@ -152,6 +152,7 @@ INSTALLED_APPS = (
     'django.contrib.flatpages',
     'django.contrib.humanize',
     # Uncomment the next line to enable the admin:
+    'grappelli',
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
@@ -373,3 +374,5 @@ PIPELINE_JS = {
 }
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
+GRAPPELLI_ADMIN_TITLE = "Vumi Go Admin"
