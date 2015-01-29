@@ -92,7 +92,9 @@ class MessageCostAdmin(admin.ModelAdmin):
                     'markup_percent', 'message_credit_cost',
                     'storage_credit_cost', 'session_credit_cost')
 
-    search_fields = ('tag_pool__name', 'account__account_number')
+    search_fields = (
+        'tag_pool__name', 'tag_pool__description', 'account__account_number',
+        'account__user__email', 'account__description')
     list_filter = ('tag_pool', 'message_direction')
     form = MessageCostForm
 

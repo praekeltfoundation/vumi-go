@@ -99,7 +99,8 @@ class TestTransaction(BillingApiTestCase):
             'tag_name': 'tag1',
             'message_direction': MessageCost.DIRECTION_INBOUND,
             'session_created': False,
-            'provider': None
+            'provider': None,
+            'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE
         }
         content.update(kwargs)
         return self.call_api('post', 'transactions', content=content)
@@ -282,7 +283,8 @@ class TestTransaction(BillingApiTestCase):
             tag_pool_name='pool1',
             tag_name='tag1',
             message_direction=MessageCost.DIRECTION_INBOUND,
-            session_created=False)
+            session_created=False,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
         # Make sure there was a transaction created
         transaction = Transaction.objects.latest('created')
@@ -304,7 +306,8 @@ class TestTransaction(BillingApiTestCase):
             storage_credits=get_storage_credits(0.5, 10.0),
             session_credits=get_session_credits(0.3, 10.0),
             status=Transaction.STATUS_COMPLETED,
-            message_direction=MessageCost.DIRECTION_INBOUND)
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
         # Get the account and make sure the credit balance was updated
         account = Account.objects.get(id=account.id)

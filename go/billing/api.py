@@ -127,11 +127,14 @@ class TransactionResource(BaseResource):
             provider = data.get('provider', None)
             message_direction = data.get('message_direction', None)
             session_created = data.get('session_created', None)
+            transaction_type = data.get('transaction_type', None)
+
             if all((account_number, message_id, tag_pool_name, tag_name,
                     message_direction, session_created is not None)):
                 d = self.create_transaction(
                     account_number, message_id, tag_pool_name, tag_name,
-                    provider, message_direction, session_created)
+                    provider, message_direction,
+                    session_created, transaction_type)
 
                 d.addCallbacks(self._render_to_json, self._handle_error,
                                callbackArgs=[request], errbackArgs=[request])
@@ -199,7 +202,7 @@ class TransactionResource(BaseResource):
     def create_transaction_interaction(self, cursor, account_number,
                                        message_id, tag_pool_name, tag_name,
                                        provider, message_direction,
-                                       session_created):
+                                       session_created, transaction_type):
         """Create a new transaction for the given ``account_number``"""
         # Get the message cost
         result = yield self.get_cost(account_number, tag_pool_name, provider,
@@ -228,7 +231,7 @@ class TransactionResource(BaseResource):
         # Create a new transaction
         query = """
             INSERT INTO billing_transaction
-                (account_number, message_id,
+                (account_number, message_id, transaction_type,
                  tag_pool_name, tag_name,
                  provider, message_direction,
                  message_cost, storage_cost,
@@ -236,7 +239,7 @@ class TransactionResource(BaseResource):
                  message_credits, storage_credits, session_credits,
                  credit_factor, credit_amount, status, created, last_modified)
             VALUES
-                (%(account_number)s, %(message_id)s,
+                (%(account_number)s, %(message_id)s, %(transaction_type)s,
                  %(tag_pool_name)s, %(tag_name)s,
                  %(provider)s, %(message_direction)s,
                  %(message_cost)s, %(storage_cost)s,
@@ -245,7 +248,7 @@ class TransactionResource(BaseResource):
                  %(credit_factor)s, %(credit_amount)s,
                  'Completed', now(),
                  now())
-            RETURNING id, account_number, message_id,
+            RETURNING id, account_number, message_id, transaction_type,
                       tag_pool_name, tag_name,
                       provider, message_direction,
                       message_cost, storage_cost, session_cost,
@@ -258,6 +261,7 @@ class TransactionResource(BaseResource):
         params = {
             'account_number': account_number,
             'message_id': message_id,
+            'transaction_type': transaction_type,
             'tag_pool_name': tag_pool_name,
             'tag_name': tag_name,
             'provider': provider,
@@ -392,12 +396,12 @@ class TransactionResource(BaseResource):
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, provider, message_direction,
-                           session_created):
+                           session_created, transaction_type):
         """Create a new transaction for the given ``account_number``"""
         result = yield self._connection_pool.runInteraction(
             self.create_transaction_interaction, account_number, message_id,
             tag_pool_name, tag_name, provider, message_direction,
-            session_created)
+            session_created, transaction_type)
 
         defer.returnValue(result)
 
