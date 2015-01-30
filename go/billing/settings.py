@@ -56,10 +56,10 @@ LOW_CREDIT_NOTIFICATION_PERCENTAGES = getattr(
 LOW_CREDIT_NOTIFICATION_EMAIL = getattr(
     settings, 'BILLING_LOW_CREDIT_NOTIFICATION_EMAIL', 'support@vumi.org')
 
-PROVIDERS = getattr(
-    settings, 'BILLING_PROVIDERS', (
-        ('mtn', 'MTN'),
-        ('vodacom', 'Vodacom')))
+PROVIDERS = getattr(settings, 'BILLING_PROVIDERS', {
+    'mtn': 'MTN',
+    'vodacom': 'Vodacom',
+})
 
 
 def get_user_table():
