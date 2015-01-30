@@ -214,14 +214,14 @@ class ConversationWrapper(object):
         return self.mdb.cache.count_to_addrs(self.batch.key)
 
     @Manager.calls_manager
-    def collect_messages(self, keys, proxy, include_sensitive, scrubber):
+    def collect_messages(self, keys, get_msg, include_sensitive, scrubber):
         """
         Collect the messages using the given keys by using the given callback.
 
         :param list keys:
             The list of keys to retrieve.
-        :param callable callback:
-            The callback to use to load the object, this is given the key.
+        :param callable get_msg:
+            The callback to use to load the message, this is given the key.
         :param bool include_sensitive:
             Whether or not to include hidden messages.
         :param callable scrubber:
@@ -229,9 +229,9 @@ class ConversationWrapper(object):
             object or None.
         """
         messages = []
-        bunches = yield proxy.load_all_bunches(keys)
-        for bunch in bunches:
-            messages.extend((yield bunch))
+        for key in keys:
+            msg = yield get_msg(key)
+            messages.append(msg)
 
         returnValue(self.filter_and_scrub_messages(
             messages, include_sensitive=include_sensitive, scrubber=scrubber))
@@ -249,9 +249,7 @@ class ConversationWrapper(object):
             object or None.
         """
         collection = []
-        for message in messages:
-            # vumi message is an attribute on the inbound message object
-            msg = message.msg
+        for msg in messages:
             msg_mdh = MessageMetadataHelper(self.api, msg)
             if not msg_mdh.is_sensitive():
                 collection.append(msg)
@@ -297,7 +295,7 @@ class ConversationWrapper(object):
             self.batch.key, start, limit - 1)
 
         replies = yield self.collect_messages(
-            keys, self.mdb.inbound_messages, include_sensitive, scrubber)
+            keys, self.mdb.get_inbound_message, include_sensitive, scrubber)
 
         # Preserve order
         returnValue(
@@ -339,7 +337,7 @@ class ConversationWrapper(object):
             self.batch.key, start, limit - 1)
 
         sent_messages = yield self.collect_messages(
-            keys, self.mdb.outbound_messages, include_sensitive, scrubber)
+            keys, self.mdb.get_outbound_message, include_sensitive, scrubber)
 
         # Preserve order
         returnValue(
