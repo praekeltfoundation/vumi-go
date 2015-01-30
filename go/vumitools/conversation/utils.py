@@ -125,20 +125,6 @@ class ConversationWrapper(object):
         returnValue(statuses)
 
     @Manager.calls_manager
-    def get_progress_percentage(self):
-        """
-        Get a percentage indication of how far along the sending
-        of messages in this conversation is.
-
-        :rtype: int
-        """
-        status = yield self.get_progress_status()
-        if status['sent'] == 0:
-            returnValue(0)
-        sent_to_network = status['ack'] + status['nack']
-        returnValue(int(sent_to_network / float(status['sent']) * 100))
-
-    @Manager.calls_manager
     def get_groups(self):
         """
         Convenience method for loading all groups linked to this conversation.

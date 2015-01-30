@@ -284,22 +284,6 @@ class TestConversationWrapper(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_get_progress_percentage_acks(self):
-        yield self.conv.start()
-        self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        yield self.store_events(outbound, 'ack', count=4)
-        self.assertEqual((yield self.conv.get_progress_percentage()), 80)
-
-    @inlineCallbacks
-    def test_get_progress_percentage_nacks(self):
-        yield self.conv.start()
-        self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        yield self.store_events(outbound, 'nack', count=4)
-        self.assertEqual((yield self.conv.get_progress_percentage()), 80)
-
-    @inlineCallbacks
     def test_get_opted_in_contact_bunches(self):
         contact_store = self.user_helper.user_api.contact_store
         user_account = yield self.user_helper.get_user_account()
