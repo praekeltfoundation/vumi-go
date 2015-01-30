@@ -422,21 +422,29 @@ class ConversationWrapper(object):
     @Manager.calls_manager
     def get_inbound_throughput(self, sample_time=300):
         """
-        Calculate how many inbound messages per minute we've been
-        doing on average.
+        Calculate how many inbound messages per minute we've been doing on
+        average.
         """
-        count = yield self.mdb.cache.count_inbound_throughput(
-            self.batch.key, sample_time)
+        inbounds = yield self.mdb.cache.get_inbound_message_keys(
+            self.batch.key, with_timestamp=True)
+        if not inbounds:
+            returnValue(0.0)
+        threshold = inbounds[0][1] - sample_time
+        count = sum(1 for _, timestamp in inbounds if timestamp >= threshold)
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
     def get_outbound_throughput(self, sample_time=300):
         """
-        Calculate how many outbound messages per minute we've been
-        doing on average.
+        Calculate how many outbound messages per minute we've been doing on
+        average.
         """
-        count = yield self.mdb.cache.count_outbound_throughput(
-            self.batch.key, sample_time)
+        outbounds = yield self.mdb.cache.get_outbound_message_keys(
+            self.batch.key, with_timestamp=True)
+        if not outbounds:
+            returnValue(0.0)
+        threshold = outbounds[0][1] - sample_time
+        count = sum(1 for _, timestamp in outbounds if timestamp >= threshold)
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
