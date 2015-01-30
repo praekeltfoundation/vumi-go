@@ -148,7 +148,7 @@ class MessageCost(models.Model):
 
     provider = models.CharField(
         max_length=20, blank=True, null=True,
-        choices=app_settings.PROVIDERS, db_index=True,
+        choices=app_settings.PROVIDERS.items(), db_index=True,
         help_text=_("This cost entry applies only to messages being sent to or"
                     " received from an address that uses the given provider."
                     " If null, this entry applies to all providers"))
