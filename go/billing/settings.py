@@ -58,7 +58,7 @@ LOW_CREDIT_NOTIFICATION_EMAIL = getattr(
 
 PROVIDERS = getattr(settings, 'BILLING_PROVIDERS', {
     'mtn': 'MTN',
-    'vodacom': 'Vodacom'
+    'vodacom': 'Vodacom',
 })
 
 
