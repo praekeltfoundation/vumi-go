@@ -563,7 +563,10 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             description__startswith='Messages received')
 
         self.assertEqual(item1.description, 'Messages received - Provider 1')
+        self.assertEqual(item1.units, 2)
+
         self.assertEqual(item2.description, 'Messages received - Provider 2')
+        self.assertEqual(item2.units, 1)
 
     @mock.patch('go.billing.settings.PROVIDERS', {'provider1': 'Provider 1'})
     def test_generate_monthly_statement_unknown_provider_inbound(self):
@@ -633,7 +636,10 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             description__startswith='Messages sent')
 
         self.assertEqual(item1.description, 'Messages sent - Provider 1')
+        self.assertEqual(item1.units, 2)
+
         self.assertEqual(item2.description, 'Messages sent - Provider 2')
+        self.assertEqual(item2.units, 1)
 
     @mock.patch('go.billing.settings.PROVIDERS', {'provider1': 'Provider 1'})
     def test_generate_monthly_statement_unknown_provider_outbound(self):
@@ -703,9 +709,13 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             item1.description,
             'Sessions (billed per session) - Provider 1')
 
+        self.assertEqual(item1.units, 2)
+
         self.assertEqual(
             item2.description,
             'Sessions (billed per session) - Provider 2')
+
+        self.assertEqual(item2.units, 1)
 
     @mock.patch('go.billing.settings.PROVIDERS', {'provider1': 'Provider 1'})
     def test_generate_monthly_statement_unknown_provider_sessions(self):
