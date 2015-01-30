@@ -56,11 +56,11 @@ class TestConversationWrapper(VumiTestCase):
         yield user_account.save()
 
     @inlineCallbacks
-    def test_count_replies(self):
+    def test_count_inbound_messages(self):
         # XXX: Does this test make sense at all?
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
-        self.assertEqual((yield self.conv.count_replies()), 5)
+        self.assertEqual((yield self.conv.count_inbound_messages()), 5)
 
     @inlineCallbacks
     def test_inbound_keys(self):
@@ -69,10 +69,10 @@ class TestConversationWrapper(VumiTestCase):
         self.assertEqual(set((yield self.conv.inbound_keys())), keys)
 
     @inlineCallbacks
-    def test_count_sent_messages(self):
+    def test_count_outbound_messages(self):
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        self.assertEqual((yield self.conv.count_sent_messages()), 5)
+        self.assertEqual((yield self.conv.count_outbound_messages()), 5)
 
     @inlineCallbacks
     def test_outbound_keys(self):

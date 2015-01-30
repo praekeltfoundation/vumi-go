@@ -105,7 +105,7 @@ class MessageStoreResource(SandboxResource):
             - ``reason``: Reason for the failure.
 
         """
-        count = yield conversation.count_replies()
+        count = yield conversation.count_inbound_messages()
         returnValue(self.reply(command, success=True, count=count))
 
     @conversation_owner
@@ -131,7 +131,7 @@ class MessageStoreResource(SandboxResource):
             - ``reason``: Reason for the failure.
 
         """
-        count = yield conversation.count_sent_messages()
+        count = yield conversation.count_outbound_messages()
         returnValue(self.reply(command, success=True, count=count))
 
     @conversation_owner

@@ -185,14 +185,14 @@ class ConversationWrapper(object):
                 })
         yield self.c.save()
 
-    def count_replies(self):
+    def count_inbound_messages(self):
         """
         Count the total number of replies received.
         This is pulled from the cache.
         """
         return self.mdb.cache.count_inbound_message_keys(self.batch.key)
 
-    def count_sent_messages(self):
+    def count_outbound_messages(self):
         """
         Count the total number of messages sent.
         This is pulled from the cache.

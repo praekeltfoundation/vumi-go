@@ -215,9 +215,10 @@ class ExportMessageView(ConversationApiView):
     def post(self, request, conversation):
         export_conversation_messages_unsorted.delay(
             request.user_api.user_account_key, conversation.key)
-        messages.info(request, 'Conversation messages CSV file export '
-                                'scheduled. CSV file should arrive in '
-                                'your mailbox shortly.')
+        messages.info(
+            request,
+            'Conversation messages CSV file export scheduled. CSV file should'
+            ' arrive in your mailbox shortly.')
         return self.redirect_to(
             'message_list', conversation_key=conversation.key)
 
@@ -248,14 +249,14 @@ class MessageListView(ConversationTemplateView):
         batch_id = conversation.batch.key
 
         # Paginator starts counting at 1 so 0 would also be invalid
-        inbound_message_paginator = Paginator(
-            PagedMessageCache(conversation.count_replies(),
-                lambda start, stop: conversation.received_messages_in_cache(
-                    start, stop)), 20)
-        outbound_message_paginator = Paginator(
-            PagedMessageCache(conversation.count_sent_messages(),
-                lambda start, stop: conversation.sent_messages_in_cache(
-                    start, stop)), 20)
+        inbound_message_paginator = Paginator(PagedMessageCache(
+            conversation.count_inbound_messages(),
+            lambda start, stop: conversation.received_messages_in_cache(
+                start, stop)), 20)
+        outbound_message_paginator = Paginator(PagedMessageCache(
+            conversation.count_outbound_messages(),
+            lambda start, stop: conversation.sent_messages_in_cache(
+                start, stop)), 20)
 
         tag_context = {
             'batch_id': batch_id,
