@@ -63,15 +63,18 @@ class BillingApi(object):
         returnValue(result)
 
     def create_transaction(self, account_number, message_id, tag_pool_name,
-                           tag_name, message_direction, session_created):
+                           tag_name, provider, message_direction,
+                           session_created, transaction_type):
         """Create a new transaction for the given ``account_number``"""
         data = {
             'account_number': account_number,
             'message_id': message_id,
             'tag_pool_name': tag_pool_name,
             'tag_name': tag_name,
+            'provider': provider,
             'message_direction': message_direction,
             'session_created': session_created,
+            'transaction_type': transaction_type,
         }
         return self._call_api("/transactions", data=data, method='POST')
 
@@ -105,6 +108,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
 
     MESSAGE_DIRECTION_INBOUND = "Inbound"
     MESSAGE_DIRECTION_OUTBOUND = "Outbound"
+
+    TRANSACTION_TYPE_MESSAGE = "Message"
 
     worker_name = 'billing_dispatcher'
 
@@ -149,8 +154,10 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             account_number=msg_mdh.get_account_key(),
             message_id=msg['message_id'],
             tag_pool_name=msg_mdh.tag[0], tag_name=msg_mdh.tag[1],
+            provider=msg.get('provider'),
             message_direction=self.MESSAGE_DIRECTION_INBOUND,
-            session_created=session_created)
+            session_created=session_created,
+            transaction_type=self.TRANSACTION_TYPE_MESSAGE)
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
@@ -162,8 +169,10 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             account_number=msg_mdh.get_account_key(),
             message_id=msg['message_id'],
             tag_pool_name=msg_mdh.tag[0], tag_name=msg_mdh.tag[1],
+            provider=msg.get('provider'),
             message_direction=self.MESSAGE_DIRECTION_OUTBOUND,
-            session_created=session_created)
+            session_created=session_created,
+            transaction_type=self.TRANSACTION_TYPE_MESSAGE)
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):

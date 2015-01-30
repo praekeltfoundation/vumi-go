@@ -88,19 +88,21 @@ class TestTransaction(BillingApiTestCase):
 
         return BillingApiTestCase.setUp(self)
 
-    def create_api_transaction(self, account_number, message_id, tag_pool_name,
-                               tag_name, message_direction, session_created):
+    def create_api_transaction(self, **kwargs):
         """
         Create a transaction record via the billing API.
         """
         content = {
-            'account_number': account_number,
-            'message_id': message_id,
-            'tag_pool_name': tag_pool_name,
-            'tag_name': tag_name,
-            'message_direction': message_direction,
-            'session_created': session_created,
+            'account_number': self.account.account_number,
+            'message_id': 'msg-id-1',
+            'tag_pool_name': 'pool1',
+            'tag_name': 'tag1',
+            'message_direction': MessageCost.DIRECTION_INBOUND,
+            'session_created': False,
+            'provider': None,
+            'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE
         }
+        content.update(kwargs)
         return self.call_api('post', 'transactions', content=content)
 
     def assert_model(self, model, **kw):
@@ -281,7 +283,8 @@ class TestTransaction(BillingApiTestCase):
             tag_pool_name='pool1',
             tag_name='tag1',
             message_direction=MessageCost.DIRECTION_INBOUND,
-            session_created=False)
+            session_created=False,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
         # Make sure there was a transaction created
         transaction = Transaction.objects.latest('created')
@@ -303,7 +306,8 @@ class TestTransaction(BillingApiTestCase):
             storage_credits=get_storage_credits(0.5, 10.0),
             session_credits=get_session_credits(0.3, 10.0),
             status=Transaction.STATUS_COMPLETED,
-            message_direction=MessageCost.DIRECTION_INBOUND)
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
         # Get the account and make sure the credit balance was updated
         account = Account.objects.get(id=account.id)
@@ -481,3 +485,90 @@ class TestTransaction(BillingApiTestCase):
             ("Unable to find billing account unknown-account while"
              " checking credit balance. Message was Outbound to/from"
              " tag pool pool2.",))
+
+    @inlineCallbacks
+    def test_transaction_provider(self):
+        mk_message_cost(tag_pool=self.pool1)
+
+        transaction = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            provider='mtn')
+
+        self.assertEqual(transaction['provider'], 'mtn')
+
+        self.assert_model(
+            model=Transaction.objects.latest('created'),
+            provider='mtn')
+
+    @inlineCallbacks
+    def test_transaction_provider_none(self):
+        mk_message_cost(tag_pool=self.pool1)
+
+        yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            provider=None)
+
+        self.assert_model(
+            model=Transaction.objects.latest('created'),
+            provider=None)
+
+    @inlineCallbacks
+    def test_transaction_provider_cost(self):
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_cost=0.8,
+            provider=None)
+
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_cost=0.7,
+            provider='vodacom')
+
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_cost=0.6,
+            provider='mtn')
+
+        yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            provider='mtn')
+
+        self.assert_model(
+            model=Transaction.objects.latest('created'),
+            message_cost=Decimal('0.6'))
+
+        yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            provider='vodacom')
+
+        self.assert_model(
+            model=Transaction.objects.latest('created'),
+            message_cost=Decimal('0.7'))
+
+    @inlineCallbacks
+    def test_transaction_provider_fallback_cost(self):
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_cost=0.8,
+            provider=None)
+
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_cost=0.6,
+            provider='mtn')
+
+        yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            provider='unknown')
+
+        self.assert_model(
+            model=Transaction.objects.latest('created'),
+            message_cost=Decimal('0.8'))
+
+        yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            provider=None)
+
+        self.assert_model(
+            model=Transaction.objects.latest('created'),
+            message_cost=Decimal('0.8'))

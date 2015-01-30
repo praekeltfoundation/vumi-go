@@ -530,6 +530,28 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item.unit_cost, 100)
         self.assertEqual(item.cost, 100)
 
+    def test_generate_monthly_statement_irrelevant_transaction_types(self):
+        mk_transaction(
+            self.account,
+            transaction_type=Transaction.TRANSACTION_TYPE_TOPUP,
+            message_cost=1.0,
+            storage_cost=2.0,
+            session_cost=3.0,
+            session_created=True)
+
+        mk_transaction(
+            self.account,
+            transaction_type=None,
+            message_cost=1.0,
+            storage_cost=2.0,
+            session_cost=3.0,
+            session_created=True)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        self.assertEqual(len(get_line_items(statement)), 0)
+
     @mock.patch('go.billing.settings.PROVIDERS', {
         'provider1': 'Provider 1',
         'provider2': 'Provider 2',
@@ -716,41 +738,6 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             'Sessions (billed per session) - Provider 2')
 
         self.assertEqual(item2.units, 1)
-
-    @mock.patch('go.billing.settings.PROVIDERS', {'provider1': 'Provider 1'})
-    def test_generate_monthly_statement_unknown_provider_sessions(self):
-        mk_transaction(
-            self.account,
-            provider='provider2',
-            session_cost=100,
-            session_created=True)
-
-        statement = tasks.generate_monthly_statement(
-            self.account.id, *this_month())
-
-        [item] = get_line_items(statement).filter(
-            description__startswith='Sessions (billed per session)')
-
-        self.assertEqual(
-            item.description,
-            'Sessions (billed per session) - provider2')
-
-    def test_generate_monthly_statement_no_provider_sessions(self):
-        mk_transaction(
-            self.account,
-            provider=None,
-            session_cost=100,
-            session_created=True)
-
-        statement = tasks.generate_monthly_statement(
-            self.account.id, *this_month())
-
-        [item] = get_line_items(statement).filter(
-            description__startswith='Sessions (billed per session)')
-
-        self.assertEqual(
-            item.description,
-            'Sessions (billed per session) - No provider given')
 
 
 class TestArchiveTransactionsTask(GoDjangoTestCase):

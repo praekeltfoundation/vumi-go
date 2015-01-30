@@ -24,7 +24,7 @@ class TestStatementAdmin(GoDjangoTestCase):
         client.login()
         response = client.get(
             reverse('admin:app_list', kwargs={'app_label': 'billing'}))
-        self.assertContains(response, "Models in the Billing application")
+        self.assertContains(response, "Billing administration")
         self.assertContains(response, "Accounts")
         self.assertContains(response, "Message costs")
         self.assertContains(response, "Statements")
@@ -38,10 +38,10 @@ class TestStatementAdmin(GoDjangoTestCase):
         client = self.vumi_helper.get_client()
         client.login()
         response = client.get(reverse('admin:billing_statement_changelist'))
-        self.assertContains(response, "1 statement")
+        self.assertContains(response, "1 total")
         self.assertContains(
             response,
-            '<a href="/billing/statement/%s">html</a>' % (statement.id,))
+            '<a href="/billing/statement/%s">' % (statement.id,))
 
     def test_statement_admin_view(self):
         mk_transaction(self.account)
@@ -51,7 +51,7 @@ class TestStatementAdmin(GoDjangoTestCase):
         response = client.get(
             reverse('admin:billing_statement_change', args=[statement.id]))
         self.assertContains(response, "Monthly Statement for")
-        self.assertContains(response, "Account:")
+        self.assertContains(response, "Account")
         # check that line items have been inlined
         self.assertContains(response, "Channel")
         self.assertContains(response, "Channel type")
