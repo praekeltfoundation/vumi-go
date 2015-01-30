@@ -95,21 +95,18 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_inbound_messages(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=10.0,
             message_direction=MessageCost.DIRECTION_INBOUND)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=10.0,
             message_direction=MessageCost.DIRECTION_OUTBOUND)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=10.0,
             message_direction=MessageCost.DIRECTION_INBOUND)
@@ -118,7 +115,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             self.account.id, *this_month())
 
         [item] = get_line_items(statement).filter(
-            description='Messages received - provider1')
+            description='Messages received')
 
         self.assertEqual(item.billed_by, 'Pool 1')
         self.assertEqual(item.channel, 'tag1')
@@ -145,21 +142,18 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_outbound_messages(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=10.0,
             message_direction=MessageCost.DIRECTION_OUTBOUND)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=10.0,
             message_direction=MessageCost.DIRECTION_INBOUND)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=10.0,
             message_direction=MessageCost.DIRECTION_OUTBOUND)
@@ -168,7 +162,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             self.account.id, *this_month())
 
         [item] = get_line_items(statement).filter(
-            description='Messages sent - provider1')
+            description='Messages sent')
 
         self.assertEqual(item.billed_by, 'Pool 1')
         self.assertEqual(item.channel, 'tag1')
@@ -217,26 +211,23 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_different_message_costs(self):
         mk_transaction(
             account=self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             account=self.account,
-            provider='provider1',
             message_cost=200,
             markup_percent=10.0)
 
         mk_transaction(
             account=self.account,
-            provider='provider1',
             message_cost=300,
             markup_percent=10.0)
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item1, item2, item3] = get_line_items(statement).filter(
-            description='Messages received - provider1')
+            description='Messages received')
 
         self.assertEqual(item1.credits, get_message_credits(100, 10))
         self.assertEqual(item1.unit_cost, 100)
@@ -253,26 +244,23 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_messages_different_markups(self):
         mk_transaction(
             account=self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             account=self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=20.0)
 
         mk_transaction(
             account=self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=30.0)
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item1, item2, item3] = get_line_items(statement).filter(
-            description='Messages received - provider1')
+            description='Messages received')
 
         self.assertEqual(item1.credits, get_message_credits(100, 10))
         self.assertEqual(item2.credits, get_message_credits(100, 20))
@@ -348,21 +336,18 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_sessions(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=100,
             markup_percent=10.0)
@@ -370,7 +355,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item] = get_line_items(statement).filter(
-            description='Sessions (billed per session) - provider1')
+            description='Sessions (billed per session)')
 
         self.assertEqual(item.credits, get_session_credits(300, 10))
         self.assertEqual(item.unit_cost, 100)
@@ -379,21 +364,18 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_different_session_costs(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=200,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=300,
             markup_percent=10.0)
@@ -401,7 +383,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item1, item2, item3] = get_line_items(statement).filter(
-            description='Sessions (billed per session) - provider1')
+            description='Sessions (billed per session)')
 
         self.assertEqual(item1.credits, get_session_credits(100, 10))
         self.assertEqual(item1.unit_cost, 100)
@@ -418,21 +400,18 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_sessions_different_markups(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=100,
             markup_percent=20.0)
 
         mk_transaction(
             self.account,
-            provider='provider1',
             session_created=True,
             session_cost=100,
             markup_percent=30.0)
@@ -440,7 +419,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item1, item2, item3] = get_line_items(statement).filter(
-            description='Sessions (billed per session) - provider1')
+            description='Sessions (billed per session)')
 
         self.assertEqual(item1.credits, get_session_credits(100, 10))
         self.assertEqual(item2.credits, get_session_credits(100, 20))
@@ -465,14 +444,13 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_messages_none_message_cost(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             message_cost=None)
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
 
         [item] = get_line_items(statement).filter(
-            description='Messages received - provider1')
+            description='Messages received')
 
         self.assertEqual(item.credits, None)
         self.assertEqual(item.unit_cost, 0)
@@ -481,7 +459,6 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_messages_none_markup(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             message_cost=100,
             markup_percent=None)
 
@@ -489,7 +466,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             self.account.id, *this_month())
 
         [item] = get_line_items(statement).filter(
-            description='Messages received - provider1')
+            description='Messages received')
 
         self.assertEqual(item.credits, None)
         self.assertEqual(item.unit_cost, 100)
@@ -498,7 +475,6 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_sessions_none_session_cost(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             session_cost=None,
             session_created=True)
 
@@ -506,7 +482,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             self.account.id, *this_month())
 
         [item] = get_line_items(statement).filter(
-            description='Sessions (billed per session) - provider1')
+            description='Sessions (billed per session)')
 
         self.assertEqual(item.credits, None)
         self.assertEqual(item.unit_cost, 0)
@@ -515,7 +491,6 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
     def test_generate_monthly_statement_sessions_none_markup(self):
         mk_transaction(
             self.account,
-            provider='provider1',
             session_cost=100,
             markup_percent=None,
             session_created=True)
@@ -524,7 +499,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             self.account.id, *this_month())
 
         [item] = get_line_items(statement).filter(
-            description='Sessions (billed per session) - provider1')
+            description='Sessions (billed per session)')
 
         self.assertEqual(item.credits, None)
         self.assertEqual(item.unit_cost, 100)
@@ -623,7 +598,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         self.assertEqual(
             item.description,
-            'Messages received - No provider given')
+            'Messages received')
 
     @mock.patch('go.billing.settings.PROVIDERS', {
         'provider1': 'Provider 1',
@@ -696,7 +671,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
 
         self.assertEqual(
             item.description,
-            'Messages sent - No provider given')
+            'Messages sent')
 
     @mock.patch('go.billing.settings.PROVIDERS', {
         'provider1': 'Provider 1',

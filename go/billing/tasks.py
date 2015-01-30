@@ -120,7 +120,7 @@ def get_provider_name(transaction):
     value = transaction['provider']
 
     if value is None:
-        return 'No provider given'
+        return None
     else:
         return settings.PROVIDERS.get(value, value)
 
@@ -183,12 +183,30 @@ def get_channel_type(transaction, tagpools):
 
 
 def get_message_description(transaction):
+    provider_name = get_provider_name(transaction)
+
     if transaction['message_direction'] == MessageCost.DIRECTION_INBOUND:
-        return 'Messages received - %s' % (get_provider_name(transaction),)
-    elif transaction['message_direction'] == MessageCost.DIRECTION_OUTBOUND:
-        return 'Messages sent - %s' % (get_provider_name(transaction),)
+        if provider_name is None:
+            return 'Messages received'
+        else:
+            return 'Messages received - %s' % (provider_name,)
+
+    if transaction['message_direction'] == MessageCost.DIRECTION_OUTBOUND:
+        if provider_name is None:
+            return 'Messages sent'
+        else:
+            return 'Messages sent - %s' % (provider_name,)
+
+    return None
+
+
+def get_session_description(transaction):
+    provider_name = get_provider_name(transaction)
+
+    if provider_name is None:
+        return 'Sessions (billed per session)'
     else:
-        return None
+        return 'Sessions (billed per session) - %s' % (provider_name,)
 
 
 def make_message_item(statement, transaction, tagpools):
@@ -216,8 +234,6 @@ def make_storage_item(statement, transaction, tagpools):
 
 
 def make_session_item(statement, transaction, tagpools):
-    provider_name = get_provider_name(transaction)
-
     return LineItem(
         statement=statement,
         units=get_count(transaction),
@@ -227,7 +243,7 @@ def make_session_item(statement, transaction, tagpools):
         billed_by=get_tagpool_name(transaction, tagpools),
         unit_cost=get_session_unit_cost(transaction),
         channel_type=get_channel_type(transaction, tagpools),
-        description='Sessions (billed per session) - %s' % (provider_name,))
+        description=get_session_description(transaction))
 
 
 def make_message_items(statement, transactions, tagpools):
