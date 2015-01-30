@@ -51,6 +51,7 @@ def get_message_transactions(transactions):
     transactions = transactions.values(
         'tag_pool_name',
         'tag_name',
+        'provider',
         'message_direction',
         'message_cost',
         'message_credits',
@@ -83,6 +84,7 @@ def get_session_transactions(transactions):
     transactions = transactions.values(
         'tag_pool_name',
         'tag_name',
+        'provider',
         'session_cost',
         'session_credits',
         'markup_percent')
@@ -104,6 +106,15 @@ def get_tagpool_name(transaction, tagpools):
 
 def get_channel_name(transaction, tagpools):
     return transaction['tag_name']
+
+
+def get_provider_name(transaction):
+    value = transaction['provider']
+
+    if value is None:
+        return 'No provider given'
+    else:
+        return settings.PROVIDERS.get(value, value)
 
 
 def get_message_cost(transaction):
@@ -165,9 +176,9 @@ def get_channel_type(transaction, tagpools):
 
 def get_message_description(transaction):
     if transaction['message_direction'] == MessageCost.DIRECTION_INBOUND:
-        return 'Messages received'
+        return 'Messages received - %s' % (get_provider_name(transaction),)
     else:
-        return 'Messages sent'
+        return 'Messages sent - %s' % (get_provider_name(transaction),)
 
 
 def make_message_item(statement, transaction, tagpools):
@@ -195,6 +206,8 @@ def make_storage_item(statement, transaction, tagpools):
 
 
 def make_session_item(statement, transaction, tagpools):
+    provider_name = get_provider_name(transaction)
+
     return LineItem(
         statement=statement,
         units=get_count(transaction),
@@ -204,7 +217,7 @@ def make_session_item(statement, transaction, tagpools):
         billed_by=get_tagpool_name(transaction, tagpools),
         unit_cost=get_session_unit_cost(transaction),
         channel_type=get_channel_type(transaction, tagpools),
-        description='Sessions')
+        description='Sessions (billed per session) - %s' % (provider_name,))
 
 
 def make_message_items(statement, transactions, tagpools):
