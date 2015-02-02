@@ -176,6 +176,14 @@ class MessageCost(models.Model):
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The base cost per session in cents."))
 
+    session_unit_time = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('20.0'),
+        help_text=_("The time of one billed unit (in seconds)."))
+
+    session_unit_cost = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The base cost per session unit time"))
+
     markup_percent = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("The markup percentage. e.g. 20.0 for twenty percent"))
