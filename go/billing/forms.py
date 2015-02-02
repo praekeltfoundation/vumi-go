@@ -7,7 +7,7 @@ from django.forms.models import BaseModelFormSet
 
 from go.vumitools.api import VumiApi
 
-from go.billing.models import Account, TagPool, MessageCost, Transaction
+from go.billing.models import Account, TagPool, MessageCost
 from go.billing.django_utils import load_account_credits
 
 
@@ -29,6 +29,8 @@ class MessageCostForm(ModelForm):
 
         * the resulting message credit cost does not underflow to zero.
         * the resulting session credit cost does not underflow to zero.
+        * the resulting storage credit cost does not underflow to zero.
+        * the resulting session length credit cost does not underflow to zero.
         * that if the tag pool is not set, neither is the account (
           this is because our message cost lookup currently ignore
           such message costs)
@@ -38,6 +40,7 @@ class MessageCostForm(ModelForm):
         storage_cost = cleaned_data.get('storage_cost')
         session_cost = cleaned_data.get('session_cost')
         markup_percent = cleaned_data.get('markup_percent')
+        session_length_cost = cleaned_data.get('session_length_cost')
 
         if message_cost and markup_percent:
             context = Context()
@@ -65,6 +68,15 @@ class MessageCostForm(ModelForm):
                 raise forms.ValidationError(
                     "The resulting cost per session (in credits) was rounded"
                     " to 0.")
+
+        if session_length_cost and markup_percent:
+            context = Context()
+            credit_cost = MessageCost.calculate_session_length_cost(
+                session_length_cost, markup_percent, context=context)
+            if cost_rounded_to_zero(credit_cost, context):
+                raise forms.ValidationError(
+                    "The resulting cost per session time length (in credits)"
+                    " was rounded to 0.")
 
         if not cleaned_data.get("tag_pool") and cleaned_data.get("account"):
             raise forms.ValidationError(

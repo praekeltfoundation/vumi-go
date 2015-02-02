@@ -120,6 +120,15 @@ class MessageCost(models.Model):
             session_cost, markup_percent, context=context)
 
     @classmethod
+    def calculate_session_length_credit_cost(
+            cls, session_length_cost, markup_percent, context=None):
+        """
+        Return the cost per session length (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            session_length_cost, markup_percent, context=context)
+
+    @classmethod
     def calculate_credit_cost(cls, message_cost, storage_cost, markup_percent,
                               session_cost, session_created, context=None):
         """
