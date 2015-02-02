@@ -308,6 +308,14 @@ class Transaction(models.Model):
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The session cost (in credits)."))
 
+    session_unit_time = models.DecimalField(
+        null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The time of one billed unit (in seconds)."))
+
+    session_unit_cost = models.DecimalField(
+        null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The cost per session unit time."))
+
     credit_factor = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True,
         help_text=_("The credit conversion factor's value when this "
