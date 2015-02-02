@@ -235,7 +235,6 @@ class TestEmail(GoDjangoTestCase):
         self.assertTrue('"Group Message" Received: 5' in email.body)
 
         # TODO fix once we support uniques properly again
-        print repr(email.body)
         self.assertTrue('Sent: 5 to 0 uniques.' in email.body)
         self.assertTrue('Received: 5 from 0 uniques.' in email.body)
 
