@@ -105,10 +105,7 @@ def load_messages_in_chunks(conversation, direction='inbound',
         messages = [get_msg(key) for key in index_page]
         yield conversation.filter_and_scrub_messages(
             messages, include_sensitive=include_sensitive, scrubber=scrubber)
-        if index_page.has_next_page():
-            index_page = index_page.next_page()
-        else:
-            index_page = None
+        index_page = index_page.next_page()
 
 
 def email_export(user_profile, conversation, io):
