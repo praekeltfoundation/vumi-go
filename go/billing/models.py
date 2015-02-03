@@ -176,6 +176,14 @@ class MessageCost(models.Model):
         max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The base cost per session in cents."))
 
+    session_unit_time = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('20.0'),
+        help_text=_("The time of one billed unit (in seconds)."))
+
+    session_unit_cost = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The base cost per session unit time"))
+
     markup_percent = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.0'),
         help_text=_("The markup percentage. e.g. 20.0 for twenty percent"))
@@ -299,6 +307,18 @@ class Transaction(models.Model):
         null=True,
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The session cost (in credits)."))
+
+    session_unit_time = models.DecimalField(
+        null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The time of one billed unit (in seconds)."))
+
+    session_unit_cost = models.DecimalField(
+        null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The cost per session unit time."))
+
+    session_length_credits = models.DecimalField(
+        null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The session length cost (in credits)"))
 
     credit_factor = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True,

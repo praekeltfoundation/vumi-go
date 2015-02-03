@@ -48,6 +48,9 @@ class TestMessageCostForm(GoDjangoTestCase):
             'message_cost': '0.0',
             'storage_cost': '0.0',
             'session_cost': '0.0',
+            'session_unit_cost': '0.0',
+            'session_unit_length': '0.0',
+            'session_unit_time': '0.0',
             'markup_percent': '0.0',
         }
         data.update(kw)
