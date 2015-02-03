@@ -5,6 +5,8 @@ import functools
 import re
 import sys
 from StringIO import StringIO
+from collections import defaultdict
+from datetime import datetime
 
 from django.conf import settings
 from django.views.generic import View, TemplateView
@@ -583,9 +585,28 @@ class AggregatesConversationView(ConversationTemplateView):
         sio = StringIO()
         writer = csv.writer(sio)
         direction = request.GET.get('direction', 'inbound')
-        writer.writerows(conversation.get_aggregate_count(direction))
-        return HttpResponse(sio.getvalue(),
-            content_type='text/csv; charset=utf-8')
+        writer.writerows(self.get_aggregate_counts(conversation, direction))
+        return HttpResponse(
+            sio.getvalue(), content_type='text/csv; charset=utf-8')
+
+    def get_aggregate_counts(self, conv, direction):
+        """
+        Get aggregated total count of messages handled bucketed per day.
+        """
+        message_callback = {
+            'inbound': conv.mdb.batch_inbound_keys_with_timestamps,
+            'outbound': conv.mdb.batch_outbound_keys_with_timestamps,
+        }.get(direction, conv.mdb.batch_inbound_keys_with_timestamps)
+
+        aggregates = defaultdict(int)
+        index_page = message_callback(conv.batch.key)
+        while index_page is not None:
+            for key, timestamp in index_page:
+                timestamp = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+                aggregates[timestamp.date()] += 1
+            index_page = index_page.next_page()
+
+        return sorted(aggregates.items())
 
 
 class EditConversationGroupsView(ConversationTemplateView):
