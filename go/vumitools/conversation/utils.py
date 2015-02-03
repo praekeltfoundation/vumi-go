@@ -125,20 +125,6 @@ class ConversationWrapper(object):
         returnValue(statuses)
 
     @Manager.calls_manager
-    def get_progress_percentage(self):
-        """
-        Get a percentage indication of how far along the sending
-        of messages in this conversation is.
-
-        :rtype: int
-        """
-        status = yield self.get_progress_status()
-        if status['sent'] == 0:
-            returnValue(0)
-        sent_to_network = status['ack'] + status['nack']
-        returnValue(int(sent_to_network / float(status['sent']) * 100))
-
-    @Manager.calls_manager
     def get_groups(self):
         """
         Convenience method for loading all groups linked to this conversation.
@@ -199,14 +185,14 @@ class ConversationWrapper(object):
                 })
         yield self.c.save()
 
-    def count_replies(self):
+    def count_inbound_messages(self):
         """
         Count the total number of replies received.
         This is pulled from the cache.
         """
         return self.mdb.cache.count_inbound_message_keys(self.batch.key)
 
-    def count_sent_messages(self):
+    def count_outbound_messages(self):
         """
         Count the total number of messages sent.
         This is pulled from the cache.
@@ -228,14 +214,14 @@ class ConversationWrapper(object):
         return self.mdb.cache.count_to_addrs(self.batch.key)
 
     @Manager.calls_manager
-    def collect_messages(self, keys, proxy, include_sensitive, scrubber):
+    def collect_messages(self, keys, get_msg, include_sensitive, scrubber):
         """
         Collect the messages using the given keys by using the given callback.
 
         :param list keys:
             The list of keys to retrieve.
-        :param callable callback:
-            The callback to use to load the object, this is given the key.
+        :param callable get_msg:
+            The callback to use to load the message, this is given the key.
         :param bool include_sensitive:
             Whether or not to include hidden messages.
         :param callable scrubber:
@@ -243,9 +229,9 @@ class ConversationWrapper(object):
             object or None.
         """
         messages = []
-        bunches = yield proxy.load_all_bunches(keys)
-        for bunch in bunches:
-            messages.extend((yield bunch))
+        for key in keys:
+            msg = yield get_msg(key)
+            messages.append(msg)
 
         returnValue(self.filter_and_scrub_messages(
             messages, include_sensitive=include_sensitive, scrubber=scrubber))
@@ -263,9 +249,7 @@ class ConversationWrapper(object):
             object or None.
         """
         collection = []
-        for message in messages:
-            # vumi message is an attribute on the inbound message object
-            msg = message.msg
+        for msg in messages:
             msg_mdh = MessageMetadataHelper(self.api, msg)
             if not msg_mdh.is_sensitive():
                 collection.append(msg)
@@ -311,7 +295,7 @@ class ConversationWrapper(object):
             self.batch.key, start, limit - 1)
 
         replies = yield self.collect_messages(
-            keys, self.mdb.inbound_messages, include_sensitive, scrubber)
+            keys, self.mdb.get_inbound_message, include_sensitive, scrubber)
 
         # Preserve order
         returnValue(
@@ -353,104 +337,12 @@ class ConversationWrapper(object):
             self.batch.key, start, limit - 1)
 
         sent_messages = yield self.collect_messages(
-            keys, self.mdb.outbound_messages, include_sensitive, scrubber)
+            keys, self.mdb.get_outbound_message, include_sensitive, scrubber)
 
         # Preserve order
         returnValue(
             sorted(sent_messages, key=lambda msg: msg['timestamp'],
                    reverse=True))
-
-    def find_inbound_messages_matching(self, pattern, flags="i",
-                                       key="msg.content", ttl=None,
-                                       wait=False):
-        """
-        Does a regex OR search over the inbound messages and returns
-        matching messages.
-
-        :param str pattern:
-            The pattern to search on
-        :param str flags:
-            The flags to set for the RegExp object.
-        :param str key:
-            The key on the message to match. Defaults to `msg.content`.
-        :param int start:
-            Where to start fetching results from.
-        :param int limit:
-            How many results to get.
-        :param int ttl:
-            How long to cache the results for.
-            Defaults to the MessageStore default.
-        :param bool wait:
-            Wait with returning keys until the results are actually available.
-
-        NOTE:   This should only be called from inside twisted as
-                MessageStore.find_inbound_keys_matching() relies
-                on Deferreds being fired.
-        """
-        query = [{
-            "key": key,
-            "pattern": pattern,
-            "flags": flags,
-            }]
-        return self.mdb.find_inbound_keys_matching(
-            self.batch.key, query, ttl=ttl, wait=wait)
-
-    @Manager.calls_manager
-    def get_inbound_messages_for_token(self, token, start=0, stop=-1):
-        """
-        Fetch the results for a search token
-        """
-        keys = yield self.mdb.get_keys_for_token(
-            self.batch.key, token, start, stop)
-        messages = []
-        for bunch in self.mdb.inbound_messages.load_all_bunches(keys):
-            messages.extend((yield bunch))
-        returnValue(messages)
-
-    def count_inbound_messages_for_token(self, token):
-        """
-        Return the total number of keys in the results for the token.
-        """
-        return self.mdb.count_keys_for_token(self.batch.key, token)
-
-    def find_outbound_messages_matching(self, pattern, flags="i",
-                                        key="msg.content", ttl=None,
-                                        wait=False):
-        """
-        Does a regex OR search over the outbound messages and returns
-        matching messages.
-
-        :param str pattern:
-            The pattern to search on
-        :param str flags:
-            The flags to set for the RegExp object.
-        :param str key:
-            The key on the message to match. Defaults to `msg.content`.
-        :param int ttl:
-            How long to store the results for in seconds.
-            Defaults to the MessageStore default.
-        :param bool wait:
-            Wait with returning keys until the results are actually available.
-        """
-        query = [{
-            "key": key,
-            "pattern": pattern,
-            "flags": flags,
-            }]
-        return self.mdb.find_outbound_keys_matching(
-            self.batch.key, query, ttl=ttl, wait=wait)
-
-    @Manager.calls_manager
-    def get_outbound_messages_for_token(self, token, start=0, stop=-1):
-        """
-        Fetch the results for a search token
-        """
-        keys = yield self.mdb.get_keys_for_token(
-            self.batch.key, token, start, stop)
-        messages = []
-        for bunch in self.mdb.outbound_messages.load_all_bunches(keys):
-            messages.extend((yield bunch))
-        returnValue(messages)
 
     @Manager.calls_manager
     def get_aggregate_count(self, direction, bucket_func=None):
@@ -479,20 +371,6 @@ class ConversationWrapper(object):
             aggregates[bucket].append(key)
 
         returnValue(sorted(aggregates.items()))
-
-    def inbound_keys(self):
-        """
-        Return the keys for this conversation's received messages in
-        whatever order the message store decides to give them back to us.
-        """
-        return self.mdb.batch_inbound_keys(self.batch.key)
-
-    def outbound_keys(self):
-        """
-        Return the keys for this conversation's sent messages in
-        whatever order the message store decides to give them back to us.
-        """
-        return self.mdb.batch_outbound_keys(self.batch.key)
 
     @property
     def worker_name(self):
@@ -530,21 +408,29 @@ class ConversationWrapper(object):
     @Manager.calls_manager
     def get_inbound_throughput(self, sample_time=300):
         """
-        Calculate how many inbound messages per minute we've been
-        doing on average.
+        Calculate how many inbound messages per minute we've been doing on
+        average.
         """
-        count = yield self.mdb.cache.count_inbound_throughput(
-            self.batch.key, sample_time)
+        inbounds = yield self.mdb.cache.get_inbound_message_keys(
+            self.batch.key, with_timestamp=True)
+        if not inbounds:
+            returnValue(0.0)
+        threshold = inbounds[0][1] - sample_time
+        count = sum(1 for _, timestamp in inbounds if timestamp >= threshold)
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
     def get_outbound_throughput(self, sample_time=300):
         """
-        Calculate how many outbound messages per minute we've been
-        doing on average.
+        Calculate how many outbound messages per minute we've been doing on
+        average.
         """
-        count = yield self.mdb.cache.count_outbound_throughput(
-            self.batch.key, sample_time)
+        outbounds = yield self.mdb.cache.get_outbound_message_keys(
+            self.batch.key, with_timestamp=True)
+        if not outbounds:
+            returnValue(0.0)
+        threshold = outbounds[0][1] - sample_time
+        count = sum(1 for _, timestamp in outbounds if timestamp >= threshold)
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
