@@ -372,20 +372,6 @@ class ConversationWrapper(object):
 
         returnValue(sorted(aggregates.items()))
 
-    def inbound_keys(self):
-        """
-        Return the keys for this conversation's received messages in
-        whatever order the message store decides to give them back to us.
-        """
-        return self.mdb.batch_inbound_keys(self.batch.key)
-
-    def outbound_keys(self):
-        """
-        Return the keys for this conversation's sent messages in
-        whatever order the message store decides to give them back to us.
-        """
-        return self.mdb.batch_outbound_keys(self.batch.key)
-
     @property
     def worker_name(self):
         # TODO better way of working out worker_name
