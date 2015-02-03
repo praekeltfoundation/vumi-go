@@ -56,29 +56,17 @@ class TestConversationWrapper(VumiTestCase):
         yield user_account.save()
 
     @inlineCallbacks
-    def test_count_replies(self):
+    def test_count_inbound_messages(self):
         # XXX: Does this test make sense at all?
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
-        self.assertEqual((yield self.conv.count_replies()), 5)
+        self.assertEqual((yield self.conv.count_inbound_messages()), 5)
 
     @inlineCallbacks
-    def test_inbound_keys(self):
-        messages = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
-        keys = set([message['message_id'] for message in messages])
-        self.assertEqual(set((yield self.conv.inbound_keys())), keys)
-
-    @inlineCallbacks
-    def test_count_sent_messages(self):
+    def test_count_outbound_messages(self):
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        self.assertEqual((yield self.conv.count_sent_messages()), 5)
-
-    @inlineCallbacks
-    def test_outbound_keys(self):
-        messages = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        keys = set([message['message_id'] for message in messages])
-        self.assertEqual(set((yield self.conv.outbound_keys())), keys)
+        self.assertEqual((yield self.conv.count_outbound_messages()), 5)
 
     @inlineCallbacks
     def test_count_inbound_uniques(self):
@@ -284,22 +272,6 @@ class TestConversationWrapper(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_get_progress_percentage_acks(self):
-        yield self.conv.start()
-        self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        yield self.store_events(outbound, 'ack', count=4)
-        self.assertEqual((yield self.conv.get_progress_percentage()), 80)
-
-    @inlineCallbacks
-    def test_get_progress_percentage_nacks(self):
-        yield self.conv.start()
-        self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        yield self.store_events(outbound, 'nack', count=4)
-        self.assertEqual((yield self.conv.get_progress_percentage()), 80)
-
-    @inlineCallbacks
     def test_get_opted_in_contact_bunches(self):
         contact_store = self.user_helper.user_api.contact_store
         user_account = yield self.user_helper.get_user_account()
@@ -367,93 +339,6 @@ class TestConversationWrapper(VumiTestCase):
         # 20 messages in 20 seconds = 60 messages per minute
         self.assertEqual(
             (yield self.conv.get_outbound_throughput(sample_time=20)), 60)
-
-    @inlineCallbacks
-    def do_search(self, conv, direction, *args, **kwargs):
-        search_callback = {
-            'inbound': conv.find_inbound_messages_matching,
-            'outbound': conv.find_outbound_messages_matching,
-        }[direction]
-
-        results_callback = {
-            'inbound': conv.get_inbound_messages_for_token,
-            'outbound': conv.get_outbound_messages_for_token,
-        }[direction]
-
-        kwargs.update({'wait': True})
-        token = yield search_callback(*args, **kwargs)
-        messages = yield results_callback(token)
-        returnValue(messages)
-
-    @inlineCallbacks
-    def test_find_inbound_messages_matching(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_inbound_to_conv(self.conv, count=11)
-        matching = yield self.do_search(self.conv, 'inbound', 'inbound')
-        self.assertEqual(len(matching), 11)
-        matching = yield self.do_search(self.conv, 'inbound', 'inbound 0')
-        self.assertEqual(len(matching), 1)
-        matching = yield self.do_search(self.conv, 'inbound', 'inbound 1')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(self.conv, 'inbound', 'inbound 1$')
-        self.assertEqual(len(matching), 1)
-
-    @inlineCallbacks
-    def test_find_inbound_messages_matching_flags(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_inbound_to_conv(self.conv, count=2)
-        matching = yield self.do_search(
-            self.conv, 'inbound', 'INBOUND', flags="i")
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(
-            self.conv, 'inbound', 'INBOUND', flags="")
-        self.assertEqual(len(matching), 0)
-
-    @inlineCallbacks
-    def test_find_inbound_messages_matching_flags_custom_key(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_inbound_to_conv(self.conv, count=2)
-        matching = yield self.do_search(
-            self.conv, 'inbound', 'FROM', flags='i', key='msg.from_addr')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(
-            self.conv, 'inbound', 'FROM', flags='', key='msg.from_addr')
-        self.assertEqual(len(matching), 0)
-
-    @inlineCallbacks
-    def test_find_outbound_messages_matching(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(self.conv, count=11)
-        matching = yield self.do_search(self.conv, 'outbound', 'outbound')
-        self.assertEqual(len(matching), 11)
-        matching = yield self.do_search(self.conv, 'outbound', 'outbound 0')
-        self.assertEqual(len(matching), 1)
-        matching = yield self.do_search(self.conv, 'outbound', 'outbound 1')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(self.conv, 'outbound', 'outbound 1$')
-        self.assertEqual(len(matching), 1)
-
-    @inlineCallbacks
-    def test_find_outbound_messages_matching_flags(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(self.conv, count=2)
-        matching = yield self.do_search(
-            self.conv, 'outbound', 'OUTBOUND', flags='i')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(
-            self.conv, 'outbound', 'OUTBOUND', flags='')
-        self.assertEqual(len(matching), 0)
-
-    @inlineCallbacks
-    def test_find_outbound_messages_matching_flags_custom_key(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(self.conv, count=2)
-        matching = yield self.do_search(
-            self.conv, 'outbound', 'TO', flags='i', key='msg.to_addr')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(
-            self.conv, 'outbound', 'TO', flags='', key='msg.to_addr')
-        self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
     def test_get_aggregate_keys(self):

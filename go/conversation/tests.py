@@ -1023,9 +1023,10 @@ class TestConversationTasks(GoDjangoTestCase):
             email, 'messages-export.zip', 'messages-export.csv')
         reader = csv.DictReader(fp)
         message_ids = [row['message_id'] for row in reader]
-        self.assertEqual(
-            set(message_ids),
-            set(conv.inbound_keys() + conv.outbound_keys()))
+        all_keys = set()
+        all_keys.update(conv.mdb.batch_inbound_keys(conv.batch.key))
+        all_keys.update(conv.mdb.batch_outbound_keys(conv.batch.key))
+        self.assertEqual(set(message_ids), all_keys)
 
     def test_export_conversation_message_session_events(self):
         conv = self.create_conversation(reply_count=0)

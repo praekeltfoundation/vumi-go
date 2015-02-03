@@ -48,6 +48,10 @@ def mk_message_cost(**fields):
     fields['message_cost'] = maybe_decimal(fields.get('message_cost', 0.0))
     fields['session_cost'] = maybe_decimal(fields.get('session_cost', 0.0))
     fields['storage_cost'] = maybe_decimal(fields.get('storage_cost', 0.0))
+    fields['session_unit_cost'] = maybe_decimal(
+        fields.get('session_unit_cost', 0.0))
+    fields['session_unit_time'] = maybe_decimal(
+        fields.get('session_unit_time', 0.0))
     fields['markup_percent'] = maybe_decimal(fields.get('markup_percent', 0.0))
     fields.setdefault('message_direction', MessageCost.DIRECTION_INBOUND)
 
@@ -62,6 +66,7 @@ def mk_transaction(account, tag_pool_name='pool1',
                    transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE,
                    message_direction=MessageCost.DIRECTION_INBOUND,
                    message_cost=100, storage_cost=50, session_cost=10,
+                   session_unit_cost=10, session_unit_time=20,
                    markup_percent=10.0, credit_factor=0.25, credit_amount=28,
                    provider=None, status=Transaction.STATUS_COMPLETED,
                    created=None, **kwargs):
@@ -75,6 +80,8 @@ def mk_transaction(account, tag_pool_name='pool1',
         message_cost=maybe_decimal(message_cost),
         storage_cost=maybe_decimal(storage_cost),
         session_cost=maybe_decimal(session_cost),
+        session_unit_cost=maybe_decimal(session_unit_cost),
+        session_unit_time=maybe_decimal(session_unit_time),
         markup_percent=maybe_decimal(markup_percent),
         credit_factor=maybe_decimal(credit_factor),
         credit_amount=credit_amount,
