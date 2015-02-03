@@ -1,39 +1,15 @@
+from datetime import datetime
+
 from django.core.management.base import BaseCommand
 
 from go.base.utils import vumi_api_for_user
 from go.base.command_utils import get_user_by_email
 
 
-def per_date(collection):
-    bucket = {}
-    for message in collection:
-        key = message.msg['timestamp'].date()
-        bucket.setdefault(key, 0)
-        bucket[key] += 1
-    return bucket
-
-
 def print_dates(bucket, io):
     items = sorted(bucket.items(), key=lambda t: t[0])
     for item, count in items:
         io.write('%s: %s\n' % (item.strftime('%Y-%m-%d'), count))
-
-
-def get_inbound(message_store, keys):
-    for key in keys:
-        yield message_store.inbound_messages.load(key)
-
-
-def get_outbound(message_store, keys):
-    for key in keys:
-        yield message_store.outbound_messages.load(key)
-
-
-def get_msisdns(key, collection):
-    uniques = set([])
-    for message in collection:
-        uniques.add(message.msg[key])
-    return uniques
 
 
 class Command(BaseCommand):
@@ -129,18 +105,27 @@ class Command(BaseCommand):
         self.out(u'Total Sent in batch %s: %s\n' % (
             batch_key, message_store.batch_outbound_count(batch_key),))
 
-    def do_batch_key_breakdown(self, message_store, batch_key):
-        inbound_keys = message_store.batch_inbound_keys(batch_key)
-        outbound_keys = message_store.batch_outbound_keys(batch_key)
+    def collect_stats(self, index_page):
+        per_date = {}
+        uniques = set()
+        while index_page is not None:
+            for _message_id, timestamp, addr in index_page:
+                date = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").date()
+                per_date.setdefault(date, 0)
+                per_date[date] += 1
+                uniques.add(addr)
+            index_page = index_page.next_page()
+        return per_date, uniques
 
-        inbound = list(get_inbound(message_store, inbound_keys))
-        outbound = list(get_outbound(message_store, outbound_keys))
-        inbound_msisdns = get_msisdns('from_addr', inbound)
-        outbound_msisdns = get_msisdns('to_addr', outbound)
-        all_msisdns = inbound_msisdns.union(outbound_msisdns)
+    def do_batch_key_breakdown(self, msg_store, batch_key):
+        inbound = msg_store.batch_inbound_keys_with_addresses(batch_key)
+        inbound_per_date, inbound_uniques = self.collect_stats(inbound)
+        outbound = msg_store.batch_inbound_keys_with_addresses(batch_key)
+        outbound_per_date, outbound_uniques = self.collect_stats(outbound)
+        all_uniques = inbound_uniques.union(outbound_uniques)
 
-        self.out(u'Total Uniques: %s\n' % (len(all_msisdns),))
+        self.out(u'Total Uniques: %s\n' % (len(all_uniques),))
         self.out(u'Received per date:\n')
-        print_dates(per_date(inbound), self.stdout)
+        print_dates(inbound_per_date, self.stdout)
         self.out(u'Sent per date:\n')
-        print_dates(per_date(outbound), self.stdout)
+        print_dates(outbound_per_date, self.stdout)
