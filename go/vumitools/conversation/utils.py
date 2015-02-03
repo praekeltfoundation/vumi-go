@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import warnings
-from datetime import datetime
-from collections import defaultdict
 
 from twisted.internet.defer import returnValue
 
@@ -343,34 +341,6 @@ class ConversationWrapper(object):
         returnValue(
             sorted(sent_messages, key=lambda msg: msg['timestamp'],
                    reverse=True))
-
-    @Manager.calls_manager
-    def get_aggregate_count(self, direction, bucket_func=None):
-        aggregate_keys = yield self.get_aggregate_keys(direction, bucket_func)
-        returnValue([(bucket, len(keys)) for bucket, keys in aggregate_keys])
-
-    @Manager.calls_manager
-    def get_aggregate_keys(self, direction, bucket_func=None):
-        """
-        Get aggregated total count of messages handled bucketed per day.
-
-        :param callable bucket_func:
-            A function that when given a timestamp returns an appropriate
-            value that will be used as the bucket key.
-        """
-        message_callback = {
-            'inbound': self.mdb.get_inbound_message_keys,
-            'outbound': self.mdb.get_outbound_message_keys,
-        }.get(direction, self.mdb.get_inbound_message_keys)
-
-        bucket_func = bucket_func or (lambda dt: dt.date())
-        results = yield message_callback(self.batch.key, with_timestamp=True)
-        aggregates = defaultdict(list)
-        for key, timestamp in results:
-            bucket = bucket_func(datetime.fromtimestamp(timestamp))
-            aggregates[bucket].append(key)
-
-        returnValue(sorted(aggregates.items()))
 
     @property
     def worker_name(self):

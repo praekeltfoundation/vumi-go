@@ -164,14 +164,13 @@ class TestGoSystemStatsCommand(GoDjangoTestCase):
 
         cmd = self.run_command(command=["message_counts_by_month"])
 
-        # TODO fix once we support uniques properly again
         self.assert_csv_output(cmd, [
             "date,conversations_started,"
             "inbound_message_count,outbound_message_count,"
             "inbound_uniques,outbound_uniques,total_uniques",
-            "09/01/2013,1,3,6,0,0,0",
-            "11/01/2013,3,2,2,0,0,0",
-            "12/01/2013,2,4,6,0,0,0",
+            "09/01/2013,1,3,6,1,2,2",
+            "11/01/2013,3,2,2,2,2,2",
+            "12/01/2013,2,4,6,2,6,6",
         ])
 
     def test_custom_date_format(self):

@@ -341,40 +341,6 @@ class TestConversationWrapper(VumiTestCase):
             (yield self.conv.get_outbound_throughput(sample_time=20)), 60)
 
     @inlineCallbacks
-    def test_get_aggregate_keys(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(
-            self.conv, 20, time_multiplier=12)
-        inbound_aggregate = yield self.conv.get_aggregate_keys('inbound')
-        self.assertEqual(inbound_aggregate, [])
-        outbound_aggregate = yield self.conv.get_aggregate_keys('outbound')
-        bucket_keys = [bucket for bucket, _ in outbound_aggregate]
-        buckets = [keys for _, keys in outbound_aggregate]
-        self.assertEqual(
-            bucket_keys,
-            [datetime.now().date() - timedelta(days=i)
-                for i in range(9, -1, -1)])
-        for bucket in buckets:
-            self.assertEqual(len(bucket), 2)
-
-    @inlineCallbacks
-    def test_get_aggregate_count(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(
-            self.conv, 20, time_multiplier=12)
-        inbound_aggregate = yield self.conv.get_aggregate_count('inbound')
-        self.assertEqual(inbound_aggregate, [])
-        outbound_aggregate = yield self.conv.get_aggregate_count('outbound')
-        bucket_keys = [bucket for bucket, _ in outbound_aggregate]
-        buckets = [keys for _, keys in outbound_aggregate]
-        self.assertEqual(
-            bucket_keys,
-            [datetime.now().date() - timedelta(days=i)
-                for i in range(9, -1, -1)])
-        for bucket in buckets:
-            self.assertEqual(bucket, 2)
-
-    @inlineCallbacks
     def test_get_groups(self):
         groups = yield self.user_helper.user_api.list_groups()
         self.assertEqual([], groups)
