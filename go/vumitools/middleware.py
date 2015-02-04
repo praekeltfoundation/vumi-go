@@ -178,6 +178,10 @@ class MetricsMiddleware(BaseMiddleware):
         NOTE:   This does not apply for events or failures, the connectors
                 names are always used for those since those message types are
                 not guaranteed to have a `transport_name` value.
+    :param list metrics_connectors:
+        List of connector names to fire metrics for. Useful for when wrapping
+        dispatchers with many connectors, only a subset of which should
+        generate metrics. Defaults to all connectors.
     """
 
     KNOWN_MODES = frozenset(['active', 'passive'])
