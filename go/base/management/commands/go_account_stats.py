@@ -120,7 +120,7 @@ class Command(BaseCommand):
     def do_batch_key_breakdown(self, msg_store, batch_key):
         inbound = msg_store.batch_inbound_keys_with_addresses(batch_key)
         inbound_per_date, inbound_uniques = self.collect_stats(inbound)
-        outbound = msg_store.batch_inbound_keys_with_addresses(batch_key)
+        outbound = msg_store.batch_outbound_keys_with_addresses(batch_key)
         outbound_per_date, outbound_uniques = self.collect_stats(outbound)
         all_uniques = inbound_uniques.union(outbound_uniques)
 

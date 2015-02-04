@@ -64,16 +64,18 @@ class TestGoAccountStatsCommand(GoDjangoTestCase):
             u'bulk_message', name=u'active', started=True)
         msgs = msg_helper.add_inbound_to_conv(conv, 5, time_multiplier=0)
         msg_helper.add_replies_to_conv(conv, msgs)
+        # Add one more inbound message so sent != received.
+        msg_helper.add_inbound_to_conv(conv, 1, time_multiplier=0)
 
         self.command.handle(self.user_email, 'stats', conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(output, [
             u'Conversation: active',
-            u'Total Received in batch %s: 5' % (conv.batch.key,),
+            u'Total Received in batch %s: 6' % (conv.batch.key,),
             u'Total Sent in batch %s: 5' % (conv.batch.key,),
             u'Total Uniques: 5',
             u'Received per date:',
-            u'%s: 5' % (datetime.now().date(),),
+            u'%s: 6' % (datetime.now().date(),),
             u'Sent per date:',
             u'%s: 5' % (datetime.now().date(),),
         ])
