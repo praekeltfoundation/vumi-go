@@ -178,7 +178,7 @@ class MetricsMiddleware(BaseMiddleware):
         NOTE:   This does not apply for events or failures, the connectors
                 names are always used for those since those message types are
                 not guaranteed to have a `transport_name` value.
-    :param list metrics_connectors:
+    :param list metric_connectors:
         List of connector names to fire metrics for. Useful for when wrapping
         dispatchers with many connectors, only a subset of which should
         generate metrics. Defaults to all connectors.
@@ -209,6 +209,8 @@ class MetricsMiddleware(BaseMiddleware):
         if self.op_mode not in self.KNOWN_MODES:
             raise ConfigError('Unknown op_mode: %s' % (
                 self.op_mode,))
+        self.metric_connectors_specified = ('metric_connectors' in self.config)
+        self.metric_connectors = set(self.config.get('metric_connectors', []))
 
     @inlineCallbacks
     def setup_middleware(self):
@@ -297,6 +299,11 @@ class MetricsMiddleware(BaseMiddleware):
             transport_name, addr)
         if timestamp:
             returnValue(time.time() - timestamp)
+
+    def is_metric_connector(self, connector_name):
+        return (
+            not self.metric_connectors_specified or
+            connector_name in self.metric_connectors)
 
     def get_name(self, message, connector_name):
         if self.op_mode == 'active':
@@ -392,6 +399,8 @@ class MetricsMiddleware(BaseMiddleware):
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
+        if not self.is_metric_connector(connector_name):
+            return
         name = self.get_name(message, connector_name)
 
         yield self.set_inbound_timestamp(name, message)
@@ -411,6 +420,8 @@ class MetricsMiddleware(BaseMiddleware):
 
     @inlineCallbacks
     def handle_outbound(self, message, connector_name):
+        if not self.is_metric_connector(connector_name):
+            return
         name = self.get_name(message, connector_name)
 
         if message['session_event'] == message.SESSION_NEW:
@@ -431,6 +442,8 @@ class MetricsMiddleware(BaseMiddleware):
         returnValue(message)
 
     def handle_event(self, event, connector_name):
+        if not self.is_metric_connector(connector_name):
+            return
         self.increment_counter(
             connector_name, 'event.%s' % (event['event_type']))
         if event['event_type'] == 'delivery_report':
@@ -439,6 +452,8 @@ class MetricsMiddleware(BaseMiddleware):
         return event
 
     def handle_failure(self, failure, connector_name):
+        if not self.is_metric_connector(connector_name):
+            return
         self.increment_counter(connector_name, 'failure.%s' % (
             failure['failure_code'] or 'unspecified',))
         return failure
