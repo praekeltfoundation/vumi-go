@@ -159,6 +159,7 @@ class TestNoStreamingHTTPWorkerBase(VumiTestCase):
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
+            'conversation_cache_ttl': 0,
         }
         self.config.update(config_overrides)
         self.app = yield self.app_helper.get_app_worker(self.config)

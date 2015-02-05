@@ -1,11 +1,10 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.internet.task import Clock
 
 from vumi.tests.helpers import VumiTestCase, MessageHelper
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata, AccountCache,
+    AccountRoutingTableDispatcher, RoutingMetadata,
     RoutingError, UnroutableMessageError, NoTargetError)
 from go.vumitools.routing_table import RoutingTable
 from go.vumitools.tests.helpers import VumiApiHelper
@@ -276,132 +275,6 @@ class TestRoutingMetadata(VumiTestCase):
         self.set_hops(msg, [["sc1", "dc1"], ["sc2", "dc2"]])
         self.set_outbound_hops(msg, [["dc2", "sc2"], ["dc1", "sc1"]])
         self.assertEqual(rmeta.unroutable_event_done(), True)
-
-
-class TestAccountCache(VumiTestCase):
-    @inlineCallbacks
-    def setUp(self):
-        self.vumi_helper = yield self.add_helper(VumiApiHelper())
-        self.user_helper = yield self.vumi_helper.make_user(u'testuser')
-        self.user_account_key = self.user_helper.account_key
-
-        self.user_account = yield self.user_helper.get_user_account()
-        self.clock = Clock()
-
-    @inlineCallbacks
-    def test_get_account_not_cached(self):
-        """
-        When fetching an uncached account, we cache it.
-        """
-        cache = AccountCache(self.clock, 5)
-        self.assertEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors, {})
-
-        account = yield cache.get_account(self.user_helper.user_api)
-        self.assertEqual(account.key, self.user_account_key)
-        self.assertEqual(cache._accounts, {self.user_account_key: account})
-        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
-
-        # Clean up remaining state.
-        cache.cleanup()
-        self.assertEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors, {})
-
-    @inlineCallbacks
-    def test_cache_eviction(self):
-        """
-        When the TTL is reached, the account is removed from the cache.
-        """
-        cache = AccountCache(self.clock, 5)
-        account = yield cache.get_account(self.user_helper.user_api)
-        self.assertEqual(account.key, self.user_account_key)
-        self.assertEqual(cache._accounts, {self.user_account_key: account})
-        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
-
-        self.clock.advance(4.9)
-        self.assertNotEqual(cache._accounts, {})
-        self.assertNotEqual(cache._evictors, {})
-
-        self.clock.advance(0.5)
-        self.assertEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors, {})
-
-    @inlineCallbacks
-    def test_multiple_cache_eviction(self):
-        """
-        Each account has its own TTL.
-        """
-        user_helper_2 = yield self.vumi_helper.make_user(u'testuser')
-        account_key_2 = user_helper_2.account_key
-
-        cache = AccountCache(self.clock, 5)
-        account = yield cache.get_account(self.user_helper.user_api)
-        self.assertEqual(cache._accounts, {self.user_account_key: account})
-        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
-
-        self.clock.advance(3)
-        account2 = yield cache.get_account(user_helper_2.user_api)
-        self.assertEqual(cache._accounts, {
-            self.user_account_key: account,
-            account_key_2: account2,
-        })
-        self.assertEqual(
-            set(cache._evictors.keys()),
-            set([self.user_account_key, account_key_2]))
-
-        self.clock.advance(3)
-        self.assertEqual(cache._accounts, {
-            account_key_2: account2,
-        })
-        self.assertEqual(cache._evictors.keys(), [account_key_2])
-
-        self.clock.advance(3)
-        self.assertEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors, {})
-
-    @inlineCallbacks
-    def test_get_account_no_caching(self):
-        """
-        When caching is disabled, we always fetch the account and never
-        store it.
-        """
-        cache = AccountCache(self.clock, 0)
-        self.assertEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors, {})
-
-        account = yield cache.get_account(self.user_helper.user_api)
-        self.assertEqual(account.key, self.user_account_key)
-        self.assertEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors, {})
-
-    @inlineCallbacks
-    def test_schedule_duplicate_eviction(self):
-        """
-        If we schedule an eviction that already exists, we keep the old one
-        instead.
-        """
-        cache = AccountCache(self.clock, 5)
-        yield cache.get_account(self.user_helper.user_api)
-        self.assertEqual(cache._evictors.keys(), [self.user_account_key])
-
-        delayed_call = cache._evictors[self.user_account_key]
-        self.clock.advance(1)
-
-        # Calling schedule_eviction() doesn't replace the existing one.
-        cache.schedule_eviction(self.user_account_key)
-        self.assertNotEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors[self.user_account_key], delayed_call)
-
-        # The existing eviction happens at the expected time.
-        self.clock.advance(4)
-        self.assertEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors, {})
-
-        # Advance to the time the new eviction would have been schduled to make
-        # sure nothing breaks.
-        self.clock.advance(1)
-        self.assertEqual(cache._accounts, {})
-        self.assertEqual(cache._evictors, {})
 
 
 class RoutingTableDispatcherTestCase(VumiTestCase):

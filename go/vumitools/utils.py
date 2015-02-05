@@ -123,11 +123,16 @@ class MessageMetadataHelper(MessageMetadataDictHelper):
     2. Objects retreived from those stores get stashed on the message object.
        This is helpful for preventing duplicate lookups within a worker.
        (Between different middlewares, for example.)
+
+    In addition, use an external conversation cache (if one is provided) to
+    allow caching of conversation objects between different messages in the
+    same worker.
     """
 
-    def __init__(self, vumi_api, message):
+    def __init__(self, vumi_api, message, conversation_cache=None):
         self.vumi_api = vumi_api
         self.message = message
+        self._conversation_cache = conversation_cache
 
         super(MessageMetadataHelper, self).__init__(
             message.get('helper_metadata', {}))
@@ -162,9 +167,13 @@ class MessageMetadataHelper(MessageMetadataDictHelper):
         return self.vumi_api.get_user_api(self.get_account_key())
 
     def get_conversation(self):
+        if self._conversation_cache is not None:
+            getter = lambda key: self._conversation_cache.get_model(
+                self.get_user_api().get_wrapped_conversation, key)
+        else:
+            getter = self.get_user_api().get_wrapped_conversation
         return self._get_if_not_stashed(
-            'conversation', self.get_user_api().get_wrapped_conversation,
-            self.get_conversation_key())
+            'conversation', getter, self.get_conversation_key())
 
     def is_optout_message(self):
         # To avoid circular imports.
