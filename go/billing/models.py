@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING
 
 from django.db import models
 from django.db.models.signals import post_save
@@ -138,8 +138,10 @@ class MessageCost(models.Model):
             session_length_cost, markup_percent, context=context)
 
     @classmethod
-    def calculate_credit_cost(cls, message_cost, storage_cost, markup_percent,
-                              session_cost, session_created, context=None):
+    def calculate_credit_cost(
+            cls, message_cost, storage_cost, markup_percent, session_cost,
+            session_created, session_unit_cost=None, session_unit_length=None,
+            session_length=None, context=None):
         """
         Return the total cost for both the message and the session, if any,
         in credits.
@@ -147,6 +149,11 @@ class MessageCost(models.Model):
         base_cost = message_cost + storage_cost
         if session_created:
             base_cost += session_cost
+        if session_length and session_unit_length and session_unit_cost:
+            units = (
+                session_length / session_unit_length
+                ).to_integral_exact(rounding=ROUND_CEILING)
+            base_cost += units * session_unit_cost
         return cls.apply_markup_and_convert_to_credits(
             base_cost, markup_percent, context=context)
 
