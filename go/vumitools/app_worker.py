@@ -198,7 +198,8 @@ class GoWorkerMixin(object):
             If the key count difference between the message_store and
             the cache is bigger than the delta a reconciliation is initiated.
         """
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
+        conv = yield self.get_conversation(
+            user_api.user_account_key, conversation_key)
         if conv is None:
             log.error('Conversation does not exist: %s' % (conversation_key,))
             return
@@ -223,12 +224,10 @@ class GoWorkerMixin(object):
             delivery_class, message.user(), create=create)
         returnValue(contact)
 
-    @inlineCallbacks
     def get_conversation(self, user_account_key, conversation_key):
         user_api = self.get_user_api(user_account_key)
-        conv = yield self._conversation_cache.get_model(
-            user_api.get_conversation, conversation_key)
-        returnValue(user_api.wrap_conversation(conv))
+        return self._conversation_cache.get_model(
+            user_api.get_wrapped_conversation, conversation_key)
 
     def get_router(self, user_account_key, router_key):
         user_api = self.get_user_api(user_account_key)
