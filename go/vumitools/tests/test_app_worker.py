@@ -173,6 +173,40 @@ class TestGoApplicationWorker(VumiTestCase):
         self.assertTrue(logmsg.startswith("Ignoring msg due to IgnoreMessage"))
         self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
 
+    @inlineCallbacks
+    def test_conversation_lookup_cached_start_command(self):
+        """
+        When we process a start command, the conversation lookup is cached.
+        """
+        cache = self.app._conversation_cache
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.start_conversation(self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    @inlineCallbacks
+    def test_conversation_lookup_cached_for_message(self):
+        """
+        When we process a message, the conversation lookup is cached.
+        """
+        yield self.app_helper.start_conversation(self.conv)
+        cache = self.app._conversation_cache
+        cache.cleanup()
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.make_dispatch_inbound("inbound", conv=self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    @inlineCallbacks
+    def test_conversation_lookup_cached_for_event(self):
+        """
+        When we process an event, the conversation lookup is cached.
+        """
+        yield self.app_helper.start_conversation(self.conv)
+        cache = self.app._conversation_cache
+        cache.cleanup()
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.make_dispatch_ack(conv=self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
 
 class DummyRouter(GoRouterWorker):
     worker_name = 'dummy_router'
