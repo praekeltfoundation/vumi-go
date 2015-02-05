@@ -124,7 +124,7 @@ class MetricsMiddleware(BaseMiddleware):
         Connection configuration details for Redis.
     :param str count_suffix:
         Defaults to 'count'. This is the suffix appended to all
-        counters. If a message is received on endpoint
+        counters. If a message is received on connector
         'foo', counters are published on
         '<manager_name>.foo.inbound.<count_suffix>'
     :param str response_time_suffix:
@@ -170,14 +170,18 @@ class MetricsMiddleware(BaseMiddleware):
     :param str op_mode:
         What mode to operate in, options are `passive` or `active`.
         Defaults to passive.
-        *passive*:  assumes the middleware endpoints are to be used as the
-                    names for metrics publishing.
+        *passive*:  assumes the middleware connector names are to be used as
+                    the names for metrics publishing.
         *active*:   assumes that the individual messages are to be inspected
                     for their `transport_name` values.
 
-        NOTE:   This does not apply for events or failures, the endpoints
-                are always used for those since those message types are not
-                guaranteed to have a `transport_name` value.
+        NOTE:   This does not apply for events or failures, the connectors
+                names are always used for those since those message types are
+                not guaranteed to have a `transport_name` value.
+    :param list metric_connectors:
+        List of connector names to fire metrics for. Useful for when wrapping
+        dispatchers with many connectors, only a subset of which should
+        generate metrics. Defaults to all connectors.
     """
 
     KNOWN_MODES = frozenset(['active', 'passive'])
@@ -205,6 +209,8 @@ class MetricsMiddleware(BaseMiddleware):
         if self.op_mode not in self.KNOWN_MODES:
             raise ConfigError('Unknown op_mode: %s' % (
                 self.op_mode,))
+        self.metric_connectors_specified = ('metric_connectors' in self.config)
+        self.metric_connectors = set(self.config.get('metric_connectors', []))
 
     @inlineCallbacks
     def setup_middleware(self):
@@ -294,10 +300,15 @@ class MetricsMiddleware(BaseMiddleware):
         if timestamp:
             returnValue(time.time() - timestamp)
 
-    def get_name(self, message, endpoint):
+    def is_metric_connector(self, connector_name):
+        return (
+            not self.metric_connectors_specified or
+            connector_name in self.metric_connectors)
+
+    def get_name(self, message, connector_name):
         if self.op_mode == 'active':
             return message['transport_name']
-        return endpoint
+        return connector_name
 
     def get_provider(self, message):
         provider = message.get('provider') or 'unknown'
@@ -387,8 +398,10 @@ class MetricsMiddleware(BaseMiddleware):
                 '%s.tag.%s.%s' % (name, pool, slugname), msg, session_dt)
 
     @inlineCallbacks
-    def handle_inbound(self, message, endpoint):
-        name = self.get_name(message, endpoint)
+    def handle_inbound(self, message, connector_name):
+        if not self.is_metric_connector(connector_name):
+            return
+        name = self.get_name(message, connector_name)
 
         yield self.set_inbound_timestamp(name, message)
         if message['session_event'] == message.SESSION_NEW:
@@ -406,8 +419,10 @@ class MetricsMiddleware(BaseMiddleware):
         returnValue(message)
 
     @inlineCallbacks
-    def handle_outbound(self, message, endpoint):
-        name = self.get_name(message, endpoint)
+    def handle_outbound(self, message, connector_name):
+        if not self.is_metric_connector(connector_name):
+            return
+        name = self.get_name(message, connector_name)
 
         if message['session_event'] == message.SESSION_NEW:
             yield self.set_session_start_timestamp(name, message['from_addr'])
@@ -426,15 +441,20 @@ class MetricsMiddleware(BaseMiddleware):
             self.fire_outbound_tagpool_metrics(name, message, session_dt)
         returnValue(message)
 
-    def handle_event(self, event, endpoint):
-        self.increment_counter(endpoint, 'event.%s' % (event['event_type']))
+    def handle_event(self, event, connector_name):
+        if not self.is_metric_connector(connector_name):
+            return
+        self.increment_counter(
+            connector_name, 'event.%s' % (event['event_type']))
         if event['event_type'] == 'delivery_report':
-            self.increment_counter(endpoint, 'event.%s.%s' % (
+            self.increment_counter(connector_name, 'event.%s.%s' % (
                 event['event_type'], event['delivery_status']))
         return event
 
-    def handle_failure(self, failure, endpoint):
-        self.increment_counter(endpoint, 'failure.%s' % (
+    def handle_failure(self, failure, connector_name):
+        if not self.is_metric_connector(connector_name):
+            return
+        self.increment_counter(connector_name, 'failure.%s' % (
             failure['failure_code'] or 'unspecified',))
         return failure
 
