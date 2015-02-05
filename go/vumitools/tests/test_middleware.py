@@ -702,75 +702,83 @@ class TestMetricsMiddleware(VumiTestCase):
     def test_metric_connectors_inbound_metrics_fired(self):
         mw = yield self.get_middleware({'metric_connectors': ['conn_1']})
         msg1 = self.mw_helper.make_inbound("foo")
-        yield mw.handle_inbound(msg1, 'conn_1')
+        msg2 = yield mw.handle_inbound(msg1, 'conn_1')
         self.assert_metrics(mw, {
             'conn_1.inbound.counter': [1],
         })
+        self.assertEqual(msg1, msg2)
 
     @inlineCallbacks
     def test_metric_connectors_inbound_metrics_not_fired(self):
         mw = yield self.get_middleware({'metric_connectors': ['conn_1']})
         msg1 = self.mw_helper.make_inbound("foo")
-        yield mw.handle_inbound(msg1, 'conn_2')
+        msg2 = yield mw.handle_inbound(msg1, 'conn_2')
         self.assert_metrics_absent(mw, [
             'conn_2.inbound.counter',
         ])
+        self.assertEqual(msg1, msg2)
 
     @inlineCallbacks
     def test_metric_connectors_outbound_fired(self):
         mw = yield self.get_middleware({'metric_connectors': ['conn_1']})
         msg1 = self.mw_helper.make_outbound("foo")
-        yield mw.handle_outbound(msg1, 'conn_1')
+        msg2 = yield mw.handle_outbound(msg1, 'conn_1')
         self.assert_metrics(mw, {
             'conn_1.outbound.counter': [1],
         })
+        self.assertEqual(msg1, msg2)
 
     @inlineCallbacks
     def test_metric_connectors_outbound_not_fired(self):
         mw = yield self.get_middleware({'metric_connectors': ['conn_1']})
         msg1 = self.mw_helper.make_outbound("foo")
-        yield mw.handle_outbound(msg1, 'conn_2')
+        msg2 = yield mw.handle_outbound(msg1, 'conn_2')
         self.assert_metrics_absent(mw, [
             'conn_2.outbound.counter',
         ])
+        self.assertEqual(msg1, msg2)
 
     @inlineCallbacks
     def test_metric_connectors_event_fired(self):
         mw = yield self.get_middleware({'metric_connectors': ['conn_1']})
-        event = self.mw_helper.make_ack()
-        mw.handle_event(event, 'conn_1')
+        event1 = self.mw_helper.make_ack()
+        event2 = mw.handle_event(event1, 'conn_1')
         self.assert_metrics(mw, {
             'conn_1.event.ack.counter': [1],
         })
+        self.assertEqual(event1, event2)
 
     @inlineCallbacks
     def test_metric_connectors_event_not_fired(self):
         mw = yield self.get_middleware({'metric_connectors': ['conn_1']})
-        event = self.mw_helper.make_ack()
-        mw.handle_event(event, 'conn_2')
+        event1 = self.mw_helper.make_ack()
+        event2 = mw.handle_event(event1, 'conn_2')
         self.assert_metrics_absent(mw, [
             'conn_2.event.ack.counter',
         ])
+        self.assertEqual(event1, event2)
 
     @inlineCallbacks
     def test_metric_connectors_failure_fired(self):
         mw = yield self.get_middleware({'metric_connectors': ['conn_1']})
-        fail = FailureMessage(
+        fail1 = FailureMessage(
             message='foo', failure_code='permanent', reason='bar')
-        mw.handle_failure(fail, 'conn_1')
+        fail2 = mw.handle_failure(fail1, 'conn_1')
         self.assert_metrics(mw, {
             'conn_1.failure.permanent.counter': [1],
         })
+        self.assertEqual(fail1, fail2)
 
     @inlineCallbacks
     def test_metric_connectors_failure_not_fired(self):
         mw = yield self.get_middleware({'metric_connectors': ['conn_1']})
-        fail = FailureMessage(
+        fail1 = FailureMessage(
             message='foo', failure_code='permanent', reason='bar')
-        mw.handle_failure(fail, 'conn_2')
+        fail2 = mw.handle_failure(fail1, 'conn_2')
         self.assert_metrics_absent(mw, [
             'conn_2.failure.permanent.counter',
         ])
+        self.assertEqual(fail1, fail2)
 
 
 class TestConversationStoringMiddleware(VumiTestCase):

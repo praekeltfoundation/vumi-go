@@ -400,7 +400,7 @@ class MetricsMiddleware(BaseMiddleware):
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
         if not self.is_metric_connector(connector_name):
-            return
+            returnValue(message)
         name = self.get_name(message, connector_name)
 
         yield self.set_inbound_timestamp(name, message)
@@ -421,7 +421,7 @@ class MetricsMiddleware(BaseMiddleware):
     @inlineCallbacks
     def handle_outbound(self, message, connector_name):
         if not self.is_metric_connector(connector_name):
-            return
+            returnValue(message)
         name = self.get_name(message, connector_name)
 
         if message['session_event'] == message.SESSION_NEW:
@@ -443,7 +443,7 @@ class MetricsMiddleware(BaseMiddleware):
 
     def handle_event(self, event, connector_name):
         if not self.is_metric_connector(connector_name):
-            return
+            return event
         self.increment_counter(
             connector_name, 'event.%s' % (event['event_type']))
         if event['event_type'] == 'delivery_report':
@@ -453,7 +453,7 @@ class MetricsMiddleware(BaseMiddleware):
 
     def handle_failure(self, failure, connector_name):
         if not self.is_metric_connector(connector_name):
-            return
+            return failure
         self.increment_counter(connector_name, 'failure.%s' % (
             failure['failure_code'] or 'unspecified',))
         return failure
