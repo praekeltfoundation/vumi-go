@@ -258,15 +258,6 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
-        """
-        FIXME:  We're forced to do too much hoopla when trying to link events
-                back to the conversation the original message was part of.
-        """
-        outbound_message = yield self.find_outboundmessage_for_event(event)
-        if outbound_message is None:
-            log.warning('Unable to find message %s for event %s.' % (
-                event['user_message_id'], event['event_id']))
-
         config = yield self.get_message_config(event)
         conversation = config.conversation
         ignore = self.get_api_config(conversation, 'ignore_events', False)
