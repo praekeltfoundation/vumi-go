@@ -4,6 +4,7 @@ from twisted.internet.defer import (
     inlineCallbacks, returnValue, maybeDeferred, gatherResults)
 
 from vumi import log
+from vumi.message import TransportUserMessage
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricPublisher, Metric
@@ -252,9 +253,19 @@ class GoWorkerMixin(object):
 
     @inlineCallbacks
     def find_message_for_event(self, event):
-        outbound_message = yield self.find_outboundmessage_for_event(event)
-        if outbound_message:
-            returnValue(outbound_message.msg)
+        if "outbound_msg" in event.cache:
+            outbound_json = event.cache["outbound_json"]
+            if outbound_json is None:
+                returnValue(None)
+            returnValue(TransportUserMessage.from_json(outbound_json))
+
+        outbound = yield self.find_outboundmessage_for_event(event)
+        if outbound is None:
+            event.cache["outbound_json"] = None
+            returnValue(None)
+
+        event.cache["outbound_json"] = outbound.msg.to_json()
+        returnValue(outbound.msg)
 
     @inlineCallbacks
     def find_inboundmessage_for_reply(self, reply):
