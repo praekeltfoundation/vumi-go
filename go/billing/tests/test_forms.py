@@ -108,6 +108,21 @@ class TestMessageCostForm(GoDjangoTestCase):
             ],
         })
 
+    def test_validate_session_length_cost_not_rounded_to_zero(self):
+        mc = self.mk_form(session_unit_cost='1.0', markup_percent='10.0')
+        self.assertTrue(mc.is_valid())
+
+    def test_validate_session_length_cost_rounded_to_zero(self):
+        self.patch_quantization(Decimal('0.1'))
+        mc = self.mk_form(session_unit_cost='0.001', markup_percent='0.1')
+        self.assertFalse(mc.is_valid())
+        self.assertEqual(mc.errors, {
+            '__all__': [
+                'The resulting cost per session time length (in credits) was'
+                ' rounded to 0.',
+            ],
+        })
+
     def test_validate_no_account_and_no_tag_pool(self):
         mc = self.mk_form(account=None, tag_pool=None)
         self.assertTrue(mc.is_valid())

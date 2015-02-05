@@ -120,6 +120,24 @@ class MessageCost(models.Model):
             session_cost, markup_percent, context=context)
 
     @classmethod
+    def calculate_session_unit_credit_cost(
+            cls, session_unit_cost, markup_percent, context=None):
+        """
+        Return the cost per session length (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            session_unit_cost, markup_percent, context=context)
+
+    @classmethod
+    def calculate_session_length_credit_cost(
+            cls, session_length_cost, markup_percent, context=None):
+        """
+        Return the cost of a session length (in credits).
+        """
+        return cls.apply_markup_and_convert_to_credits(
+            session_length_cost, markup_percent, context=context)
+
+    @classmethod
     def calculate_credit_cost(cls, message_cost, storage_cost, markup_percent,
                               session_cost, session_created, context=None):
         """
@@ -205,6 +223,12 @@ class MessageCost(models.Model):
         """Return the calculated cost per session (in credits)."""
         return self.calculate_session_credit_cost(
             self.session_cost, self.markup_percent)
+
+    @property
+    def session_unit_credit_cost(self):
+        """Return the calculated cost per unit of session time (in credits)."""
+        return self.calculate_session_unit_credit_cost(
+            self.session_unit_cost, self.markup_percent)
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)

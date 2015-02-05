@@ -7,7 +7,7 @@ from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import Account, Transaction
 from go.billing.tests.helpers import (
     mk_transaction, get_message_credits, get_storage_credits,
-    get_session_credits)
+    get_session_credits, get_session_length_credits)
 
 from go.billing.django_utils import TransactionSerializer, load_account_credits
 
@@ -40,7 +40,8 @@ class TestTransactionSerializer(GoDjangoTestCase):
                 u"storage_cost": 50.0,
                 u'session_unit_cost': 10.0,
                 u'session_unit_time': 20.0,
-                u'session_length_credits': 0.0,
+                u'session_length_credits':
+                    float(get_session_length_credits(10, 10)),
                 u"message_credits": float(get_message_credits(100.0, 10.0)),
                 u"storage_credits": float(get_storage_credits(50.0, 10.0)),
                 u"session_credits": float(get_session_credits(10.0, 10.0)),

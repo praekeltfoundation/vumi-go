@@ -67,6 +67,7 @@ def mk_transaction(account, tag_pool_name='pool1',
                    message_direction=MessageCost.DIRECTION_INBOUND,
                    message_cost=100, storage_cost=50, session_cost=10,
                    session_unit_cost=10, session_unit_time=20,
+                   session_length_credits=10,
                    markup_percent=10.0, credit_factor=0.25, credit_amount=28,
                    provider=None, status=Transaction.STATUS_COMPLETED,
                    created=None, **kwargs):
@@ -88,6 +89,8 @@ def mk_transaction(account, tag_pool_name='pool1',
         message_credits=get_message_credits(message_cost, markup_percent),
         storage_credits=get_storage_credits(storage_cost, markup_percent),
         session_credits=get_session_credits(session_cost, markup_percent),
+        session_length_credits=get_session_length_credits(
+            session_length_credits, markup_percent),
         status=status, **kwargs)
 
     transaction.save()
@@ -153,6 +156,14 @@ def get_storage_credits(cost, markup):
         return MessageCost.calculate_storage_credit_cost(
             maybe_decimal(cost),
             maybe_decimal(markup))
+
+
+def get_session_length_credits(cost, markup):
+    if cost is None or markup is None:
+        return None
+    else:
+        return MessageCost.calculate_session_length_credit_cost(
+            maybe_decimal(cost), maybe_decimal(markup))
 
 
 def get_line_items(statement):
