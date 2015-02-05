@@ -70,6 +70,19 @@ class TestGoApplicationWorker(VumiTestCase):
         self.conv = yield self.app_helper.create_conversation()
 
     @inlineCallbacks
+    def test_conversation_cache_ttl_config(self):
+        """
+        The conversation_cache_ttl config option is passed to the cache.
+        """
+        # When the config isn't provided, we use the default.
+        self.assertEqual(self.app._conversation_cache._ttl, 5)
+
+        app_helper2 = self.add_helper(AppWorkerHelper(DummyApplication))
+        app2 = yield app_helper2.get_app_worker(
+            {"conversation_cache_ttl": 0})
+        self.assertEqual(app2._conversation_cache._ttl, 0)
+
+    @inlineCallbacks
     def test_message_not_processed_while_stopped(self):
         self.assertFalse(self.conv.running())
         self.assertEqual([], self.app.msgs)

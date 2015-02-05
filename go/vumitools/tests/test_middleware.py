@@ -796,6 +796,18 @@ class TestConversationStoringMiddleware(VumiTestCase):
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
+    def test_conversation_cache_ttl_config(self):
+        """
+        The conversation_cache_ttl config option is passed to the cache.
+        """
+        # When the config isn't provided, we use the default.
+        mw = yield self.mw_helper.create_middleware()
+        self.assertEqual(mw._conversation_cache._ttl, 5)
+        mw2 = yield self.mw_helper.create_middleware(
+            {"conversation_cache_ttl": 0})
+        self.assertEqual(mw2._conversation_cache._ttl, 0)
+
+    @inlineCallbacks
     def test_inbound_message(self):
         mw = yield self.mw_helper.create_middleware()
 
