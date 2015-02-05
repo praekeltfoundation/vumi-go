@@ -151,7 +151,7 @@ class MessageCost(models.Model):
             base_cost += session_cost
         if session_length and session_unit_length and session_unit_cost:
             units = (
-                Decimal(session_length)/Decimal(session_unit_length)
+                session_length / session_unit_length
                 ).to_integral_exact(rounding=ROUND_CEILING)
             base_cost += units * session_unit_cost
         return cls.apply_markup_and_convert_to_credits(
