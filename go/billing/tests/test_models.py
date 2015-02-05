@@ -179,6 +179,19 @@ class TestMessageCost(GoDjangoTestCase):
         self.assertEqual(context.flags[Inexact], 1)
         self.assertEqual(context.flags[Rounded], 1)
 
+    def test_calculate_credit_cost_with_session_length(self):
+        self.assertEqual(
+            MessageCost.calculate_credit_cost(
+                message_cost=Decimal('1.0'),
+                storage_cost=Decimal('3.0'),
+                session_cost=Decimal('2.0'),
+                session_unit_cost=Decimal('2.0'),
+                markup_percent=Decimal('10.0'),
+                session_created=True,
+                session_length=Decimal('25.0'),
+                session_unit_length=Decimal('20.0')),
+            Decimal('110.0'))
+
     def test_message_credit_cost(self):
         mc = self.mk_msg_cost(
             message_cost=Decimal('5.0'),
