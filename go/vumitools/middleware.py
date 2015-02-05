@@ -3,6 +3,7 @@ import math
 import re
 import time
 
+from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
@@ -15,6 +16,7 @@ from vumi.errors import ConfigError
 from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.api import VumiApi
+from go.vumitools.model_object_cache import ModelObjectCache
 from go.vumitools.utils import MessageMetadataHelper
 
 
@@ -464,9 +466,15 @@ class GoStoringMiddleware(StoringMiddleware):
     def setup_middleware(self):
         yield super(GoStoringMiddleware, self).setup_middleware()
         self.vumi_api = yield VumiApi.from_config_async(self.config)
+        # We don't have access to our worker's conversation cache (if any), so
+        # we use our own here to avoid duplicate lookups between messages for
+        # the same conversation.
+        self._conversation_cache = ModelObjectCache(
+            reactor, self.config.get("conversation_cache_ttl", 5))
 
     @inlineCallbacks
     def teardown_middleware(self):
+        yield self._conversation_cache.cleanup()
         yield self.vumi_api.redis.close_manager()
         yield super(GoStoringMiddleware, self).teardown_middleware()
 
@@ -489,7 +497,8 @@ class GoStoringMiddleware(StoringMiddleware):
 class ConversationStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
-        mdh = MessageMetadataHelper(self.vumi_api, msg)
+        mdh = MessageMetadataHelper(
+            self.vumi_api, msg, conversation_cache=self._conversation_cache)
         conversation = yield mdh.get_conversation()
         returnValue(conversation.batch.key)
 
@@ -497,6 +506,7 @@ class ConversationStoringMiddleware(GoStoringMiddleware):
 class RouterStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
-        mdh = MessageMetadataHelper(self.vumi_api, msg)
+        mdh = MessageMetadataHelper(
+            self.vumi_api, msg, conversation_cache=self._conversation_cache)
         router = yield mdh.get_router()
         returnValue(router.batch.key)

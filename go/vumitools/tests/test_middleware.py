@@ -847,6 +847,32 @@ class TestConversationStoringMiddleware(VumiTestCase):
         yield mw.handle_publish_outbound(msg2, 'default')
         yield self.assert_stored_outbound([msg2])
 
+    @inlineCallbacks
+    def test_conversation_cached_for_inbound_message(self):
+        """
+        When we process an inbound message, the conversation lookup is cached.
+        """
+        mw = yield self.mw_helper.create_middleware()
+        cache = mw._conversation_cache
+
+        self.assertEqual(cache._models.keys(), [])
+        msg1 = self.mw_helper.make_inbound("inbound", conv=self.conv)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    @inlineCallbacks
+    def test_conversation_cached_for_outbound_message(self):
+        """
+        When we process an outbound message, the conversation lookup is cached.
+        """
+        mw = yield self.mw_helper.create_middleware()
+        cache = mw._conversation_cache
+
+        self.assertEqual(cache._models.keys(), [])
+        msg1 = self.mw_helper.make_outbound("outbound", conv=self.conv)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
 
 class TestRouterStoringMiddleware(VumiTestCase):
 
