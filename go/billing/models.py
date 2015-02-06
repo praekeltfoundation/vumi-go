@@ -139,6 +139,9 @@ class MessageCost(models.Model):
 
     @classmethod
     def calculate_session_length_cost(cls, unit_cost, unit_length, length):
+        if not all((unit_cost, unit_length, length)):
+            return Decimal(0)
+
         units = length / unit_length
         units = units.to_integral_exact(rounding=ROUND_CEILING)
         return units * unit_cost
@@ -153,11 +156,13 @@ class MessageCost(models.Model):
         in credits.
         """
         base_cost = message_cost + storage_cost
+
         if session_created:
             base_cost += session_cost
-        if session_length and session_unit_length and session_unit_cost:
-            base_cost += cls.calculate_session_length_cost(
-                session_unit_cost, session_unit_length, session_length)
+
+        base_cost += cls.calculate_session_length_cost(
+            session_unit_cost, session_unit_length, session_length)
+
         return cls.apply_markup_and_convert_to_credits(
             base_cost, markup_percent, context=context)
 
