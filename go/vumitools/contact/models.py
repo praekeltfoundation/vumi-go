@@ -70,11 +70,7 @@ def contact_field_for_addr(delivery_class, addr):
         raise ContactError("Unsupported transport_type %r" % delivery_class)
 
     contact_field = delivery_class_dict['field']
-    if contact_field == 'msisdn':
-        addr = '+' + addr.lstrip('+')
-    elif contact_field == 'gtalk':
-        addr = addr.partition('/')[0]
-    return normalize_addr(contact_field, addr)
+    return contact_field, addr
 
 
 class ContactGroup(Model):
