@@ -88,6 +88,13 @@ class TransactionResource(BaseResource):
 
     isLeaf = True
 
+    FIELDS = (
+        'account_number', 'message_id', 'tag_pool_name',
+        'tag_name', 'provider', 'message_direction', 'session_created',
+        'transaction_type',)
+
+    NULLABLE_FIELDS = ('provider',)
+
     def __init__(self, connection_pool):
         BaseResource.__init__(self, connection_pool)
         self._notification_mapping = self._create_notification_mapping()
@@ -118,31 +125,27 @@ class TransactionResource(BaseResource):
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
-        data = self._parse_json(request)
-        if data:
-            account_number = data.get('account_number', None)
-            message_id = data.get('message_id', None)
-            tag_pool_name = data.get('tag_pool_name', None)
-            tag_name = data.get('tag_name', None)
-            provider = data.get('provider', None)
-            message_direction = data.get('message_direction', None)
-            session_created = data.get('session_created', None)
-            transaction_type = data.get('transaction_type', None)
+        data = self._parse_post(request)
 
-            if all((account_number, message_id, tag_pool_name, tag_name,
-                    message_direction, session_created is not None)):
-                d = self.create_transaction(
-                    account_number, message_id, tag_pool_name, tag_name,
-                    provider, message_direction,
-                    session_created, transaction_type)
-
-                d.addCallbacks(self._render_to_json, self._handle_error,
-                               callbackArgs=[request], errbackArgs=[request])
-            else:
-                self._handle_bad_request(request)
-        else:
+        if data is None:
             self._handle_bad_request(request)
+        else:
+            d = self.create_transaction(*pluck(data, self.FIELDS))
+
+            d.addCallbacks(self._render_to_json, self._handle_error,
+                           callbackArgs=[request], errbackArgs=[request])
+
         return NOT_DONE_YET
+
+    def _parse_post(self, request):
+        data = self._parse_json(request) or {}
+        data = dict((k, data.get(k)) for k in self.FIELDS)
+        fields = set(self.FIELDS) - set(self.NULLABLE_FIELDS)
+
+        if any(data[k] is None for k in fields):
+            return None
+
+        return data
 
     @defer.inlineCallbacks
     def get_cost(self, account_number, tag_pool_name, provider,
