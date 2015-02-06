@@ -70,6 +70,19 @@ class TestGoApplicationWorker(VumiTestCase):
         self.conv = yield self.app_helper.create_conversation()
 
     @inlineCallbacks
+    def test_conversation_cache_ttl_config(self):
+        """
+        The conversation_cache_ttl config option is passed to the cache.
+        """
+        # When the config isn't provided, we use the default.
+        self.assertEqual(self.app._conversation_cache._ttl, 5)
+
+        app_helper2 = self.add_helper(AppWorkerHelper(DummyApplication))
+        app2 = yield app_helper2.get_app_worker(
+            {"conversation_cache_ttl": 0})
+        self.assertEqual(app2._conversation_cache._ttl, 0)
+
+    @inlineCallbacks
     def test_message_not_processed_while_stopped(self):
         self.assertFalse(self.conv.running())
         self.assertEqual([], self.app.msgs)
@@ -172,6 +185,40 @@ class TestGoApplicationWorker(VumiTestCase):
         [logmsg] = lc.messages()
         self.assertTrue(logmsg.startswith("Ignoring msg due to IgnoreMessage"))
         self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
+
+    @inlineCallbacks
+    def test_conversation_lookup_cached_start_command(self):
+        """
+        When we process a start command, the conversation lookup is cached.
+        """
+        cache = self.app._conversation_cache
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.start_conversation(self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    @inlineCallbacks
+    def test_conversation_lookup_cached_for_message(self):
+        """
+        When we process a message, the conversation lookup is cached.
+        """
+        yield self.app_helper.start_conversation(self.conv)
+        cache = self.app._conversation_cache
+        cache.cleanup()
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.make_dispatch_inbound("inbound", conv=self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    @inlineCallbacks
+    def test_conversation_lookup_cached_for_event(self):
+        """
+        When we process an event, the conversation lookup is cached.
+        """
+        yield self.app_helper.start_conversation(self.conv)
+        cache = self.app._conversation_cache
+        cache.cleanup()
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.make_dispatch_ack(conv=self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
 
 
 class DummyRouter(GoRouterWorker):

@@ -1,4 +1,5 @@
 from zope.interface import implements
+from twisted.internet import reactor
 from twisted.internet.defer import (
     inlineCallbacks, returnValue, maybeDeferred, gatherResults)
 
@@ -6,7 +7,8 @@ from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricPublisher, Metric
-from vumi.config import IConfigData, ConfigText, ConfigDict, ConfigField
+from vumi.config import (
+    IConfigData, ConfigText, ConfigDict, ConfigField, ConfigFloat)
 from vumi.connectors import IgnoreMessage
 
 from go.config import get_conversation_definition
@@ -15,6 +17,7 @@ from go.vumitools.api import (
     ApiEventPublisher)
 from go.vumitools.metrics import (
     get_account_metric_prefix, get_conversation_metric_prefix)
+from go.vumitools.model_object_cache import ModelObjectCache
 from go.vumitools.utils import MessageMetadataHelper
 
 
@@ -52,6 +55,10 @@ class GoWorkerConfigMixin(object):
         "Name of this worker.", required=True, static=True)
     riak_manager = ConfigDict("Riak config.", static=True)
     redis_manager = ConfigDict("Redis config.", static=True)
+    conversation_cache_ttl = ConfigFloat(
+        "TTL (in seconds) for cached conversations. If less than or equal to"
+        " zero, conversations will not be cached.",
+        static=True, default=5)
 
 
 class GoWorkerMixin(object):
@@ -96,6 +103,11 @@ class GoWorkerMixin(object):
         if config.worker_name is not None:
             self.worker_name = config.worker_name
 
+        # Not all workers need this, but it's cheap if unused and easier to put
+        # here than a bunch of more specific places.
+        self._conversation_cache = ModelObjectCache(
+            reactor, config.conversation_cache_ttl)
+
         self.metric_publisher = yield self.start_publisher(MetricPublisher)
 
         yield self._go_setup_command_publisher(config)
@@ -105,6 +117,7 @@ class GoWorkerMixin(object):
 
     @inlineCallbacks
     def _go_teardown_worker(self):
+        yield self._conversation_cache.cleanup()
         # Sometimes something else closes our Redis connection.
         if self.redis is not None:
             yield self.redis.close_manager()
@@ -185,7 +198,8 @@ class GoWorkerMixin(object):
             If the key count difference between the message_store and
             the cache is bigger than the delta a reconciliation is initiated.
         """
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
+        conv = yield self.get_conversation(
+            user_api.user_account_key, conversation_key)
         if conv is None:
             log.error('Conversation does not exist: %s' % (conversation_key,))
             return
@@ -212,14 +226,16 @@ class GoWorkerMixin(object):
 
     def get_conversation(self, user_account_key, conversation_key):
         user_api = self.get_user_api(user_account_key)
-        return user_api.get_wrapped_conversation(conversation_key)
+        return self._conversation_cache.get_model(
+            user_api.get_wrapped_conversation, conversation_key)
 
     def get_router(self, user_account_key, router_key):
         user_api = self.get_user_api(user_account_key)
         return user_api.get_router(router_key)
 
     def get_metadata_helper(self, msg):
-        return MessageMetadataHelper(self.vumi_api, msg)
+        return MessageMetadataHelper(
+            self.vumi_api, msg, conversation_cache=self._conversation_cache)
 
     @inlineCallbacks
     def find_outboundmessage_for_event(self, event):

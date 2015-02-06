@@ -804,6 +804,18 @@ class TestConversationStoringMiddleware(VumiTestCase):
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
+    def test_conversation_cache_ttl_config(self):
+        """
+        The conversation_cache_ttl config option is passed to the cache.
+        """
+        # When the config isn't provided, we use the default.
+        mw = yield self.mw_helper.create_middleware()
+        self.assertEqual(mw._conversation_cache._ttl, 5)
+        mw2 = yield self.mw_helper.create_middleware(
+            {"conversation_cache_ttl": 0})
+        self.assertEqual(mw2._conversation_cache._ttl, 0)
+
+    @inlineCallbacks
     def test_inbound_message(self):
         mw = yield self.mw_helper.create_middleware()
 
@@ -854,6 +866,32 @@ class TestConversationStoringMiddleware(VumiTestCase):
         msg2 = self.mw_helper.make_outbound("outbound", conv=self.conv)
         yield mw.handle_publish_outbound(msg2, 'default')
         yield self.assert_stored_outbound([msg2])
+
+    @inlineCallbacks
+    def test_conversation_cached_for_inbound_message(self):
+        """
+        When we process an inbound message, the conversation lookup is cached.
+        """
+        mw = yield self.mw_helper.create_middleware()
+        cache = mw._conversation_cache
+
+        self.assertEqual(cache._models.keys(), [])
+        msg1 = self.mw_helper.make_inbound("inbound", conv=self.conv)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    @inlineCallbacks
+    def test_conversation_cached_for_outbound_message(self):
+        """
+        When we process an outbound message, the conversation lookup is cached.
+        """
+        mw = yield self.mw_helper.create_middleware()
+        cache = mw._conversation_cache
+
+        self.assertEqual(cache._models.keys(), [])
+        msg1 = self.mw_helper.make_outbound("outbound", conv=self.conv)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        self.assertEqual(cache._models.keys(), [self.conv.key])
 
 
 class TestRouterStoringMiddleware(VumiTestCase):
