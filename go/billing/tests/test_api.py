@@ -107,13 +107,17 @@ class TestTransaction(BillingApiTestCase):
         content.update(kwargs)
         return self.call_api('post', 'transactions', content=content)
 
+    def assert_dict(self, dict_obj, **kw):
+        for name, value in kw.iteritems():
+            self.assertEqual(dict_obj[name], value)
+
     def assert_model(self, model, **kw):
         for name, value in kw.iteritems():
             self.assertEqual(getattr(model, name), value)
 
-    def assert_dict(self, dict_obj, **kw):
-        for name, value in kw.iteritems():
-            self.assertEqual(dict_obj[name], value)
+    def assert_result(self, result, model, **kw):
+        self.assert_dict(result, **kw)
+        self.assert_model(model, **kw)
 
     def test_check_all_low_credit_thresholds(self):
         """
@@ -283,7 +287,7 @@ class TestTransaction(BillingApiTestCase):
             session_created=True)
 
         # Create a transaction
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=account.account_number,
             message_id='msg-id-1',
             tag_pool_name='pool1',
@@ -292,11 +296,9 @@ class TestTransaction(BillingApiTestCase):
             session_created=False,
             transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
-        # Make sure there was a transaction created
-        transaction = Transaction.objects.latest('created')
-
-        self.assert_model(
-            model=transaction,
+        self.assert_result(
+            result=transaction,
+            model=Transaction.objects.latest('created'),
             message_id='msg-id-1',
             tag_name='tag1',
             tag_pool_name='pool1',
@@ -320,7 +322,7 @@ class TestTransaction(BillingApiTestCase):
         self.assertEqual(account.credit_balance, -credit_amount)
 
         # Create a transaction (with session_created=True)
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=account.account_number,
             message_id='msg-id-2',
             tag_pool_name='pool1',
@@ -328,11 +330,9 @@ class TestTransaction(BillingApiTestCase):
             message_direction=MessageCost.DIRECTION_INBOUND,
             session_created=True)
 
-        # Make sure there was a transaction created (with session_created=True)
-        transaction = Transaction.objects.latest('created')
-
-        self.assert_model(
-            model=transaction,
+        self.assert_result(
+            result=transaction,
+            model=Transaction.objects.latest('created'),
             message_id='msg-id-2',
             tag_name='tag1',
             tag_pool_name='pool1',
@@ -365,7 +365,7 @@ class TestTransaction(BillingApiTestCase):
             session_cost=7.0,
             markup_percent=11.0)
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=account.account_number,
             message_id='msg-id-3',
             tag_pool_name='pool1',
@@ -380,7 +380,8 @@ class TestTransaction(BillingApiTestCase):
             Decimal('7.0'),
             session_created=False)
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_id='msg-id-3',
             tag_name='tag1',
@@ -407,7 +408,7 @@ class TestTransaction(BillingApiTestCase):
             session_cost=0.2,
             markup_percent=12.0)
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=account2.account_number,
             message_id='msg-id-4',
             tag_pool_name='pool2',
@@ -422,7 +423,8 @@ class TestTransaction(BillingApiTestCase):
             Decimal('0.2'),
             session_created=False)
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_id='msg-id-4',
             tag_name='tag2',
@@ -500,9 +502,8 @@ class TestTransaction(BillingApiTestCase):
             account_number=self.account.account_number,
             provider='mtn')
 
-        self.assertEqual(transaction['provider'], 'mtn')
-
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             provider='mtn')
 
@@ -510,11 +511,12 @@ class TestTransaction(BillingApiTestCase):
     def test_transaction_provider_none(self):
         mk_message_cost(tag_pool=self.pool1)
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider=None)
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             provider=None)
 
@@ -535,19 +537,21 @@ class TestTransaction(BillingApiTestCase):
             message_cost=0.6,
             provider='mtn')
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider='mtn')
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.6'))
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider='vodacom')
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.7'))
 
@@ -563,19 +567,21 @@ class TestTransaction(BillingApiTestCase):
             message_cost=0.6,
             provider='mtn')
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider='unknown')
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.8'))
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider=None)
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.8'))
 
@@ -593,18 +599,16 @@ class TestTransaction(BillingApiTestCase):
 
         session_length_cost = get_session_length_cost(0.2, 20, 23)
 
-        expected = {
-            'session_unit_cost': Decimal('0.2'),
-            'session_unit_time': Decimal('20.0'),
-            'session_length_cost': session_length_cost,
-            'session_unit_credits': get_session_unit_credits(0.2, 10),
-            'session_length_credits': get_session_length_credits(
+        self.assert_result(
+            result=transaction,
+            model=Transaction.objects.latest('created'),
+            session_unit_cost=Decimal('0.2'),
+            session_unit_time=Decimal('20.0'),
+            session_length_cost=session_length_cost,
+            session_unit_credits=get_session_unit_credits(0.2, 10),
+            session_length_credits=get_session_length_credits(
                 session_length_cost, 10),
-            'session_length': Decimal('23.0'),
-        }
-
-        self.assert_dict(transaction, **expected)
-        self.assert_model(Transaction.objects.latest('created'), **expected)
+            session_length=Decimal('23.0'))
 
     @inlineCallbacks
     def test_transaction_session_length_cost_none_length(self):
@@ -618,14 +622,12 @@ class TestTransaction(BillingApiTestCase):
             account_number=self.account.account_number,
             session_length=None)
 
-        expected = {
-            'session_unit_cost': Decimal('0.2'),
-            'session_unit_time': Decimal('20.0'),
-            'session_length_cost': Decimal(0),
-            'session_unit_credits': get_session_unit_credits(0.2, 10),
-            'session_length_credits': Decimal(0),
-            'session_length': None,
-        }
-
-        self.assert_dict(transaction, **expected)
-        self.assert_model(Transaction.objects.latest('created'), **expected)
+        self.assert_result(
+            result=transaction,
+            model=Transaction.objects.latest('created'),
+            session_unit_cost=Decimal('0.2'),
+            session_unit_time=Decimal('20.0'),
+            session_length_cost=Decimal(0),
+            session_unit_credits=get_session_unit_credits(0.2, 10),
+            session_length_credits=Decimal(0),
+            session_length=None)
