@@ -124,6 +124,10 @@ class Contact(Model):
     mxit_id = Unicode(null=True, index=True)
     wechat_id = Unicode(null=True, index=True)
 
+    ADDRESS_FIELDS = [
+        'msisdn', 'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+        'mxit_id', 'wechat_id']
+
     def add_to_group(self, group):
         if isinstance(group, ContactGroup):
             self.groups.add(group)
