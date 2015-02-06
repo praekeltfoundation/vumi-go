@@ -90,6 +90,8 @@ def mk_transaction(account, tag_pool_name='pool1',
         message_credits=get_message_credits(message_cost, markup_percent),
         storage_credits=get_storage_credits(storage_cost, markup_percent),
         session_credits=get_session_credits(session_cost, markup_percent),
+        session_unit_credits=get_session_unit_credits(
+            session_unit_cost, markup_percent),
         session_length_credits=get_session_length_credits(
             session_length_cost, markup_percent),
         status=status, **kwargs)
@@ -157,6 +159,14 @@ def get_storage_credits(cost, markup):
         return MessageCost.calculate_storage_credit_cost(
             maybe_decimal(cost),
             maybe_decimal(markup))
+
+
+def get_session_unit_credits(cost, markup):
+    if cost is None or markup is None:
+        return None
+    else:
+        return MessageCost.calculate_session_unit_credit_cost(
+            maybe_decimal(cost), maybe_decimal(markup))
 
 
 def get_session_length_credits(cost, markup):

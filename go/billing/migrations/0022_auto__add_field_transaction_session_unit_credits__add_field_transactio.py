@@ -8,6 +8,11 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        # Adding field 'Transaction.session_unit_credits'
+        db.add_column(u'billing_transaction', 'session_unit_credits',
+                      self.gf('django.db.models.fields.DecimalField')(default='0.0', null=True, max_digits=20, decimal_places=6),
+                      keep_default=False)
+
         # Adding field 'Transaction.session_length_cost'
         db.add_column(u'billing_transaction', 'session_length_cost',
                       self.gf('django.db.models.fields.DecimalField')(default='0.0', null=True, max_digits=10, decimal_places=3),
@@ -15,6 +20,9 @@ class Migration(SchemaMigration):
 
 
     def backwards(self, orm):
+        # Deleting field 'Transaction.session_unit_credits'
+        db.delete_column(u'billing_transaction', 'session_unit_credits')
+
         # Deleting field 'Transaction.session_length_cost'
         db.delete_column(u'billing_transaction', 'session_length_cost')
 
@@ -129,6 +137,7 @@ class Migration(SchemaMigration):
             'session_length_cost': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'null': 'True', 'max_digits': '10', 'decimal_places': '3'}),
             'session_length_credits': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'null': 'True', 'max_digits': '20', 'decimal_places': '6'}),
             'session_unit_cost': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'null': 'True', 'max_digits': '10', 'decimal_places': '3'}),
+            'session_unit_credits': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'null': 'True', 'max_digits': '20', 'decimal_places': '6'}),
             'session_unit_time': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'null': 'True', 'max_digits': '10', 'decimal_places': '3'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'Pending'", 'max_length': '20'}),
             'storage_cost': ('django.db.models.fields.DecimalField', [], {'default': "'0.0'", 'null': 'True', 'max_digits': '10', 'decimal_places': '3'}),
