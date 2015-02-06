@@ -375,6 +375,10 @@ class Transaction(models.Model):
         help_text=_("The number of credits this transaction adds or "
                     "subtracts."))
 
+    session_length = models.DecimalField(
+        null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The length of the session (in seconds)"))
+
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,
         help_text=_("The status of this transaction. One of pending, "

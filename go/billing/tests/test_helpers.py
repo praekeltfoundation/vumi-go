@@ -7,7 +7,8 @@ from go.billing.models import (
 from go.billing.tests.helpers import (
     start_of_month, end_of_month, this_month, maybe_decimal,
     get_billing_account, mk_tagpool, mk_message_cost, mk_transaction,
-    mk_statement, get_message_credits, get_session_credits,
+    mk_statement, get_session_length_cost,
+    get_message_credits, get_session_credits,
     get_storage_credits, get_session_unit_credits,
     get_session_length_credits, get_line_items)
 
@@ -111,6 +112,7 @@ class TestHelpers(GoDjangoTestCase):
             markup_percent=10.0,
             credit_factor=11.0,
             credit_amount=28,
+            session_length=23,
             created=date(2015, 3, 23),
             status=Transaction.STATUS_COMPLETED)
 
@@ -134,6 +136,7 @@ class TestHelpers(GoDjangoTestCase):
             markup_percent=Decimal('10.0'),
             credit_factor=Decimal('11.0'),
             credit_amount=28,
+            session_length=Decimal('23.0'),
             created=date(2015, 3, 23),
             status=Transaction.STATUS_COMPLETED)
 
@@ -188,6 +191,14 @@ class TestHelpers(GoDjangoTestCase):
             description='Messages Received',
             cost=Decimal('200.0'),
             credits=None)))
+
+    def test_get_session_length_cost(self):
+        self.assertEqual(
+            get_session_length_cost(1, 2, 3),
+            MessageCost.calculate_session_length_cost(
+                Decimal('1.0'),
+                Decimal('2.0'),
+                Decimal('3.0')))
 
     def test_get_message_credits(self):
         self.assertEqual(
