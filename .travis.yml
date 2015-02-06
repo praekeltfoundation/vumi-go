@@ -33,6 +33,9 @@ before_script:
   - "export PYTHONPATH=."
   - "django-admin.py syncdb --migrate --noinput --settings=go.testsettings"
   - "pip list"
+  # To see what version of Riak we're running and check that it's happy.
+  - riak version
+  - riak-admin member-status
 script:
   - ./run-tests.sh
   - grunt test
