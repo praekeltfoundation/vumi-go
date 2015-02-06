@@ -40,6 +40,7 @@ class TestTransactionSerializer(GoDjangoTestCase):
                 u"storage_cost": 50.0,
                 u'session_unit_cost': 10.0,
                 u'session_unit_time': 20.0,
+                u'session_length_cost': 10.0,
                 u'session_length_credits':
                     float(get_session_length_credits(10, 10)),
                 u"message_credits": float(get_message_credits(100.0, 10.0)),

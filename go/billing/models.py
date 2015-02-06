@@ -351,6 +351,10 @@ class Transaction(models.Model):
         null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The cost per session unit time."))
 
+    session_length_cost = models.DecimalField(
+        null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The session length cost (in cents)"))
+
     session_length_credits = models.DecimalField(
         null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The session length cost (in credits)"))
