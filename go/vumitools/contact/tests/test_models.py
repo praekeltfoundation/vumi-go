@@ -193,6 +193,23 @@ class TestContactStore(VumiTestCase):
         self.assertEqual(contact.key, found_contact.key)
 
     @inlineCallbacks
+    def test_contact_for_field_msisdn(self):
+        contact = yield self.contact_store.new_contact(
+            name=u'name', msisdn=u'+123456')
+        found_contact = yield self.contact_store.contact_for_addr_field(
+            'msisdn', u'+123456', create=False)
+        self.assertEqual(contact.key, found_contact.key)
+
+    @inlineCallbacks
+    def test_contact_for_field_not_found(self):
+        yield self.contact_store.new_contact(
+            name=u'name', msisdn=u'+27831234567')
+        self.contact_store.FIND_BY_INDEX_SEARCH_FALLBACK = False
+        contact_d = self.contact_store.contact_for_addr_field(
+            'msisdn', u'nothing', create=False)
+        yield self.assertFailure(contact_d, ContactNotFoundError)
+
+    @inlineCallbacks
     def test_contact_for_addr_gtalk(self):
         contact = yield self.contact_store.new_contact(
             name=u'name', msisdn=u'+27831234567', gtalk_id=u'foo@example.com')
