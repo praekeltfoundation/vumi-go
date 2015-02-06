@@ -15,8 +15,9 @@ from go.billing.utils import DummySite, DictRowConnectionPool, JSONDecoder
 from go.base.tests.helpers import DjangoVumiApiHelper
 from go.billing.django_utils import load_account_credits
 from go.billing.tests.helpers import (
+    mk_tagpool, mk_message_cost, get_session_length_cost,
     get_message_credits, get_storage_credits, get_session_credits,
-    mk_tagpool, mk_message_cost)
+    get_session_unit_credits, get_session_length_credits)
 
 DB_SUPPORTED = False
 try:
@@ -100,7 +101,8 @@ class TestTransaction(BillingApiTestCase):
             'message_direction': MessageCost.DIRECTION_INBOUND,
             'session_created': False,
             'provider': None,
-            'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE
+            'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE,
+            'session_length': None,
         }
         content.update(kwargs)
         return self.call_api('post', 'transactions', content=content)
@@ -108,6 +110,10 @@ class TestTransaction(BillingApiTestCase):
     def assert_model(self, model, **kw):
         for name, value in kw.iteritems():
             self.assertEqual(getattr(model, name), value)
+
+    def assert_dict(self, dict_obj, **kw):
+        for name, value in kw.iteritems():
+            self.assertEqual(dict_obj[name], value)
 
     def test_check_all_low_credit_thresholds(self):
         """
@@ -572,3 +578,54 @@ class TestTransaction(BillingApiTestCase):
         self.assert_model(
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.8'))
+
+    @inlineCallbacks
+    def test_transaction_session_length_cost(self):
+        mk_message_cost(
+            tag_pool=self.pool1,
+            session_unit_cost=0.2,
+            session_unit_time=20,
+            markup_percent=10)
+
+        transaction = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            session_length=23)
+
+        session_length_cost = get_session_length_cost(0.2, 20, 23)
+
+        expected = {
+            'session_unit_cost': Decimal('0.2'),
+            'session_unit_time': Decimal('20.0'),
+            'session_length_cost': session_length_cost,
+            'session_unit_credits': get_session_unit_credits(0.2, 10),
+            'session_length_credits': get_session_length_credits(
+                session_length_cost, 10),
+            'session_length': Decimal('23.0'),
+        }
+
+        self.assert_dict(transaction, **expected)
+        self.assert_model(Transaction.objects.latest('created'), **expected)
+
+    @inlineCallbacks
+    def test_transaction_session_length_cost_none_length(self):
+        mk_message_cost(
+            tag_pool=self.pool1,
+            session_unit_cost=0.2,
+            session_unit_time=20,
+            markup_percent=10)
+
+        transaction = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            session_length=None)
+
+        expected = {
+            'session_unit_cost': Decimal('0.2'),
+            'session_unit_time': Decimal('20.0'),
+            'session_length_cost': Decimal(0),
+            'session_unit_credits': get_session_unit_credits(0.2, 10),
+            'session_length_credits': Decimal(0),
+            'session_length': None,
+        }
+
+        self.assert_dict(transaction, **expected)
+        self.assert_model(Transaction.objects.latest('created'), **expected)
