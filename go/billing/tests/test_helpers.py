@@ -7,8 +7,9 @@ from go.billing.models import (
 from go.billing.tests.helpers import (
     start_of_month, end_of_month, this_month, maybe_decimal,
     get_billing_account, mk_tagpool, mk_message_cost, mk_transaction,
-    mk_statement, get_message_credits, get_session_credits,
-    get_storage_credits, get_line_items)
+    mk_statement, get_session_length_cost,
+    get_message_credits, get_session_credits,
+    get_storage_credits, get_session_length_credits, get_line_items)
 
 
 class TestHelpers(GoDjangoTestCase):
@@ -105,9 +106,12 @@ class TestHelpers(GoDjangoTestCase):
             message_cost=0.1,
             storage_cost=0.2,
             session_cost=0.3,
+            session_unit_cost=0.4,
+            session_length_cost=0.4,
             markup_percent=10.0,
             credit_factor=11.0,
             credit_amount=28,
+            session_length=23,
             created=date(2015, 3, 23),
             status=Transaction.STATUS_COMPLETED)
 
@@ -121,12 +125,16 @@ class TestHelpers(GoDjangoTestCase):
             message_cost=Decimal('0.1'),
             storage_cost=Decimal('0.2'),
             session_cost=Decimal('0.3'),
+            session_unit_cost=Decimal('0.4'),
+            session_length_cost=Decimal('0.4'),
             message_credits=get_message_credits(0.1, 10.0),
             storage_credits=get_storage_credits(0.2, 10.0),
             session_credits=get_session_credits(0.3, 10.0),
+            session_length_credits=get_session_length_credits(0.4, 10.0),
             markup_percent=Decimal('10.0'),
             credit_factor=Decimal('11.0'),
             credit_amount=28,
+            session_length=Decimal('23.0'),
             created=date(2015, 3, 23),
             status=Transaction.STATUS_COMPLETED)
 
@@ -182,6 +190,14 @@ class TestHelpers(GoDjangoTestCase):
             cost=Decimal('200.0'),
             credits=None)))
 
+    def test_get_session_length_cost(self):
+        self.assertEqual(
+            get_session_length_cost(1, 2, 3),
+            MessageCost.calculate_session_length_cost(
+                Decimal('1.0'),
+                Decimal('2.0'),
+                Decimal('3.0')))
+
     def test_get_message_credits(self):
         self.assertEqual(
             get_message_credits(0.1, 10.0),
@@ -220,6 +236,19 @@ class TestHelpers(GoDjangoTestCase):
 
     def test_get_session_credits_none_markup(self):
         self.assertEqual(get_session_credits(None, 10.0), None)
+
+    def test_get_session_length_credits(self):
+        self.assertEqual(
+            get_session_length_credits(0.1, 10.0),
+            MessageCost.calculate_session_length_credit_cost(
+                Decimal('0.1'),
+                Decimal('10.0')))
+
+    def test_get_session_length_credits_none_cost(self):
+        self.assertEqual(get_session_length_credits(0.1, None), None)
+
+    def test_get_session_length_credits_none_markup(self):
+        self.assertEqual(get_session_length_credits(None, 10.0), None)
 
     def test_get_line_items(self):
         statement = mk_statement(
