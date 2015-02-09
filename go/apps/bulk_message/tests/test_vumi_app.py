@@ -123,6 +123,36 @@ class TestBulkMessageApplication(VumiTestCase):
             (yield self.app.window_manager.count_in_flight(window_id)), 0)
 
     @inlineCallbacks
+    def test_bulk_send_command(self):
+        """
+        If we send a bulk message to a number of contacts, we send a message to
+        the msisdn for each contact.
+        """
+        group = yield self.app_helper.create_group_with_contacts(u'group', 10)
+        conversation = yield self.app_helper.create_conversation(
+            groups=[group])
+        yield self.app_helper.start_conversation(conversation)
+        batch_id = conversation.batch.key
+        yield self.app_helper.dispatch_command(
+            "bulk_send",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            dedupe=False,
+            content="hello world",
+            delivery_class="sms",
+            msg_options={},
+        )
+        yield self.app_helper.kick_delivery()
+        self.clock.advance(self.app.monitor_interval + 1)
+
+        contacts = yield self.get_opted_in_contacts(conversation)
+        msgs = yield self.app_helper.wait_for_dispatched_outbound(10)
+        contact_addrs = sorted([contact.msisdn for contact in contacts])
+        msg_addrs = sorted([msg["to_addr"] for msg in msgs])
+        self.assertEqual(contact_addrs, msg_addrs)
+
+    @inlineCallbacks
     def test_send_message_command(self):
         msg_options = {
             'transport_name': self.app_helper.transport_name,
