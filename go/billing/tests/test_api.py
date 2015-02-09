@@ -17,7 +17,7 @@ from go.billing.django_utils import load_account_credits
 from go.billing.tests.helpers import (
     mk_tagpool, mk_message_cost, get_session_length_cost,
     get_message_credits, get_storage_credits, get_session_credits,
-    get_session_unit_credits, get_session_length_credits)
+    get_session_length_credits)
 
 DB_SUPPORTED = False
 try:
@@ -605,7 +605,6 @@ class TestTransaction(BillingApiTestCase):
             session_unit_cost=Decimal('0.2'),
             session_unit_time=Decimal('20.0'),
             session_length_cost=session_length_cost,
-            session_unit_credits=get_session_unit_credits(0.2, 10),
             session_length_credits=get_session_length_credits(
                 session_length_cost, 10),
             session_length=Decimal('23.0'))
@@ -628,6 +627,5 @@ class TestTransaction(BillingApiTestCase):
             session_unit_cost=Decimal('0.2'),
             session_unit_time=Decimal('20.0'),
             session_length_cost=Decimal(0),
-            session_unit_credits=get_session_unit_credits(0.2, 10),
             session_length_credits=Decimal(0),
             session_length=None)

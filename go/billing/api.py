@@ -244,9 +244,6 @@ class TransactionResource(BaseResource):
         session_credits = MessageCost.calculate_session_credit_cost(
             session_cost, markup_percent)
 
-        session_unit_credits = MessageCost.calculate_session_unit_credit_cost(
-            session_unit_cost, markup_percent)
-
         session_len_credits = MessageCost.calculate_session_length_credit_cost(
             session_len_cost, markup_percent)
 
@@ -260,7 +257,7 @@ class TransactionResource(BaseResource):
                  session_unit_cost, session_length_cost,
                  session_created, markup_percent,
                  message_credits, storage_credits, session_credits,
-                 session_unit_credits, session_length_credits,
+                 session_length_credits,
                  credit_factor, credit_amount,
                  session_unit_time, session_length,
                  status, created, last_modified)
@@ -272,7 +269,7 @@ class TransactionResource(BaseResource):
                  %(session_unit_cost)s, %(session_length_cost)s,
                  %(session_created)s, %(markup_percent)s,
                  %(message_credits)s, %(storage_credits)s, %(session_credits)s,
-                 %(session_unit_credits)s, %(session_length_credits)s,
+                 %(session_length_credits)s,
                  %(credit_factor)s, %(credit_amount)s,
                  %(session_unit_time)s, %(session_length)s,
                  'Completed', now(), now())
@@ -283,7 +280,7 @@ class TransactionResource(BaseResource):
                       session_unit_cost, session_length_cost,
                       session_created, markup_percent,
                       message_credits, storage_credits, session_credits,
-                      session_unit_credits, session_length_credits,
+                      session_length_credits,
                       credit_factor, credit_amount,
                       session_unit_time, session_length,
                       status, created, last_modified
@@ -307,7 +304,6 @@ class TransactionResource(BaseResource):
             'message_credits': message_credits,
             'storage_credits': storage_credits,
             'session_credits': session_credits,
-            'session_unit_credits': session_unit_credits,
             'session_length_credits': session_len_credits,
             'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
             'credit_amount': -credit_amount,
