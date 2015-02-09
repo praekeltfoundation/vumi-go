@@ -222,8 +222,9 @@ class ContactStore(PerAccountStore):
     @Manager.calls_manager
     def new_smart_group(self, name, query):
         group_id = uuid4().get_hex()
-        group = self.groups(group_id, name=name,
-            user_account=self.user_account_key, query=query)
+        group = self.groups(
+            group_id, name=name, user_account=self.user_account_key,
+            query=query)
         yield group.save()
         returnValue(group)
 
