@@ -61,7 +61,8 @@ def normalize_addr(contact_field, addr):
         addr = '+' + addr.lstrip('+')
     elif contact_field == 'gtalk':
         addr = addr.partition('/')[0]
-    return (contact_field, addr)
+    return addr
+
 
 def contact_field_for_addr(delivery_class, addr):
     # TODO: change when we have proper address types in vumi
@@ -334,7 +335,7 @@ class ContactStore(PerAccountStore):
         Returns a contact from a field (address type) and address, raising a
         ContactNotFoundError exception if the contact does not exist.
         """
-        field, value = normalize_addr(field, value)
+        value = normalize_addr(field, value)
         keys = None
         if self.FIND_BY_INDEX:
             keys = yield self.contacts.index_keys(field, value)
