@@ -56,6 +56,14 @@ class ContactNotFoundError(ContactError):
     """Raised when a contact is not found"""
 
 
+def normalize_addr(contact_field, addr):
+    if contact_field == 'msisdn':
+        addr = '+' + addr.lstrip('+')
+    elif contact_field == 'gtalk':
+        addr = addr.partition('/')[0]
+    return addr
+
+
 def contact_field_for_addr(delivery_class, addr):
     # TODO: change when we have proper address types in vumi
     delivery_class_dict = DELIVERY_CLASSES.get(delivery_class, None)
@@ -63,11 +71,7 @@ def contact_field_for_addr(delivery_class, addr):
         raise ContactError("Unsupported transport_type %r" % delivery_class)
 
     contact_field = delivery_class_dict['field']
-    if contact_field == 'msisdn':
-        addr = '+' + addr.lstrip('+')
-    elif contact_field == 'gtalk':
-        addr = addr.partition('/')[0]
-    return (contact_field, addr)
+    return contact_field, addr
 
 
 class ContactGroup(Model):
@@ -116,6 +120,10 @@ class Contact(Model):
     gtalk_id = Unicode(null=True, index=True)
     mxit_id = Unicode(null=True, index=True)
     wechat_id = Unicode(null=True, index=True)
+
+    ADDRESS_FIELDS = [
+        'msisdn', 'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+        'mxit_id', 'wechat_id']
 
     def add_to_group(self, group):
         if isinstance(group, ContactGroup):
@@ -214,8 +222,9 @@ class ContactStore(PerAccountStore):
     @Manager.calls_manager
     def new_smart_group(self, name, query):
         group_id = uuid4().get_hex()
-        group = self.groups(group_id, name=name,
-            user_account=self.user_account_key, query=query)
+        group = self.groups(
+            group_id, name=name, user_account=self.user_account_key,
+            query=query)
         yield group.save()
         returnValue(group)
 
@@ -322,12 +331,11 @@ class ContactStore(PerAccountStore):
         return self.new_contact(**field_dict)
 
     @Manager.calls_manager
-    def contact_for_addr(self, delivery_class, addr, create=True):
+    def contact_for_addr_field(self, field, value, create=True):
         """
-        Returns a contact from a delivery class and address, raising a
+        Returns a contact from a field (address type) and address, raising a
         ContactNotFoundError exception if the contact does not exist.
         """
-        field, value = contact_field_for_addr(delivery_class, addr)
         keys = None
         if self.FIND_BY_INDEX:
             keys = yield self.contacts.index_keys(field, value)
@@ -355,5 +363,21 @@ class ContactStore(PerAccountStore):
                 contact_id, user_account=self.user_account_key, **field_dict))
 
         raise ContactNotFoundError(
-            "Contact with address '%s' for delivery class '%s' not found."
-            % (addr, delivery_class))
+            "Contact with field '%s' equal to value '%s' not found."
+            % (field, value))
+
+    @Manager.calls_manager
+    def contact_for_addr(self, delivery_class, addr, create=True):
+        """
+        Returns a contact from a delivery class and address, raising a
+        ContactNotFoundError exception if the contact does not exist.
+        """
+        addr = normalize_addr(delivery_class, addr)
+        field, value = contact_field_for_addr(delivery_class, addr)
+        try:
+            contact = yield self.contact_for_addr_field(field, value, create)
+        except ContactNotFoundError:
+            raise ContactNotFoundError(
+                "Contact with address '%s' for delivery class '%s' not found."
+                % (addr, delivery_class))
+        returnValue(contact)
