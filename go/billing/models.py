@@ -240,12 +240,6 @@ class MessageCost(models.Model):
         return self.calculate_session_credit_cost(
             self.session_cost, self.markup_percent)
 
-    @property
-    def session_unit_credit_cost(self):
-        """Return the calculated cost per unit of session time (in credits)."""
-        return self.calculate_session_unit_credit_cost(
-            self.session_unit_cost, self.markup_percent)
-
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
 
@@ -344,10 +338,6 @@ class Transaction(models.Model):
     session_credits = models.DecimalField(
         null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The session cost (in credits)."))
-
-    session_unit_credits = models.DecimalField(
-        null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
-        help_text=_("The session unit cost (in credits)"))
 
     session_length_credits = models.DecimalField(
         null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
