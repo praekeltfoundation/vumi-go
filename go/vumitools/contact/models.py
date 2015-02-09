@@ -336,7 +336,6 @@ class ContactStore(PerAccountStore):
         Returns a contact from a field (address type) and address, raising a
         ContactNotFoundError exception if the contact does not exist.
         """
-        value = normalize_addr(field, value)
         keys = None
         if self.FIND_BY_INDEX:
             keys = yield self.contacts.index_keys(field, value)
@@ -373,6 +372,7 @@ class ContactStore(PerAccountStore):
         Returns a contact from a delivery class and address, raising a
         ContactNotFoundError exception if the contact does not exist.
         """
+        addr = normalize_addr(delivery_class, addr)
         field, value = contact_field_for_addr(delivery_class, addr)
         try:
             contact = yield self.contact_for_addr_field(field, value, create)
@@ -381,4 +381,3 @@ class ContactStore(PerAccountStore):
                 "Contact with address '%s' for delivery class '%s' not found."
                 % (addr, delivery_class))
         returnValue(contact)
-        
