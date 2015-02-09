@@ -70,6 +70,10 @@ class BulkMessageApplication(GoApplicationWorker):
     def process_command_bulk_send(self, user_account_key, conversation_key,
                                   batch_id, msg_options, content, dedupe,
                                   delivery_class, **extra_params):
+        # TODO: This is currently *UNSAFE* around Riak errors and worker
+        #       restarts during a bulk send. This will be fixed almot
+        #       immediately, but in the very short term we need the batched
+        #       send more than we need the safety.
 
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
@@ -77,19 +81,24 @@ class BulkMessageApplication(GoApplicationWorker):
                 conversation_key, user_account_key))
             return
 
-        to_addresses = []
+        self.add_conv_to_msg_options(conv, msg_options)
+        window_id = self.get_window_id(conversation_key, batch_id)
+        seen_addresses = set()
+
         for contacts_batch in (
                 yield conv.get_opted_in_contact_bunches(delivery_class)):
             for contact in (yield contacts_batch):
-                to_addresses.append(contact.addr_for(delivery_class))
-        if dedupe:
-            to_addresses = set(to_addresses)
-
-        self.add_conv_to_msg_options(conv, msg_options)
-        window_id = self.get_window_id(conversation_key, batch_id)
-        for to_addr in to_addresses:
-            yield self.send_message_via_window(
-                conv, window_id, batch_id, to_addr, msg_options, content)
+                to_addr = contact.addr_for(delivery_class)
+                if dedupe:
+                    # We only use the seen_addresses set if we're deduping.
+                    if to_addr in seen_addresses:
+                        continue
+                    else:
+                        seen_addresses.add(to_addr)
+                log.info("Bulk send for conversation [%s]: [%s] -> %r" % (
+                    conv.key, contact.key, to_addr))
+                yield self.send_message_via_window(
+                    conv, window_id, batch_id, to_addr, msg_options, content)
 
     def consume_ack(self, event):
         return self.handle_event(event)
