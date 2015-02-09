@@ -95,6 +95,7 @@ class TransactionResource(BaseResource):
         'transaction_type')
 
     NULLABLE_FIELDS = ('provider', 'session_length')
+    NON_NULLABLE_FIELDS = tuple(set(FIELDS) - set(NULLABLE_FIELDS))
 
     def __init__(self, connection_pool):
         BaseResource.__init__(self, connection_pool)
@@ -141,9 +142,8 @@ class TransactionResource(BaseResource):
     def _parse_post(self, request):
         data = self._parse_json(request) or {}
         data = dict((k, data.get(k)) for k in self.FIELDS)
-        fields = set(self.FIELDS) - set(self.NULLABLE_FIELDS)
 
-        if any(data[k] is None for k in fields):
+        if any(data[k] is None for k in self.NON_NULLABLE_FIELDS):
             return None
 
         return data
