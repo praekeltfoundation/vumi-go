@@ -240,17 +240,6 @@ class ContactStore(PerAccountStore):
         return self.groups.load(key)
 
     @Manager.calls_manager
-    def get_contacts_for_group(self, group):
-        """Return contact keys for this group."""
-        contacts = set([])
-        static_contacts = yield self.get_static_contacts_for_group(group)
-        contacts.update(static_contacts)
-        if group.is_smart_group():
-            dynamic_contacts = yield self.get_dynamic_contacts_for_group(group)
-            contacts.update(dynamic_contacts)
-        returnValue(list(contacts))
-
-    @Manager.calls_manager
     def get_contacts_for_conversation(self, conversation):
         """
         Collect all contacts relating to a conversation from static &
@@ -261,22 +250,12 @@ class ContactStore(PerAccountStore):
         contacts = set([])
         for groups in conversation.groups.load_all_bunches():
             for group in (yield groups):
-                group_contacts = yield self.get_contacts_for_group(group)
-                contacts.update(group_contacts)
+                index_page = yield self.get_contact_keys_for_group(group)
+                while index_page is not None:
+                    contacts.update(list(index_page))
+                    index_page = yield index_page.next_page()
 
         returnValue(list(contacts))
-
-    def get_static_contacts_for_group(self, group):
-        """
-        Look up contacts through Riak 2i
-        """
-        return group.backlinks.contacts()
-
-    def get_dynamic_contacts_for_group(self, group):
-        """
-        Use Riak search to find matching contacts.
-        """
-        return self.contacts.raw_search(group.query).get_keys()
 
     @Manager.calls_manager
     def get_contact_keys_for_group(self, group):
@@ -299,7 +278,16 @@ class ContactStore(PerAccountStore):
         """
         Use Riak search to find matching contacts.
         """
-        zeroth_page = PaginatedSearch(self.contacts, 1000, group.query, 0, [])
+        return self.search_contacts(group.query)
+
+    def search_contacts(self, query):
+        """
+        Perform a paginated search over all contacts.
+
+        NOTE: The pagination is count-based, so if the result set changes
+              between calls it's possible to get duplicate or missing results.
+        """
+        zeroth_page = PaginatedSearch(self.contacts, 1000, query, 0, [])
         return zeroth_page.next_page()
 
     def count_contacts_for_group(self, group):
