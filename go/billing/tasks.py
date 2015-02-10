@@ -114,8 +114,7 @@ def get_session_length_transactions(transactions):
         'tag_name',
         'provider',
         'session_unit_time',
-        'session_length_cost',
-        'session_length_credits',
+        'session_unit_cost',
         'markup_percent')
 
     transactions = transactions.annotate(
@@ -170,6 +169,11 @@ def get_count(transaction):
     return transaction['count']
 
 
+def get_session_length_count(transaction):
+    length_cost = get_session_length_cost(transaction)
+    return length_cost / get_session_length_unit_cost(transaction)
+
+
 def get_message_unit_cost(transaction):
     count = get_count(transaction)
     # count should never be 0 since we count by id
@@ -189,9 +193,7 @@ def get_session_unit_cost(transaction):
 
 
 def get_session_length_unit_cost(transaction):
-    count = get_count(transaction)
-    # count should never be 0 since we count by id
-    return get_session_length_cost(transaction) / count
+    return transaction['session_unit_cost']
 
 
 def get_message_credits(transaction):
@@ -249,7 +251,7 @@ def get_session_description(transaction):
 def get_session_length_description(transaction):
     provider_name = get_provider_name(transaction)
     unit_time = transaction['session_unit_time']
-    description = 'Sessions (billed per %ds)' % (unit_time,)
+    description = 'Session intervals (billed per %ds)' % (unit_time,)
 
     if provider_name is None:
         return description
@@ -297,7 +299,7 @@ def make_session_item(statement, transaction, tagpools):
 def make_session_length_item(statement, transaction, tagpools):
     return LineItem(
         statement=statement,
-        units=get_count(transaction),
+        units=get_session_length_count(transaction),
         cost=get_session_length_cost(transaction),
         credits=get_session_length_credits(transaction),
         channel=get_channel_name(transaction, tagpools),

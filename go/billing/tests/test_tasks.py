@@ -431,146 +431,171 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         mk_transaction(
             self.account,
             session_unit_time=20,
+            session_unit_cost=100,
             session_length_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
             session_unit_time=20,
-            session_length_cost=100,
+            session_unit_cost=100,
+            session_length_cost=200,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
             session_unit_time=20,
-            session_length_cost=100,
+            session_unit_cost=100,
+            session_length_cost=300,
             markup_percent=10.0)
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item] = get_line_items(statement).filter(
-            description='Sessions (billed per 20s)')
+            description='Session intervals (billed per 20s)')
 
-        self.assertEqual(item.credits, get_session_length_credits(300, 10))
+        self.assertEqual(item.credits, get_session_length_credits(600, 10))
         self.assertEqual(item.unit_cost, 100)
-        self.assertEqual(item.cost, 300)
+        self.assertEqual(item.cost, 600)
+        self.assertEqual(item.units, 6)
 
-    def test_generate_monthly_statement_different_unit_times(self):
+    def test_generate_monthly_statement_different_session_unit_times(self):
         mk_transaction(
             self.account,
             session_unit_time=20,
+            session_unit_cost=100,
             session_length_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
             session_unit_time=21,
+            session_unit_cost=100,
             session_length_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
             session_unit_time=22,
+            session_unit_cost=100,
             session_length_cost=100,
             markup_percent=10.0)
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item1, item2, item3] = get_line_items(statement).filter(
-            description__startswith='Sessions (billed per')
+            description__startswith='Session intervals')
 
         self.assertEqual(item1.credits, get_session_length_credits(100, 10))
         self.assertEqual(item1.unit_cost, 100)
         self.assertEqual(item1.cost, 100)
-        self.assertEqual(item1.description, 'Sessions (billed per 20s)')
+        self.assertEqual(item1.units, 1)
+
+        self.assertEqual(
+            item1.description,
+            'Session intervals (billed per 20s)')
 
         self.assertEqual(item2.credits, get_session_length_credits(100, 10))
         self.assertEqual(item2.unit_cost, 100)
         self.assertEqual(item2.cost, 100)
-        self.assertEqual(item2.description, 'Sessions (billed per 21s)')
+        self.assertEqual(item2.units, 1)
+
+        self.assertEqual(
+            item2.description,
+            'Session intervals (billed per 21s)')
 
         self.assertEqual(item3.credits, get_session_length_credits(100, 10))
         self.assertEqual(item3.unit_cost, 100)
         self.assertEqual(item3.cost, 100)
-        self.assertEqual(item3.description, 'Sessions (billed per 22s)')
+        self.assertEqual(item3.units, 1)
 
-    def test_generate_monthly_statement_different_session_length_costs(self):
+        self.assertEqual(
+            item3.description,
+            'Session intervals (billed per 22s)')
+
+    def test_generate_monthly_statement_different_session_unit_costs(self):
         mk_transaction(
             self.account,
             session_unit_time=20,
+            session_unit_cost=100,
             session_length_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
             session_unit_time=20,
+            session_unit_cost=200,
             session_length_cost=200,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
             session_unit_time=20,
-            session_length_cost=300,
+            session_unit_cost=300,
+            session_length_cost=600,
             markup_percent=10.0)
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item1, item2, item3] = get_line_items(statement).filter(
-            description='Sessions (billed per 20s)')
+            description='Session intervals (billed per 20s)')
 
         self.assertEqual(item1.credits, get_session_length_credits(100, 10))
         self.assertEqual(item1.unit_cost, 100)
         self.assertEqual(item1.cost, 100)
-        self.assertEqual(item1.description, 'Sessions (billed per 20s)')
+        self.assertEqual(item1.units, 1)
 
         self.assertEqual(item2.credits, get_session_length_credits(200, 10))
         self.assertEqual(item2.unit_cost, 200)
         self.assertEqual(item2.cost, 200)
-        self.assertEqual(item2.description, 'Sessions (billed per 20s)')
+        self.assertEqual(item2.units, 1)
 
-        self.assertEqual(item3.credits, get_session_length_credits(300, 10))
+        self.assertEqual(item3.credits, get_session_length_credits(600, 10))
         self.assertEqual(item3.unit_cost, 300)
-        self.assertEqual(item3.cost, 300)
-        self.assertEqual(item3.description, 'Sessions (billed per 20s)')
+        self.assertEqual(item3.cost, 600)
+        self.assertEqual(item3.units, 2)
 
     def test_generate_monthly_statement_session_length_different_markups(self):
         mk_transaction(
             self.account,
             session_unit_time=20,
+            session_unit_cost=100,
             session_length_cost=100,
             markup_percent=10.0)
 
         mk_transaction(
             self.account,
             session_unit_time=20,
-            session_length_cost=200,
+            session_unit_cost=100,
+            session_length_cost=100,
             markup_percent=11.0)
 
         mk_transaction(
             self.account,
             session_unit_time=20,
-            session_length_cost=300,
+            session_unit_cost=100,
+            session_length_cost=100,
             markup_percent=12.0)
 
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
         [item1, item2, item3] = get_line_items(statement).filter(
-            description='Sessions (billed per 20s)')
+            description='Session intervals (billed per 20s)')
 
         self.assertEqual(item1.credits, get_session_length_credits(100, 10))
         self.assertEqual(item1.unit_cost, 100)
         self.assertEqual(item1.cost, 100)
-        self.assertEqual(item1.description, 'Sessions (billed per 20s)')
+        self.assertEqual(item1.units, 1)
 
-        self.assertEqual(item2.credits, get_session_length_credits(200, 11))
-        self.assertEqual(item2.unit_cost, 200)
-        self.assertEqual(item2.cost, 200)
-        self.assertEqual(item2.description, 'Sessions (billed per 20s)')
+        self.assertEqual(item2.credits, get_session_length_credits(100, 11))
+        self.assertEqual(item2.unit_cost, 100)
+        self.assertEqual(item2.cost, 100)
+        self.assertEqual(item2.units, 1)
 
-        self.assertEqual(item3.credits, get_session_length_credits(300, 12))
-        self.assertEqual(item3.unit_cost, 300)
-        self.assertEqual(item3.cost, 300)
-        self.assertEqual(item3.description, 'Sessions (billed per 20s)')
+        self.assertEqual(item3.credits, get_session_length_credits(100, 12))
+        self.assertEqual(item3.unit_cost, 100)
+        self.assertEqual(item3.cost, 100)
+        self.assertEqual(item3.units, 1)
 
     def test_generate_monthly_statement_unaccessible_tags(self):
         self.vumi_helper.setup_tagpool(u'pool2', [u'tag2.1'], {
