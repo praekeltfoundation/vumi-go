@@ -53,7 +53,7 @@ def delete_group_contacts(account_key, group_key):
     #        we're deleting contacts that are part of a smart group.
     contact_keys = []
     while contacts_page is not None:
-        contact_keys.extend(list(contacts_page))
+        contact_keys.extend(contacts_page)
         contacts_page = contacts_page.next_page()
     # We do this one at a time because we're already saving them one at a time
     # and the boilerplate for fetching batches without having them all sit in
@@ -128,7 +128,7 @@ def get_group_contacts(contact_store, *groups):
     for group in groups:
         contacts_page = contact_store.get_contact_keys_for_group(group)
         while contacts_page is not None:
-            contact_keys.extend(list(contacts_page))
+            contact_keys.extend(contacts_page)
             contacts_page = contacts_page.next_page()
     return contacts_by_key(contact_store, *contact_keys)
 

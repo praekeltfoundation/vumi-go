@@ -43,7 +43,7 @@ def get_all_contact_keys_for_group(contact_store, group):
     keys = []
     index_page = contact_store.get_contact_keys_for_group(group)
     while index_page is not None:
-        keys.extend(list(index_page))
+        keys.extend(index_page)
         index_page = index_page.next_page()
     return keys
 
