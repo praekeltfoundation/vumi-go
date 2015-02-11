@@ -359,6 +359,32 @@ class TestContactStore(VumiTestCase):
         self.assertEqual(list(third_page), [])
         self.assertEqual(third_page.has_next_page(), False)
 
+    @inlineCallbacks
+    def test_get_contact_keys_for_mixed_group(self):
+        """
+        If we ask for the keys for a group that is both static and dynamic, we
+        get a wrapper around a PaginatedSearch and an IndexPage that we can
+        walk until we have all the results.
+        """
+        store = self.contact_store
+        group = yield store.new_smart_group(u'test group', u'surname:"Foo 1"')
+        dynamic_contact = yield store.new_contact(
+            name=u'Contact', surname=u'Foo 1', msisdn=u'12345')
+        static_contact = yield store.new_contact(
+            name=u'Contact', surname=u'Foo 2', msisdn=u'12345', groups=[group])
+        yield store.new_contact(
+            name=u'Contact', surname=u'Foo 3', msisdn=u'12345')
+
+        first_page = yield store.get_contact_keys_for_group(group)
+        self.assertEqual(list(first_page), [dynamic_contact.key])
+        # This is the empty last page of the search results.
+        second_page = yield first_page.next_page()
+        self.assertEqual(list(second_page), [])
+        # This is the only page of the index results.
+        third_page = yield second_page.next_page()
+        self.assertEqual(list(third_page), [static_contact.key])
+        self.assertEqual(third_page.has_next_page(), False)
+
 
 class TestPaginatedSearch(VumiTestCase):
     @inlineCallbacks
