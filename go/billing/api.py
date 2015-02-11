@@ -88,6 +88,15 @@ class TransactionResource(BaseResource):
 
     isLeaf = True
 
+    FIELDS = (
+        'account_number', 'message_id', 'tag_pool_name',
+        'tag_name', 'provider', 'message_direction',
+        'session_created', 'session_length',
+        'transaction_type')
+
+    NULLABLE_FIELDS = ('provider', 'session_length')
+    NON_NULLABLE_FIELDS = tuple(set(FIELDS) - set(NULLABLE_FIELDS))
+
     def __init__(self, connection_pool):
         BaseResource.__init__(self, connection_pool)
         self._notification_mapping = self._create_notification_mapping()
@@ -118,44 +127,41 @@ class TransactionResource(BaseResource):
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
-        data = self._parse_json(request)
-        if data:
-            account_number = data.get('account_number', None)
-            message_id = data.get('message_id', None)
-            tag_pool_name = data.get('tag_pool_name', None)
-            tag_name = data.get('tag_name', None)
-            provider = data.get('provider', None)
-            message_direction = data.get('message_direction', None)
-            session_created = data.get('session_created', None)
-            transaction_type = data.get('transaction_type', None)
+        data = self._parse_post(request)
 
-            if all((account_number, message_id, tag_pool_name, tag_name,
-                    message_direction, session_created is not None)):
-                d = self.create_transaction(
-                    account_number, message_id, tag_pool_name, tag_name,
-                    provider, message_direction,
-                    session_created, transaction_type)
-
-                d.addCallbacks(self._render_to_json, self._handle_error,
-                               callbackArgs=[request], errbackArgs=[request])
-            else:
-                self._handle_bad_request(request)
-        else:
+        if data is None:
             self._handle_bad_request(request)
+        else:
+            d = self.create_transaction(*pluck(data, self.FIELDS))
+
+            d.addCallbacks(self._render_to_json, self._handle_error,
+                           callbackArgs=[request], errbackArgs=[request])
+
         return NOT_DONE_YET
+
+    def _parse_post(self, request):
+        data = self._parse_json(request) or {}
+        data = dict((k, data.get(k)) for k in self.FIELDS)
+
+        if any(data[k] is None for k in self.NON_NULLABLE_FIELDS):
+            return None
+
+        return data
 
     @defer.inlineCallbacks
     def get_cost(self, account_number, tag_pool_name, provider,
-                 message_direction, session_created):
+                 message_direction, session_created, session_length):
         """Return the message cost"""
         query = """
             SELECT t.account_number, t.tag_pool_name,
                    t.provider, t.message_direction,
                    t.message_cost, t.storage_cost, t.session_cost,
+                   t.session_unit_time, t.session_unit_cost,
                    t.markup_percent
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
                          c.provider, c.message_direction,
                          c.message_cost, c.storage_cost, c.session_cost,
+                         c.session_unit_time, c.session_unit_cost,
                          c.markup_percent
                   FROM billing_messagecost c
                   LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
@@ -188,10 +194,13 @@ class TransactionResource(BaseResource):
         if len(result) > 0:
             message_cost = result[0]
             message_cost['credit_amount'] = MessageCost.calculate_credit_cost(
-                message_cost['message_cost'],
-                message_cost['storage_cost'],
-                message_cost['markup_percent'],
-                message_cost['session_cost'],
+                message_cost=message_cost['message_cost'],
+                storage_cost=message_cost['storage_cost'],
+                session_cost=message_cost['session_cost'],
+                session_unit_length=message_cost['session_unit_time'],
+                session_unit_cost=message_cost['session_unit_cost'],
+                session_length=session_length,
+                markup_percent=message_cost['markup_percent'],
                 session_created=session_created)
 
             defer.returnValue(message_cost)
@@ -202,11 +211,13 @@ class TransactionResource(BaseResource):
     def create_transaction_interaction(self, cursor, account_number,
                                        message_id, tag_pool_name, tag_name,
                                        provider, message_direction,
-                                       session_created, transaction_type):
+                                       session_created, session_length,
+                                       transaction_type):
         """Create a new transaction for the given ``account_number``"""
         # Get the message cost
         result = yield self.get_cost(account_number, tag_pool_name, provider,
-                                     message_direction, session_created)
+                                     message_direction, session_created,
+                                     session_length)
         if result is None:
             raise BillingError(
                 "Unable to determine %s message cost for account %s"
@@ -216,8 +227,13 @@ class TransactionResource(BaseResource):
         message_cost = result.get('message_cost', 0)
         session_cost = result.get('session_cost', 0)
         storage_cost = result.get('storage_cost', 0)
+        session_unit_cost = result.get('session_unit_cost', 0)
+        session_unit_time = result.get('session_unit_time', 0)
         markup_percent = result.get('markup_percent', 0)
         credit_amount = result.get('credit_amount', 0)
+
+        session_len_cost = MessageCost.calculate_session_length_cost(
+            session_unit_cost, session_unit_time, session_length)
 
         message_credits = MessageCost.calculate_message_credit_cost(
             message_cost, markup_percent)
@@ -228,34 +244,46 @@ class TransactionResource(BaseResource):
         session_credits = MessageCost.calculate_session_credit_cost(
             session_cost, markup_percent)
 
+        session_len_credits = MessageCost.calculate_session_length_credit_cost(
+            session_len_cost, markup_percent)
+
         # Create a new transaction
         query = """
             INSERT INTO billing_transaction
                 (account_number, message_id, transaction_type,
                  tag_pool_name, tag_name,
                  provider, message_direction,
-                 message_cost, storage_cost,
-                 session_created, session_cost, markup_percent,
+                 message_cost, storage_cost, session_cost,
+                 session_unit_cost, session_length_cost,
+                 session_created, markup_percent,
                  message_credits, storage_credits, session_credits,
-                 credit_factor, credit_amount, status, created, last_modified)
+                 session_length_credits,
+                 credit_factor, credit_amount,
+                 session_unit_time, session_length,
+                 status, created, last_modified)
             VALUES
                 (%(account_number)s, %(message_id)s, %(transaction_type)s,
                  %(tag_pool_name)s, %(tag_name)s,
                  %(provider)s, %(message_direction)s,
-                 %(message_cost)s, %(storage_cost)s,
-                 %(session_created)s, %(session_cost)s, %(markup_percent)s,
+                 %(message_cost)s, %(storage_cost)s, %(session_cost)s,
+                 %(session_unit_cost)s, %(session_length_cost)s,
+                 %(session_created)s, %(markup_percent)s,
                  %(message_credits)s, %(storage_credits)s, %(session_credits)s,
+                 %(session_length_credits)s,
                  %(credit_factor)s, %(credit_amount)s,
-                 'Completed', now(),
-                 now())
+                 %(session_unit_time)s, %(session_length)s,
+                 'Completed', now(), now())
             RETURNING id, account_number, message_id, transaction_type,
                       tag_pool_name, tag_name,
                       provider, message_direction,
                       message_cost, storage_cost, session_cost,
+                      session_unit_cost, session_length_cost,
                       session_created, markup_percent,
                       message_credits, storage_credits, session_credits,
-                      credit_factor, credit_amount, status,
-                      created, last_modified
+                      session_length_credits,
+                      credit_factor, credit_amount,
+                      session_unit_time, session_length,
+                      status, created, last_modified
         """
 
         params = {
@@ -270,12 +298,17 @@ class TransactionResource(BaseResource):
             'storage_cost': storage_cost,
             'session_created': session_created,
             'session_cost': session_cost,
+            'session_unit_cost': session_unit_cost,
+            'session_length_cost': session_len_cost,
             'markup_percent': markup_percent,
             'message_credits': message_credits,
             'storage_credits': storage_credits,
             'session_credits': session_credits,
+            'session_length_credits': session_len_credits,
             'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
-            'credit_amount': -credit_amount
+            'credit_amount': -credit_amount,
+            'session_unit_time': session_unit_time,
+            'session_length': session_length,
         }
 
         cursor = yield cursor.execute(query, params)
@@ -396,12 +429,12 @@ class TransactionResource(BaseResource):
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, provider, message_direction,
-                           session_created, transaction_type):
+                           session_created, session_length, transaction_type):
         """Create a new transaction for the given ``account_number``"""
         result = yield self._connection_pool.runInteraction(
             self.create_transaction_interaction, account_number, message_id,
             tag_pool_name, tag_name, provider, message_direction,
-            session_created, transaction_type)
+            session_created, session_length, transaction_type)
 
         defer.returnValue(result)
 
