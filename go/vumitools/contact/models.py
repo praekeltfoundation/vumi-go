@@ -252,7 +252,7 @@ class ContactStore(PerAccountStore):
             for group in (yield groups):
                 index_page = yield self.get_contact_keys_for_group(group)
                 while index_page is not None:
-                    contacts.update(list(index_page))
+                    contacts.update(index_page)
                     index_page = yield index_page.next_page()
 
         returnValue(list(contacts))
