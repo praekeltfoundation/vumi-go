@@ -105,6 +105,26 @@ def get_session_transactions(transactions):
     return transactions
 
 
+def get_session_length_transactions(transactions):
+    transactions = transactions.filter(
+        transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
+    transactions = transactions.values(
+        'tag_pool_name',
+        'tag_name',
+        'provider',
+        'session_unit_time',
+        'session_unit_cost',
+        'markup_percent')
+
+    transactions = transactions.annotate(
+        count=Count('id'),
+        total_session_length_cost=Sum('session_length_cost'),
+        total_session_length_credits=Sum('session_length_credits'))
+
+    return transactions
+
+
 def get_tagpool_name(transaction, tagpools):
     if transaction['tag_pool_name'] not in tagpools.pools():
         return transaction['tag_pool_name']
@@ -140,8 +160,18 @@ def get_session_cost(transaction):
     return cost if cost is not None else 0
 
 
+def get_session_length_cost(transaction):
+    cost = transaction['total_session_length_cost']
+    return cost if cost is not None else 0
+
+
 def get_count(transaction):
     return transaction['count']
+
+
+def get_session_length_count(transaction):
+    length_cost = get_session_length_cost(transaction)
+    return length_cost / get_session_length_unit_cost(transaction)
 
 
 def get_message_unit_cost(transaction):
@@ -162,6 +192,10 @@ def get_session_unit_cost(transaction):
     return get_session_cost(transaction) / count
 
 
+def get_session_length_unit_cost(transaction):
+    return transaction['session_unit_cost']
+
+
 def get_message_credits(transaction):
     return transaction['total_message_credits']
 
@@ -172,6 +206,10 @@ def get_storage_credits(transaction):
 
 def get_session_credits(transaction):
     return transaction['total_session_credits']
+
+
+def get_session_length_credits(transaction):
+    return transaction['total_session_length_credits']
 
 
 def get_channel_type(transaction, tagpools):
@@ -202,11 +240,23 @@ def get_message_description(transaction):
 
 def get_session_description(transaction):
     provider_name = get_provider_name(transaction)
+    description = 'Sessions (billed per session)'
 
     if provider_name is None:
-        return 'Sessions (billed per session)'
+        return description
     else:
-        return 'Sessions (billed per session) - %s' % (provider_name,)
+        return '%s - %s' % (description, provider_name)
+
+
+def get_session_length_description(transaction):
+    provider_name = get_provider_name(transaction)
+    unit_time = transaction['session_unit_time']
+    description = 'Session intervals (billed per %ds)' % (unit_time,)
+
+    if provider_name is None:
+        return description
+    else:
+        return '%s - %s' % (description, provider_name)
 
 
 def make_message_item(statement, transaction, tagpools):
@@ -246,6 +296,19 @@ def make_session_item(statement, transaction, tagpools):
         description=get_session_description(transaction))
 
 
+def make_session_length_item(statement, transaction, tagpools):
+    return LineItem(
+        statement=statement,
+        units=get_session_length_count(transaction),
+        cost=get_session_length_cost(transaction),
+        credits=get_session_length_credits(transaction),
+        channel=get_channel_name(transaction, tagpools),
+        billed_by=get_tagpool_name(transaction, tagpools),
+        unit_cost=get_session_length_unit_cost(transaction),
+        channel_type=get_channel_type(transaction, tagpools),
+        description=get_session_length_description(transaction))
+
+
 def make_message_items(statement, transactions, tagpools):
     return [
         make_message_item(statement, transaction, tagpools)
@@ -264,6 +327,12 @@ def make_session_items(statement, transactions, tagpools):
         for transaction in get_session_transactions(transactions)]
 
 
+def make_session_length_items(statement, transactions, tagpools):
+    return [
+        make_session_length_item(statement, transaction, tagpools)
+        for transaction in get_session_length_transactions(transactions)]
+
+
 def make_account_fee_item(statement):
     return LineItem(
         units=1,
@@ -279,6 +348,7 @@ def generate_statement_items(statement, transactions, tagpools):
     items = []
     items.extend(make_message_items(statement, transactions, tagpools))
     items.extend(make_session_items(statement, transactions, tagpools))
+    items.extend(make_session_length_items(statement, transactions, tagpools))
     items.extend(make_storage_items(statement, transactions, tagpools))
     statement.lineitem_set.bulk_create(items)
     return items
