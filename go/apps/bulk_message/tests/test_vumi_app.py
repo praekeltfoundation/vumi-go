@@ -186,24 +186,3 @@ class TestBulkMessageApplication(VumiTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
-
-    @inlineCallbacks
-    def test_reconcile_cache(self):
-        conv = yield self.app_helper.create_conversation()
-
-        with LogCatcher() as logger:
-            yield self.app_helper.dispatch_command(
-                'reconcile_cache', conversation_key='bogus key',
-                user_account_key=conv.user_account.key)
-
-            yield self.app_helper.dispatch_command(
-                'reconcile_cache', conversation_key=conv.key,
-                user_account_key=conv.user_account.key)
-
-            [err] = logger.errors
-            [msg1, msg2] = [msg for msg in logger.messages()
-                            if 'twisted.web.client' not in msg]
-            self.assertTrue('Conversation does not exist: bogus key'
-                                in err['message'][0])
-            self.assertEqual('Reconciling cache for %s' % (conv.key,), msg1)
-            self.assertEqual('Cache reconciled for %s' % (conv.key,), msg2)
