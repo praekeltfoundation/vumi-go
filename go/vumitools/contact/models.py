@@ -240,42 +240,55 @@ class ContactStore(PerAccountStore):
         return self.groups.load(key)
 
     @Manager.calls_manager
-    def get_contacts_for_group(self, group):
-        """Return contact keys for this group."""
-        contacts = set([])
-        static_contacts = yield self.get_static_contacts_for_group(group)
-        contacts.update(static_contacts)
-        if group.is_smart_group():
-            dynamic_contacts = yield self.get_dynamic_contacts_for_group(group)
-            contacts.update(dynamic_contacts)
-        returnValue(list(contacts))
-
-    @Manager.calls_manager
     def get_contacts_for_conversation(self, conversation):
         """
         Collect all contacts relating to a conversation from static &
         dynamic groups.
         """
+        # TODO: FIXME: Avoid building up the whole set in memory.
         # Grab all contacts we can find
         contacts = set([])
         for groups in conversation.groups.load_all_bunches():
             for group in (yield groups):
-                group_contacts = yield self.get_contacts_for_group(group)
-                contacts.update(group_contacts)
+                index_page = yield self.get_contact_keys_for_group(group)
+                while index_page is not None:
+                    contacts.update(index_page)
+                    index_page = yield index_page.next_page()
 
         returnValue(list(contacts))
 
-    def get_static_contacts_for_group(self, group):
+    @Manager.calls_manager
+    def get_contact_keys_for_group(self, group):
+        """Return contact keys for this group."""
+        index_page = yield self.get_static_contact_keys_for_group(group)
+        if group.is_smart_group():
+            search_page = yield self.get_dynamic_contact_keys_for_group(group)
+            returnValue(ChainedIndexPages(
+                self.manager, search_page, index_page))
+        else:
+            returnValue(index_page)
+
+    def get_static_contact_keys_for_group(self, group):
         """
         Look up contacts through Riak 2i
         """
-        return group.backlinks.contacts()
+        return group.backlinks.contact_keys()
 
-    def get_dynamic_contacts_for_group(self, group):
+    def get_dynamic_contact_keys_for_group(self, group):
         """
         Use Riak search to find matching contacts.
         """
-        return self.contacts.raw_search(group.query).get_keys()
+        return self.search_contacts(group.query)
+
+    def search_contacts(self, query):
+        """
+        Perform a paginated search over all contacts.
+
+        NOTE: The pagination is count-based, so if the result set changes
+              between calls it's possible to get duplicate or missing results.
+        """
+        zeroth_page = PaginatedSearch(self.contacts, 1000, query, 0, [])
+        return zeroth_page.next_page()
 
     def count_contacts_for_group(self, group):
         if group.is_smart_group():
@@ -381,3 +394,80 @@ class ContactStore(PerAccountStore):
                 "Contact with address '%s' for delivery class '%s' not found."
                 % (addr, delivery_class))
         returnValue(contact)
+
+
+class PaginatedSearch(object):
+    """
+    This has the same external interface as an IndexPage object, but it
+    performs the search queries itself internally.
+
+    To avoid having to perform the first search query externally, the first
+    page of results can be acquired by passing in an empty results list and a
+    cursor of ``0``.
+    """
+
+    def __init__(self, model_proxy, max_results, query, cursor, results):
+        self._model_proxy = model_proxy
+        self.manager = model_proxy._manager
+        self._max_results = max_results
+        self._query = query
+        self._cursor = cursor
+        self._results = results
+
+    @Manager.calls_manager
+    def _get_page_of_results(self):
+        results = yield self._model_proxy.real_search(
+            self._query, rows=self._max_results, start=self._cursor)
+        if len(results) == 0:
+            new_cursor = None
+        else:
+            new_cursor = self._cursor + len(results)
+        returnValue((new_cursor, results))
+
+    def __iter__(self):
+        return iter(self._results)
+
+    def has_next_page(self):
+        return self._cursor is not None
+
+    @Manager.calls_manager
+    def next_page(self):
+        if self._cursor is None:
+            returnValue(None)
+        cursor, results = yield self._get_page_of_results()
+        returnValue(type(self)(
+            self._model_proxy, self._max_results, self._query, cursor,
+            results))
+
+
+class ChainedIndexPages(object):
+    """
+    Wrapper around a list of index pages to walk through them one after the
+    other.
+
+    NOTE: This assumes that all index pages are non-None.
+    """
+
+    def __init__(self, manager, current_page, *further_pages):
+        self.manager = manager
+        self._current_page = current_page
+        self._further_pages = further_pages
+
+    def __iter__(self):
+        return iter(self._current_page)
+
+    def has_next_page(self):
+        if self._current_page.has_next_page():
+            return True
+        return len(self._further_pages) > 0
+
+    @Manager.calls_manager
+    def next_page(self):
+        pages = list(self._further_pages[:])
+        next_current_page = yield self._current_page.next_page()
+        if next_current_page is not None:
+            pages = [next_current_page] + pages
+        if pages:
+            returnValue(type(self)(self.manager, *pages))
+        else:
+            returnValue(None)

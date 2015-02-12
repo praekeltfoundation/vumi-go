@@ -130,10 +130,14 @@ class Command(BaseCommand):
         # We do this one at a time because we're already saving them one at a
         # time and the boilerplate for fetching batches without having them all
         # sit in memory is ugly.
-        for contact_key in group.backlinks.contacts():
-            contact = user_api.contact_store.get_contact_by_key(contact_key)
-            contact.groups.remove(group)
-            contact.save()
-            self.stdout.write('.')
+        contacts_page = group.backlinks.contact_keys()
+        while contacts_page is not None:
+            for contact_key in contacts_page:
+                contact = user_api.contact_store.get_contact_by_key(
+                    contact_key)
+                contact.groups.remove(group)
+                contact.save()
+                self.stdout.write('.')
+            contacts_page = contacts_page.next_page()
         self.stdout.write('\nDone.\n')
         group.delete()
