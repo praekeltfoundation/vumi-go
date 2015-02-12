@@ -10,9 +10,7 @@ class Command(BaseGoCommand):
 
     option_list = BaseGoCommand.option_list + (
         make_command_option(
-            'reconcile', help='Reconcile the message cache.'),
-        make_command_option(
-            'switch_to_counters', help='Switch cache to counters.'),
+            'rebuild', help='Rebuild the message cache.'),
         make_option(
             '--email-address', dest='email_address',
             help="Act on the given user's batches."),
@@ -110,14 +108,8 @@ class Command(BaseGoCommand):
         self._apply_to_batches_from_file(func, dry_run)
         self._apply_to_accounts(func, dry_run)
 
-    def handle_command_reconcile(self, *args, **options):
-        def reconcile(batch_id):
+    def handle_command_rebuild(self, *args, **options):
+        def rebuild(batch_id):
             self.mk_vumi_api().mdb.reconcile_cache(batch_id)
 
-        self._apply_command(reconcile)
-
-    def handle_command_switch_to_counters(self, *args, **options):
-        def switch_to_counters(batch_id):
-            self.mk_vumi_api().mdb.cache.switch_to_counters(batch_id)
-
-        self._apply_command(switch_to_counters)
+        self._apply_command(rebuild)
