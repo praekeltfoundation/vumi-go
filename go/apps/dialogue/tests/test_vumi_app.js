@@ -318,5 +318,17 @@ describe("app", function() {
                     });
             });
         });
+
+        describe("when the user enters a send state which is a http_json type", function() {
+            it("do something", function() {
+                return tester
+                    .setup.user.state('choice-1')
+                    .input('4')
+                    .check(function(api) {
+                        assert.equal(api, 2);
+                    })
+                    .run();
+            });
+        });
     });
 });
