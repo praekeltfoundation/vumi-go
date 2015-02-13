@@ -8,6 +8,7 @@ var FreeText = vumigo.states.FreeText;
 var Choice = vumigo.states.Choice;
 var ChoiceState = vumigo.states.ChoiceState;
 var InteractionMachine = vumigo.InteractionMachine;
+var JsonApi = vumigo.http.api.JsonApi;
 
 
 var DialogueApp = App.extend(function(self) {
@@ -21,6 +22,8 @@ var DialogueApp = App.extend(function(self) {
     };
 
     self.init = function() {
+        self.http = new JsonApi(self.im);
+
         return Q
             .all([self.get_poll(), self.im.contacts.for_user()])
             .spread(function(poll, contact) {
@@ -166,6 +169,27 @@ var DialogueApp = App.extend(function(self) {
     self.states.add('states:start', function() {
         return self.states.create(self.poll.start_state.uuid);
     });
+
+    self.types.http_json = function(desc) {
+        self.im.contacts.for_user()
+            .then(function(contact) {
+                var payload = {
+                    user: {
+                        answers: self.im.user.answers
+                    },
+                    contact: contact
+                };
+                
+                return self
+                    .http.request(desc.method, desc.url, { data: payload })
+                        .then(function(request) {
+                            if(request.body){
+                                desc.payload = request.body;
+                            }
+                            return self.states.create(self.next(desc.exit_endpoint));
+                        });
+            });
+    };
 });
 
 
