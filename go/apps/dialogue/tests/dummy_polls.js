@@ -25,7 +25,8 @@ var simple_poll = {
         choice_endpoints: [ // these are actually also the endpoints
         {value: "value-1", label: "Red", uuid: "endpoint-1"},
         {value: "value-2", label: "Blue", uuid: "endpoint-2"},
-        {value: "value-3", label: "Green", uuid: "endpoint-3"}
+        {value: "value-3", label: "Green", uuid: "endpoint-3"},
+        {value: "value-4", label: "Black", uuid: "endpoint-11"},
         ]
     },
     {
@@ -65,6 +66,17 @@ var simple_poll = {
         entry_endpoint: {uuid: "endpoint-10"},
         // end specific
         text: "Thank you for taking our survey"
+    },
+    {
+        uuid: "http_json-1",
+        name: "json post 1",
+        type: "http_json",
+        desc: {
+            url: "www.google.com", 
+            method: "GET"
+        },
+        entry_endpoint: {uuid: "endpoint-11"},
+        exit_endpoint: {uuid: "endpoint-12"}
     }],
     connections: [
     {
@@ -89,6 +101,10 @@ var simple_poll = {
     },
     {
         source: {uuid: "endpoint-9"},
+        target: {uuid: "endpoint-10"}
+    },
+    {
+        source: {uuid: "endpoint-12"},
         target: {uuid: "endpoint-10"}
     }]
 };
