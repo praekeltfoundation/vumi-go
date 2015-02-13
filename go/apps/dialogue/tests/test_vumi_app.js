@@ -60,7 +60,8 @@ describe("app", function() {
                         "What is your favourite colour?",
                         "1. Red",
                         "2. Blue",
-                        "3. Green"
+                        "3. Green",
+                        "4. Black"
                     ].join('\n'))
                     .run();
             });
@@ -322,10 +323,17 @@ describe("app", function() {
         describe("when the user enters a send state which is a http_json type", function() {
             it("do something", function() {
                 return tester
+                    .setup(function(api) {
+                        api.contacts.add({
+                            msisdn: '+27123'
+                        });
+                    })
+                    .setup.user.addr('+27123')
                     .setup.user.state('choice-1')
                     .input('4')
                     .check(function(api) {
-                        assert.equal(api, 2);
+                        console.log(api.http);
+                        //console.log(api.outbound);
                     })
                     .run();
             });
