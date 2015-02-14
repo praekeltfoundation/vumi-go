@@ -61,7 +61,8 @@ describe("app", function() {
                         "1. Red",
                         "2. Blue",
                         "3. Green",
-                        "4. Black"
+                        "4. Black",
+                        "5. Yellow"
                     ].join('\n'))
                     .run();
             });
@@ -321,19 +322,45 @@ describe("app", function() {
         });
 
         describe("when the user enters a send state which is a http_json type", function() {
-            it("do something", function() {
+            it("and it is a GET type the response should be 200", function() {
                 return tester
                     .setup(function(api) {
                         api.contacts.add({
-                            msisdn: '+27123'
+                           msisdn: '+27123'
                         });
+                        api.http.fixtures.add({request: {method: "GET", url: "www.foo.bar"}});
                     })
                     .setup.user.addr('+27123')
                     .setup.user.state('choice-1')
                     .input('4')
                     .check(function(api) {
-                        console.log(api.http);
-                        //console.log(api.outbound);
+console.log(JSON.stringify(api.kv.store));
+                        assert.equal(api.http.fixtures.fixtures[0].responses[0].code, 200);
+                    })
+                    .run();
+            });
+            
+            it("and it is a POST type the response should be 200", function() {
+                return tester
+                    .setup.user.addr('+27123')                    
+                    .setup.user.state('choice-1')
+                    .setup(function(api) {
+                        api.contacts.add({
+                           msisdn: '+27123'
+                        });
+                        api.contacts.store[0].extra = { 'message-1': 'value-5', 'message-1-1': 'value-5' };
+                        api.http.fixtures.add({
+                              request: {
+                                  method: "POST", 
+                                  url: "www.foo.bar", 
+                                  data: JSON.stringify({user: {answers: { 'choice-1': 'value-5'}}, contact: api.contacts.store[0]})
+                              }
+                        });
+                        api.contacts.store[0].extra = {};
+                    })
+                    .input('5')
+                    .check(function(api) {
+                        assert.equal(api.http.fixtures.fixtures[0].responses[0].code, 200);
                     })
                     .run();
             });

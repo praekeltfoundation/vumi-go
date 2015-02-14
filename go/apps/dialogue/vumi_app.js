@@ -22,8 +22,6 @@ var DialogueApp = App.extend(function(self) {
     };
 
     self.init = function() {
-        self.http = new JsonApi(self.im);
-
         return Q
             .all([self.get_poll(), self.im.contacts.for_user()])
             .spread(function(poll, contact) {
@@ -171,22 +169,23 @@ var DialogueApp = App.extend(function(self) {
     });
 
     self.types.http_json = function(desc) {
-	/*var payload = {
+        self.http = new JsonApi(self.im);
+
+	var payload = {
 	    user: {
 		answers: self.im.user.answers
 	    },
 	    contact: self.contact
 	};
-	
+
 	return self
-	    .http.request(desc.method, desc.url, { data: payload })
+	    .http.request(desc.method, desc.url, desc.method !== 'GET' ? { data: JSON.stringify(payload) } : {})
 		.then(function(request) {
 		    if(request.body){
-			desc.payload = request.body;
+			return request.body;
 		    }
 		    return self.states.create(self.next(desc.exit_endpoint));
-		});*/
-        return self.http.request("GET", "www.foo.bar");
+		});
     };
 });
 

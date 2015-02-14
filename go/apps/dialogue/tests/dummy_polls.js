@@ -27,6 +27,7 @@ var simple_poll = {
         {value: "value-2", label: "Blue", uuid: "endpoint-2"},
         {value: "value-3", label: "Green", uuid: "endpoint-3"},
         {value: "value-4", label: "Black", uuid: "endpoint-11"},
+        {value: "value-5", label: "Yellow", uuid: "endpoint-14"}
         ]
     },
     {
@@ -71,12 +72,19 @@ var simple_poll = {
         uuid: "http_json-1",
         name: "json post 1",
         type: "http_json",
-        desc: {
-            url: "www.google.com", 
-            method: "GET"
-        },
-        entry_endpoint: {uuid: "endpoint-11"},
-        exit_endpoint: {uuid: "endpoint-12"}
+        url: "www.foo.bar", 
+        method: "GET",
+        entry_endpoint: {uuid: "endpoint-12"},
+        exit_endpoint: {uuid: "endpoint-13"}
+    },
+    {
+        uuid: "http_json-2",
+        name: "json post 2",
+        type: "http_json",
+        url: "www.foo.bar", 
+        method: "POST",
+        entry_endpoint: {uuid: "endpoint-15"},
+        exit_endpoint: {uuid: "endpoint-13"}
     }],
     connections: [
     {
@@ -104,8 +112,16 @@ var simple_poll = {
         target: {uuid: "endpoint-10"}
     },
     {
-        source: {uuid: "endpoint-12"},
+        source: {uuid: "endpoint-11"},
+        target: {uuid: "endpoint-12"}
+    },
+    {
+        source: {uuid: "endpoint-13"},
         target: {uuid: "endpoint-10"}
+    },
+    {
+        source: {uuid: "endpoint-14"},
+        target: {uuid: "endpoint-15"}
     }]
 };
 
