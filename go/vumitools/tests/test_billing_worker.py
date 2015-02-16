@@ -29,7 +29,7 @@ class BillingApiMock(object):
 
     def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, provider, message_direction,
-                           session_created, transaction_type):
+                           session_created, transaction_type, session_length):
         self._record(self.transactions, locals())
         return {
             "id": 1,
@@ -48,7 +48,8 @@ class BillingApiMock(object):
             "created": "2013-10-30T10:42:51.144745+02:00",
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
             "status": "Completed",
-            "transaction_type": transaction_type
+            "transaction_type": transaction_type,
+            "session_length": session_length,
         }
 
 
@@ -110,6 +111,7 @@ class TestBillingApi(VumiTestCase):
             'message_direction': "Inbound",
             'session_created': False,
             'transaction_type': BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
+            'session_length': 23,
         }
         yield self.billing_api.create_transaction(**kwargs)
         self.assertEqual(hrm.request.uri, "%stransactions" % (self.api_url,))
@@ -135,6 +137,7 @@ class TestBillingApi(VumiTestCase):
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
             "status": "Completed",
             "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
+            'session_length': 23,
         }
         response = self._mk_response(
             delivered_body=json.dumps(delivered_body, cls=JSONEncoder))
@@ -152,6 +155,7 @@ class TestBillingApi(VumiTestCase):
             'message_direction': "Inbound",
             'session_created': False,
             "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
+            'session_length': 23,
         }
         result = yield self.billing_api.create_transaction(**kwargs)
         self.assertEqual(result, delivered_body)
@@ -174,6 +178,7 @@ class TestBillingApi(VumiTestCase):
             'message_direction': "Inbound",
             'session_created': False,
             'transaction_type': BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
+            'session_length': 23,
         }
         d = self.billing_api.create_transaction(**kwargs)
         yield self.assertFailure(d, BillingError)
@@ -197,6 +202,7 @@ class TestBillingApi(VumiTestCase):
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
             "status": "Completed",
             "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
+            'session_length': 23,
         }
         response = self._mk_response(
             delivered_body=json.dumps(delivered_body, cls=JSONEncoder))
@@ -214,6 +220,7 @@ class TestBillingApi(VumiTestCase):
             'message_direction': "Inbound",
             'session_created': False,
             "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
+            'session_length': 23,
         }
         result = yield self.billing_api.create_transaction(**kwargs)
         self.assertEqual(result, delivered_body)
@@ -236,6 +243,7 @@ class TestBillingApi(VumiTestCase):
             'message_direction': "Inbound",
             'session_created': False,
             "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
+            'session_length': 23,
         }
         d = self.billing_api.create_transaction(**kwargs)
         yield self.assertFailure(d, MockNetworkError)
@@ -291,12 +299,14 @@ class TestBillingDispatcher(VumiTestCase):
         self.add_md(msg, user_account=user_account, tag=tag, is_paid=is_paid)
         return self.ro_helper.dispatch_outbound(msg).addCallback(lambda _: msg)
 
-    def assert_transaction(self, msg, direction, session_created):
+    def assert_transaction(self, msg, direction, session_created,
+                           session_metadata_field='session_metadata'):
         md = MessageMetadataHelper(self.vumi_helper.get_vumi_api(), msg)
         direction = {
             "inbound": BillingDispatcher.MESSAGE_DIRECTION_INBOUND,
             "outbound": BillingDispatcher.MESSAGE_DIRECTION_OUTBOUND,
         }[direction]
+
         self.assertEqual(self.billing_api.transactions, [{
             "account_number": md.get_account_key(),
             "message_id": msg["message_id"],
@@ -306,10 +316,39 @@ class TestBillingDispatcher(VumiTestCase):
             "message_direction": direction,
             "session_created": session_created,
             "transaction_type": BillingDispatcher.TRANSACTION_TYPE_MESSAGE,
+            "session_length": BillingDispatcher.determine_session_length(
+                session_metadata_field, msg),
         }])
 
     def assert_no_transactions(self):
         self.assertEqual(self.billing_api.transactions, [])
+
+    def test_determine_session_length(self):
+        msg = self.msg_helper.make_inbound('roar', helper_metadata={
+            'foo': {
+                'session_start': 32,
+                'session_end': 55,
+            }
+        })
+
+        self.assertEqual(
+            BillingDispatcher.determine_session_length('foo', msg), 23)
+
+    def test_determine_session_length_no_start(self):
+        msg = self.msg_helper.make_inbound('roar', helper_metadata={
+            'foo': {'session_start': 32}
+        })
+
+        self.assertEqual(
+            BillingDispatcher.determine_session_length('foo', msg), None)
+
+    def test_determine_session_length_no_end(self):
+        msg = self.msg_helper.make_inbound('roar', helper_metadata={
+            'foo': {'session_end': 55}
+        })
+
+        self.assertEqual(
+            BillingDispatcher.determine_session_length('foo', msg), None)
 
     @inlineCallbacks
     def test_inbound_message(self):
@@ -387,6 +426,74 @@ class TestBillingDispatcher(VumiTestCase):
         self.add_md(msg, is_paid=True)
         self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
         self.assert_transaction(msg, "inbound", session_created=False)
+
+    @inlineCallbacks
+    def test_inbound_message_session_length(self):
+        yield self.get_dispatcher()
+        msg = yield self.make_dispatch_inbound(
+            "inbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={
+                'session_metadata': {
+                    'session_start': 32,
+                    'session_end': 55,
+                }
+            })
+
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+        self.assert_transaction(msg, "inbound", session_created=False)
+
+    @inlineCallbacks
+    def test_inbound_message_session_length_no_start(self):
+        yield self.get_dispatcher()
+        msg = yield self.make_dispatch_inbound(
+            "inbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={'session_metadata': {'session_end': 55}})
+
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+        self.assert_transaction(msg, "inbound", session_created=False)
+
+    @inlineCallbacks
+    def test_inbound_message_session_length_no_end(self):
+        yield self.get_dispatcher()
+        msg = yield self.make_dispatch_inbound(
+            "inbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={'session_metadata': {'session_start': 32}})
+
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+        self.assert_transaction(msg, "inbound", session_created=False)
+
+    @inlineCallbacks
+    def test_inbound_message_session_length_custom_field(self):
+        yield self.get_dispatcher(session_metadata_field='foo')
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={
+                'foo': {
+                    'session_start': 32,
+                    'session_end': 55,
+                }
+            })
+
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ro_helper.get_dispatched_inbound())
+
+        self.assert_transaction(
+            msg,
+            "inbound",
+            session_created=False,
+            session_metadata_field='foo')
 
     @inlineCallbacks
     def test_outbound_message(self):
@@ -564,3 +671,71 @@ class TestBillingDispatcher(VumiTestCase):
         self.assertEqual(
             [err.getErrorMessage() for err in errors],
             ["I can't do that, Dave."])
+
+    @inlineCallbacks
+    def test_outbound_message_session_length(self):
+        yield self.get_dispatcher()
+        msg = yield self.make_dispatch_outbound(
+            "outbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={
+                'session_metadata': {
+                    'session_start': 32,
+                    'session_end': 55,
+                }
+            })
+
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+        self.assert_transaction(msg, "outbound", session_created=False)
+
+    @inlineCallbacks
+    def test_outbound_message_session_length_no_start(self):
+        yield self.get_dispatcher()
+        msg = yield self.make_dispatch_outbound(
+            "outbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={'session_metadata': {'session_end': 55}})
+
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+        self.assert_transaction(msg, "outbound", session_created=False)
+
+    @inlineCallbacks
+    def test_outbound_message_session_length_no_end(self):
+        yield self.get_dispatcher()
+        msg = yield self.make_dispatch_outbound(
+            "outbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={'session_metadata': {'session_start': 32}})
+
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+        self.assert_transaction(msg, "outbound", session_created=False)
+
+    @inlineCallbacks
+    def test_outbound_message_session_length_custom_field(self):
+        yield self.get_dispatcher(session_metadata_field='foo')
+
+        msg = yield self.make_dispatch_outbound(
+            "outbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={
+                'foo': {
+                    'session_start': 32,
+                    'session_end': 55,
+                }
+            })
+
+        self.add_md(msg, is_paid=True)
+        self.assertEqual([msg], self.ri_helper.get_dispatched_outbound())
+
+        self.assert_transaction(
+            msg,
+            "outbound",
+            session_created=False,
+            session_metadata_field='foo')
