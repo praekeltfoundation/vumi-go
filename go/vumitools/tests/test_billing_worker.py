@@ -49,7 +49,7 @@ class BillingApiMock(object):
             "last_modified": "2013-10-30T10:42:51.144745+02:00",
             "status": "Completed",
             "transaction_type": transaction_type,
-            "session_length": session_length
+            "session_length": session_length,
         }
 
 
