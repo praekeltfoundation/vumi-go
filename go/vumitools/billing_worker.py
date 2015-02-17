@@ -64,7 +64,7 @@ class BillingApi(object):
 
     def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, provider, message_direction,
-                           session_created, transaction_type):
+                           session_created, transaction_type, session_length):
         """Create a new transaction for the given ``account_number``"""
         data = {
             'account_number': account_number,
@@ -75,6 +75,7 @@ class BillingApi(object):
             'message_direction': message_direction,
             'session_created': session_created,
             'transaction_type': transaction_type,
+            'session_length': session_length,
         }
         return self._call_api("/transactions", data=data, method='POST')
 
@@ -90,6 +91,10 @@ class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
     disable_billing = ConfigBool(
         "Disable calling the billing API and just pass through all messages.",
         static=True, default=False)
+    session_metadata_field = ConfigText(
+        "Name of the session metadata field to look for in each message to "
+        "calculate session length",
+        static=True, default='session_metadata')
 
     def post_validate(self):
         if len(self.receive_inbound_connectors) != 1:
@@ -127,6 +132,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         self.api_url = config.api_url
         self.billing_api = BillingApi(self.api_url, config.retry_delay)
         self.disable_billing = config.disable_billing
+        self.session_metadata_field = config.session_metadata_field
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -144,6 +150,33 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             raise BillingError(
                 "No tag found for message %s" % (msg.get('message_id'),))
 
+    @classmethod
+    def determine_session_length(cls, session_metadata_field, msg):
+        """
+        Determines the length of the session from metadata attached to the
+        message. The billing dispatcher looks for the following on the message
+        payload to calculate this:
+
+          - ``helper_metadata.<session_metadata_field>.session_start``
+          - ``helper_metadata.<session_metadata_field>.session_end``
+
+        If either of these fields are not present, the message is assumed to not
+        contain enough information to calculate the session length and ``None``
+        is returned
+        """
+        metadata = msg['helper_metadata'].get(session_metadata_field, {})
+        
+        if 'session_start' not in metadata:
+            return None
+
+        if 'session_end' not in metadata:
+            return None
+
+        return metadata['session_end'] - metadata['session_start']
+
+    def _determine_session_length(self, msg):
+        return self.determine_session_length(self.session_metadata_field, msg)
+
     @inlineCallbacks
     def create_transaction_for_inbound(self, msg):
         """Create a transaction for the given inbound message"""
@@ -157,7 +190,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             provider=msg.get('provider'),
             message_direction=self.MESSAGE_DIRECTION_INBOUND,
             session_created=session_created,
-            transaction_type=self.TRANSACTION_TYPE_MESSAGE)
+            transaction_type=self.TRANSACTION_TYPE_MESSAGE,
+            session_length=self._determine_session_length(msg))
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
@@ -172,7 +206,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             provider=msg.get('provider'),
             message_direction=self.MESSAGE_DIRECTION_OUTBOUND,
             session_created=session_created,
-            transaction_type=self.TRANSACTION_TYPE_MESSAGE)
+            transaction_type=self.TRANSACTION_TYPE_MESSAGE,
+            session_length=self._determine_session_length(msg))
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):

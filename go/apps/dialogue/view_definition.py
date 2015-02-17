@@ -62,16 +62,6 @@ class DialogueEditView(ConversationTemplateView):
         })
 
 
-class UserDataView(ConversationTemplateView):
-    view_name = 'user_data'
-    path_suffix = 'users.csv'
-
-    def get(self, request, conversation):
-        # TODO: write new CSV data export
-        csv_data = "TODO: write data export."
-        return HttpResponse(csv_data, content_type='application/csv')
-
-
 class SendDialogueForm(Form):
     # TODO: Something better than this?
     pass
@@ -79,10 +69,6 @@ class SendDialogueForm(Form):
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     edit_view = DialogueEditView
-
-    extra_views = (
-        UserDataView,
-    )
 
     action_forms = {
         'send_jsbox': SendDialogueForm,

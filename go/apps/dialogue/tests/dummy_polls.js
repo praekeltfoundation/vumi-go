@@ -1,5 +1,5 @@
 var simple_poll = {
-    conversation: "conversation-key",
+    conversation_key: "conversation-key",
     start_state: {uuid: "choice-1"},
     poll_metadata: {
         repeatable: true,
