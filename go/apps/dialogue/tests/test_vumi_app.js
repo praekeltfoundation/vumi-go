@@ -334,7 +334,6 @@ describe("app", function() {
                     .setup.user.state('choice-1')
                     .input('4')
                     .check(function(api) {
-console.log(JSON.stringify(api.kv.store));
                         assert.equal(api.http.fixtures.fixtures[0].responses[0].code, 200);
                     })
                     .run();

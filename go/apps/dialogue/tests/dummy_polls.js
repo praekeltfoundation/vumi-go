@@ -71,7 +71,7 @@ var simple_poll = {
     {
         uuid: "http_json-1",
         name: "json post 1",
-        type: "http_json",
+        type: "httpjson",
         url: "www.foo.bar", 
         method: "GET",
         entry_endpoint: {uuid: "endpoint-12"},
@@ -80,7 +80,7 @@ var simple_poll = {
     {
         uuid: "http_json-2",
         name: "json post 2",
-        type: "http_json",
+        type: "httpjson",
         url: "www.foo.bar", 
         method: "POST",
         entry_endpoint: {uuid: "endpoint-15"},

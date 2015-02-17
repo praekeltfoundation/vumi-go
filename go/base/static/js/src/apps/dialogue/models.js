@@ -194,7 +194,7 @@
     }, {
       type: Backbone.HasOne,
       key: 'method',
-      includeInJSON: 'url'
+      includeInJSON: 'method'
     }, {
       type: Backbone.HasOne,
       key: 'entry_endpoint',
@@ -209,7 +209,8 @@
       return _({
         text: '',
         url: '',
-        method: '',
+        http_method: '',
+        httpmeth: '',
         entry_endpoint: {},
         exit_endpoint: {}
       }).defaults(GroupStateModel.__super__.defaults.call(this));

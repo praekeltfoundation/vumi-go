@@ -12,27 +12,18 @@ describe("go.apps.dialogue.states.httpjson", function() {
     setUp();
 
     diagram = newDialogueDiagram();
-    
+
     diagram.model.set({
-      channel_types: [{
-        name: 'sms',
-        label: 'SMS'
-      }, {
-        name: 'ussd',
-        label: 'USSD'
-      }],
       states: [{
         uuid: 'foo',
         name: 'Foo',
-        type: 'http_json',
-        channel_type: 'sms',
+        type: 'httpjson',
         entry_endpoint: {uuid: 'endpoint-a'},
         exit_endpoint: {uuid: 'endpoint-b'},
-        text: 'Hello over SMS',
         method: 'POST',
         url: 'www.foo.bar'
       }]
-    }, {silent: true})
+    }, {silent: true});
 
     state = diagram.states.get('foo');
   });
@@ -55,7 +46,7 @@ describe("go.apps.dialogue.states.httpjson", function() {
 
         editMode
           .$('.httpjson-method')
-          .text('GET')
+          .val('GET')
           .change();
 
         assert.equal(
@@ -72,7 +63,7 @@ describe("go.apps.dialogue.states.httpjson", function() {
 
         editMode
           .$('.httpjson-url')
-          .text('www.bar.baz')
+          .val('www.bar.baz')
           .change();
 
         assert.equal(
@@ -90,20 +81,20 @@ describe("go.apps.dialogue.states.httpjson", function() {
       state.preview();
     });
 
-    it("should show the currently assigned method", function() {
-      state.preview();
-
-      assert.equal(
-        previewMode.$('.httpjson-method').text(), 
-        'POST');
-    });
-
     it("should show the currently assigned url", function() {
       state.preview();
 
       assert.equal(
         previewMode.$('.httpjson-url').text(), 
         'www.foo.bar');
+    });
+
+    it("should show the currently assigned method", function() {
+      state.preview();
+
+      assert.equal(
+        previewMode.$('.httpjson-method').text(), 
+        'POST');
     });
 
   });

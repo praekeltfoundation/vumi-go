@@ -24,34 +24,12 @@
     },
 
     events: _.extend({
-      'change .channel-type': function(e) {
-        var name = $(e.target).val();
-
-        if (name === 'unassigned') {
-          this.model.set('channel_type', null, {silent: true});
-        } else if (name !== 'none') {
-          this.model.set('channel_type', {name: name}, {silent: true});
-        }
-      },
-
       'change .httpjson-method': function(e) {
-        var model = $(e.target).val();
-
-        if(model === 'unassigned') {
-          this.model.set('method', null, {silent: true});
-        } else if( model !== 'none') {
-          this.model.set('method', {model: model}, {silent: true});
-        }
+        this.model.set('method', $(e.target).val(), {silent: true});
       },
 
       'change .httpjson-url': function(e) {
-        var url = $(e.target).val();
-
-        if(url === 'unassigned') {
-          this.model.set('url', null, {silent: true});
-        } else if(url !== 'none') {
-          this.model.set('url', {url: url}, {silent: true});
-        }
+        this.model.set('url', $(e.target).val(), {silent: true});
       }
     }, DialogueStateEditView.prototype.events)
   });
@@ -63,7 +41,7 @@
 
     data: function() {
       var d = HttpJsonStatePreviewView.__super__.data.call(this);
-      d.method = this.model.get('mehtod');
+      d.method = this.model.get('method');
       d.url = this.model.get('url');
 
       return d;
@@ -71,7 +49,7 @@
   });
 
   var HttpJsonStateView = DialogueStateView.extend({
-    typeName: 'http_json',
+    typeName: 'httpjson',
 
     editModeType: HttpJsonStateEditView,
     previewModeType: HttpJsonStatePreviewView,

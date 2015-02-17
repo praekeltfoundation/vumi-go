@@ -168,23 +168,23 @@ var DialogueApp = App.extend(function(self) {
         return self.states.create(self.poll.start_state.uuid);
     });
 
-    self.types.http_json = function(desc) {
+    self.types.httpjson = function(desc) {
         self.http = new JsonApi(self.im);
 
-	var payload = {
-	    user: {
-		answers: self.im.user.answers
-	    },
-	    contact: self.contact
-	};
+        var payload = {
+	        user: {
+		        answers: self.im.user.answers
+	        },
+	        contact: self.contact
+	    };
 
-	return self
-	    .http.request(desc.method, desc.url, desc.method !== 'GET' ? { data: JSON.stringify(payload) } : {})
-		.then(function(request) {
-		    if(request.body){
-			return request.body;
-		    }
-		    return self.states.create(self.next(desc.exit_endpoint));
+	    return self
+	        .http.request(desc.method, desc.url, desc.method !== 'GET' ? { data: JSON.stringify(payload) } : {})
+                .then(function(request) {
+		            if(request.body){
+			            return request.body;
+		            }
+		            return self.states.create(self.next(desc.exit_endpoint));
 		});
     };
 });
