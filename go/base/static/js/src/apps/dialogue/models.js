@@ -45,7 +45,8 @@
       freetext: 'go.apps.dialogue.models.FreeTextStateModel',
       end: 'go.apps.dialogue.models.EndStateModel',
       group: 'go.apps.dialogue.models.GroupStateModel',
-      send: 'go.apps.dialogue.models.SendStateModel'
+      send: 'go.apps.dialogue.models.SendStateModel',
+      httpjson: 'go.apps.dialogue.models.HttpJsonStatemodel'
     },
 
     defaults: function() {
@@ -182,6 +183,38 @@
       }).defaults(GroupStateModel.__super__.defaults.call(this));
     }
   });
+  
+  var HttpJsonStateModel = DialogueStateModel.extend({
+    storableOnContact: false,
+
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'url',
+      includeInJSON: 'url'
+    }, {
+      type: Backbone.HasOne,
+      key: 'method',
+      includeInJSON: 'url'
+    }, {
+      type: Backbone.HasOne,
+      key: 'entry_endpoint',
+      relatedModel: DialogueEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'exit_endpoint',
+      relatedModel: DialogueEndpointModel
+    }],
+
+    defaults: function() {
+      return _({
+        text: '',
+        url: '',
+        method: '',
+        entry_endpoint: {},
+        exit_endpoint: {}
+      }).defaults(GroupStateModel.__super__.defaults.call(this));
+    }
+  });
 
   var EndStateModel = DialogueStateModel.extend({
     storableOnContact: false,
@@ -299,6 +332,7 @@
     FreeTextStateModel: FreeTextStateModel,
     EndStateModel: EndStateModel,
     GroupStateModel: GroupStateModel,
-    SendStateModel: SendStateModel
+    SendStateModel: SendStateModel,
+    HttpJsonStateModel: HttpJsonStateModel
   });
 })(go.apps.dialogue.models = {});
