@@ -352,7 +352,7 @@ describe("app", function() {
                               request: {
                                   method: "POST", 
                                   url: "www.foo.bar", 
-                                  data: JSON.stringify({user: {answers: { 'choice-1': 'value-5'}}, contact: api.contacts.store[0]})
+                                  data: JSON.stringify({user: {answers: { 'choice-1': 'value-5'}}, contact: api.contacts.store[0], conversation_key: poll.conversation_key})
                               }
                         });
                         api.contacts.store[0].extra = {};

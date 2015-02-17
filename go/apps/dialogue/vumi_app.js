@@ -175,7 +175,8 @@ var DialogueApp = App.extend(function(self) {
 	        user: {
 		        answers: self.im.user.answers
 	        },
-	        contact: self.contact
+	        contact: self.contact,
+            conversation_key: self.poll.conversation_key
 	    };
 
 	    return self
