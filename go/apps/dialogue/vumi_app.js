@@ -172,21 +172,22 @@ var DialogueApp = App.extend(function(self) {
         self.http = new JsonApi(self.im);
 
         var payload = {
-	        user: {
-		        answers: self.im.user.answers
-	        },
-	        contact: self.contact,
+            user: {
+                answers: self.im.user.answers
+            },
+            contact: self.contact,
             conversation_key: self.poll.conversation_key
-	    };
+        };
 
-	    return self
-	        .http.request(desc.method, desc.url, desc.method !== 'GET' ? { data: JSON.stringify(payload) } : {})
-                .then(function(request) {
-		            if(request.body){
-			            return request.body;
-		            }
-		            return self.states.create(self.next(desc.exit_endpoint));
-		});
+        var data = desc.method !== 'GET' ? { 
+                    data: JSON.stringify(payload) 
+                } : null;
+
+        return self
+            .http.request(desc.method, desc.url, data)
+                .then(function(response) {
+                    return self.states.create(self.next(desc.exit_endpoint));
+        });
     };
 });
 

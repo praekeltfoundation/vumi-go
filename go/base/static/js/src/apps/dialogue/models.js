@@ -189,14 +189,6 @@
 
     relations: [{
       type: Backbone.HasOne,
-      key: 'url',
-      includeInJSON: 'url'
-    }, {
-      type: Backbone.HasOne,
-      key: 'method',
-      includeInJSON: 'method'
-    }, {
-      type: Backbone.HasOne,
       key: 'entry_endpoint',
       relatedModel: DialogueEndpointModel
     }, {
@@ -207,10 +199,8 @@
 
     defaults: function() {
       return _({
-        text: '',
         url: '',
-        http_method: '',
-        httpmeth: '',
+        method: 'POST',
         entry_endpoint: {},
         exit_endpoint: {}
       }).defaults(GroupStateModel.__super__.defaults.call(this));

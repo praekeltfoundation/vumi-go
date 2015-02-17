@@ -321,14 +321,19 @@ describe("app", function() {
             });
         });
 
-        describe("when the user enters a send state which is a http_json type", function() {
-            it("and it is a GET type the response should be 200", function() {
+        describe("when the user enters a send state which is a httpjson type", function() {
+            it("should successfully fetch the data from the url if the method is GET", function() {
                 return tester
                     .setup(function(api) {
                         api.contacts.add({
                            msisdn: '+27123'
                         });
-                        api.http.fixtures.add({request: {method: "GET", url: "www.foo.bar"}});
+                        api.http.fixtures.add({
+                            request: {
+                                method: "GET", 
+                                url: "www.foo.bar"
+                            }
+                        });
                     })
                     .setup.user.addr('+27123')
                     .setup.user.state('choice-1')
@@ -339,22 +344,36 @@ describe("app", function() {
                     .run();
             });
             
-            it("and it is a POST type the response should be 200", function() {
+            it("should successfully send the data to the url if the method is POST", function() {
                 return tester
                     .setup.user.addr('+27123')                    
                     .setup.user.state('choice-1')
                     .setup(function(api) {
                         api.contacts.add({
-                           msisdn: '+27123'
+                            msisdn: '+27123'
                         });
-                        api.contacts.store[0].extra = { 'message-1': 'value-5', 'message-1-1': 'value-5' };
+
+                        api.contacts.store[0].extra = { 
+                            'message-1': 'value-5', 
+                            'message-1-1': 'value-5' 
+                        };
+
                         api.http.fixtures.add({
-                              request: {
-                                  method: "POST", 
-                                  url: "www.foo.bar", 
-                                  data: JSON.stringify({user: {answers: { 'choice-1': 'value-5'}}, contact: api.contacts.store[0], conversation_key: poll.conversation_key})
-                              }
+                            request: {
+                                method: "POST", 
+                                url: "www.foo.bar", 
+                                data: JSON.stringify({
+                                    user: {
+                                        answers: { 
+                                            'choice-1': 'value-5'
+                                        }
+                                    }, 
+                                    contact: api.contacts.store[0], 
+                                    conversation_key: poll.conversation_key
+                                })
+                            }
                         });
+
                         api.contacts.store[0].extra = {};
                     })
                     .input('5')
