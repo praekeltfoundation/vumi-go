@@ -72,3 +72,4 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, 'Description')
         self.assertContains(response, 'Credit balance')
         self.assertContains(response, 'Last topup balance')
+        self.assertContains(response, 'Is developer')
