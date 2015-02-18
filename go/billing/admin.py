@@ -22,12 +22,13 @@ class TagPoolAdmin(admin.ModelAdmin):
 
 
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('account_number', 'user', 'description',
-                    'credit_balance', 'last_topup_balance')
+    list_display = (
+        'account_number', 'user', 'description', 'credit_balance',
+        'last_topup_balance', 'is_developer')
 
     search_fields = ('account_number', 'user__email', 'description')
     readonly_fields = ('credit_balance',)
-    actions = ['load_credits']
+    actions = ['load_credits', 'set_developer_flag', 'unset_developer_flag']
 
     def load_credits(self, request, queryset):
         selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
@@ -35,6 +36,16 @@ class AccountAdmin(admin.ModelAdmin):
         redirect_url = "credits/load/"
         return HttpResponseRedirect(redirect_url)
     load_credits.short_description = "Load credits for selected accounts"
+
+    def set_developer_flag(self, request, queryset):
+        queryset.update(is_developer=True)
+    set_developer_flag.short_description = (
+        "Set the developer flag for selected accounts")
+
+    def unset_developer_flag(self, request, queryset):
+        queryset.update(is_developer=False)
+    unset_developer_flag.short_description = (
+        "Unset the developer flag for selected accounts")
 
     def get_urls(self):
         urls = super(AccountAdmin, self).get_urls()
