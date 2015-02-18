@@ -50,6 +50,11 @@ class Account(models.Model):
                     "in the calculation to determine when low-credits "
                     "notifications should be sent."))
 
+    is_developer = models.BooleanField(
+        default=False,
+        help_text=_("Determines whether or not the billing account is a "
+                    "developer account."))
+
     def __unicode__(self):
         return u"{0} ({1})".format(self.account_number, self.user.email)
 
