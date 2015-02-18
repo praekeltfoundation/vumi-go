@@ -180,9 +180,3 @@ class TestDialogueViews(GoDjangoTestCase):
 
         model_data = response.context["model_data"]
         self.assertEqual(json.loads(model_data), expected)
-
-    def test_export_user_data(self):
-        conv_helper = self.setup_conversation()
-        response = self.client.get(conv_helper.get_view_url('user_data'))
-        self.assertEqual(response['Content-Type'], 'application/csv')
-        self.assertEqual(response.content, "TODO: write data export.")
