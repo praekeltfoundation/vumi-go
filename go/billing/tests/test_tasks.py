@@ -10,7 +10,6 @@ from django.core import mail
 import mock
 
 from go.base.s3utils import Bucket
-from go.base.utils import vumi_api_for_user
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.tests.s3_helpers import S3Helper
 
@@ -1233,18 +1232,18 @@ class TestLoadCreditsForDeveloperAccount(GoDjangoTestCase):
         self.assertEqual(transaction.credit_amount, credits)
 
     def test_set_credit_balance(self):
-        self._assert_account_balance(0.0)
-        tasks.set_account_balance(self.user_account.key, 10.0)
-        self._assert_account_balance(10.0)
-        self._assert_last_transaction_topup(10.0)
+        self._assert_account_balance(Decimal(0.0))
+        tasks.set_account_balance(self.user_account.key, Decimal(10.0))
+        self._assert_account_balance(Decimal(10.0))
+        self._assert_last_transaction_topup(Decimal(10.0))
 
     def test_set_all_developer_account_balances(self):
-        self._assert_account_balance(0.0)
-        tasks.set_developer_account_balances(10.0)
-        self._assert_account_balance(0.0)
+        self._assert_account_balance(Decimal(0.0))
+        tasks.set_developer_account_balances(Decimal(10.0))
+        self._assert_account_balance(Decimal(0.0))
         self.assertEqual(Transaction.objects.count(), 0)
 
         self._set_developer_flag(self.user_helper.get_django_user(), True)
-        tasks.set_developer_account_balances(10.0)
-        self._assert_account_balance(10.0)
-        self._assert_last_transaction_topup(10.0)
+        tasks.set_developer_account_balances(Decimal(10.0))
+        self._assert_account_balance(Decimal(10.0))
+        self._assert_last_transaction_topup(Decimal(10.0))
