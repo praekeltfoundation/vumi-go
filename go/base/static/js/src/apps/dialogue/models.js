@@ -183,7 +183,7 @@
       }).defaults(GroupStateModel.__super__.defaults.call(this));
     }
   });
-  
+
   var HttpJsonStateModel = DialogueStateModel.extend({
     storableOnContact: false,
 

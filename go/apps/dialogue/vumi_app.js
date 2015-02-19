@@ -179,8 +179,8 @@ var DialogueApp = App.extend(function(self) {
             conversation_key: self.poll.conversation_key
         };
 
-        var data = desc.method !== 'GET' ? { 
-                    data: JSON.stringify(payload) 
+        var data = desc.method !== 'GET' ? {
+                    data: JSON.stringify(payload)
                 } : null;
 
         return self

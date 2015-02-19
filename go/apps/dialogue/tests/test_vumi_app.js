@@ -330,7 +330,7 @@ describe("app", function() {
                         });
                         api.http.fixtures.add({
                             request: {
-                                method: "GET", 
+                                method: "GET",
                                 url: "www.foo.bar"
                             }
                         });
@@ -341,45 +341,50 @@ describe("app", function() {
                     .check(function(api) {
                         assert.equal(api.http.fixtures.fixtures[0].responses[0].code, 200);
                     })
+                    .check.user.state('end-1')
                     .run();
             });
-            
+
             it("should successfully send the data to the url if the method is POST", function() {
                 return tester
-                    .setup.user.addr('+27123')                    
+                    .setup.user.addr('+27123')
                     .setup.user.state('choice-1')
                     .setup(function(api) {
                         api.contacts.add({
                             msisdn: '+27123'
                         });
 
-                        api.contacts.store[0].extra = { 
-                            'message-1': 'value-5', 
-                            'message-1-1': 'value-5' 
+                        // extra is only populated by input so "mocking" the input data here
+                        api.contacts.store[0].extra = {
+                            'message-1': 'value-5',
+                            'message-1-1': 'value-5'
                         };
 
                         api.http.fixtures.add({
                             request: {
-                                method: "POST", 
-                                url: "www.foo.bar", 
+                                method: "POST",
+                                url: "www.foo.bar",
                                 data: JSON.stringify({
                                     user: {
-                                        answers: { 
+                                        answers: {
                                             'choice-1': 'value-5'
                                         }
-                                    }, 
-                                    contact: api.contacts.store[0], 
+                                    },
+                                    contact: api.contacts.store[0],
                                     conversation_key: poll.conversation_key
                                 })
                             }
                         });
 
+                        // Clearing out the "mocked" input data, else input will add extra
+                        // values making the test fail
                         api.contacts.store[0].extra = {};
                     })
                     .input('5')
                     .check(function(api) {
                         assert.equal(api.http.fixtures.fixtures[0].responses[0].code, 200);
                     })
+                    .check.user.state('end-1')
                     .run();
             });
         });

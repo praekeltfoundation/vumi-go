@@ -72,7 +72,7 @@ var simple_poll = {
         uuid: "http_json-1",
         name: "json post 1",
         type: "httpjson",
-        url: "www.foo.bar", 
+        url: "www.foo.bar",
         method: "GET",
         entry_endpoint: {uuid: "endpoint-12"},
         exit_endpoint: {uuid: "endpoint-13"}
@@ -81,10 +81,10 @@ var simple_poll = {
         uuid: "http_json-2",
         name: "json post 2",
         type: "httpjson",
-        url: "www.foo.bar", 
+        url: "www.foo.bar",
         method: "POST",
         entry_endpoint: {uuid: "endpoint-15"},
-        exit_endpoint: {uuid: "endpoint-13"}
+        exit_endpoint: {uuid: "endpoint-16"}
     }],
     connections: [
     {
@@ -122,6 +122,10 @@ var simple_poll = {
     {
         source: {uuid: "endpoint-14"},
         target: {uuid: "endpoint-15"}
+    },
+    {
+        source: {uuid: "endpoint-16"},
+        target: {uuid: "endpoint-10"}
     }]
 };
 

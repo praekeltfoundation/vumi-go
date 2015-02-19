@@ -85,7 +85,7 @@ describe("go.apps.dialogue.states.httpjson", function() {
       state.preview();
 
       assert.equal(
-        previewMode.$('.httpjson-url').text(), 
+        previewMode.$('.httpjson-url').text(),
         'www.foo.bar');
     });
 
@@ -93,7 +93,7 @@ describe("go.apps.dialogue.states.httpjson", function() {
       state.preview();
 
       assert.equal(
-        previewMode.$('.httpjson-method').text(), 
+        previewMode.$('.httpjson-method').text(),
         'POST');
     });
 
