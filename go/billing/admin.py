@@ -8,6 +8,7 @@ from django.utils.html import format_html
 from django.contrib import admin
 from django.contrib import messages
 
+from go.base.utils import vumi_api_for_user
 from go.billing.models import (
     TagPool, Account, MessageCost, Transaction, Statement, LineItem,
     LowCreditNotification, TransactionArchive)
@@ -37,13 +38,26 @@ class AccountAdmin(admin.ModelAdmin):
         return HttpResponseRedirect(redirect_url)
     load_credits.short_description = "Load credits for selected accounts"
 
+    def is_developer(self, obj):
+        vumi_api = vumi_api_for_user(obj.user)
+        account = vumi_api.get_user_account()
+        return account.is_developer
+
+    def _set_developer_flag(self, user, value):
+        vumi_api = vumi_api_for_user(user)
+        account = vumi_api.get_user_account()
+        account.is_developer = value
+        account.save()
+
     def set_developer_flag(self, request, queryset):
-        queryset.update(is_developer=True)
+        for obj in queryset:
+            self._set_developer_flag(obj.user, True)
     set_developer_flag.short_description = (
         "Set the developer flag for selected accounts")
 
     def unset_developer_flag(self, request, queryset):
-        queryset.update(is_developer=False)
+        for obj in queryset:
+            self._set_developer_flag(obj.user, False)
     unset_developer_flag.short_description = (
         "Unset the developer flag for selected accounts")
 
