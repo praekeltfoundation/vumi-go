@@ -10,6 +10,7 @@ from django.core import mail
 import mock
 
 from go.base.s3utils import Bucket
+from go.base.utils import vumi_api_for_user
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.base.tests.s3_helpers import S3Helper
 
@@ -1209,3 +1210,41 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertTrue(self.django_user.get_full_name() in email.body)
         self.assertTrue(str(notification.pk) in email.body)
         self.assertTrue(str(self.acc.user.email) in email.body)
+
+
+class TestLoadCreditsForDeveloperAccount(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.user_account = self.user_helper.get_user_account()
+
+    def _set_developer_flag(self, user, value):
+        self.user_account.is_developer = value
+        self.user_account.save()
+
+    def _assert_account_balance(self, balance):
+        account = Account.objects.get(account_number=self.user_account.key)
+        self.assertEqual(account.credit_balance, balance)
+
+    def _assert_last_transaction_topup(self, credits):
+        transaction = Transaction.objects.order_by('-created')[0]
+        self.assertEqual(
+            transaction.transaction_type, Transaction.TRANSACTION_TYPE_TOPUP)
+        self.assertEqual(transaction.credit_amount, credits)
+
+    def test_set_credit_balance(self):
+        self._assert_account_balance(0.0)
+        tasks.set_account_balance(self.user_account.key, 10.0)
+        self._assert_account_balance(10.0)
+        self._assert_last_transaction_topup(10.0)
+
+    def test_set_all_developer_account_balances(self):
+        self._assert_account_balance(0.0)
+        tasks.set_developer_account_balances(10.0)
+        self._assert_account_balance(0.0)
+        self.assertEqual(Transaction.objects.count(), 0)
+
+        self._set_developer_flag(self.user_helper.get_django_user(), True)
+        tasks.set_developer_account_balances(10.0)
+        self._assert_account_balance(10.0)
+        self._assert_last_transaction_topup(10.0)
