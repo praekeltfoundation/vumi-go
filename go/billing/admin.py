@@ -107,7 +107,7 @@ class TransactionAdmin(admin.ModelAdmin):
                     'session_created', 'message_cost', 'storage_cost',
                     'session_cost', 'session_length_cost',
                     'session_unit_cost', 'session_unit_time',
-                    'markup_percent', 'provider', 'credit_amount', 
+                    'markup_percent', 'provider', 'credit_amount',
                     'message_credits', 'storage_credits',
                     'session_credits', 'session_length_credits',
                     'credit_factor', 'status', 'message_id', 'last_modified')
