@@ -240,6 +240,12 @@ class MessageCost(models.Model):
         return self.calculate_session_credit_cost(
             self.session_cost, self.markup_percent)
 
+    @property
+    def session_length_credit_cost(self):
+        """Return the calculated cost per session length (in credits)."""
+        return self.calculate_session_length_credit_cost(
+            self.session_cost, self.markup_percent)
+
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
 

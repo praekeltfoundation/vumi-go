@@ -89,8 +89,10 @@ class AccountAdmin(admin.ModelAdmin):
 class MessageCostAdmin(admin.ModelAdmin):
     list_display = ('id', 'account', 'tag_pool', 'message_direction',
                     'message_cost', 'storage_cost', 'session_cost',
-                    'markup_percent', 'message_credit_cost',
-                    'storage_credit_cost', 'session_credit_cost')
+                    'session_unit_cost', 'markup_percent',
+                    'message_credit_cost', 'storage_credit_cost',
+                    'session_credit_cost', 'session_length_credit_cost',
+                    'session_unit_time')
 
     search_fields = (
         'tag_pool__name', 'tag_pool__description', 'account__account_number',
@@ -100,23 +102,20 @@ class MessageCostAdmin(admin.ModelAdmin):
 
 
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'account_number', 'transaction_type', 'tag_pool_name',
-                    'tag_name', 'message_id', 'message_direction',
+    list_display = ('id', 'created', 'account_number', 'transaction_type',
+                    'tag_pool_name', 'tag_name', 'message_direction',
                     'session_created', 'message_cost', 'storage_cost',
-                    'session_cost', 'message_credits', 'storage_credits',
-                    'session_credits', 'markup_percent', 'credit_factor',
-                    'credit_amount', 'status', 'provider', 'created',
-                    'last_modified')
+                    'session_cost', 'session_length_cost',
+                    'session_unit_cost', 'session_unit_time',
+                    'markup_percent', 'credit_amount', 'provider',
+                    'message_credits', 'storage_credits',
+                    'session_credits', 'session_length_credits',
+                    'credit_factor', 'status', 'message_id', 'last_modified')
+
+    readonly_fields = list_display
 
     search_fields = ('account__account_number', 'tag_pool_name', 'tag_name')
     list_filter = ('message_direction', 'status', 'created', 'last_modified')
-    readonly_fields = ('account_number', 'transaction_type', 'tag_pool_name',
-                       'tag_name', 'message_id', 'message_direction',
-                       'session_created', 'message_cost', 'storage_cost',
-                       'session_cost', 'message_credits', 'storage_credits',
-                       'session_credits', 'markup_percent', 'credit_factor',
-                       'credit_amount', 'status', 'provider', 'created',
-                       'last_modified')
 
     def has_add_permission(self, request):
         return False
