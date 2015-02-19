@@ -1,9 +1,12 @@
 """ Test for billing admin. """
 
+from django.contrib.admin.sites import AdminSite
 from django.core.urlresolvers import reverse
 
+from go.base.utils import vumi_api_for_user
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import Account
+from go.billing.admin import AccountAdmin
 
 from .helpers import mk_statement, mk_transaction
 
@@ -72,3 +75,20 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, 'Description')
         self.assertContains(response, 'Credit balance')
         self.assertContains(response, 'Last topup balance')
+        self.assertContains(response, 'Is developer')
+
+    def test_getting_developer_flag(self):
+        admin = AccountAdmin(Account, AdminSite())
+        self.assertFalse(admin.is_developer(self.account))
+        vumi_api = vumi_api_for_user(self.account.user)
+        account = vumi_api.get_user_account()
+        account.is_developer = True
+        account.save()
+        self.assertTrue(admin.is_developer(self.account))
+
+    def test_setting_developer_flag(self):
+        admin = AccountAdmin(Account, AdminSite())
+        admin._set_developer_flag(self.account.user, True)
+        self.assertTrue(admin.is_developer(self.account))
+        admin._set_developer_flag(self.account.user, False)
+        self.assertFalse(admin.is_developer(self.account))
