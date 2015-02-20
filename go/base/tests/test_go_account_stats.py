@@ -58,6 +58,14 @@ class TestGoAccountStatsCommand(GoDjangoTestCase):
         self.assertEqual(len(output), 1)
         self.assertTrue(active_conv.key in output[0])
 
+    def test_parse_timestamp_to_date(self):
+        self.assertEqual(
+            self.command.parse_timestamp_to_date('2015-01-01 12:00:00'),
+            datetime(2015, 1, 1, 0, 0, 0).date())
+        self.assertEqual(
+            self.command.parse_timestamp_to_date('2015-01-01 12:00:00.123'),
+            datetime(2015, 1, 1, 0, 0, 0).date())
+
     def test_stats(self):
         msg_helper = GoMessageHelper(vumi_helper=self.vumi_helper)
         conv = self.user_helper.create_conversation(
