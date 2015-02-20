@@ -62,10 +62,14 @@ class TestGoAccountStatsCommand(GoDjangoTestCase):
         msg_helper = GoMessageHelper(vumi_helper=self.vumi_helper)
         conv = self.user_helper.create_conversation(
             u'bulk_message', name=u'active', started=True)
-        msgs = msg_helper.add_inbound_to_conv(conv, 5, time_multiplier=0)
+        start_date = datetime(
+            2015, 1, 1, 11, 10, 9, microsecond=0)
+        msgs = msg_helper.add_inbound_to_conv(
+            conv, 5, start_date=start_date, time_multiplier=0)
         msg_helper.add_replies_to_conv(conv, msgs)
         # Add one more inbound message so sent != received.
-        msg_helper.add_inbound_to_conv(conv, 1, time_multiplier=0)
+        msg_helper.add_inbound_to_conv(
+            conv, 1, start_date=start_date, time_multiplier=0)
 
         self.command.handle(self.user_email, 'stats', conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
@@ -75,7 +79,33 @@ class TestGoAccountStatsCommand(GoDjangoTestCase):
             u'Total Sent in batch %s: 5' % (conv.batch.key,),
             u'Total Uniques: 5',
             u'Received per date:',
-            u'%s: 6' % (datetime.now().date(),),
+            u'%s: 6' % (start_date.date(),),
             u'Sent per date:',
-            u'%s: 5' % (datetime.now().date(),),
+            u'%s: 5' % (start_date.date(),),
+        ])
+
+    def test_stats_with_microsecond_timestamps(self):
+        msg_helper = GoMessageHelper(vumi_helper=self.vumi_helper)
+        conv = self.user_helper.create_conversation(
+            u'bulk_message', name=u'active', started=True)
+        start_date = datetime(
+            2015, 1, 1, 11, 10, 9, microsecond=123)
+        msgs = msg_helper.add_inbound_to_conv(
+            conv, 5, start_date=start_date, time_multiplier=0)
+        msg_helper.add_replies_to_conv(conv, msgs)
+        # Add one more inbound message so sent != received.
+        msg_helper.add_inbound_to_conv(
+            conv, 1, start_date=start_date, time_multiplier=0)
+
+        self.command.handle(self.user_email, 'stats', conv.key)
+        output = self.command.stdout.getvalue().strip().split('\n')
+        self.assertEqual(output, [
+            u'Conversation: active',
+            u'Total Received in batch %s: 6' % (conv.batch.key,),
+            u'Total Sent in batch %s: 5' % (conv.batch.key,),
+            u'Total Uniques: 5',
+            u'Received per date:',
+            u'%s: 6' % (start_date.date(),),
+            u'Sent per date:',
+            u'%s: 5' % (start_date.date(),),
         ])
