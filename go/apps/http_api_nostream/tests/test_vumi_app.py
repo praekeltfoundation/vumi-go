@@ -268,8 +268,9 @@ class TestNoStreamingHTTPWorkerBase(VumiTestCase):
             prefix = "go.campaigns.test-0-user.stores.metric_store"
 
         self.assertEqual(
-            self.app_helper.get_published_metrics(self.app),
-            [("%s.%s" % (prefix, name), value) for name, value in metrics])
+            self.app_helper.get_published_metrics_with_aggs(self.app),
+            [("%s.%s" % (prefix, name), value, agg)
+             for name, value, agg in metrics])
 
 
 class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
@@ -717,8 +718,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         ])
         self.assert_response_ok(response, "Metrics published")
         self.assert_metrics_published([
-            ("vumi.test.v1", 1234),
-            ("vumi.test.v2", 3456),
+            ("vumi.test.v1", 1234, 'sum'),
+            ("vumi.test.v2", 3456, 'avg'),
         ])
 
     @inlineCallbacks
@@ -729,7 +730,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         ])
         self.assert_response_ok(response, "Metrics published")
         self.assert_metrics_published([
-            ("vumi.test.v1", 1234),
+            ("vumi.test.v1", 1234, 'last'),
         ])
 
     @inlineCallbacks
@@ -739,6 +740,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             ("vumi.test.v1", 1234, None),
         ])
         self.assert_bad_request(response, "None is not a valid aggregate.")
+        self.assert_metrics_published([])
 
     @inlineCallbacks
     def test_metrics_publishing_unknown_aggregate_name(self):
@@ -748,6 +750,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         ])
         self.assert_bad_request(
             response, "'unknown' is not a valid aggregate.")
+        self.assert_metrics_published([])
 
     @inlineCallbacks
     def test_health_response(self):
