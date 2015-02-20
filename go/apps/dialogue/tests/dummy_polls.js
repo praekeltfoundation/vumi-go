@@ -19,7 +19,6 @@ var simple_poll = {
         store_as: "message-1",
         type: "choice", // menu of options
         entry_endpoint: null, // null for the start state
-        store_on_contact: true,
         // choice specific
         text: "What is your favourite colour?",
         choice_endpoints: [ // these are actually also the endpoints
@@ -52,7 +51,6 @@ var simple_poll = {
         name: "Message 3",
         store_as: "message-3",
         type: "freetext",
-        store_on_contact: true,
         entry_endpoint: {uuid: "endpoint-8"},
         // freetext specific
         exit_endpoint: {uuid: "endpoint-9"},
@@ -63,7 +61,6 @@ var simple_poll = {
         name: "Ending 1",
         store_as: "ending-1",
         type: "end",
-        store_on_contact: true,
         entry_endpoint: {uuid: "endpoint-10"},
         // end specific
         text: "Thank you for taking our survey"

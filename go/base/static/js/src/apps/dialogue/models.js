@@ -35,8 +35,6 @@
   });
 
   var DialogueStateModel = StateModel.extend({
-    storableOnContact: true,
-
     relations: [],
 
     subModelTypes: {
@@ -53,7 +51,6 @@
       return {
         uuid: uuid.v4(),
         user_defined_store_as: false,
-        store_on_contact: false,
       };
     },
 
@@ -130,8 +127,6 @@
   });
 
   var GroupStateModel = DialogueStateModel.extend({
-    storableOnContact: false,
-
     relations: [{
       type: Backbone.HasOne,
       key: 'group',
@@ -157,8 +152,6 @@
   });
 
   var SendStateModel = DialogueStateModel.extend({
-    storableOnContact: false,
-
     relations: [{
       type: Backbone.HasOne,
       key: 'channel_type',
@@ -208,8 +201,6 @@
   });
 
   var EndStateModel = DialogueStateModel.extend({
-    storableOnContact: false,
-
     relations: [{
       type: Backbone.HasOne,
       key: 'entry_endpoint',

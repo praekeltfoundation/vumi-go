@@ -38,7 +38,6 @@
       store_as: 'message-1',
       text: 'What is your favourite colour?',
       user_defined_store_as: false,
-      store_on_contact: false,
       entry_endpoint: {uuid: 'endpoint0'},
       choice_endpoints: [{
         value: 'red',
@@ -57,7 +56,6 @@
       type: 'freetext',
       store_as: 'message-2',
       user_defined_store_as: false,
-      store_on_contact: false,
       entry_endpoint: {uuid: 'endpoint3'},
       exit_endpoint: {uuid: 'endpoint4'},
       text: 'What is your name?'
@@ -67,7 +65,6 @@
       type: 'end',
       store_as: 'ending-1',
       user_defined_store_as: false,
-      store_on_contact: false,
       entry_endpoint: {uuid: 'endpoint5'},
       text: 'Thank you for taking our survey'
     }, {
@@ -75,7 +72,6 @@
       name: 'Dummy Message 1',
       type: 'dummy',
       user_defined_store_as: false,
-      store_on_contact: false,
       store_as: 'dummy-message-1',
       entry_endpoint: {uuid: 'endpoint6'},
       exit_endpoint: {uuid: 'endpoint7'}
@@ -85,7 +81,6 @@
       type: 'group',
       group: {key: 'group1'},
       user_defined_store_as: false,
-      store_on_contact: false,
       store_as: 'message-5',
       entry_endpoint: {uuid: 'endpoint8'},
       exit_endpoint: {uuid: 'endpoint9'}
