@@ -555,6 +555,24 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item3.cost, 600)
         self.assertEqual(item3.units, 2)
 
+    def test_generate_monthly_statement_zero_session_unit_cost(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=0,
+            session_length_cost=0,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item] = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertEqual(item.credits, 0)
+        self.assertEqual(item.unit_cost, 0)
+        self.assertEqual(item.cost, 0)
+        self.assertEqual(item.units, 0)
+
     def test_generate_monthly_statement_session_length_different_markups(self):
         mk_transaction(
             self.account,

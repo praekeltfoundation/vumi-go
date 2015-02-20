@@ -171,7 +171,8 @@ def get_count(transaction):
 
 def get_session_length_count(transaction):
     length_cost = get_session_length_cost(transaction)
-    return length_cost / get_session_length_unit_cost(transaction)
+    unit_cost = get_session_length_unit_cost(transaction)
+    return length_cost / (unit_cost if unit_cost != 0 else 1)
 
 
 def get_message_unit_cost(transaction):
