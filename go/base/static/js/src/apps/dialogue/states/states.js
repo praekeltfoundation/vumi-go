@@ -247,7 +247,8 @@
       freetext: 'go.apps.dialogue.states.freetext.FreeTextStateView',
       end: 'go.apps.dialogue.states.end.EndStateView',
       group: 'go.apps.dialogue.states.group.GroupStateView',
-      send: 'go.apps.dialogue.states.send.SendStateView'
+      send: 'go.apps.dialogue.states.send.SendStateView',
+      httpjson: 'go.apps.dialogue.states.httpjson.HttpJsonStateView'
     },
 
     events: {
