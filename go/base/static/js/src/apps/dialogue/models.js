@@ -44,7 +44,7 @@
       end: 'go.apps.dialogue.models.EndStateModel',
       group: 'go.apps.dialogue.models.GroupStateModel',
       send: 'go.apps.dialogue.models.SendStateModel',
-      httpjson: 'go.apps.dialogue.models.HttpJsonStatemodel'
+      httpjson: 'go.apps.dialogue.models.HttpJsonStateModel'
     },
 
     defaults: function() {
@@ -196,7 +196,7 @@
         method: 'POST',
         entry_endpoint: {},
         exit_endpoint: {}
-      }).defaults(GroupStateModel.__super__.defaults.call(this));
+      }).defaults(HttpJsonStateModel.__super__.defaults.call(this));
     }
   });
 
