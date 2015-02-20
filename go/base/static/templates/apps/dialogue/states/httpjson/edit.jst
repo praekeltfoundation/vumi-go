@@ -1,9 +1,11 @@
 <div class="form-group">
     <label class="control-label">Method</label>
-    <select class=httpjson-method form-control">
+    <select class="httpjson-method form-control">
         <option value="POST" <% if (method === 'POST') { %> selected <% } %> >POST</option>
         <option value="GET" <% if (method === 'GET') { %> selected <% } %> >GET</option>
     </select>
-  <label class="control-label">Url</label>
+</div>
+<div class="form-group">
+  <label class="control-label">URL</label>
   <input class="text form-control httpjson-url" value="<%= url %>">
 </div>
