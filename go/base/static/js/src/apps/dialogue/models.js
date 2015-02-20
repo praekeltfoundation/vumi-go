@@ -196,7 +196,7 @@
         method: 'POST',
         entry_endpoint: {},
         exit_endpoint: {}
-      }).defaults(GroupStateModel.__super__.defaults.call(this));
+      }).defaults(HttpJsonStateModel.__super__.defaults.call(this));
     }
   });
 
