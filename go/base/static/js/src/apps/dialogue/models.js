@@ -35,8 +35,6 @@
   });
 
   var DialogueStateModel = StateModel.extend({
-    storableOnContact: true,
-
     relations: [],
 
     subModelTypes: {
@@ -46,14 +44,13 @@
       end: 'go.apps.dialogue.models.EndStateModel',
       group: 'go.apps.dialogue.models.GroupStateModel',
       send: 'go.apps.dialogue.models.SendStateModel',
-      httpjson: 'go.apps.dialogue.models.HttpJsonStatemodel'
+      httpjson: 'go.apps.dialogue.models.HttpJsonStateModel'
     },
 
     defaults: function() {
       return {
         uuid: uuid.v4(),
         user_defined_store_as: false,
-        store_on_contact: false,
       };
     },
 
@@ -130,8 +127,6 @@
   });
 
   var GroupStateModel = DialogueStateModel.extend({
-    storableOnContact: false,
-
     relations: [{
       type: Backbone.HasOne,
       key: 'group',
@@ -157,8 +152,6 @@
   });
 
   var SendStateModel = DialogueStateModel.extend({
-    storableOnContact: false,
-
     relations: [{
       type: Backbone.HasOne,
       key: 'channel_type',
@@ -203,13 +196,11 @@
         method: 'POST',
         entry_endpoint: {},
         exit_endpoint: {}
-      }).defaults(GroupStateModel.__super__.defaults.call(this));
+      }).defaults(HttpJsonStateModel.__super__.defaults.call(this));
     }
   });
 
   var EndStateModel = DialogueStateModel.extend({
-    storableOnContact: false,
-
     relations: [{
       type: Backbone.HasOne,
       key: 'entry_endpoint',
