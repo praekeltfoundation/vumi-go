@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -89,6 +89,30 @@ class TestConversationWrapper(VumiTestCase):
         self.assertEqual((yield self.conv.count_outbound_uniques()), 0)
         yield self.msg_helper.add_outbound_to_conv(self.conv, 2)
         self.assertEqual((yield self.conv.count_outbound_uniques()), 0)
+
+    @inlineCallbacks
+    def test_collect_messages(self):
+        yield self.conv.start()
+        created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        collected_msgs = yield self.conv.collect_messages(
+            [msg['message_id'] for msg in created_msgs],
+            self.conv.mdb.get_inbound_message,
+            include_sensitive=False, scrubber=lambda msg: msg)
+        self.assertEqual(
+            [msg['message_id'] for msg in collected_msgs],
+            [msg['message_id'] for msg in created_msgs])
+
+    @inlineCallbacks
+    def test_collect_messages_with_unknown_key(self):
+        yield self.conv.start()
+        created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        collected_msgs = yield self.conv.collect_messages(
+            [msg['message_id'] for msg in created_msgs] + [u'unknown-key'],
+            self.conv.mdb.get_inbound_message,
+            include_sensitive=False, scrubber=lambda msg: msg)
+        self.assertEqual(
+            [msg['message_id'] for msg in collected_msgs],
+            [msg['message_id'] for msg in created_msgs])
 
     @inlineCallbacks
     def test_received_messages(self):
