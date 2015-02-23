@@ -567,5 +567,5 @@ def set_developer_account_balances(balance):
     account_store = vumi_api().account_store
     for key in account_store.users.all_keys():
         account = account_store.users.load(key)
-        if account.is_developer:
+        if account and account.is_developer:
             set_account_balance(key, balance)
