@@ -1209,3 +1209,41 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertTrue(self.django_user.get_full_name() in email.body)
         self.assertTrue(str(notification.pk) in email.body)
         self.assertTrue(str(self.acc.user.email) in email.body)
+
+
+class TestLoadCreditsForDeveloperAccount(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.user_account = self.user_helper.get_user_account()
+
+    def _set_developer_flag(self, user, value):
+        user.is_developer = value
+        user.save()
+
+    def _assert_account_balance(self, account_number, balance):
+        account = Account.objects.get(account_number=account_number)
+        self.assertEqual(account.credit_balance, balance)
+
+    def _assert_last_transaction_topup(self, credits):
+        transaction = Transaction.objects.order_by('-created')[0]
+        self.assertEqual(
+            transaction.transaction_type, Transaction.TRANSACTION_TYPE_TOPUP)
+        self.assertEqual(transaction.credit_amount, credits)
+
+    def test_set_credit_balance(self):
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        tasks.set_account_balance(self.user_account.key, Decimal('10.0'))
+        self._assert_account_balance(self.user_account.key, Decimal('10.0'))
+        self._assert_last_transaction_topup(Decimal('10.0'))
+
+    def test_set_all_developer_account_balances(self):
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        tasks.set_developer_account_balances(Decimal('10.0'))
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        self.assertEqual(Transaction.objects.count(), 0)
+
+        self._set_developer_flag(self.user_account, True)
+        tasks.set_developer_account_balances(Decimal('10.0'))
+        self._assert_account_balance(self.user_account.key, Decimal('10.0'))
+        self._assert_last_transaction_topup(Decimal('10.0'))
