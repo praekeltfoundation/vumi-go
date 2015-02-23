@@ -560,6 +560,10 @@ def set_account_balance(account_number, balance):
 
 @task()
 def set_developer_account_balances(balance):
+    """
+    Credits all accounts with developer flags enough credits for the resulting
+    balance to be ``balance``.
+    """
     account_store = vumi_api().account_store
     for key in account_store.users.all_keys():
         account = account_store.users.load(key)
