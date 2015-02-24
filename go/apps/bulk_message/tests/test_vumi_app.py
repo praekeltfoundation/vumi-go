@@ -8,7 +8,6 @@ from twisted.internet.task import Clock
 from vumi.components.window_manager import WindowManager
 from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
-from vumi.tests.utils import LogCatcher
 
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.apps.tests.helpers import AppWorkerHelper

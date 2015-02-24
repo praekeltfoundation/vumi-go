@@ -25,10 +25,12 @@ class BulkMessageApplication(GoApplicationWorker):
         yield super(BulkMessageApplication, self).setup_application()
         wm_redis = self.redis.sub_manager('%s:window_manager' % (
             self.worker_name,))
-        self.window_manager = WindowManager(wm_redis,
+        self.window_manager = WindowManager(
+            wm_redis,
             window_size=self.max_ack_window,
             flight_lifetime=self.max_ack_wait)
-        self.window_manager.monitor(self.on_window_key_ready,
+        self.window_manager.monitor(
+            self.on_window_key_ready,
             interval=self.monitor_interval,
             cleanup=self.monitor_window_cleanup,
             cleanup_callback=self.on_window_cleanup)
@@ -46,8 +48,8 @@ class BulkMessageApplication(GoApplicationWorker):
         msg_options = data['msg_options']
         msg = yield self.send_to(
             to_addr, content, endpoint='default', **msg_options)
-        yield self.window_manager.set_external_id(window_id, flight_key,
-            msg['message_id'])
+        yield self.window_manager.set_external_id(
+            window_id, flight_key, msg['message_id'])
 
     def on_window_cleanup(self, window_id):
         log.info('Finished window %s, removing.' % (window_id,))
@@ -109,8 +111,8 @@ class BulkMessageApplication(GoApplicationWorker):
         conv = yield msg_mdh.get_conversation()
         if conv:
             window_id = self.get_window_id(conv.key, conv.batch.key)
-            flight_key = yield self.window_manager.get_internal_id(window_id,
-                                message['message_id'])
+            flight_key = yield self.window_manager.get_internal_id(
+                window_id, message['message_id'])
             yield self.window_manager.remove_key(window_id, flight_key)
 
     @inlineCallbacks
