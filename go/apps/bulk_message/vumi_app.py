@@ -114,24 +114,3 @@ class BulkMessageApplication(GoApplicationWorker):
             flight_key = yield self.window_manager.get_internal_id(
                 window_id, message['message_id'])
             yield self.window_manager.remove_key(window_id, flight_key)
-
-    @inlineCallbacks
-    def process_command_initial_action_hack(self, user_account_key,
-                                            conversation_key, **kwargs):
-        # HACK: This lets us do whatever we used to do when we got a `start'
-        # message without having horrible app-specific view logic.
-        # TODO: Remove this when we've decoupled the various conversation
-        # actions from the lifecycle.
-
-        conv = yield self.get_conversation(user_account_key, conversation_key)
-        if conv is None:
-            log.warning("Cannot find conversation '%s' for user '%s'." % (
-                user_account_key, conversation_key))
-            return
-
-        kwargs.setdefault('content', conv.description)
-        kwargs.setdefault('dedupe', False)
-        yield self.process_command_bulk_send(
-            user_account_key=user_account_key,
-            conversation_key=conversation_key,
-            **kwargs)
