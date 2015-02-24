@@ -72,26 +72,41 @@ class BulkMessageApplication(GoApplicationWorker):
     def process_command_bulk_send(self, user_account_key, conversation_key,
                                   batch_id, msg_options, content, dedupe,
                                   delivery_class, **extra_params):
-
+        """
+        Send a copy of a message to every contact in every group attached to
+        a conversation.
+        """
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (
                 conversation_key, user_account_key))
             return
+        contact_store = conv.user_api.contact_store
+        addresses_seen = set()  # To deduplicate addresses, if asked.
 
-        to_addresses = []
-        for contacts_batch in (
-                yield conv.get_opted_in_contact_bunches(delivery_class)):
-            for contact in (yield contacts_batch):
-                to_addresses.append(contact.addr_for(delivery_class))
-        if dedupe:
-            to_addresses = set(to_addresses)
+        # NOTE: We fetch all contact keys before we start. This is suboptimal,
+        #       but we need the keys sorted and deduplicated.
+        contact_keys = yield conv.get_contact_keys()
+        contact_keys.sort()  # Sort in-place to keep memory usage down.
 
         self.add_conv_to_msg_options(conv, msg_options)
         window_id = self.get_window_id(conversation_key, batch_id)
-        for to_addr in to_addresses:
+
+        for contact_key in contact_keys:
+            contact = yield contact_store.get_contact_by_key(contact_key)
+            to_addr = yield conv.get_opted_in_contact_address(
+                contact, delivery_class)
+            if dedupe:
+                if to_addr in addresses_seen:
+                    # We've already seen this address, so move on.
+                    continue
+                addresses_seen.add(to_addr)
+            # Send the message.
             yield self.send_message_via_window(
                 conv, window_id, batch_id, to_addr, msg_options, content)
+
+            # FIXME: If this breaks in the middle, we'll resend to all contacts
+            #        we've already sent to.
 
     def consume_ack(self, event):
         return self.handle_event(event)

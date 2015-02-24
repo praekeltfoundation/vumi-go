@@ -152,6 +152,72 @@ class TestBulkMessageApplication(VumiTestCase):
         self.assertEqual(contact_addrs, msg_addrs)
 
     @inlineCallbacks
+    def test_bulk_send_command_with_duplicates(self):
+        """
+        If we send a bulk message to a number of contacts, we send a message to
+        the msisdn for each contact, even if we have duplicate msisdns.
+        """
+        group1 = yield self.app_helper.create_group_with_contacts(u'group1', 3)
+        group2 = yield self.app_helper.create_group_with_contacts(u'group2', 5)
+        conversation = yield self.app_helper.create_conversation(
+            groups=[group1, group2])
+        yield self.app_helper.start_conversation(conversation)
+        batch_id = conversation.batch.key
+        yield self.app_helper.dispatch_command(
+            "bulk_send",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            dedupe=False,
+            content="hello world",
+            delivery_class="sms",
+            msg_options={},
+        )
+        yield self.app_helper.kick_delivery()
+        self.clock.advance(self.app.monitor_interval + 1)
+
+        contacts = yield self.get_opted_in_contacts(conversation)
+        msgs = yield self.app_helper.wait_for_dispatched_outbound(8)
+        contact_addrs = sorted([contact.msisdn for contact in contacts])
+        # Make sure we have duplicate addresses.
+        self.assertNotEqual(len(contact_addrs), len(set(contact_addrs)))
+        msg_addrs = sorted([msg["to_addr"] for msg in msgs])
+        self.assertEqual(contact_addrs, msg_addrs)
+
+    @inlineCallbacks
+    def test_bulk_send_command_with_duplicates_dedupe(self):
+        """
+        If we send a bulk message to a number of contacts, we send a message to
+        the msisdn for each contact, unless we have already sent a message to
+        that msisdn.
+        """
+        group1 = yield self.app_helper.create_group_with_contacts(u'group1', 3)
+        group2 = yield self.app_helper.create_group_with_contacts(u'group2', 5)
+        conversation = yield self.app_helper.create_conversation(
+            groups=[group1, group2])
+        yield self.app_helper.start_conversation(conversation)
+        batch_id = conversation.batch.key
+        yield self.app_helper.dispatch_command(
+            "bulk_send",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            dedupe=True,
+            content="hello world",
+            delivery_class="sms",
+            msg_options={},
+        )
+        yield self.app_helper.kick_delivery()
+        self.clock.advance(self.app.monitor_interval + 1)
+
+        contacts = yield self.get_opted_in_contacts(conversation)
+        msgs = yield self.app_helper.wait_for_dispatched_outbound(5)
+        contact_addrs = sorted([contact.msisdn for contact in contacts])
+        msg_addrs = sorted([msg["to_addr"] for msg in msgs])
+        self.assertNotEqual(contact_addrs, msg_addrs)
+        self.assertEqual(sorted(set(contact_addrs)), msg_addrs)
+
+    @inlineCallbacks
     def test_send_message_command(self):
         msg_options = {
             'transport_name': self.app_helper.transport_name,
