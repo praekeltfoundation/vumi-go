@@ -218,6 +218,172 @@ class TestBulkMessageApplication(VumiTestCase):
         self.assertEqual(sorted(set(contact_addrs)), msg_addrs)
 
     @inlineCallbacks
+    def test_interrupted_bulk_send_command_with_duplicates(self):
+        """
+        If we interrupt a bulk message command and reprocess it, we skip any
+        messages we have already sent.
+        """
+        # Replace send_message_via_window with one that we can break.
+        send_message_via_window = self.app.send_message_via_window
+        send_broken = DeferredQueue()
+        messages_sent = [0]
+
+        def breaking_send_message_via_window(*args, **kw):
+            if messages_sent[0] >= 4:
+                send_broken.put(None)
+                raise Exception("oops")
+            messages_sent[0] += 1
+            return send_message_via_window(*args, **kw)
+
+        self.app.send_message_via_window = breaking_send_message_via_window
+
+        group1 = yield self.app_helper.create_group_with_contacts(u'group1', 3)
+        group2 = yield self.app_helper.create_group_with_contacts(u'group2', 5)
+        conversation = yield self.app_helper.create_conversation(
+            groups=[group1, group2])
+        yield self.app_helper.start_conversation(conversation)
+        batch_id = conversation.batch.key
+
+        send_progress = yield self.app.get_send_progress(conversation)
+        self.assertEqual(send_progress, None)
+
+        command_params = dict(
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            dedupe=False,
+            content="hello world",
+            delivery_class="sms",
+            msg_options={},
+        )
+        # We don't yield here, because this message will break the consumer and
+        # never be acked.
+        self.app_helper.dispatch_command("bulk_send", **command_params)
+        yield send_broken.get()
+        # Tell the fake broken that we've handled this message, because the
+        # now-broken consumer can't.
+        self.app.control_consumer._in_progress -= 1
+        self.app.control_consumer.channel.message_processed()
+        # Have the window manager deliver the messages.
+        self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
+
+        contacts = yield self.get_opted_in_contacts(conversation)
+        contact_addrs = sorted([contact.msisdn for contact in contacts])
+        # Make sure we have duplicate addresses.
+        self.assertNotEqual(len(contact_addrs), len(set(contact_addrs)))
+
+        msgs1 = yield self.app_helper.get_dispatched_outbound()
+        msg_addrs1 = [msg["to_addr"] for msg in msgs1]
+        self.assertEqual(len(msg_addrs1), 4)
+
+        send_progress = yield self.app.get_send_progress(conversation)
+        self.assertEqual(send_progress, sorted(c.key for c in contacts)[3])
+
+        self.app_helper.clear_dispatched_outbound()
+        # Now we undo the breaking patch, replace the broken command consumer,
+        # and redeliver the command message.
+        self.app.send_message_via_window = send_message_via_window
+        yield self.app._go_setup_command_consumer(self.app.get_static_config())
+        yield self.app_helper.dispatch_command("bulk_send", **command_params)
+        # Have the window manager deliver the messages.
+        self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
+
+        msgs2 = yield self.app_helper.get_dispatched_outbound()
+        msg_addrs2 = [msg["to_addr"] for msg in msgs2]
+        self.assertEqual(len(msg_addrs2), 4)
+
+        msg_addrs = sorted(msg_addrs1 + msg_addrs2)
+        self.assertEqual(contact_addrs, msg_addrs)
+
+        send_progress = yield self.app.get_send_progress(conversation)
+        self.assertEqual(send_progress, None)
+
+    @inlineCallbacks
+    def test_interrupted_bulk_send_command_with_duplicates_dedupe(self):
+        """
+        If we interrupt a bulk message command and reprocess it, we skip any
+        messages we have already sent and also deduplicate correctly.
+        """
+        # Replace send_message_via_window with one that we can break.
+        send_message_via_window = self.app.send_message_via_window
+        send_broken = DeferredQueue()
+        messages_sent = [0]
+
+        def breaking_send_message_via_window(*args, **kw):
+            if messages_sent[0] >= 4:
+                send_broken.put(None)
+                raise Exception("oops")
+            messages_sent[0] += 1
+            return send_message_via_window(*args, **kw)
+
+        self.app.send_message_via_window = breaking_send_message_via_window
+
+        group1 = yield self.app_helper.create_group_with_contacts(u'group1', 3)
+        group2 = yield self.app_helper.create_group_with_contacts(u'group2', 5)
+        conversation = yield self.app_helper.create_conversation(
+            groups=[group1, group2])
+        yield self.app_helper.start_conversation(conversation)
+        batch_id = conversation.batch.key
+
+        send_progress = yield self.app.get_send_progress(conversation)
+        self.assertEqual(send_progress, None)
+
+        command_params = dict(
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            dedupe=True,
+            content="hello world",
+            delivery_class="sms",
+            msg_options={},
+        )
+        # We don't yield here, because this message will break the consumer and
+        # never be acked.
+        self.app_helper.dispatch_command("bulk_send", **command_params)
+        yield send_broken.get()
+        # Tell the fake broken that we've handled this message, because the
+        # now-broken consumer can't.
+        self.app.control_consumer._in_progress -= 1
+        self.app.control_consumer.channel.message_processed()
+        # Have the window manager deliver the messages.
+        self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
+
+        contacts = yield self.get_opted_in_contacts(conversation)
+        contact_addrs = sorted([contact.msisdn for contact in contacts])
+        # Make sure we have duplicate addresses.
+        self.assertNotEqual(len(contact_addrs), len(set(contact_addrs)))
+
+        msgs1 = yield self.app_helper.get_dispatched_outbound()
+        msg_addrs1 = [msg["to_addr"] for msg in msgs1]
+        self.assertTrue(len(msg_addrs1) <= 4)
+
+        send_progress = yield self.app.get_send_progress(conversation)
+        self.assertTrue(send_progress >= sorted(c.key for c in contacts)[3])
+
+        self.app_helper.clear_dispatched_outbound()
+        # Now we undo the breaking patch, replace the broken command consumer,
+        # and redeliver the command message.
+        self.app.send_message_via_window = send_message_via_window
+        yield self.app._go_setup_command_consumer(self.app.get_static_config())
+        yield self.app_helper.dispatch_command("bulk_send", **command_params)
+        # Have the window manager deliver the messages.
+        self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
+
+        msgs2 = yield self.app_helper.get_dispatched_outbound()
+        msg_addrs2 = [msg["to_addr"] for msg in msgs2]
+        self.assertTrue(len(msg_addrs2) <= 3)
+
+        msg_addrs = sorted(msg_addrs1 + msg_addrs2)
+        self.assertEqual(sorted(set(contact_addrs)), msg_addrs)
+
+        send_progress = yield self.app.get_send_progress(conversation)
+        self.assertEqual(send_progress, None)
+
+    @inlineCallbacks
     def test_send_message_command(self):
         msg_options = {
             'transport_name': self.app_helper.transport_name,

@@ -57,6 +57,18 @@ class BulkMessageApplication(GoApplicationWorker):
     def get_window_id(self, conversation_key, batch_id):
         return ':'.join([conversation_key, batch_id])
 
+    def _send_progress_key(self, conv):
+        return ':'.join([self.worker_name, conv.key, conv.batch.key])
+
+    def get_send_progress(self, conv):
+        return self.redis.get(self._send_progress_key(conv))
+
+    def set_send_progress(self, conv, contact_key):
+        return self.redis.set(self._send_progress_key(conv), contact_key)
+
+    def clear_send_progress(self, conv):
+        return self.redis.delete(self._send_progress_key(conv))
+
     @inlineCallbacks
     def send_message_via_window(self, conv, window_id, batch_id, to_addr,
                                 msg_options, content):
@@ -75,6 +87,13 @@ class BulkMessageApplication(GoApplicationWorker):
         """
         Send a copy of a message to every contact in every group attached to
         a conversation.
+
+        If this command is interrupted (by a worker restart, for example) the
+        next time it is processed it will avoid sending the message to contacts
+        that it has already been sent to. Note that the contact and opt-out
+        lookups still happen (because those are required for deduplication), so
+        there may be a lengthly delay before the remaining messages are sent if
+        the previous send was interrupted after a large number of messages.
         """
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
@@ -91,6 +110,11 @@ class BulkMessageApplication(GoApplicationWorker):
 
         self.add_conv_to_msg_options(conv, msg_options)
         window_id = self.get_window_id(conversation_key, batch_id)
+        interrupted_progress = yield self.get_send_progress(conv)
+        if interrupted_progress is not None:
+            log.warning(
+                "Resuming interrupted send for conversation '%s' at '%s'." % (
+                    conv.key, interrupted_progress))
 
         for contact_key in contact_keys:
             contact = yield contact_store.get_contact_by_key(contact_key)
@@ -101,12 +125,21 @@ class BulkMessageApplication(GoApplicationWorker):
                     # We've already seen this address, so move on.
                     continue
                 addresses_seen.add(to_addr)
-            # Send the message.
+
+            if interrupted_progress and contact_key <= interrupted_progress:
+                # We are still working through the backlog of a previously
+                # interrupted bulk send command, so don't actually send the
+                # message. This check is safe because our contact keys are both
+                # sorted and unique.
+                continue
+
+            # We can now send the message and update the progress tracker.
             yield self.send_message_via_window(
                 conv, window_id, batch_id, to_addr, msg_options, content)
+            yield self.set_send_progress(conv, contact_key)
 
-            # FIXME: If this breaks in the middle, we'll resend to all contacts
-            #        we've already sent to.
+        # All finished, so clear the send progress.
+        yield self.clear_send_progress(conv)
 
     def consume_ack(self, event):
         return self.handle_event(event)
