@@ -13,7 +13,9 @@ from django.template.loader import render_to_string
 from djcelery_email.tasks import send_email
 
 from go.base.s3utils import Bucket
+from go.base.utils import vumi_api
 from go.billing import settings
+from go.billing.django_utils import load_account_credits
 from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
     LowCreditNotification)
@@ -171,7 +173,12 @@ def get_count(transaction):
 
 def get_session_length_count(transaction):
     length_cost = get_session_length_cost(transaction)
-    return length_cost / get_session_length_unit_cost(transaction)
+    unit_cost = get_session_length_unit_cost(transaction)
+
+    if unit_cost == 0:
+        return Decimal(0)
+    else:
+        return length_cost / unit_cost
 
 
 def get_message_unit_cost(transaction):
@@ -545,3 +552,25 @@ def create_low_credit_notification(account_number, threshold, balance):
         low_credit_notification_confirm_sent.s(notification.pk)).apply_async()
 
     return notification.pk, res
+
+
+def set_account_balance(account_number, balance):
+    """
+    Credits the given account so that the resulting balance is ``balance``.
+    """
+    account = Account.objects.get(account_number=account_number)
+    credit_amount = Decimal(str(balance)) - account.credit_balance
+    load_account_credits(account, credit_amount)
+
+
+@task()
+def set_developer_account_balances(balance):
+    """
+    Credits all accounts with developer flags enough credits for the resulting
+    balance to be ``balance``.
+    """
+    account_store = vumi_api().account_store
+    for key in account_store.users.all_keys():
+        account = account_store.users.load(key)
+        if account and account.is_developer:
+            set_account_balance(key, balance)

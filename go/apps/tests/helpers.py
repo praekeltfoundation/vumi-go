@@ -181,5 +181,14 @@ class AppWorkerHelper(object):
                     metrics.append((name, value))
         return metrics
 
+    def get_published_metrics_with_aggs(self, worker):
+        metrics = []
+        for metric_msg in self.worker_helper.get_dispatched_metrics():
+            for name, aggs, data in metric_msg:
+                for _time, value in data:
+                    for agg in aggs:
+                        metrics.append((name, value, agg))
+        return metrics
+
     def get_dispatched_app_events(self):
         return self.worker_helper.get_dispatched('vumi', 'event', VumiApiEvent)

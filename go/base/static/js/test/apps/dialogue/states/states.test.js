@@ -123,7 +123,6 @@ describe("go.apps.dialogue.states", function() {
             entry_endpoint: {'uuid':'endpoint6'},
             exit_endpoint: {'uuid':'endpoint7'},
             user_defined_store_as: false,
-            store_on_contact: false,
             ordinal: 3
           });
 
@@ -138,25 +137,11 @@ describe("go.apps.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
-          store_on_contact: false,
           ordinal: 3
         });
 
         state.model.set('name', 'New Dummy');
         editMode.trigger('activate');
-      });
-    });
-
-    describe(".render", function() {
-      it("should mark whether the user's answer should be stored on the contact",
-      function() {
-        state.model.set('store_on_contact', true);
-        state.render();
-        assert(state.$('.store-on-contact').prop('checked'));
-
-        state.model.set('store_on_contact', false);
-        state.render();
-        assert(!state.$('.store-on-contact').prop('checked'));
       });
     });
 
@@ -170,7 +155,6 @@ describe("go.apps.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
-          store_on_contact: false,
           ordinal: 3
         });
 
@@ -185,7 +169,6 @@ describe("go.apps.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
-          store_on_contact: false,
           ordinal: 3
         });
       });
@@ -284,7 +267,6 @@ describe("go.apps.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
-          store_on_contact: false,
           ordinal: 3
         });
 
@@ -299,7 +281,6 @@ describe("go.apps.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
-          store_on_contact: false,
           ordinal: 3
         });
       });
@@ -316,19 +297,6 @@ describe("go.apps.dialogue.states", function() {
         assert.equal(state.modeName, 'edit');
         editMode.$('.ok').click();
         assert.equal(state.modeName, 'preview');
-      });
-    });
-
-    describe("when '.store-on-contact' changes", function() {
-      it("should set its model's 'store_on_contact' attr accordingly",
-      function() {
-        assert.equal(state.model.get('store_on_contact'), false);
-
-        editMode.$('.store-on-contact')
-          .prop('checked', true)
-          .change();
-
-        assert.equal(state.model.get('store_on_contact'), true);
       });
     });
   });

@@ -8,6 +8,7 @@ var FreeText = vumigo.states.FreeText;
 var Choice = vumigo.states.Choice;
 var ChoiceState = vumigo.states.ChoiceState;
 var InteractionMachine = vumigo.InteractionMachine;
+var JsonApi = vumigo.http.api.JsonApi;
 
 
 var DialogueApp = App.extend(function(self) {
@@ -166,6 +167,28 @@ var DialogueApp = App.extend(function(self) {
     self.states.add('states:start', function() {
         return self.states.create(self.poll.start_state.uuid);
     });
+
+    self.types.httpjson = function(desc) {
+        self.http = new JsonApi(self.im);
+
+        var payload = {
+            user: {
+                answers: self.im.user.answers
+            },
+            contact: self.contact,
+            conversation_key: self.poll.conversation_key
+        };
+
+        var data = desc.method !== 'GET' ? {
+                    data: JSON.stringify(payload)
+                } : null;
+
+        return self
+            .http.request(desc.method, desc.url, data)
+                .then(function(response) {
+                    return self.states.create(self.next(desc.exit_endpoint));
+        });
+    };
 });
 
 
