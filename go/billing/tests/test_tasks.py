@@ -592,7 +592,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
             self.account,
             session_unit_time=20,
             session_unit_cost=0.2,
-            session_length=None,
+            session_length=0,
             markup_percent=10.0)
 
         statement = tasks.generate_monthly_statement(
