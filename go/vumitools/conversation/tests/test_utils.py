@@ -296,6 +296,53 @@ class TestConversationWrapper(VumiTestCase):
         })
 
     @inlineCallbacks
+    def test_get_opted_in_contact_address(self):
+        """
+        If we ask for the opted-in address of a contact that has a suitable
+        address and isn't opted out, we get that address.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, None)
+
+        self.assertEqual(contact_addr, contact.msisdn)
+
+    @inlineCallbacks
+    def test_get_opted_in_contact_address_opted_out(self):
+        """
+        If we ask for the opted-in address of a contact that has a suitable
+        address and is opted out, we get None.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        user_account = yield self.user_helper.get_user_account()
+        opt_out_store = OptOutStore.from_user_account(user_account)
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+        yield opt_out_store.new_opt_out(u"msisdn", contact.msisdn, {
+            "message_id": u"some-message-id",
+        })
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, None)
+
+        self.assertEqual(contact_addr, None)
+
+    @inlineCallbacks
+    def test_get_opted_in_contact_address_no_address(self):
+        """
+        If we ask for the opted-in address of a contact that doesn't have a
+        suitable address, we get None.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, "gtalk")
+
+        self.assertEqual(contact_addr, None)
+
+    @inlineCallbacks
     def test_get_opted_in_contact_bunches(self):
         contact_store = self.user_helper.user_api.contact_store
         user_account = yield self.user_helper.get_user_account()
