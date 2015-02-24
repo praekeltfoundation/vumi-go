@@ -229,7 +229,8 @@ class ConversationWrapper(object):
         messages = []
         for key in keys:
             msg = yield get_msg(key)
-            messages.append(msg)
+            if msg is not None:
+                messages.append(msg)
 
         returnValue(self.filter_and_scrub_messages(
             messages, include_sensitive=include_sensitive, scrubber=scrubber))

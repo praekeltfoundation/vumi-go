@@ -1,3 +1,5 @@
+import re
+
 from datetime import datetime
 
 from django.core.management.base import BaseCommand
@@ -19,6 +21,8 @@ class Command(BaseCommand):
     """
     args = "<email-address> <command>"
     encoding = 'utf-8'
+
+    MICROSECOND_RE = re.compile(r'\.[0-9]*$')
 
     def handle(self, *args, **options):
 
@@ -105,12 +109,17 @@ class Command(BaseCommand):
         self.out(u'Total Sent in batch %s: %s\n' % (
             batch_key, message_store.batch_outbound_count(batch_key),))
 
+    def parse_timestamp_to_date(self, timestamp):
+        timestamp = self.MICROSECOND_RE.sub('', timestamp)
+        date = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").date()
+        return date
+
     def collect_stats(self, index_page):
         per_date = {}
         uniques = set()
         while index_page is not None:
             for _message_id, timestamp, addr in index_page:
-                date = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").date()
+                date = self.parse_timestamp_to_date(timestamp)
                 per_date.setdefault(date, 0)
                 per_date[date] += 1
                 uniques.add(addr)
