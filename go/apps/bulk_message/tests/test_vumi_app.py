@@ -99,7 +99,6 @@ class TestBulkMessageApplication(VumiTestCase):
             msg_options={},
         )
         window_id = self.app.get_window_id(conversation.key, batch_id)
-        yield self.app_helper.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)
         yield self.wait_for_window_monitor()
 
@@ -142,11 +141,11 @@ class TestBulkMessageApplication(VumiTestCase):
             delivery_class="sms",
             msg_options={},
         )
-        yield self.app_helper.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
 
         contacts = yield self.get_opted_in_contacts(conversation)
-        msgs = yield self.app_helper.wait_for_dispatched_outbound(10)
+        msgs = yield self.app_helper.get_dispatched_outbound()
         contact_addrs = sorted([contact.msisdn for contact in contacts])
         msg_addrs = sorted([msg["to_addr"] for msg in msgs])
         self.assertEqual(contact_addrs, msg_addrs)
@@ -173,11 +172,11 @@ class TestBulkMessageApplication(VumiTestCase):
             delivery_class="sms",
             msg_options={},
         )
-        yield self.app_helper.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
 
         contacts = yield self.get_opted_in_contacts(conversation)
-        msgs = yield self.app_helper.wait_for_dispatched_outbound(8)
+        msgs = yield self.app_helper.get_dispatched_outbound()
         contact_addrs = sorted([contact.msisdn for contact in contacts])
         # Make sure we have duplicate addresses.
         self.assertNotEqual(len(contact_addrs), len(set(contact_addrs)))
@@ -207,11 +206,11 @@ class TestBulkMessageApplication(VumiTestCase):
             delivery_class="sms",
             msg_options={},
         )
-        yield self.app_helper.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
 
         contacts = yield self.get_opted_in_contacts(conversation)
-        msgs = yield self.app_helper.wait_for_dispatched_outbound(5)
+        msgs = yield self.app_helper.get_dispatched_outbound()
         contact_addrs = sorted([contact.msisdn for contact in contacts])
         msg_addrs = sorted([msg["to_addr"] for msg in msgs])
         self.assertNotEqual(contact_addrs, msg_addrs)
