@@ -10,6 +10,9 @@ from vumi import log
 from go.vumitools.app_worker import GoApplicationWorker
 
 
+SEND_PROGRESS_EXPIRY = 3600 * 24 * 7  # One week
+
+
 class BulkMessageApplication(GoApplicationWorker):
     """
     Application that accepts 'send message' commands and does exactly that.
@@ -64,7 +67,8 @@ class BulkMessageApplication(GoApplicationWorker):
         return self.redis.get(self._send_progress_key(conv))
 
     def set_send_progress(self, conv, contact_key):
-        return self.redis.set(self._send_progress_key(conv), contact_key)
+        return self.redis.setex(
+            self._send_progress_key(conv), SEND_PROGRESS_EXPIRY, contact_key)
 
     def clear_send_progress(self, conv):
         return self.redis.delete(self._send_progress_key(conv))
