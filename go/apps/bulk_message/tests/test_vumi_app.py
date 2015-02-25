@@ -14,6 +14,59 @@ from go.apps.tests.helpers import AppWorkerHelper
 from go.vumitools.api import VumiApiCommand
 
 
+class MessageSendBreaker(object):
+    """
+    A helper to break message sending during a bulk send.
+    """
+
+    def __init__(self, app, allow=4):
+        self.app = app
+        self.allow = allow
+        self._send_message_via_window = self.app.send_message_via_window
+        self._queue = DeferredQueue()
+        self._messages_sent = 0
+        self._broken = False
+
+    def break_app(self):
+        """
+        Replace the original send method with our broken one.
+        """
+        assert not self._broken
+        self.app.send_message_via_window = self._broken_send
+
+    @inlineCallbacks
+    def fix_app(self):
+        """
+        Restore the original send method and replace the now-broken consumer.
+        """
+        assert self._broken
+        self.app.send_message_via_window = self._send_message_via_window
+        yield self.app._go_setup_command_consumer(self.app.get_static_config())
+        self._broken = False
+
+    @inlineCallbacks
+    def wait_for_break(self):
+        """
+        Wait for the break to be triggered.
+        """
+        yield self._queue.get()
+        # Tell the fake broker that we've handled this message, because the
+        # now-broken consumer can't.
+        self.app.control_consumer._in_progress -= 1
+        self.app.control_consumer.channel.message_processed()
+
+    def _broken_send(self, *args, **kw):
+        """
+        Send up to self.allow messages, then raise an exception.
+        """
+        if self._messages_sent >= self.allow:
+            self._queue.put(None)
+            self._broken = True
+            raise Exception("oops")
+        self._messages_sent += 1
+        return self._send_message_via_window(*args, **kw)
+
+
 class TestBulkMessageApplication(VumiTestCase):
 
     @inlineCallbacks
@@ -223,18 +276,8 @@ class TestBulkMessageApplication(VumiTestCase):
         messages we have already sent.
         """
         # Replace send_message_via_window with one that we can break.
-        send_message_via_window = self.app.send_message_via_window
-        send_broken = DeferredQueue()
-        messages_sent = [0]
-
-        def breaking_send_message_via_window(*args, **kw):
-            if messages_sent[0] >= 4:
-                send_broken.put(None)
-                raise Exception("oops")
-            messages_sent[0] += 1
-            return send_message_via_window(*args, **kw)
-
-        self.app.send_message_via_window = breaking_send_message_via_window
+        send_breaker = MessageSendBreaker(self.app)
+        send_breaker.break_app()
 
         group1 = yield self.app_helper.create_group_with_contacts(u'group1', 3)
         group2 = yield self.app_helper.create_group_with_contacts(u'group2', 5)
@@ -258,11 +301,7 @@ class TestBulkMessageApplication(VumiTestCase):
         # We don't yield here, because this message will break the consumer and
         # never be acked.
         self.app_helper.dispatch_command("bulk_send", **command_params)
-        yield send_broken.get()
-        # Tell the fake broken that we've handled this message, because the
-        # now-broken consumer can't.
-        self.app.control_consumer._in_progress -= 1
-        self.app.control_consumer.channel.message_processed()
+        yield send_breaker.wait_for_break()
         # Have the window manager deliver the messages.
         self.clock.advance(self.app.monitor_interval + 1)
         yield self.wait_for_window_monitor()
@@ -280,10 +319,8 @@ class TestBulkMessageApplication(VumiTestCase):
         self.assertEqual(send_progress, sorted(c.key for c in contacts)[3])
 
         self.app_helper.clear_dispatched_outbound()
-        # Now we undo the breaking patch, replace the broken command consumer,
-        # and redeliver the command message.
-        self.app.send_message_via_window = send_message_via_window
-        yield self.app._go_setup_command_consumer(self.app.get_static_config())
+        # Fix the broken command consumer and redeliver the command message.
+        yield send_breaker.fix_app()
         yield self.app_helper.dispatch_command("bulk_send", **command_params)
         # Have the window manager deliver the messages.
         self.clock.advance(self.app.monitor_interval + 1)
@@ -306,18 +343,8 @@ class TestBulkMessageApplication(VumiTestCase):
         messages we have already sent and also deduplicate correctly.
         """
         # Replace send_message_via_window with one that we can break.
-        send_message_via_window = self.app.send_message_via_window
-        send_broken = DeferredQueue()
-        messages_sent = [0]
-
-        def breaking_send_message_via_window(*args, **kw):
-            if messages_sent[0] >= 4:
-                send_broken.put(None)
-                raise Exception("oops")
-            messages_sent[0] += 1
-            return send_message_via_window(*args, **kw)
-
-        self.app.send_message_via_window = breaking_send_message_via_window
+        send_breaker = MessageSendBreaker(self.app)
+        send_breaker.break_app()
 
         group1 = yield self.app_helper.create_group_with_contacts(u'group1', 3)
         group2 = yield self.app_helper.create_group_with_contacts(u'group2', 5)
@@ -341,11 +368,7 @@ class TestBulkMessageApplication(VumiTestCase):
         # We don't yield here, because this message will break the consumer and
         # never be acked.
         self.app_helper.dispatch_command("bulk_send", **command_params)
-        yield send_broken.get()
-        # Tell the fake broken that we've handled this message, because the
-        # now-broken consumer can't.
-        self.app.control_consumer._in_progress -= 1
-        self.app.control_consumer.channel.message_processed()
+        yield send_breaker.wait_for_break()
         # Have the window manager deliver the messages.
         self.clock.advance(self.app.monitor_interval + 1)
         yield self.wait_for_window_monitor()
@@ -363,10 +386,8 @@ class TestBulkMessageApplication(VumiTestCase):
         self.assertTrue(send_progress >= sorted(c.key for c in contacts)[3])
 
         self.app_helper.clear_dispatched_outbound()
-        # Now we undo the breaking patch, replace the broken command consumer,
-        # and redeliver the command message.
-        self.app.send_message_via_window = send_message_via_window
-        yield self.app._go_setup_command_consumer(self.app.get_static_config())
+        # Fix the broken command consumer and redeliver the command message.
+        yield send_breaker.fix_app()
         yield self.app_helper.dispatch_command("bulk_send", **command_params)
         # Have the window manager deliver the messages.
         self.clock.advance(self.app.monitor_interval + 1)
