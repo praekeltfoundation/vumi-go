@@ -168,11 +168,11 @@ class MessageCost(models.Model):
 
     class Meta:
         unique_together = [
-            ['account', 'tag_pool', 'message_direction'],
+            ['account', 'tag_pool', 'message_direction', 'provider'],
         ]
 
         index_together = [
-            ['account', 'tag_pool', 'message_direction'],
+            ['account', 'tag_pool', 'message_direction', 'provider'],
         ]
 
     account = models.ForeignKey(
