@@ -6,7 +6,6 @@ import re
 import sys
 from StringIO import StringIO
 from collections import defaultdict
-from datetime import datetime
 
 from django.conf import settings
 from django.views.generic import View, TemplateView
@@ -17,6 +16,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from vumi.message import parse_vumi_date
 
 from go.base import message_store_client as ms_client
 from go.base.utils import page_range_window, sendfile
@@ -602,7 +602,7 @@ class AggregatesConversationView(ConversationTemplateView):
         index_page = message_callback(conv.batch.key)
         while index_page is not None:
             for key, timestamp in index_page:
-                timestamp = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+                timestamp = parse_vumi_date(timestamp)
                 aggregates[timestamp.date()] += 1
             index_page = index_page.next_page()
 

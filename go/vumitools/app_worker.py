@@ -140,18 +140,20 @@ class GoWorkerMixin(object):
             The command message received for this application.
         """
         cmd_method_name = 'process_command_%(command)s' % command_message
+        command_id = command_message['command_id']
         args = command_message['args']
         kwargs = command_message['kwargs']
         cmd_method = getattr(self, cmd_method_name, None)
         if cmd_method:
-            d = maybeDeferred(cmd_method, *args, **kwargs)
+            d = maybeDeferred(cmd_method, command_id, *args, **kwargs)
             d.addErrback(self._ignore_message, command_message)
             return d
         else:
-            return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
+            return self.process_unknown_cmd(
+                cmd_method_name, command_id, *args, **kwargs)
 
     @inlineCallbacks
-    def process_command_collect_metrics(self, conversation_key,
+    def process_command_collect_metrics(self, cmd_id, conversation_key,
                                         user_account_key):
         key_tuple = (conversation_key, user_account_key)
         if key_tuple in self._metrics_conversations:
@@ -164,9 +166,9 @@ class GoWorkerMixin(object):
         yield self.collect_metrics(user_api, conversation_key)
         self._metrics_conversations.remove(key_tuple)
 
-    def process_unknown_cmd(self, method_name, *args, **kwargs):
-        log.error("Unknown vumi API command: %s(%s, %s)" % (
-            method_name, args, kwargs))
+    def process_unknown_cmd(self, method_name, command_id, *args, **kwargs):
+        log.error("Unknown vumi API command: %s(%s, %s) id=%s" % (
+            method_name, args, kwargs, command_id))
 
     @inlineCallbacks
     def get_contact_for_message(self, message, create=True):
@@ -314,7 +316,7 @@ class GoApplicationMixin(GoWorkerMixin):
         returnValue(self.get_config_for_conversation(conversation))
 
     @inlineCallbacks
-    def process_command_start(self, user_account_key, conversation_key):
+    def process_command_start(self, cmd_id, user_account_key, conversation_key):
         log.info("Starting conversation '%s' for user '%s'." % (
             conversation_key, user_account_key))
         conv = yield self.get_conversation(user_account_key, conversation_key)
@@ -333,7 +335,7 @@ class GoApplicationMixin(GoWorkerMixin):
         yield conv.save()
 
     @inlineCallbacks
-    def process_command_stop(self, user_account_key, conversation_key):
+    def process_command_stop(self, cmd_id, user_account_key, conversation_key):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
             log.warning(
@@ -350,8 +352,8 @@ class GoApplicationMixin(GoWorkerMixin):
         yield conv.save()
 
     @inlineCallbacks
-    def process_command_send_message(self, user_account_key, conversation_key,
-                                     command_data, **kwargs):
+    def process_command_send_message(self, cmd_id, user_account_key,
+                                     conversation_key, command_data, **kwargs):
         if kwargs:
             log.info("Received unexpected command args: %s" % (kwargs,))
         conv = yield self.get_conversation(user_account_key, conversation_key)
@@ -405,7 +407,7 @@ class GoRouterMixin(GoWorkerMixin):
         returnValue(self.get_config_for_router(router))
 
     @inlineCallbacks
-    def process_command_start(self, user_account_key, router_key):
+    def process_command_start(self, cmd_id, user_account_key, router_key):
         log.info("Starting router '%s' for user '%s'." % (
             router_key, user_account_key))
         router = yield self.get_router(user_account_key, router_key)
@@ -423,7 +425,7 @@ class GoRouterMixin(GoWorkerMixin):
         yield router.save()
 
     @inlineCallbacks
-    def process_command_stop(self, user_account_key, router_key):
+    def process_command_stop(self, cmd_id, user_account_key, router_key):
         log.info("Stopping router '%s' for user '%s'." % (
             router_key, user_account_key))
         router = yield self.get_router(user_account_key, router_key)
