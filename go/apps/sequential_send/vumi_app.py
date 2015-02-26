@@ -156,18 +156,19 @@ class SequentialSendApplication(GoApplicationWorker):
         log.info('Stored outbound %s' % (msg,))
 
     @inlineCallbacks
-    def process_command_start(self, user_account_key, conversation_key):
+    def process_command_start(self, cmd_id, user_account_key,
+                              conversation_key):
         yield super(SequentialSendApplication, self).process_command_start(
-            user_account_key, conversation_key)
+            cmd_id, user_account_key, conversation_key)
 
         log.debug("Scheduling conversation: %s" % (conversation_key,))
         yield self.redis.sadd('scheduled_conversations', json.dumps(
             [user_account_key, conversation_key]))
 
     @inlineCallbacks
-    def process_command_stop(self, user_account_key, conversation_key):
+    def process_command_stop(self, cmd_id, user_account_key, conversation_key):
         yield super(SequentialSendApplication, self).process_command_stop(
-            user_account_key, conversation_key)
+            cmd_id, user_account_key, conversation_key)
 
         log.debug("Unscheduling conversation: %s" % (conversation_key,))
         yield self.redis.srem('scheduled_conversations', json.dumps(

@@ -90,8 +90,8 @@ class RapidSMSApplication(GoApplicationMixin, RapidSMSRelay):
         return self.send_to(to_addr, content, endpoint=endpoint,
                             helper_metadata=helper_metadata)
 
-    def process_command_start(self, user_account_key, conversation_key):
+    def process_command_start(self, cmd_id, user_account_key, conversation_key):
         log.info("Starting RapidSMS conversation (key: %r)." %
                  (conversation_key,))
         return super(RapidSMSApplication, self).process_command_start(
-            user_account_key, conversation_key)
+            cmd_id, user_account_key, conversation_key)
