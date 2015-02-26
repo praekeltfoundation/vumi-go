@@ -168,11 +168,11 @@ class MessageCost(models.Model):
 
     class Meta:
         unique_together = [
-            ['account', 'tag_pool', 'message_direction'],
+            ['account', 'tag_pool', 'message_direction', 'provider'],
         ]
 
         index_together = [
-            ['account', 'tag_pool', 'message_direction'],
+            ['account', 'tag_pool', 'message_direction', 'provider'],
         ]
 
     account = models.ForeignKey(
@@ -238,6 +238,12 @@ class MessageCost(models.Model):
     def session_credit_cost(self):
         """Return the calculated cost per session (in credits)."""
         return self.calculate_session_credit_cost(
+            self.session_cost, self.markup_percent)
+
+    @property
+    def session_length_credit_cost(self):
+        """Return the calculated cost per session length (in credits)."""
+        return self.calculate_session_length_credit_cost(
             self.session_cost, self.markup_percent)
 
     def __unicode__(self):

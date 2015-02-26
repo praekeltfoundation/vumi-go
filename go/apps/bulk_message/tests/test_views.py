@@ -110,7 +110,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
         conversation = conv_helper.get_conversation()
         self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'bulk_send',
+            'bulk_send', command_id=bulk_send_cmd["command_id"],
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key, msg_options={},
@@ -130,7 +130,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
         conversation = conv_helper.get_conversation()
         self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'bulk_send',
+            'bulk_send', command_id=bulk_send_cmd["command_id"],
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key, msg_options={},
@@ -168,7 +168,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
         self.assertEqual(
             VumiApiCommand.command(
                 '%s_application' % (conversation.conversation_type,),
-                'send_message',
+                'send_message', command_id=token_send_cmd["command_id"],
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key,
                 command_data=dict(
@@ -196,7 +196,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
         [bulk_send_cmd] = self.app_helper.get_api_commands_sent()
         self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'bulk_send',
+            'bulk_send', command_id=bulk_send_cmd["command_id"],
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key, msg_options={},

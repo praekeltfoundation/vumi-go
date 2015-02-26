@@ -555,6 +555,54 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item3.cost, 600)
         self.assertEqual(item3.units, 2)
 
+    def test_generate_monthly_statement_zero_session_unit_cost(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=0,
+            session_length_cost=0,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        items = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertFalse(items.exists())
+
+    def test_generate_monthly_statement_none_session_length(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=0.2,
+            session_length=None,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        items = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertFalse(items.exists())
+
+    def test_generate_monthly_statement_zero_session_length(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=0.2,
+            session_length=0,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        items = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertFalse(items.exists())
+
     def test_generate_monthly_statement_session_length_different_markups(self):
         mk_transaction(
             self.account,

@@ -46,7 +46,7 @@ class TestSurveysViews(GoDjangoTestCase):
         conversation = conv_helper.get_conversation()
         self.assertEqual(send_survey_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'send_survey',
+            'send_survey', command_id=send_survey_cmd["command_id"],
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key, msg_options={},

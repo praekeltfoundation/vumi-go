@@ -44,7 +44,7 @@ class TestJsBoxViews(GoDjangoTestCase):
         conversation = conv_helper.get_conversation()
         self.assertEqual(send_jsbox_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'send_jsbox',
+            'send_jsbox', command_id=send_jsbox_cmd["command_id"],
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key))

@@ -528,6 +528,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         [start_cmd] = self.get_api_commands_sent()
         self.assertEqual(start_cmd, VumiApiCommand.command(
             '%s_application' % (conv.conversation_type,), 'start',
+            command_id=start_cmd["command_id"],
             user_account_key=conv.user_account.key, conversation_key=conv.key))
 
     def test_stop(self):

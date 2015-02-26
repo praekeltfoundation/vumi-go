@@ -20,7 +20,7 @@ from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
     LowCreditNotification)
 from go.billing.django_utils import TransactionSerializer
-from go.base.utils import vumi_api, format_currency
+from go.base.utils import format_currency
 
 
 def month_range(months_ago=1, today=None):
@@ -111,6 +111,10 @@ def get_session_length_transactions(transactions):
     transactions = transactions.filter(
         transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
+    transactions = transactions.exclude(session_length=0)
+    transactions = transactions.exclude(session_length=None)
+    transactions = transactions.exclude(session_length_cost=0)
+
     transactions = transactions.values(
         'tag_pool_name',
         'tag_name',
@@ -173,7 +177,9 @@ def get_count(transaction):
 
 def get_session_length_count(transaction):
     length_cost = get_session_length_cost(transaction)
-    return length_cost / get_session_length_unit_cost(transaction)
+    unit_cost = get_session_length_unit_cost(transaction)
+    # no 0 unit costs will appear, these are filtered out
+    return length_cost / unit_cost
 
 
 def get_message_unit_cost(transaction):
