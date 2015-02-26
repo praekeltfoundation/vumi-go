@@ -351,6 +351,12 @@ class TransactionResource(BaseResource):
                 credit_balance, credit_amount, last_topup_balance,
                 account_number)
 
+        if last_topup_balance:
+            credit_percent = int(math.ceil(
+                credit_balance * 100 / last_topup_balance))
+            if credit_percent < app_settings.CREDIT_PERCENT_CUTOFF:
+                transaction['credit_cutoff_reached'] = True
+
         defer.returnValue(transaction)
 
     def check_and_notify_low_credit_threshold(
