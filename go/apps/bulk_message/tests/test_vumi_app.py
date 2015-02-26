@@ -2,7 +2,10 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
-from twisted.internet.defer import inlineCallbacks, returnValue, DeferredQueue
+from uuid import uuid4
+
+from twisted.internet.defer import (
+    inlineCallbacks, returnValue, DeferredQueue, Deferred)
 from twisted.internet.task import Clock
 
 from vumi.components.window_manager import WindowManager
@@ -19,39 +22,69 @@ class MessageSendBreaker(object):
     A helper to break message sending during a bulk send.
     """
 
-    def __init__(self, app, allow=4):
+    def __init__(self, app, allow):
         self.app = app
         self.allow = allow
         self._send_message_via_window = self.app.send_message_via_window
         self._messages_sent = 0
-        self._broken = False
 
-    def break_app(self):
+    def patch_app(self):
         """
         Replace the original send method with our broken one.
         """
-        assert not self._broken
         self.app.send_message_via_window = self._broken_send
-
-    @inlineCallbacks
-    def fix_app(self):
-        """
-        Restore the original send method and replace the now-broken consumer.
-        """
-        assert self._broken
-        self.app.send_message_via_window = self._send_message_via_window
-        yield self.app._go_setup_command_consumer(self.app.get_static_config())
-        self._broken = False
 
     def _broken_send(self, *args, **kw):
         """
         Send up to self.allow messages, then raise an exception.
         """
         if self._messages_sent >= self.allow:
-            self._broken = True
             raise Exception("oops")
         self._messages_sent += 1
         return self._send_message_via_window(*args, **kw)
+
+
+class MessageSendPauser(object):
+    """
+    A helper to pause message sending during a bulk send.
+    """
+
+    def __init__(self, app, allow):
+        self.app = app
+        self.allow = allow
+        self._send_message_via_window = self.app.send_message_via_window
+        self._messages_sent = 0
+        self._pause_d = Deferred()
+        self._resume_d = Deferred()
+
+    def patch_app(self):
+        """
+        Replace the original send method with our pausing one.
+        """
+        self.app.send_message_via_window = self._pausing_send
+
+    def wait_for_pause(self):
+        """
+        Wait for sends to be paused.
+        """
+        return self._pause_d
+
+    def resume(self):
+        """
+        Resume sends.
+        """
+        self._resume_d.callback(None)
+
+    @inlineCallbacks
+    def _pausing_send(self, *args, **kw):
+        """
+        Send up to self.allow messages, then pause and wait to be resumed.
+        """
+        if self._messages_sent == self.allow:
+            self._pause_d.callback(None)
+            yield self._resume_d
+        self._messages_sent += 1
+        yield self._send_message_via_window(*args, **kw)
 
 
 class TestBulkMessageApplication(VumiTestCase):
@@ -142,7 +175,7 @@ class TestBulkMessageApplication(VumiTestCase):
         self.clock.advance(self.app.monitor_interval + 1)
         yield self.wait_for_window_monitor()
 
-        [msg1, msg2] = yield self.app_helper.get_dispatched_outbound()
+        [msg1, msg2] = self.app_helper.get_dispatched_outbound()
         yield self.app_helper.store_outbound(
             conversation, TransportUserMessage(**msg1.payload))
         yield self.app_helper.store_outbound(
@@ -185,7 +218,7 @@ class TestBulkMessageApplication(VumiTestCase):
         yield self.wait_for_window_monitor()
 
         contacts = yield self.get_opted_in_contacts(conversation)
-        msgs = yield self.app_helper.get_dispatched_outbound()
+        msgs = self.app_helper.get_dispatched_outbound()
         contact_addrs = sorted([contact.msisdn for contact in contacts])
         msg_addrs = sorted([msg["to_addr"] for msg in msgs])
         self.assertEqual(contact_addrs, msg_addrs)
@@ -216,7 +249,7 @@ class TestBulkMessageApplication(VumiTestCase):
         yield self.wait_for_window_monitor()
 
         contacts = yield self.get_opted_in_contacts(conversation)
-        msgs = yield self.app_helper.get_dispatched_outbound()
+        msgs = self.app_helper.get_dispatched_outbound()
         contact_addrs = sorted([contact.msisdn for contact in contacts])
         # Make sure we have duplicate addresses.
         self.assertNotEqual(len(contact_addrs), len(set(contact_addrs)))
@@ -250,7 +283,7 @@ class TestBulkMessageApplication(VumiTestCase):
         yield self.wait_for_window_monitor()
 
         contacts = yield self.get_opted_in_contacts(conversation)
-        msgs = yield self.app_helper.get_dispatched_outbound()
+        msgs = self.app_helper.get_dispatched_outbound()
         contact_addrs = sorted([contact.msisdn for contact in contacts])
         msg_addrs = sorted([msg["to_addr"] for msg in msgs])
         self.assertNotEqual(contact_addrs, msg_addrs)
@@ -263,8 +296,8 @@ class TestBulkMessageApplication(VumiTestCase):
         messages we have already sent.
         """
         # Replace send_message_via_window with one that we can break.
-        send_breaker = MessageSendBreaker(self.app)
-        send_breaker.break_app()
+        send_breaker = MessageSendBreaker(self.app, 4)
+        send_breaker.patch_app()
 
         group1 = yield self.app_helper.create_group_with_contacts(u'group1', 3)
         group2 = yield self.app_helper.create_group_with_contacts(u'group2', 5)
@@ -272,11 +305,13 @@ class TestBulkMessageApplication(VumiTestCase):
             groups=[group1, group2])
         yield self.app_helper.start_conversation(conversation)
         batch_id = conversation.batch.key
+        cmd_id = uuid4().get_hex()
 
-        send_progress = yield self.app.get_send_progress(conversation)
+        send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, None)
 
         command_params = dict(
+            command_id=cmd_id,
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=batch_id,
@@ -295,29 +330,30 @@ class TestBulkMessageApplication(VumiTestCase):
         # Make sure we have duplicate addresses.
         self.assertNotEqual(len(contact_addrs), len(set(contact_addrs)))
 
-        msgs1 = yield self.app_helper.get_dispatched_outbound()
+        msgs1 = self.app_helper.get_dispatched_outbound()
         msg_addrs1 = [msg["to_addr"] for msg in msgs1]
         self.assertEqual(len(msg_addrs1), 4)
 
-        send_progress = yield self.app.get_send_progress(conversation)
+        send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, sorted(c.key for c in contacts)[3])
 
         self.app_helper.clear_dispatched_outbound()
-        # Fix the broken command consumer and redeliver the command message.
-        yield send_breaker.fix_app()
+        # Set up an unbroken worker to process the redelivered command and
+        # redeliver the command.
+        yield self.app_helper.get_app_worker(extra_worker=True)
         yield self.app_helper.dispatch_command("bulk_send", **command_params)
         # Have the window manager deliver the messages.
         self.clock.advance(self.app.monitor_interval + 1)
         yield self.wait_for_window_monitor()
 
-        msgs2 = yield self.app_helper.get_dispatched_outbound()
+        msgs2 = self.app_helper.get_dispatched_outbound()
         msg_addrs2 = [msg["to_addr"] for msg in msgs2]
         self.assertEqual(len(msg_addrs2), 4)
 
         msg_addrs = sorted(msg_addrs1 + msg_addrs2)
         self.assertEqual(contact_addrs, msg_addrs)
 
-        send_progress = yield self.app.get_send_progress(conversation)
+        send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, None)
 
     @inlineCallbacks
@@ -327,8 +363,8 @@ class TestBulkMessageApplication(VumiTestCase):
         messages we have already sent and also deduplicate correctly.
         """
         # Replace send_message_via_window with one that we can break.
-        send_breaker = MessageSendBreaker(self.app)
-        send_breaker.break_app()
+        send_breaker = MessageSendBreaker(self.app, 4)
+        send_breaker.patch_app()
 
         group1 = yield self.app_helper.create_group_with_contacts(u'group1', 3)
         group2 = yield self.app_helper.create_group_with_contacts(u'group2', 5)
@@ -336,11 +372,13 @@ class TestBulkMessageApplication(VumiTestCase):
             groups=[group1, group2])
         yield self.app_helper.start_conversation(conversation)
         batch_id = conversation.batch.key
+        cmd_id = uuid4().get_hex()
 
-        send_progress = yield self.app.get_send_progress(conversation)
+        send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, None)
 
         command_params = dict(
+            command_id=cmd_id,
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=batch_id,
@@ -359,30 +397,108 @@ class TestBulkMessageApplication(VumiTestCase):
         # Make sure we have duplicate addresses.
         self.assertNotEqual(len(contact_addrs), len(set(contact_addrs)))
 
-        msgs1 = yield self.app_helper.get_dispatched_outbound()
+        msgs1 = self.app_helper.get_dispatched_outbound()
         msg_addrs1 = [msg["to_addr"] for msg in msgs1]
         self.assertTrue(len(msg_addrs1) <= 4)
 
-        send_progress = yield self.app.get_send_progress(conversation)
+        send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertTrue(send_progress >= sorted(c.key for c in contacts)[3])
 
         self.app_helper.clear_dispatched_outbound()
-        # Fix the broken command consumer and redeliver the command message.
-        yield send_breaker.fix_app()
+        # Set up an unbroken worker to process the redelivered command and
+        # redeliver the command.
+        yield self.app_helper.get_app_worker(extra_worker=True)
         yield self.app_helper.dispatch_command("bulk_send", **command_params)
         # Have the window manager deliver the messages.
         self.clock.advance(self.app.monitor_interval + 1)
         yield self.wait_for_window_monitor()
 
-        msgs2 = yield self.app_helper.get_dispatched_outbound()
+        msgs2 = self.app_helper.get_dispatched_outbound()
         msg_addrs2 = [msg["to_addr"] for msg in msgs2]
         self.assertTrue(len(msg_addrs2) <= 3)
 
         msg_addrs = sorted(msg_addrs1 + msg_addrs2)
         self.assertEqual(sorted(set(contact_addrs)), msg_addrs)
 
-        send_progress = yield self.app.get_send_progress(conversation)
+        send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, None)
+
+    @inlineCallbacks
+    def test_overlapping_bulk_send_commands(self):
+        """
+        If we send a second command before the first one finishes, both sets of
+        messages are sent to all contacts.
+        """
+        # Replace send_message_via_window with one that we can pause.
+        send_pauser1 = MessageSendPauser(self.app, 3)
+        send_pauser1.patch_app()
+
+        group = yield self.app_helper.create_group_with_contacts(u'group', 10)
+        conversation = yield self.app_helper.create_conversation(
+            groups=[group])
+        yield self.app_helper.start_conversation(conversation)
+        batch_id = conversation.batch.key
+
+        # We don't yield here, because we want to start sending the next
+        # message before this one's finished.
+        first_d = self.app_helper.dispatch_command(
+            "bulk_send",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            dedupe=False,
+            content="hello 1",
+            delivery_class="sms",
+            msg_options={},
+        )
+        yield send_pauser1.wait_for_pause()
+        # Have the window manager deliver the messages.
+        self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
+
+        # We should have sent 3 messages from the first send.
+        msgs = self.app_helper.get_dispatched_outbound()
+        self.assertEqual(["hello 1"] * 3, [m["content"] for m in msgs])
+
+        # Set up a second worker to process the second command.
+        app2 = yield self.app_helper.get_app_worker(extra_worker=True)
+        send_pauser2 = MessageSendPauser(app2, 3)
+        send_pauser2.patch_app()
+        second_d = self.app_helper.dispatch_command(
+            "bulk_send",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            dedupe=False,
+            content="hello 2",
+            delivery_class="sms",
+            msg_options={},
+        )
+        # Manually kick the command dispatcher. It's still waiting for the
+        # previous command to finish.
+        self.app_helper.dispatch_commands_to_app()
+        yield send_pauser2.wait_for_pause()
+        # Have the window manager deliver the messages.
+        self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
+
+        # Unpause and wait for commands to finish.
+        send_pauser1.resume()
+        send_pauser2.resume()
+        yield first_d
+        yield second_d
+        # Have the window manager deliver the messages.
+        self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
+
+        contacts = yield self.get_opted_in_contacts(conversation)
+        contact_addrs = sorted([contact.msisdn for contact in contacts])
+
+        msgs = self.app_helper.get_dispatched_outbound()
+        msg_addrs1 = [m["to_addr"] for m in msgs if m["content"] == "hello 1"]
+        msg_addrs2 = [m["to_addr"] for m in msgs if m["content"] == "hello 2"]
+        self.assertEqual(sorted(msg_addrs1), contact_addrs)
+        self.assertEqual(sorted(msg_addrs2), contact_addrs)
 
     @inlineCallbacks
     def test_send_message_command(self):
@@ -406,7 +522,7 @@ class TestBulkMessageApplication(VumiTestCase):
                 "msg_options": msg_options,
             })
 
-        [msg] = yield self.app_helper.get_dispatched_outbound()
+        [msg] = self.app_helper.get_dispatched_outbound()
         self.assertEqual(msg.payload['to_addr'], "123456")
         self.assertEqual(msg.payload['from_addr'], "666666")
         self.assertEqual(msg.payload['content'], "hello world")

@@ -60,18 +60,18 @@ class BulkMessageApplication(GoApplicationWorker):
     def get_window_id(self, conversation_key, batch_id):
         return ':'.join([conversation_key, batch_id])
 
-    def _send_progress_key(self, conv):
-        return ':'.join([self.worker_name, conv.key, conv.batch.key])
+    def _send_progress_key(self, conv, command_id):
+        return ':'.join([self.worker_name, conv.key, command_id])
 
-    def get_send_progress(self, conv):
-        return self.redis.get(self._send_progress_key(conv))
+    def get_send_progress(self, conv, command_id):
+        return self.redis.get(self._send_progress_key(conv, command_id))
 
-    def set_send_progress(self, conv, contact_key):
-        return self.redis.setex(
-            self._send_progress_key(conv), SEND_PROGRESS_EXPIRY, contact_key)
+    def set_send_progress(self, conv, command_id, contact_key):
+        key = self._send_progress_key(conv, command_id)
+        return self.redis.setex(key, SEND_PROGRESS_EXPIRY, contact_key)
 
-    def clear_send_progress(self, conv):
-        return self.redis.delete(self._send_progress_key(conv))
+    def clear_send_progress(self, conv, command_id):
+        return self.redis.delete(self._send_progress_key(conv, command_id))
 
     @inlineCallbacks
     def send_message_via_window(self, conv, window_id, batch_id, to_addr,
@@ -85,9 +85,10 @@ class BulkMessageApplication(GoApplicationWorker):
             })
 
     @inlineCallbacks
-    def process_command_bulk_send(self, user_account_key, conversation_key,
-                                  batch_id, msg_options, content, dedupe,
-                                  delivery_class, **extra_params):
+    def process_command_bulk_send(self, cmd_id, user_account_key,
+                                  conversation_key, batch_id, msg_options,
+                                  content, dedupe, delivery_class,
+                                  **extra_params):
         """
         Send a copy of a message to every contact in every group attached to
         a conversation.
@@ -114,7 +115,7 @@ class BulkMessageApplication(GoApplicationWorker):
 
         self.add_conv_to_msg_options(conv, msg_options)
         window_id = self.get_window_id(conversation_key, batch_id)
-        interrupted_progress = yield self.get_send_progress(conv)
+        interrupted_progress = yield self.get_send_progress(conv, cmd_id)
         if interrupted_progress is not None:
             log.warning(
                 "Resuming interrupted send for conversation '%s' at '%s'." % (
@@ -140,10 +141,10 @@ class BulkMessageApplication(GoApplicationWorker):
             # We can now send the message and update the progress tracker.
             yield self.send_message_via_window(
                 conv, window_id, batch_id, to_addr, msg_options, content)
-            yield self.set_send_progress(conv, contact_key)
+            yield self.set_send_progress(conv, cmd_id, contact_key)
 
         # All finished, so clear the send progress.
-        yield self.clear_send_progress(conv)
+        yield self.clear_send_progress(conv, cmd_id)
 
     def consume_ack(self, event):
         return self.handle_event(event)
