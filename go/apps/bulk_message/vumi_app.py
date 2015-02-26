@@ -67,9 +67,10 @@ class BulkMessageApplication(GoApplicationWorker):
             })
 
     @inlineCallbacks
-    def process_command_bulk_send(self, user_account_key, conversation_key,
-                                  batch_id, msg_options, content, dedupe,
-                                  delivery_class, **extra_params):
+    def process_command_bulk_send(self, cmd_id, user_account_key,
+                                  conversation_key, batch_id, msg_options,
+                                  content, dedupe, delivery_class,
+                                  **extra_params):
 
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
@@ -114,7 +115,7 @@ class BulkMessageApplication(GoApplicationWorker):
             yield self.window_manager.remove_key(window_id, flight_key)
 
     @inlineCallbacks
-    def process_command_initial_action_hack(self, user_account_key,
+    def process_command_initial_action_hack(self, cmd_id, user_account_key,
                                             conversation_key, **kwargs):
         # HACK: This lets us do whatever we used to do when we got a `start'
         # message without having horrible app-specific view logic.

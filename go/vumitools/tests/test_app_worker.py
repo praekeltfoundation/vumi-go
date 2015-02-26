@@ -165,7 +165,8 @@ class TestGoApplicationWorker(VumiTestCase):
     def test_command_ignored(self):
         yield self.app_helper.start_conversation(self.conv)
 
-        def ignore_cmd_collect_metrics(conversation_key, user_account_key):
+        def ignore_cmd_collect_metrics(cmd_id, conversation_key,
+                                       user_account_key):
             raise IgnoreMessage("Ignoring message for conversation '%s'." % (
                 conversation_key,))
 
@@ -304,7 +305,8 @@ class TestGoRouterWorker(VumiTestCase):
     def test_command_ignored(self):
         yield self.rtr_helper.start_router(self.router)
 
-        def ignore_cmd_collect_metrics(conversation_key, user_account_key):
+        def ignore_cmd_collect_metrics(cmd_id, conversation_key,
+                                       user_account_key):
             raise IgnoreMessage("Ignoring message for conversation '%s'." % (
                 conversation_key,))
 
