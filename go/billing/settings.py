@@ -56,6 +56,9 @@ LOW_CREDIT_NOTIFICATION_PERCENTAGES = getattr(
 LOW_CREDIT_NOTIFICATION_EMAIL = getattr(
     settings, 'BILLING_LOW_CREDIT_NOTIFICATION_EMAIL', 'support@vumi.org')
 
+CREDIT_PERCENT_CUTOFF = getattr(
+    settings, 'BILLING_CREDIT_PERCENT_CUTOFF', None)
+
 PROVIDERS = getattr(settings, 'BILLING_PROVIDERS', {
     'mtn': 'MTN',
     'vodacom': 'Vodacom',
