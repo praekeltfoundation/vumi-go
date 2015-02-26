@@ -259,6 +259,42 @@ class TestTransaction(BillingApiTestCase):
         self.assertFalse(mock_task_delay.called)
 
     @inlineCallbacks
+    def test_credit_cutoff(self):
+        self.patch(app_settings, 'CREDIT_PERCENT_CUTOFF', -5)
+
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            message_cost=1.0,
+            storage_cost=0.0,
+            session_cost=0.0,
+            markup_percent=0.0)
+
+        load_account_credits(self.account, 10)
+
+        transaction1 = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            message_id='msg-id-1',
+            tag_pool_name='pool1',
+            tag_name='tag1',
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            session_created=False,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
+        self.assertFalse(transaction1.get('credit_cutoff_reached', False))
+
+        transaction2 = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            message_id='msg-id-1',
+            tag_pool_name='pool1',
+            tag_name='tag1',
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            session_created=False,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
+        self.assertTrue(transaction2.get('credit_cutoff_reached', False))
+
+    @inlineCallbacks
     def test_transaction(self):
         account = self.account
         account2 = self.account2
