@@ -52,6 +52,7 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         self.assertEqual(
             start_cmd, VumiApiCommand.command(
                 '%s_router' % (router.router_type,), 'start',
+                command_id=start_cmd["command_id"],
                 user_account_key=router.user_account.key,
                 router_key=router.key))
 
@@ -62,10 +63,11 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         self.assertRedirects(response, rtr_helper.get_view_url('show'))
         router = rtr_helper.get_router()
         self.assertTrue(router.stopping())
-        [start_cmd] = self.router_helper.get_api_commands_sent()
+        [stop_cmd] = self.router_helper.get_api_commands_sent()
         self.assertEqual(
-            start_cmd, VumiApiCommand.command(
+            stop_cmd, VumiApiCommand.command(
                 '%s_router' % (router.router_type,), 'stop',
+                command_id=stop_cmd["command_id"],
                 user_account_key=router.user_account.key,
                 router_key=router.key))
 
