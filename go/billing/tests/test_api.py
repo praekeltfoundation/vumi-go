@@ -259,7 +259,7 @@ class TestTransaction(BillingApiTestCase):
         self.assertFalse(mock_task_delay.called)
 
     @inlineCallbacks
-    def test_credit_cutoff(self):
+    def test_credit_cutoff_inbound(self):
         self.patch(app_settings, 'CREDIT_PERCENT_CUTOFF', -5)
 
         mk_message_cost(
@@ -282,6 +282,7 @@ class TestTransaction(BillingApiTestCase):
             transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
         self.assertFalse(transaction1.get('credit_cutoff_reached', False))
+        self.assertEqual(Transaction.objects.count(), 2)
 
         transaction2 = yield self.create_api_transaction(
             account_number=self.account.account_number,
@@ -293,6 +294,45 @@ class TestTransaction(BillingApiTestCase):
             transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
         self.assertTrue(transaction2.get('credit_cutoff_reached', False))
+        self.assertEqual(Transaction.objects.count(), 3)
+
+        @inlineCallbacks
+        def test_credit_cutoff_outbound(self):
+            self.patch(app_settings, 'CREDIT_PERCENT_CUTOFF', -5)
+
+            mk_message_cost(
+                tag_pool=self.pool1,
+                message_direction=MessageCost.DIRECTION_OUTBOUND,
+                message_cost=1.0,
+                storage_cost=0.0,
+                session_cost=0.0,
+                markup_percent=0.0)
+
+            load_account_credits(self.account, 10)
+
+            transaction1 = yield self.create_api_transaction(
+                account_number=self.account.account_number,
+                message_id='msg-id-1',
+                tag_pool_name='pool1',
+                tag_name='tag1',
+                message_direction=MessageCost.DIRECTION_OUTBOUND,
+                session_created=False,
+                transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
+            self.assertFalse(transaction1.get('credit_cutoff_reached', False))
+            self.assertEqual(Transaction.objects.count(), 2)
+
+            transaction2 = yield self.create_api_transaction(
+                account_number=self.account.account_number,
+                message_id='msg-id-1',
+                tag_pool_name='pool1',
+                tag_name='tag1',
+                message_direction=MessageCost.DIRECTION_OUTBOUND,
+                session_created=False,
+                transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
+            self.assertTrue(transaction2.get('credit_cutoff_reached', False))
+            self.assertEqual(Transaction.objects.count(), 2)
 
     @inlineCallbacks
     def test_transaction(self):
