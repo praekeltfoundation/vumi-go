@@ -13,6 +13,9 @@ from go.billing import settings as app_settings
 from go.billing.models import MessageCost
 from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 from go.billing.tasks import create_low_credit_notification
+from go.vumitools.billing_worker import BillingDispatcher
+
+MESSAGE_DIRECTION_OUTBOUND = BillingDispatcher.MESSAGE_DIRECTION_OUTBOUND
 
 
 def spawn_celery_task_via_thread(t, *args, **kw):
@@ -247,6 +250,31 @@ class TransactionResource(BaseResource):
         session_len_credits = MessageCost.calculate_session_length_credit_cost(
             session_len_cost, markup_percent)
 
+        query = """SELECT credit_balance, last_topup_balance
+                   FROM billing_account
+                   WHERE account_number = %(account_number)s"""
+
+        params = {'account_number': account_number}
+        cursor = yield cursor.execute(query, params)
+        result = yield cursor.fetchone()
+
+        if result is None:
+            raise BillingError(
+                "Unable to find billing account %s while checking"
+                " credit balance. Message was %s to/from tag pool %s." % (
+                    account_number, message_direction, tag_pool_name))
+
+        last_topup_balance = result.get('last_topup_balance')
+        credit_balance = result.get('credit_balance')
+
+        # If the message is outbound and limit is reached, don't charge
+        if (last_topup_balance and
+                message_direction == MESSAGE_DIRECTION_OUTBOUND):
+            credit_percent = int(math.ceil(
+                (credit_balance) * 100 / last_topup_balance))
+            if credit_percent < app_settings.CREDIT_PERCENT_CUTOFF:
+                defer.returnValue({'credit_cutoff_reached': True})
+
         # Create a new transaction
         query = """
             INSERT INTO billing_transaction
@@ -319,6 +347,7 @@ class TransactionResource(BaseResource):
             UPDATE billing_account
             SET credit_balance = credit_balance - %(credit_amount)s
             WHERE account_number = %(account_number)s
+            RETURNING credit_balance
         """
 
         params = {
@@ -327,17 +356,10 @@ class TransactionResource(BaseResource):
         }
 
         cursor = yield cursor.execute(query, params)
+        result = cursor.fetchone()
 
         # Check the account's credit balance and raise an
         # alert if it has gone below the credit balance threshold
-        query = """SELECT credit_balance, last_topup_balance
-                   FROM billing_account
-                   WHERE account_number = %(account_number)s"""
-
-        params = {'account_number': account_number}
-        cursor = yield cursor.execute(query, params)
-        result = yield cursor.fetchone()
-
         if result is None:
             raise BillingError(
                 "Unable to find billing account %s while checking"
@@ -345,7 +367,7 @@ class TransactionResource(BaseResource):
                     account_number, message_direction, tag_pool_name))
 
         credit_balance = result.get('credit_balance')
-        last_topup_balance = result.get('last_topup_balance')
+
         if app_settings.ENABLE_LOW_CREDIT_NOTIFICATION:
             yield self.check_and_notify_low_credit_threshold(
                 credit_balance, credit_amount, last_topup_balance,
