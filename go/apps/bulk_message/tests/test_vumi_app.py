@@ -98,16 +98,19 @@ class TestBulkMessageApplication(VumiTestCase):
         self.clock = Clock()
         self.patch(WindowManager, 'get_clock', lambda _: self.clock)
 
-        self.app = yield self.app_helper.get_app_worker({})
-        self._setup_wait_for_window_monitor()
-
-    def _setup_wait_for_window_monitor(self):
         # Hackery to wait for the window manager on the app.
         self._wm_state = {
             'queue': DeferredQueue(),
             'expected': 0,
         }
-        orig = self.app.window_manager._monitor_windows
+        self.app = yield self.get_app_worker(extra_worker=False)
+
+    @inlineCallbacks
+    def get_app_worker(self, extra_worker=True):
+        app = yield self.app_helper.get_app_worker(
+            {}, extra_worker=extra_worker)
+
+        orig = app.window_manager._monitor_windows
 
         @inlineCallbacks
         def monitor_wrapper(*args, **kw):
@@ -115,8 +118,8 @@ class TestBulkMessageApplication(VumiTestCase):
             yield orig(*args, **kw)
             self._wm_state['queue'].put(object())
 
-        self.patch(
-            self.app.window_manager, '_monitor_windows', monitor_wrapper)
+        self.patch(app.window_manager, '_monitor_windows', monitor_wrapper)
+        returnValue(app)
 
     @inlineCallbacks
     def wait_for_window_monitor(self):
@@ -340,7 +343,7 @@ class TestBulkMessageApplication(VumiTestCase):
         self.app_helper.clear_dispatched_outbound()
         # Set up an unbroken worker to process the redelivered command and
         # redeliver the command.
-        yield self.app_helper.get_app_worker(extra_worker=True)
+        yield self.get_app_worker()
         yield self.app_helper.dispatch_command("bulk_send", **command_params)
         # Have the window manager deliver the messages.
         self.clock.advance(self.app.monitor_interval + 1)
@@ -407,7 +410,7 @@ class TestBulkMessageApplication(VumiTestCase):
         self.app_helper.clear_dispatched_outbound()
         # Set up an unbroken worker to process the redelivered command and
         # redeliver the command.
-        yield self.app_helper.get_app_worker(extra_worker=True)
+        yield self.get_app_worker()
         yield self.app_helper.dispatch_command("bulk_send", **command_params)
         # Have the window manager deliver the messages.
         self.clock.advance(self.app.monitor_interval + 1)
@@ -461,7 +464,7 @@ class TestBulkMessageApplication(VumiTestCase):
         self.assertEqual(["hello 1"] * 3, [m["content"] for m in msgs])
 
         # Set up a second worker to process the second command.
-        app2 = yield self.app_helper.get_app_worker(extra_worker=True)
+        app2 = yield self.get_app_worker()
         send_pauser2 = MessageSendPauser(app2, 3)
         send_pauser2.patch_app()
         second_d = self.app_helper.dispatch_command(
