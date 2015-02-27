@@ -561,6 +561,7 @@ def set_account_balance(account_number, balance):
     """
     account = Account.objects.get(account_number=account_number)
     credit_amount = Decimal(str(balance)) - account.credit_balance
+    credit_amount = max(Decimal('0.0'), credit_amount)
     load_account_credits(account, credit_amount)
 
 
