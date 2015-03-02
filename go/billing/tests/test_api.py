@@ -260,12 +260,12 @@ class TestTransaction(BillingApiTestCase):
 
     @inlineCallbacks
     def test_credit_cutoff_inbound(self):
-        self.patch(app_settings, 'CREDIT_PERCENT_CUTOFF', -5)
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_CUTOFF', True)
 
         mk_message_cost(
             tag_pool=self.pool1,
             message_direction=MessageCost.DIRECTION_INBOUND,
-            message_cost=1.0,
+            message_cost=0.2,
             storage_cost=0.0,
             session_cost=0.0,
             markup_percent=0.0)
@@ -298,12 +298,12 @@ class TestTransaction(BillingApiTestCase):
 
         @inlineCallbacks
         def test_credit_cutoff_outbound(self):
-            self.patch(app_settings, 'CREDIT_PERCENT_CUTOFF', -5)
+            self.patch(app_settings, 'ENABLE_LOW_CREDIT_CUTOFF', True)
 
             mk_message_cost(
                 tag_pool=self.pool1,
                 message_direction=MessageCost.DIRECTION_OUTBOUND,
-                message_cost=1.0,
+                message_cost=0.2,
                 storage_cost=0.0,
                 session_cost=0.0,
                 markup_percent=0.0)
