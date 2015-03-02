@@ -267,12 +267,13 @@ class TransactionResource(BaseResource):
         last_topup_balance = result.get('last_topup_balance')
         credit_balance = result.get('credit_balance')
 
+        def credit_percent():
+            return self._ceil_percent(credit_balance, last_topup_balance)
+
         # If the message is outbound and limit is reached, don't charge
         if (app_settings.ENABLE_LOW_CREDIT_CUTOFF and last_topup_balance and
                 message_direction == MESSAGE_DIRECTION_OUTBOUND):
-            credit_percent = int(math.ceil(
-                (credit_balance) * 100 / last_topup_balance))
-            if credit_percent < self._notification_mapping[0]:
+            if credit_percent() < self._notification_mapping[0]:
                 defer.returnValue({'credit_cutoff_reached': True})
 
         # Create a new transaction
@@ -374,9 +375,7 @@ class TransactionResource(BaseResource):
                 account_number)
 
         if app_settings.ENABLE_LOW_CREDIT_CUTOFF and last_topup_balance:
-            credit_percent = int(math.ceil(
-                credit_balance * 100 / last_topup_balance))
-            if credit_percent < self._notification_mapping[0]:
+            if credit_percent() < self._notification_mapping[0]:
                 transaction['credit_cutoff_reached'] = True
 
         defer.returnValue(transaction)
@@ -421,6 +420,9 @@ class TransactionResource(BaseResource):
             return None
         return self._notification_mapping[percentage - minimum]
 
+    def _ceil_percent(self, num, den):
+        return int(math.ceil(num * 100 / den))
+
     def check_all_low_credit_thresholds(
             self, credit_balance, credit_amount, last_topup_balance):
         """
@@ -442,7 +444,7 @@ class TransactionResource(BaseResource):
             return None
 
         def ceil_percent(n):
-            return int(math.ceil(n * 100 / last_topup_balance))
+            return self._ceil_percent(n, last_topup_balance)
 
         current_percentage = ceil_percent(credit_balance)
         current_notification_level = self._get_notification_level(
