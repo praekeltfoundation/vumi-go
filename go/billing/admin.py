@@ -138,7 +138,8 @@ class TransactionAdmin(admin.ModelAdmin):
 
     readonly_fields = list_display
 
-    search_fields = ('account__account_number', 'tag_pool_name', 'tag_name')
+    search_fields = ('account_number', 'tag_pool_name', 'tag_name',
+                     'transaction_type')
     list_filter = ('message_direction', 'status', 'created', 'last_modified')
 
     def has_add_permission(self, request):
