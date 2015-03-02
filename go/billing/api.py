@@ -268,11 +268,11 @@ class TransactionResource(BaseResource):
         credit_balance = result.get('credit_balance')
 
         # If the message is outbound and limit is reached, don't charge
-        if (last_topup_balance and
+        if (app_settings.ENABLE_LOW_CREDIT_CUTOFF and last_topup_balance and
                 message_direction == MESSAGE_DIRECTION_OUTBOUND):
             credit_percent = int(math.ceil(
                 (credit_balance) * 100 / last_topup_balance))
-            if credit_percent < app_settings.CREDIT_PERCENT_CUTOFF:
+            if credit_percent < self._notification_mapping[0]:
                 defer.returnValue({'credit_cutoff_reached': True})
 
         # Create a new transaction
@@ -373,10 +373,10 @@ class TransactionResource(BaseResource):
                 credit_balance, credit_amount, last_topup_balance,
                 account_number)
 
-        if last_topup_balance:
+        if app_settings.ENABLE_LOW_CREDIT_CUTOFF and last_topup_balance:
             credit_percent = int(math.ceil(
                 credit_balance * 100 / last_topup_balance))
-            if credit_percent < app_settings.CREDIT_PERCENT_CUTOFF:
+            if credit_percent < self._notification_mapping[0]:
                 transaction['credit_cutoff_reached'] = True
 
         defer.returnValue(transaction)
