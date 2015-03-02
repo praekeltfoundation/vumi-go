@@ -56,8 +56,8 @@ LOW_CREDIT_NOTIFICATION_PERCENTAGES = getattr(
 LOW_CREDIT_NOTIFICATION_EMAIL = getattr(
     settings, 'BILLING_LOW_CREDIT_NOTIFICATION_EMAIL', 'support@vumi.org')
 
-CREDIT_PERCENT_CUTOFF = getattr(
-    settings, 'BILLING_CREDIT_PERCENT_CUTOFF', None)
+ENABLE_LOW_CREDIT_CUTOFF = getattr(
+    settings, 'BILLING_ENABLE_LOW_CREDIT_CUTOFF', False)
 
 PROVIDERS = getattr(settings, 'BILLING_PROVIDERS', {
     'mtn': 'MTN',
