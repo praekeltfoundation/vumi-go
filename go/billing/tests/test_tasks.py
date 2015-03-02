@@ -1295,3 +1295,11 @@ class TestLoadCreditsForDeveloperAccount(GoDjangoTestCase):
         tasks.set_developer_account_balances(Decimal('10.0'))
         self._assert_account_balance(self.user_account.key, Decimal('10.0'))
         self._assert_last_transaction_topup(Decimal('10.0'))
+
+    def test_dont_decrement_developer_account_balance(self):
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        self._set_developer_flag(self.user_account, True)
+        tasks.set_developer_account_balances(Decimal('-10.0'))
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        self._assert_last_transaction_topup(Decimal('0.0'))
+        self.assertEqual(Transaction.objects.count(), 1)
