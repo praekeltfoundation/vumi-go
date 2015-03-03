@@ -9,11 +9,14 @@ from twisted.internet import reactor
 from vumi import log
 from vumi.dispatchers.endpoint_dispatchers import Dispatcher
 from vumi.config import ConfigText, ConfigFloat, ConfigBool
+from vumi.message import TransportUserMessage
 from vumi.utils import http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 
 from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
+
+SESSION_CLOSE = TransportUserMessage.SESSION_CLOSE
 
 
 class BillingApi(object):
@@ -95,6 +98,9 @@ class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
         "Name of the session metadata field to look for in each message to "
         "calculate session length",
         static=True, default='session_metadata')
+    credit_limit_message = ConfigText(
+        "The message to send when terminating session based transports.",
+        static=True, default='Vumi Go account has run out of credits.')
 
     def post_validate(self):
         if len(self.receive_inbound_connectors) != 1:
@@ -133,6 +139,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         self.billing_api = BillingApi(self.api_url, config.retry_delay)
         self.disable_billing = config.disable_billing
         self.session_metadata_field = config.session_metadata_field
+        self.credit_limit_message = config.credit_limit_message
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -225,10 +232,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 log.info(
                     "Not billing for inbound message: %r" % msg.to_json())
             else:
-                transaction = yield self.create_transaction_for_inbound(msg)
+                yield self.create_transaction_for_inbound(msg)
                 msg_mdh.set_paid()
-                if transaction.get('credit_cutoff_reached', False):
-                    self._handle_credit_cutoff_inbound(msg)
 
         except BillingError:
             log.warning(
@@ -259,7 +264,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 transaction = yield self.create_transaction_for_outbound(msg)
                 msg_mdh.set_paid()
                 if transaction.get('credit_cutoff_reached', False):
-                    self._handle_credit_cutoff_outbound(msg)
+                    self._handle_credit_cutoff(msg)
         except BillingError:
             log.warning(
                 "BillingError for outbound message, sending without billing:"
@@ -270,13 +275,16 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 "Error processing outbound message, sending without billing:"
                 " %r" % (msg,))
             log.err()
-        yield self.publish_outbound(msg, self.receive_inbound_connector, None)
+        if msg is not None:
+            yield self.publish_outbound(
+                msg, self.receive_inbound_connector, None)
 
-    def _handle_credit_cutoff_inbound(self, msg):
-        pass
-
-    def _handle_credit_cutoff_outbound(self, msg):
-        pass
+    def _handle_credit_cutoff(self, msg):
+        if msg.session_event is not None:
+            msg.session_event = SESSION_CLOSE
+            msg.content = self.credit_limit_message
+        else:
+            msg = None
 
     @inlineCallbacks
     def process_event(self, config, event, connector_name):
