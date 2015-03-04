@@ -772,8 +772,39 @@ class TestBillingDispatcher(VumiTestCase):
             "outbound",
             user_account="12345",
             tag=("pool1", "1234"),
-            helper_metadata={},
+            helper_metadata={}
             )
 
         published_msgs = self.ri_helper.get_dispatched_outbound()
         self.assertEqual(len(published_msgs), 0)
+
+    @inlineCallbacks
+    def test_inbound_message_credit_cutoff_session(self):
+        self.billing_api = BillingApiMock(credit_cutoff=True)
+        yield self.get_dispatcher
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={},
+            session_event='new'
+            )
+
+        published_msg = self.ri_helper.get_dispatched_inbound()[0]
+        self.assertEqual(msg, published_msg)
+
+    @inlineCallbacks
+    def test_inbound_message_credit_cutoff_message(self):
+        self.billing_api = BillingApiMock(credit_cutoff=True)
+        yield self.get_dispatcher
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={}
+            )
+
+        published_msg = self.ri_helper.get_dispatched_inbound()[0]
+        self.assertEqual(msg, published_msg)
