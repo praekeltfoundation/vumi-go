@@ -274,7 +274,10 @@ class TransactionResource(BaseResource):
         if (app_settings.ENABLE_LOW_CREDIT_CUTOFF and last_topup_balance and
                 message_direction == MESSAGE_DIRECTION_OUTBOUND):
             if credit_percent() < self._notification_mapping[0]:
-                defer.returnValue({'credit_cutoff_reached': True})
+                defer.returnValue({
+                    'credit_cutoff_reached': True,
+                    'transaction': None,
+                })
 
         # Create a new transaction
         query = """
@@ -376,9 +379,15 @@ class TransactionResource(BaseResource):
 
         if app_settings.ENABLE_LOW_CREDIT_CUTOFF and last_topup_balance:
             if credit_percent() < self._notification_mapping[0]:
-                transaction['credit_cutoff_reached'] = True
+                defer.returnValue({
+                    'transaction': transaction,
+                    'credit_cutoff_reached': True,
+                })
 
-        defer.returnValue(transaction)
+        defer.returnValue({
+            'transaction': transaction,
+            'credit_cutoff_reached': False,
+        })
 
     def check_and_notify_low_credit_threshold(
             self, credit_balance, credit_amount, last_topup_balance,
