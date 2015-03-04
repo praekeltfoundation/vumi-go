@@ -264,7 +264,7 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 transaction = yield self.create_transaction_for_outbound(msg)
                 msg_mdh.set_paid()
                 if transaction.get('credit_cutoff_reached', False):
-                    self._handle_credit_cutoff(msg)
+                    msg = self._handle_credit_cutoff(msg)
         except BillingError:
             log.warning(
                 "BillingError for outbound message, sending without billing:"
@@ -280,11 +280,12 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 msg, self.receive_inbound_connector, None)
 
     def _handle_credit_cutoff(self, msg):
-        if msg.session_event is not None:
-            msg.session_event = SESSION_CLOSE
-            msg.content = self.credit_limit_message
+        if msg.get('session_event') is not None:
+            msg['session_event'] = SESSION_CLOSE
+            msg['content'] = self.credit_limit_message
+            return msg
         else:
-            msg = None
+            return None
 
     @inlineCallbacks
     def process_event(self, config, event, connector_name):
