@@ -367,7 +367,7 @@ describe("app", function() {
                                 data: JSON.stringify({
                                     user: {
                                         answers: {
-                                            'choice-1': 'value-5'
+                                            'message-1': 'value-5',
                                         }
                                     },
                                     contact: api.contacts.store[0],

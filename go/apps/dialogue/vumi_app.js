@@ -91,6 +91,15 @@ var DialogueApp = App.extend(function(self) {
         self.contact.extra[[key, n + 1].join('-')] = value;
     };
 
+    self.labelled_answers = function() {
+        return _.transform(
+            self.im.user.answers,
+            function(result, value, uuid) {
+                var desc = _.find(self.poll.states, {uuid: uuid});
+                result[desc.store_as] = value;
+            });
+    };
+
     self.types = {};
 
     self.types.choice = function(desc) {
@@ -173,7 +182,7 @@ var DialogueApp = App.extend(function(self) {
 
         var payload = {
             user: {
-                answers: self.im.user.answers
+                answers: self.labelled_answers(),
             },
             contact: self.contact,
             conversation_key: self.poll.conversation_key
