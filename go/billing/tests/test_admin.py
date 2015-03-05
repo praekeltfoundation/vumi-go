@@ -5,7 +5,7 @@ from django.core.urlresolvers import reverse
 
 from go.base.utils import vumi_api_for_user
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import Account
+from go.billing.models import Account, Transaction
 from go.billing.admin import AccountAdmin
 
 from .helpers import mk_statement, mk_transaction
@@ -126,3 +126,21 @@ class TestStatementAdmin(GoDjangoTestCase):
             self.assertFalse(admin.is_developer(account))
         for account in developers:
             self.assertTrue(admin.is_developer(account))
+
+    def test_transaction_search(self):
+        trans1 = mk_transaction(
+            self.account,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+        trans2 = mk_transaction(
+            self.account,
+            transaction_type=Transaction.TRANSACTION_TYPE_TOPUP)
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_transaction_changelist'),
+            {'q': 'Top Up'})
+        self.assertContains(response, "1 result")
+        self.assertContains(
+            response, '<a href="/admin/billing/transaction/%d/">' % trans2.pk)
+        self.assertNotContains(
+            response, '<a href="/admin/billing/transaction/%d/">' % trans1.pk)
