@@ -270,7 +270,7 @@ class TestTransaction(BillingApiTestCase):
 
         load_account_credits(self.account, 10)
 
-        transaction1 = yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             message_id='msg-id-1',
             tag_pool_name='pool1',
@@ -279,7 +279,8 @@ class TestTransaction(BillingApiTestCase):
             session_created=False,
             transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
-        self.assertFalse(transaction1['credit_cutoff_reached'])
+        self.assertFalse(transaction['credit_cutoff_reached'])
+        self.assertTrue(transaction['transaction'] is not None)
         self.assertEqual(Transaction.objects.count(), 2)
 
     @inlineCallbacks
@@ -293,6 +294,8 @@ class TestTransaction(BillingApiTestCase):
             )
 
         load_account_credits(self.account, 10)
+        self.account.credit_balance = 6
+        self.account.save()
 
         transaction_kwargs = {
             'account_number': self.account.account_number,
@@ -304,11 +307,11 @@ class TestTransaction(BillingApiTestCase):
             'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE
         }
 
-        yield self.create_api_transaction(**transaction_kwargs)
         transaction = yield self.create_api_transaction(**transaction_kwargs)
 
         self.assertTrue(transaction['credit_cutoff_reached'])
-        self.assertEqual(Transaction.objects.count(), 3)
+        self.assertTrue(transaction['transaction'] is not None)
+        self.assertEqual(Transaction.objects.count(), 2)
 
     @inlineCallbacks
     def test_credit_cutoff_outbound_not_reached(self):
@@ -322,7 +325,7 @@ class TestTransaction(BillingApiTestCase):
 
         load_account_credits(self.account, 10)
 
-        transaction1 = yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             message_id='msg-id-1',
             tag_pool_name='pool1',
@@ -331,7 +334,8 @@ class TestTransaction(BillingApiTestCase):
             session_created=False,
             transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
-        self.assertFalse(transaction1['credit_cutoff_reached'])
+        self.assertFalse(transaction['credit_cutoff_reached'])
+        self.assertTrue(transaction['transaction'] is not None)
         self.assertEqual(Transaction.objects.count(), 2)
 
     @inlineCallbacks
@@ -345,6 +349,8 @@ class TestTransaction(BillingApiTestCase):
             )
 
         load_account_credits(self.account, 10)
+        self.account.credit_balance = 6
+        self.account.save()
 
         transaction_kwargs = {
             'account_number': self.account.account_number,
@@ -356,11 +362,11 @@ class TestTransaction(BillingApiTestCase):
             'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE
         }
 
-        yield self.create_api_transaction(**transaction_kwargs)
         transaction = yield self.create_api_transaction(**transaction_kwargs)
 
         self.assertTrue(transaction['credit_cutoff_reached'])
-        self.assertEqual(Transaction.objects.count(), 2)
+        self.assertTrue(transaction['transaction'] is None)
+        self.assertEqual(Transaction.objects.count(), 1)
 
     @inlineCallbacks
     def test_transaction(self):
