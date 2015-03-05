@@ -96,7 +96,9 @@ var DialogueApp = App.extend(function(self) {
             self.im.user.answers,
             function(result, value, uuid) {
                 var desc = _.find(self.poll.states, {uuid: uuid});
-                result[desc.store_as] = value;
+                if (typeof desc !== 'undefined') {
+                    result[desc.store_as] = value;
+                }
             });
     };
 
