@@ -5,6 +5,7 @@ import logging
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.web.client import Agent, Request, Response
 
+from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 from vumi.utils import mkheaders, StringProducer
@@ -17,11 +18,14 @@ from go.vumitools.utils import MessageMetadataHelper
 from go.billing.api import BillingError
 from go.billing.utils import JSONEncoder
 
+SESSION_CLOSE = TransportUserMessage.SESSION_CLOSE
+
 
 class BillingApiMock(object):
 
-    def __init__(self):
+    def __init__(self, credit_cutoff=False):
         self.transactions = []
+        self.credit_cutoff = credit_cutoff
 
     def _record(self, items, vars):
         del vars["self"]
@@ -32,24 +36,27 @@ class BillingApiMock(object):
                            session_created, transaction_type, session_length):
         self._record(self.transactions, locals())
         return {
-            "id": 1,
-            "account_number": account_number,
-            "message_id": message_id,
-            "tag_pool_name": tag_pool_name,
-            "tag_name": tag_name,
-            "provider": provider,
-            "message_direction": message_direction,
-            "message_cost": 80,
-            "session_created": session_created,
-            "session_cost": 30,
-            "markup_percent": decimal.Decimal('10.0'),
-            "credit_amount": -35,
-            "credit_factor": decimal.Decimal('0.4'),
-            "created": "2013-10-30T10:42:51.144745+02:00",
-            "last_modified": "2013-10-30T10:42:51.144745+02:00",
-            "status": "Completed",
-            "transaction_type": transaction_type,
-            "session_length": session_length,
+            "transaction": {
+                "id": 1,
+                "account_number": account_number,
+                "message_id": message_id,
+                "tag_pool_name": tag_pool_name,
+                "tag_name": tag_name,
+                "provider": provider,
+                "message_direction": message_direction,
+                "message_cost": 80,
+                "session_created": session_created,
+                "session_cost": 30,
+                "markup_percent": decimal.Decimal('10.0'),
+                "credit_amount": -35,
+                "credit_factor": decimal.Decimal('0.4'),
+                "created": "2013-10-30T10:42:51.144745+02:00",
+                "last_modified": "2013-10-30T10:42:51.144745+02:00",
+                "status": "Completed",
+                "transaction_type": transaction_type,
+                "session_length": session_length,
+                },
+            "credit_cutoff_reached": self.credit_cutoff
         }
 
 
@@ -739,3 +746,84 @@ class TestBillingDispatcher(VumiTestCase):
             "outbound",
             session_created=False,
             session_metadata_field='foo')
+
+    @inlineCallbacks
+    def test_outbound_message_credit_cutoff_session(self):
+        self.billing_api = BillingApiMock(credit_cutoff=True)
+        dispatcher = yield self.get_dispatcher()
+
+        yield self.make_dispatch_outbound(
+            "outbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={},
+            session_event='resume'
+            )
+
+        [published_msg] = self.ri_helper.get_dispatched_outbound()
+        self.assertEqual(published_msg['session_event'], SESSION_CLOSE)
+        self.assertEqual(
+            published_msg['content'], dispatcher.credit_limit_message)
+
+    @inlineCallbacks
+    def test_outbound_message_credit_cutoff_session_start(self):
+        self.billing_api = BillingApiMock(credit_cutoff=True)
+        yield self.get_dispatcher()
+
+        yield self.make_dispatch_outbound(
+            "outbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={},
+            session_event='new'
+            )
+
+        self.assertEqual(len(self.ri_helper.get_dispatched_outbound()), 0)
+
+    @inlineCallbacks
+    def test_outbound_message_credit_cutoff_message(self):
+        self.billing_api = BillingApiMock(credit_cutoff=True)
+        yield self.get_dispatcher()
+
+        yield self.make_dispatch_outbound(
+            "outbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={}
+            )
+
+        published_msgs = self.ri_helper.get_dispatched_outbound()
+        self.assertEqual(len(published_msgs), 0)
+
+    @inlineCallbacks
+    def test_inbound_message_credit_cutoff_session(self):
+        self.billing_api = BillingApiMock(credit_cutoff=True)
+        yield self.get_dispatcher()
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={},
+            session_event='resume'
+            )
+
+        self.add_md(msg, is_paid=True)
+        [published_msg] = self.ro_helper.get_dispatched_inbound()
+        self.assertEqual(msg, published_msg)
+
+    @inlineCallbacks
+    def test_inbound_message_credit_cutoff_message(self):
+        self.billing_api = BillingApiMock(credit_cutoff=True)
+        yield self.get_dispatcher()
+
+        msg = yield self.make_dispatch_inbound(
+            "inbound",
+            user_account="12345",
+            tag=("pool1", "1234"),
+            helper_metadata={}
+            )
+
+        self.add_md(msg, is_paid=True)
+        [published_msg] = self.ro_helper.get_dispatched_inbound()
+        self.assertEqual(msg, published_msg)
