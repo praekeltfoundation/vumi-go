@@ -17,6 +17,7 @@ from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 
 SESSION_CLOSE = TransportUserMessage.SESSION_CLOSE
+SESSION_NEW = TransportUserMessage.SESSION_NEW
 
 
 class BillingApi(object):
@@ -282,7 +283,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 msg, self.receive_inbound_connector, None)
 
     def _handle_credit_cutoff(self, msg):
-        if msg.get('session_event') is not None:
+        session_event = msg.get('session_event')
+        if session_event is not None and session_event != SESSION_NEW:
             msg['session_event'] = SESSION_CLOSE
             msg['content'] = self.credit_limit_message
             return msg
