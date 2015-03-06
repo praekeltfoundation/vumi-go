@@ -404,9 +404,10 @@ class TransactionResource(BaseResource):
         level = self.check_all_low_credit_thresholds(
             credit_balance, credit_amount, last_topup_balance)
         if level is not None:
+            cutoff_notification = level * 100 == self._notification_mapping[0]
             return spawn_celery_task_via_thread(
                 create_low_credit_notification, account_number,
-                level, credit_balance, level*100 == self._notification_mapping[0])
+                level, credit_balance, cutoff_notification)
 
     def _get_notification_level(self, percentage):
         """
