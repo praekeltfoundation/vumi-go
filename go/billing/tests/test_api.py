@@ -180,7 +180,8 @@ class TestTransaction(BillingApiTestCase):
         mock_task_delay.assert_called_once_with(
             account.account_number,
             Decimal('0.9'),
-            account.credit_balance)
+            account.credit_balance,
+            False)
         mock_task_delay.reset_mock()
 
         # Create another transaction
@@ -197,7 +198,8 @@ class TestTransaction(BillingApiTestCase):
         mock_task_delay.assert_called_once_with(
             account.account_number,
             Decimal('0.8'),
-            account.credit_balance)
+            account.credit_balance,
+            False)
         mock_task_delay.reset_mock()
 
         # Create a third transaction
@@ -214,7 +216,8 @@ class TestTransaction(BillingApiTestCase):
         mock_task_delay.assert_called_once_with(
             account.account_number,
             Decimal('0.7'),
-            account.credit_balance)
+            account.credit_balance,
+            True)
         mock_task_delay.reset_mock()
 
         # Create a fourth transaction

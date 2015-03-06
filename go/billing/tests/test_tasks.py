@@ -1224,22 +1224,22 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
                                  + 'EmailBackend')
         self.user_helper = self.vumi_helper.make_django_user()
 
-    def mk_notification(self, percent, balance):
+    def mk_notification(self, percent, balance, cutoff_notification):
         self.django_user = self.user_helper.get_django_user()
         self.acc = Account.objects.get(user=self.django_user)
         percent = Decimal(percent)
         balance = Decimal(balance)
         return tasks.create_low_credit_notification(
-            self.acc.account_number, percent, balance)
+            self.acc.account_number, percent, balance, cutoff_notification)
 
     def test_confirm_sent(self):
-        notification_id, res = self.mk_notification('0.60', '31.41')
+        notification_id, res = self.mk_notification('0.60', '31.41', False)
         notification = LowCreditNotification.objects.get(pk=notification_id)
         timestamp = res.get()
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
-        notification_id, res = self.mk_notification('0.701', '1234.5678')
+        notification_id, res = self.mk_notification('0.701', '1234.5678', False)
         notification = LowCreditNotification.objects.get(pk=notification_id)
         self.assertTrue(res.get() is not None)
         self.assertEqual(len(mail.outbox), 1)
@@ -1257,6 +1257,29 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertTrue(self.django_user.get_full_name() in email.body)
         self.assertTrue(str(notification.pk) in email.body)
         self.assertTrue(str(self.acc.user.email) in email.body)
+
+    def test_credit_cutoff_email_sent(self):
+        notification_id, res = self.mk_notification('0.701', '1234.5678', True)
+        notification = LowCreditNotification.objects.get(pk=notification_id)
+        self.assertTrue(res.get() is not None)
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertEqual(email.from_email, 'support@vumi.org')
+        self.assertEqual(
+            'Vumi Go account %s (%s) at %s%% left of available credits' % (
+                str(self.acc.user.email), str(self.acc.user.get_full_name()),
+                '70.100'),
+            email.subject)
+        self.assertTrue('29.900%' in email.body)
+        self.assertTrue('1,234.56 credits' in email.body)
+        self.assertTrue(self.django_user.get_full_name() in email.body)
+        self.assertTrue(str(notification.pk) in email.body)
+        self.assertTrue(str(self.acc.user.email) in email.body)
+        self.assertTrue(
+                'You will no longer be able to send messages'
+                in email.body)
 
 
 class TestLoadCreditsForDeveloperAccount(GoDjangoTestCase):
