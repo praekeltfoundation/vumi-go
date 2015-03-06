@@ -806,16 +806,17 @@ class TestBillingDispatcher(VumiTestCase):
             user_account="12345",
             tag=("pool1", "1234"),
             helper_metadata={},
-            session_event='new'
+            session_event='resume'
             )
 
-        published_msg = self.ri_helper.get_dispatched_inbound()[0]
+        self.add_md(msg, is_paid=True)
+        [published_msg] = self.ro_helper.get_dispatched_inbound()
         self.assertEqual(msg, published_msg)
 
     @inlineCallbacks
     def test_inbound_message_credit_cutoff_message(self):
         self.billing_api = BillingApiMock(credit_cutoff=True)
-        yield self.get_dispatcher
+        yield self.get_dispatcher()
 
         msg = yield self.make_dispatch_inbound(
             "inbound",
@@ -824,5 +825,6 @@ class TestBillingDispatcher(VumiTestCase):
             helper_metadata={}
             )
 
-        published_msg = self.ri_helper.get_dispatched_inbound()[0]
+        self.add_md(msg, is_paid=True)
+        [published_msg] = self.ro_helper.get_dispatched_inbound()
         self.assertEqual(msg, published_msg)
