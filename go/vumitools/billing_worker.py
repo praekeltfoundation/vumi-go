@@ -232,8 +232,9 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 log.info(
                     "Not billing for inbound message: %r" % msg.to_json())
             else:
-                yield self.create_transaction_for_inbound(msg)
-                msg_mdh.set_paid()
+                result = yield self.create_transaction_for_inbound(msg)
+                if result.get('transaction'):
+                    msg_mdh.set_paid()
 
         except BillingError:
             log.warning(
@@ -261,9 +262,10 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 log.info(
                     "Not billing for outbound message: %r" % msg.to_json())
             else:
-                transaction = yield self.create_transaction_for_outbound(msg)
-                msg_mdh.set_paid()
-                if transaction.get('credit_cutoff_reached', False):
+                result = yield self.create_transaction_for_outbound(msg)
+                if result.get('transaction'):
+                    msg_mdh.set_paid()
+                if result.get('credit_cutoff_reached', False):
                     msg = self._handle_credit_cutoff(msg)
         except BillingError:
             log.warning(
