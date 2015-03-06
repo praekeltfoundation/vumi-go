@@ -406,7 +406,7 @@ class TransactionResource(BaseResource):
         if level is not None:
             return spawn_celery_task_via_thread(
                 create_low_credit_notification, account_number,
-                level, credit_balance, level == self._notification_mapping[0])
+                level, credit_balance, level*100 == self._notification_mapping[0])
 
     def _get_notification_level(self, percentage):
         """
