@@ -1278,7 +1278,7 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertTrue(str(notification.pk) in email.body)
         self.assertTrue(str(self.acc.user.email) in email.body)
         self.assertTrue(
-                'you will no longer be able to send any more messages'
+                'You will no longer be able to send messages'
                 in email.body)
 
 
