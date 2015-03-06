@@ -768,7 +768,7 @@ class TestBillingDispatcher(VumiTestCase):
     @inlineCallbacks
     def test_outbound_message_credit_cutoff_session_start(self):
         self.billing_api = BillingApiMock(credit_cutoff=True)
-        dispatcher = yield self.get_dispatcher()
+        yield self.get_dispatcher()
 
         yield self.make_dispatch_outbound(
             "outbound",
@@ -779,7 +779,6 @@ class TestBillingDispatcher(VumiTestCase):
             )
 
         self.assertEqual(len(self.ri_helper.get_dispatched_outbound()), 0)
-
 
     @inlineCallbacks
     def test_outbound_message_credit_cutoff_message(self):
