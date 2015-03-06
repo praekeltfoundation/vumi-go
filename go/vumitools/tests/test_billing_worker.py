@@ -758,7 +758,7 @@ class TestBillingDispatcher(VumiTestCase):
             session_event='new'
             )
 
-        published_msg = self.ri_helper.get_dispatched_outbound()[0]
+        [published_msg] = self.ri_helper.get_dispatched_outbound()
         self.assertEqual(published_msg['session_event'], SESSION_CLOSE)
         self.assertEqual(
             published_msg['content'], dispatcher.credit_limit_message)
