@@ -521,7 +521,7 @@ def low_credit_notification_confirm_sent(res, notification_id):
 
 
 @task()
-def create_low_credit_notification(account_number, threshold, balance):
+def create_low_credit_notification(account_number, threshold, balance, cutoff_notification):
     """
     Sends a low credit notification. Returns (model instance id, email_task).
     """
@@ -537,8 +537,13 @@ def create_low_credit_notification(account_number, threshold, balance):
     email_from = settings.LOW_CREDIT_NOTIFICATION_EMAIL
     email_to = account.user.email
     formatted_balance = format_currency(balance)
+    if cutoff_notification:
+        template = 'billing/credit_cutoff_notification_email.txt'
+    else:
+        template = 'billing/low_credit_notification_email.txt'
+	
     message = render_to_string(
-        'billing/low_credit_notification_email.txt',
+        template,
         {
             'user': account.user,
             'account': account,
