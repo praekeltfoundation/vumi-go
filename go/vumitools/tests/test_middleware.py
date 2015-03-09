@@ -93,6 +93,17 @@ class TestNormalizeMisdnMiddleware(VumiTestCase):
         msg = self.mw.handle_inbound(msg, 'dummy_endpoint')
         self.assertEqual(msg['from_addr'], None)
 
+    @inlineCallbacks
+    def test_inbound_normalization_ignores_strip_plus(self):
+        mw = yield self.mw_helper.create_middleware({
+            'country_code': '256',
+            'strip_plus': True,
+        })
+        msg = self.mw_helper.make_inbound(
+            "foo", to_addr='8007', from_addr='+256123456789')
+        msg = mw.handle_inbound(msg, 'dummy_endpoint')
+        self.assertEqual(msg['from_addr'], '+256123456789')
+
     def test_outbound_normalization(self):
         msg = self.mw_helper.make_outbound(
             "foo", to_addr='0123456789', from_addr='8007')
@@ -104,6 +115,17 @@ class TestNormalizeMisdnMiddleware(VumiTestCase):
             "foo", to_addr=None, from_addr='8007')
         msg = self.mw.handle_outbound(msg, 'dummy_endpoint')
         self.assertEqual(msg['to_addr'], None)
+
+    @inlineCallbacks
+    def test_outbound_normalization_applies_strip_plus(self):
+        mw = yield self.mw_helper.create_middleware({
+            'country_code': '256',
+            'strip_plus': True,
+        })
+        msg = self.mw_helper.make_outbound(
+            "foo", to_addr='0123456789', from_addr='8007')
+        msg = mw.handle_outbound(msg, 'dummy_endpoint')
+        self.assertEqual(msg['to_addr'], '256123456789')
 
 
 class TestOptOutMiddleware(VumiTestCase):
