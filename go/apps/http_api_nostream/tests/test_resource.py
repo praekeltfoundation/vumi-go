@@ -1,7 +1,10 @@
 from twisted.trial.unittest import TestCase
 
+from vumi.message import TransportUserMessage
+
 from go.apps.http_api_nostream.resource import (
-    MsgOptions, SendToOptions, ReplyToOptions)
+    MsgOptions, SendToOptions, ReplyToOptions,
+    MsgCheckHelpers)
 
 
 def validate_even_not_multiple_of_odd(payload, api_config):
@@ -79,6 +82,43 @@ class TestMsgOptions(TestCase):
         )
         self.assert_no_attribute(opts, "even")
         self.assert_no_attribute(opts, "odd")
+
+
+class TestMsgCheckHelpers(TestCase):
+    def test_is_unicode(self):
+        self.assertTrue(MsgCheckHelpers.is_unicode(u"123"))
+        self.assertFalse(MsgCheckHelpers.is_unicode(None))
+        self.assertFalse(MsgCheckHelpers.is_unicode("123"))
+
+    def test_is_unicode_or_none(self):
+        self.assertTrue(MsgCheckHelpers.is_unicode_or_none(u"123"))
+        self.assertTrue(MsgCheckHelpers.is_unicode_or_none(None))
+        self.assertFalse(MsgCheckHelpers.is_unicode("123"))
+
+    def test_is_session_event(self):
+        for event in TransportUserMessage.SESSION_EVENTS:
+            self.assertTrue(MsgCheckHelpers.is_session_event(event))
+        self.assertFalse(MsgCheckHelpers.is_session_event('sparrow'))
+
+    def test_is_within_content_length_limit_(self):
+        api_config = {"content_length_limit": 5}
+        within_limit = lambda payload: (
+            MsgCheckHelpers.is_within_content_length_limit(
+                payload, api_config))
+        self.assertEqual(within_limit({"content": None}), None)
+        self.assertEqual(within_limit({"content": "five!"}), None)
+        self.assertEqual(
+            within_limit({"content": "sixsix"}),
+            "Payload content too long: 6 > 5")
+
+    def test_is_within_content_length_limit_no_limit(self):
+        api_config = {}
+        within_limit = lambda payload: (
+            MsgCheckHelpers.is_within_content_length_limit(
+                payload, api_config))
+        self.assertEqual(within_limit({"content": None}), None)
+        self.assertEqual(
+            within_limit({"content": "fairly_long_content"}), None)
 
 
 class TestSendToOptions(TestCase):
