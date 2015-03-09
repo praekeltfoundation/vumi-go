@@ -34,7 +34,7 @@ setup(
         'librabbitmq==1.5.1',
         'hiredis==0.1.4',
         'django-pipeline==1.3.6',
-        'txpostgres==1.1.0',
+        'txpostgres>=1.2.0',
         'django-crispy-forms==1.4.0',
         'django-loginas==0.1.3',
         'boto',

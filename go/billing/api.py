@@ -8,6 +8,7 @@ from twisted.internet import defer
 from twisted.internet.threads import deferToThread
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
+from txpostgres.reconnection import ConnectionDead
 
 from go.billing import settings as app_settings
 from go.billing.models import MessageCost
@@ -478,12 +479,25 @@ class TransactionResource(BaseResource):
         defer.returnValue(result)
 
 
+class HealthResource(Resource):
+    isLeaf = True
+
+    def __init__(self, health_check_func):
+        Resource.__init__(self)
+        self._health_check_func = health_check_func
+
+    def render_GET(self, request):
+        self._health_check_func(request)
+        return NOT_DONE_YET
+
+
 class Root(BaseResource):
     """The root resource"""
 
     def __init__(self, connection_pool):
         BaseResource.__init__(self, connection_pool)
         self.putChild('transactions', TransactionResource(connection_pool))
+        self.putChild('ping', HealthResource(self.health_check))
 
     def getChild(self, name, request):
         if name == '':
@@ -493,3 +507,18 @@ class Root(BaseResource):
     def render_GET(self, request):
         request.setResponseCode(200)  # OK
         return ''
+
+    @defer.inlineCallbacks
+    def health_check(self, request):
+        """
+        We want our health check to be comprehensive, so we implement it here.
+        """
+        try:
+            yield self._connection_pool.runQuery("SELECT 1")
+        except ConnectionDead:
+            request.setResponseCode(503)
+            request.write("Database connection unavailable\n")
+        else:
+            request.setResponseCode(200)
+            request.write("OK\n")
+        request.finish()
