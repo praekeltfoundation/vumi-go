@@ -47,12 +47,8 @@ class BillingApiTestCase(VumiTestCase):
     def setUp(self):
         root = api.billing_api_resource()
         self.connection_pool = yield root._connection_pool_started
+        self.add_cleanup(self.connection_pool.close)
         self.web = DummySite(root)
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield super(BillingApiTestCase, self).tearDown()
-        self.connection_pool.close()
 
     @inlineCallbacks
     def call_api(self, method, path, **kw):
@@ -63,6 +59,32 @@ class BillingApiTestCase(VumiTestCase):
             raise ApiCallError(response)
         result = json.loads(response.value(), cls=JSONDecoder)
         returnValue(result)
+
+
+class TestHealthCheck(BillingApiTestCase):
+
+    @inlineCallbacks
+    def test_ping_okay(self):
+        """
+        The health check returns HTTP 200 if the database connections are
+        alive.
+        """
+        response = yield self.web.get('ping')
+        self.assertEqual(response.responseCode, 200)
+        self.assertEqual(response.value(), 'OK\n')
+
+    @inlineCallbacks
+    def test_ping_disconnected(self):
+        """
+        The health check returns HTTP 503 if the database connections are dead.
+        """
+        # Clear detectors so we don't try to schedule reconnects.
+        for conn in self.connection_pool.connections:
+            conn.detector = None
+        yield self.connection_pool.close()
+        response = yield self.web.get('ping')
+        self.assertEqual(response.responseCode, 503)
+        self.assertEqual(response.value(), 'Database connection unavailable\n')
 
 
 class TestTransaction(BillingApiTestCase):

@@ -9,6 +9,8 @@ from twisted.internet.threads import deferToThread
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from txpostgres.reconnection import ConnectionDead
+# Import psycopg2 via txpostgres because they handle multiple implementations.
+from txpostgres.txpostgres import psycopg2
 
 from go.billing import settings as app_settings
 from go.billing.models import MessageCost
@@ -516,7 +518,7 @@ class Root(BaseResource):
         """
         try:
             yield self._connection_pool.runQuery("SELECT 1")
-        except ConnectionDead:
+        except (ConnectionDead, psycopg2.InterfaceError):
             request.setResponseCode(503)
             request.write("Database connection unavailable\n")
         else:
