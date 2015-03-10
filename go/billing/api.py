@@ -12,7 +12,8 @@ from txpostgres.reconnection import ConnectionDead
 
 from go.billing import settings as app_settings
 from go.billing.models import MessageCost
-from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
+from go.billing.utils import (
+    JSONEncoder, JSONDecoder, BillingError, DictRowConnectionPool)
 from go.billing.tasks import create_low_credit_notification
 from go.vumitools.billing_worker import BillingDispatcher
 
@@ -522,3 +523,14 @@ class Root(BaseResource):
             request.setResponseCode(200)
             request.write("OK\n")
         request.finish()
+
+
+def billing_api_resource():
+    """
+    Create and return a go.billing.api.Root resource for use with twistd.
+    """
+    connection_string = app_settings.get_connection_string()
+    connection_pool = DictRowConnectionPool(
+        None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
+    connection_pool.start()
+    return Root(connection_pool)
