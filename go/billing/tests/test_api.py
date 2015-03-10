@@ -11,7 +11,7 @@ from vumi.tests.helpers import VumiTestCase
 from go.billing import settings as app_settings
 from go.billing import api
 from go.billing.models import Account, Transaction, MessageCost
-from go.billing.utils import DummySite, DictRowConnectionPool, JSONDecoder
+from go.billing.utils import DummySite, JSONDecoder
 from go.base.tests.helpers import DjangoVumiApiHelper
 from go.billing.django_utils import load_account_credits
 from go.billing.tests.helpers import (
@@ -45,11 +45,8 @@ class BillingApiTestCase(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        connection_string = app_settings.get_connection_string()
-        connection_pool = DictRowConnectionPool(
-            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
-        self.connection_pool = yield connection_pool.start()
-        root = api.Root(connection_pool)
+        root = api.billing_api_resource()
+        self.connection_pool = yield root._connection_pool_started
         self.web = DummySite(root)
 
     @inlineCallbacks

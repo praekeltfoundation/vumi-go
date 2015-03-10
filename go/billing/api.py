@@ -532,5 +532,8 @@ def billing_api_resource():
     connection_string = app_settings.get_connection_string()
     connection_pool = DictRowConnectionPool(
         None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
-    connection_pool.start()
-    return Root(connection_pool)
+    resource = Root(connection_pool)
+    # Tests need to know when we're connected, so stash the deferred on the
+    # resource for them to look at.
+    resource._connection_pool_started = connection_pool.start()
+    return resource
