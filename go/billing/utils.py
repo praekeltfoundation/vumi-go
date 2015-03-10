@@ -161,3 +161,7 @@ class DummySite(server.Site):
                 return request.notifyFinish().addCallback(lambda _: request)
         else:
             raise ValueError("Unexpected return value: %r" % (result,))
+
+    @property
+    def connection_pool(self):
+        return self.resource._connection_pool
