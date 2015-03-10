@@ -46,18 +46,24 @@ class NormalizeMsisdnMiddleware(TransportMiddleware):
         self.country_code = self.config.country_code
         self.strip_plus = self.config.strip_plus
 
+    def _normalize_msisdn(self, addr, country_code, strip_plus):
+        if addr is None:
+            return addr
+        addr = normalize_msisdn(addr, country_code=country_code)
+        if strip_plus:
+            addr = addr.lstrip('+')
+        return addr
+
     def handle_inbound(self, message, endpoint):
-        from_addr = normalize_msisdn(message.get('from_addr'),
-                                     country_code=self.country_code)
-        message['from_addr'] = from_addr
+        message['from_addr'] = self._normalize_msisdn(
+            message.get('from_addr'), country_code=self.country_code,
+            strip_plus=False)
         return message
 
     def handle_outbound(self, message, endpoint):
-        to_addr = normalize_msisdn(message.get('to_addr'),
-                                   country_code=self.country_code)
-        if self.strip_plus:
-            to_addr = to_addr.lstrip('+')
-        message['to_addr'] = to_addr
+        message['to_addr'] = self._normalize_msisdn(
+            message.get('to_addr'), country_code=self.country_code,
+            strip_plus=self.strip_plus)
         return message
 
 

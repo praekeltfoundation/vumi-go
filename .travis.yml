@@ -6,12 +6,15 @@ node_js:
   - "0.10"
 env:
   - RIAK_VERSION="1.4.12-1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
-matrix:
-  include:
-    # Test against the Travis-provided version of Riak (currently 2.0.x).
-    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
-    - python: "2.7"
-      env: RIAK_VERSION=current VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+## Riak 2.0 sometimes doesn't have enough file descriptors:
+## https://github.com/travis-ci/travis-ci/issues/3328
+## Until that's fixed, don't build against new Riak.
+# matrix:
+#   include:
+#     # Test against the Travis-provided version of Riak (currently 2.0.x).
+#     # This is a separate matrix inclusion to avoid spawning unnecessary builds.
+#     - python: "2.7"
+#       env: RIAK_VERSION=current VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
 services:
   - postgresql
   - redis-server

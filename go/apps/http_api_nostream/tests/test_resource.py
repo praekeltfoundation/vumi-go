@@ -1,7 +1,10 @@
 from twisted.trial.unittest import TestCase
 
+from vumi.message import TransportUserMessage
+
 from go.apps.http_api_nostream.resource import (
-    MsgOptions, SendToOptions, ReplyToOptions)
+    MsgOptions, SendToOptions, ReplyToOptions,
+    MsgCheckHelpers)
 
 
 def validate_even_not_multiple_of_odd(payload, api_config):
@@ -81,39 +84,88 @@ class TestMsgOptions(TestCase):
         self.assert_no_attribute(opts, "odd")
 
 
+class TestMsgCheckHelpers(TestCase):
+    def test_is_unicode(self):
+        self.assertTrue(MsgCheckHelpers.is_unicode(u"123"))
+        self.assertFalse(MsgCheckHelpers.is_unicode(None))
+        self.assertFalse(MsgCheckHelpers.is_unicode("123"))
+
+    def test_is_unicode_or_none(self):
+        self.assertTrue(MsgCheckHelpers.is_unicode_or_none(u"123"))
+        self.assertTrue(MsgCheckHelpers.is_unicode_or_none(None))
+        self.assertFalse(MsgCheckHelpers.is_unicode("123"))
+
+    def test_is_session_event(self):
+        for event in TransportUserMessage.SESSION_EVENTS:
+            self.assertTrue(MsgCheckHelpers.is_session_event(event))
+        self.assertFalse(MsgCheckHelpers.is_session_event('sparrow'))
+
+    def test_is_within_content_length_limit_(self):
+        api_config = {"content_length_limit": 5}
+        within_limit = lambda payload: (
+            MsgCheckHelpers.is_within_content_length_limit(
+                payload, api_config))
+        self.assertEqual(within_limit({"content": None}), None)
+        self.assertEqual(within_limit({"content": "five!"}), None)
+        self.assertEqual(
+            within_limit({"content": "sixsix"}),
+            "Payload content too long: 6 > 5")
+
+    def test_is_within_content_length_limit_no_limit(self):
+        api_config = {}
+        within_limit = lambda payload: (
+            MsgCheckHelpers.is_within_content_length_limit(
+                payload, api_config))
+        self.assertEqual(within_limit({"content": None}), None)
+        self.assertEqual(
+            within_limit({"content": "fairly_long_content"}), None)
+
+
 class TestSendToOptions(TestCase):
 
     def assert_no_attribute(self, obj, attr):
         self.assertRaises(AttributeError, getattr, obj, attr)
 
     def test_content_whitelist(self):
-        self.assertTrue(SendToOptions({"content": None}, {}).is_valid)
-        self.assertTrue(SendToOptions({"content": u"nicode"}, {}).is_valid)
-        self.assertFalse(SendToOptions({"content": "str"}, {}).is_valid)
-        self.assertFalse(SendToOptions({"content": 123}, {}).is_valid)
+        self.assertTrue(SendToOptions(
+            {"content": None, "to_addr": u"dummy"}, {}).is_valid)
+        self.assertTrue(SendToOptions(
+            {"content": u"nicode", "to_addr": u"dummy"}, {}).is_valid)
+        self.assertFalse(SendToOptions(
+            {"content": "str", "to_addr": u"dummy"}, {}).is_valid)
+        self.assertFalse(SendToOptions(
+            {"content": 123, "to_addr": u"dummy"}, {}).is_valid)
 
     def test_to_addr_whitelist(self):
-        self.assertTrue(SendToOptions({"to_addr": None}, {}).is_valid)
         self.assertTrue(SendToOptions({"to_addr": u"nicode"}, {}).is_valid)
         self.assertFalse(SendToOptions({"to_addr": "str"}, {}).is_valid)
         self.assertFalse(SendToOptions({"to_addr": 123}, {}).is_valid)
+        self.assertFalse(SendToOptions({"to_addr": None}, {}).is_valid)
 
     def test_white_listing(self):
-        opts = SendToOptions({"bad": 5}, {})
+        opts = SendToOptions({"bad": 5, "to_addr": u"dummy"}, {})
         self.assertTrue(opts.is_valid)
         self.assert_no_attribute(opts, "bad")
 
     def test_content_length_validation(self):
-        self.assertTrue(SendToOptions({"content": None}, {}).is_valid)
-        self.assertTrue(SendToOptions({"content": u"12345"}, {}).is_valid)
+        self.assertTrue(SendToOptions(
+            {"content": None, "to_addr": u"dummy"}, {}).is_valid)
+        self.assertTrue(SendToOptions(
+            {"content": u"12345", "to_addr": u"dummy"}, {}).is_valid)
 
-        opts = SendToOptions({"content": None}, {"content_length_limit": 5})
+        opts = SendToOptions(
+            {"content": None, "to_addr": u"dummy"},
+            {"content_length_limit": 5})
         self.assertTrue(opts.is_valid)
 
-        opts = SendToOptions({"content": u"1234"}, {"content_length_limit": 4})
+        opts = SendToOptions(
+            {"content": u"1234", "to_addr": u"dummy"},
+            {"content_length_limit": 4})
         self.assertTrue(opts.is_valid)
 
-        opts = SendToOptions({"content": u"1234"}, {"content_length_limit": 3})
+        opts = SendToOptions(
+            {"content": u"1234", "to_addr": u"dummy"},
+            {"content_length_limit": 3})
         self.assertFalse(opts.is_valid)
 
 

@@ -10,7 +10,6 @@ from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 from vumi import errors
 from vumi.blinkenlights.metrics import Aggregator
 from vumi.message import TransportUserMessage
-from vumi.errors import InvalidMessage
 from vumi.config import ConfigContext
 from vumi import log
 
@@ -108,6 +107,10 @@ class MsgOptions(object):
 
 class MsgCheckHelpers(object):
     @staticmethod
+    def is_unicode(value):
+        return isinstance(value, unicode)
+
+    @staticmethod
     def is_unicode_or_none(value):
         return (value is None) or (isinstance(value, unicode))
 
@@ -137,7 +140,7 @@ class SendToOptions(MsgOptions):
 
     WHITELIST = {
         'content': MsgCheckHelpers.is_unicode_or_none,
-        'to_addr': MsgCheckHelpers.is_unicode_or_none,
+        'to_addr': MsgCheckHelpers.is_unicode,
     }
 
     VALIDATION = (
