@@ -171,6 +171,75 @@ class TestContacts(BaseContactsTestCase):
             set(contact.groups.keys()),
             set([g.key for g in self.contact_store.list_groups()]))
 
+    def test_list_contacts(self):
+        """
+        When we have fewer contacts than the default limit, the response
+        contains all of them.
+        """
+        contacts = [self.mkcontact(), self.mkcontact()]
+        ckeys = sorted(c.key for c in contacts)
+
+        response = self.client.get(reverse('contacts:people'), {})
+        response_contacts = response.context['selected_contacts']
+        self.assertEqual(ckeys, sorted(c.key for c in response_contacts))
+        self.assertContains(response, "Showing 2 of 2 contact(s)")
+        self.assertContains(response, ckeys[0])
+        self.assertContains(response, ckeys[1])
+
+    def test_list_contacts_within_limit(self):
+        """
+        When we have fewer contacts than the specified limit, the response
+        contains all of them.
+        """
+        contacts = [self.mkcontact(), self.mkcontact(), self.mkcontact()]
+        ckeys = sorted(c.key for c in contacts)
+
+        response = self.client.get(reverse('contacts:people'), {'limit': 5})
+        response_contacts = response.context['selected_contacts']
+        self.assertEqual(ckeys, sorted(c.key for c in response_contacts))
+        self.assertContains(response, "Showing 3 of 3 contact(s)")
+        self.assertContains(response, ckeys[0])
+        self.assertContains(response, ckeys[1])
+        self.assertContains(response, ckeys[2])
+
+    def test_list_contacts_limit(self):
+        """
+        When we have more contacts than the limit, the response only contains
+        a subset of the contacts.
+        """
+        contacts = [self.mkcontact(), self.mkcontact(), self.mkcontact()]
+        ckeys = sorted(c.key for c in contacts)
+
+        response = self.client.get(reverse('contacts:people'), {'limit': 2})
+        response_contacts = response.context['selected_contacts']
+        # This assumes we're using raw index pagination (which sorts by key)
+        # under the hood.
+        self.assertEqual(ckeys[:2], sorted(c.key for c in response_contacts))
+        self.assertContains(response, "Showing 2 of 3 contact(s)")
+        self.assertContains(response, ckeys[0])
+        self.assertContains(response, ckeys[1])
+        self.assertNotContains(response, ckeys[2])
+
+    def test_list_contacts_fetch_limit(self):
+        """
+        When we have more contacts than the fetch limit, the response only
+        contains a subset of the contacts and doesn't display the total number
+        of contacts.
+        """
+        contacts = [self.mkcontact(), self.mkcontact(), self.mkcontact()]
+        ckeys = sorted(c.key for c in contacts)
+
+        response = self.client.get(
+            reverse('contacts:people'), {'limit': 1, '_fetch_limit': 2})
+        response_contacts = response.context['selected_contacts']
+        # This assumes we're using raw index pagination (which sorts by key)
+        # under the hood.
+        self.assertEqual(ckeys[:1], sorted(c.key for c in response_contacts))
+        self.assertContains(response, "Showing 1 of 10k+ contact(s)")
+        self.assertContains(response, ckeys[0])
+        self.assertNotContains(response, ckeys[1])
+        self.assertNotContains(response, ckeys[2])
+
     def test_contact_exporting(self):
         c1 = self.mkcontact()
         c1.extra['foo'] = u'bar'

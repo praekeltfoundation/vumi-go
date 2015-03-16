@@ -115,6 +115,15 @@ class PerAccountStore(object):
     def list_keys(self, model_proxy, field_name='user_account'):
         return model_proxy.index_keys(field_name, self.user_account_key)
 
+    def list_keys_page(self, model_proxy, field_name='user_account',
+                       max_results=None, continuation=None):
+        """
+        Paginated equivalent of list_keys().
+        """
+        return model_proxy.index_keys_page(
+            field_name, self.user_account_key, max_results=max_results,
+            continuation=continuation)
+
     def get_user_account(self):
         store = AccountStore(self.base_manager)
         return store.users.load(self.user_account_key)

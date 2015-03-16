@@ -299,6 +299,10 @@ class ContactStore(PerAccountStore):
     def list_contacts(self):
         return self.list_keys(self.contacts)
 
+    def list_contacts_page(self, max_results=None, continuation=None):
+        return self.list_keys_page(
+            self.contacts, max_results=max_results, continuation=continuation)
+
     @Manager.calls_manager
     def list_groups(self):
         # FIXME: Loading and returning all groups is a potential performance
