@@ -454,6 +454,34 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             'helper_metadata': {},
         })
 
+    @inlineCallbacks
+    def test_send_to_endpoint_with_helper_metadata(self):
+        yield self.create_resource({
+            'allowed_helper_metadata': ['voice'],
+        })
+
+        with LogCatcher() as lc:
+            reply = yield self.dispatch_command(
+                'send_to_endpoint', endpoint='extra_endpoint', to_addr='6789',
+                content='bar',
+                helper_metadata={
+                    'voice': {
+                        'speech_url': 'http://www.example.com/audio.wav',
+                    },
+                })
+            self.assertEqual(lc.messages(), [
+                "Sending outbound message to u'6789' via endpoint "
+                "u'extra_endpoint', content: u'bar'"])
+        self.check_reply(reply)
+        self.assert_sent('6789', 'bar', {
+            'endpoint': 'extra_endpoint',
+            'helper_metadata': {
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            },
+        })
+
     def test_send_to_endpoint_not_configured(self):
         return self.assert_send_to_endpoint_fails(
             "Endpoint u'bad_endpoint' not configured",
