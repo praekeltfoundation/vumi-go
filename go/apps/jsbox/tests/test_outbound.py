@@ -201,6 +201,37 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 }
             })
 
+    @inlineCallbacks
+    def test_reply_to_with_helper_metadata(self):
+        yield self.create_resource({
+            'allowed_helper_metadata': ['voice'],
+        })
+
+        msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
+        msg_reply = msg.reply('Reply!')
+        self.app_worker.conversation.set_go_helper_metadata = (
+            self.dummy_metadata_adder)
+
+        reply = yield self.dispatch_command(
+            'reply_to', content=msg_reply['content'],
+            in_reply_to=msg['message_id'],
+            helper_metadata={
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            })
+
+        self.check_reply(reply)
+        self.app_worker.reply_to.assert_called_once_with(
+            msg, 'Reply!', continue_session=True,
+            helper_metadata={
+                'orig': 'data',
+                'new': 'foo',
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            })
+
     def test_reply_to_fails_with_no_content(self):
         return self.assert_cmd_fails(
             "'content' must be given in replies.",
@@ -235,8 +266,8 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             resource_config={'allowed_helper_metadata': ['voice']},
             to_addr='6789', content='bar', in_reply_to=u'unknown',
             helper_metadata={'go': {'conversation': 'someone-elses'}})
-    @inlineCallbacks
 
+    @inlineCallbacks
     def test_reply_to_group(self):
         yield self.create_resource({})
         msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
@@ -276,6 +307,37 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                     "conversation_key": conv.key,
                     "user_account": u'test-0-user',
                 }
+            })
+
+    @inlineCallbacks
+    def test_reply_to_group_with_helper_metadata(self):
+        yield self.create_resource({
+            'allowed_helper_metadata': ['voice'],
+        })
+
+        msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
+        msg_reply = msg.reply('Reply!')
+        self.app_worker.conversation.set_go_helper_metadata = (
+            self.dummy_metadata_adder)
+
+        reply = yield self.dispatch_command(
+            'reply_to_group', content=msg_reply['content'],
+            in_reply_to=msg['message_id'],
+            helper_metadata={
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            })
+
+        self.check_reply(reply)
+        self.app_worker.reply_to_group.assert_called_once_with(
+            msg, 'Reply!', continue_session=True,
+            helper_metadata={
+                'orig': 'data',
+                'new': 'foo',
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
             })
 
     def test_reply_to_group_fails_with_no_content(self):
