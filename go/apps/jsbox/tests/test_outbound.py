@@ -403,3 +403,10 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             "'helper_metadata' is not allowed",
             to_addr='6789', endpoint='extra_endpoint', content='bar',
             helper_metadata={'go': {'conversation': 'someone-elses'}})
+
+    def test_send_to_endpoint_helper_metadata_invalid(self):
+        return self.assert_send_to_endpoint_fails(
+            "'helper_metadata' may only contain the following keys: voice",
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', endpoint='extra_endpoint', content='bar',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
