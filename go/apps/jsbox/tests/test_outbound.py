@@ -221,7 +221,22 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             "Could not find original message with id: u'unknown'",
             'reply_to', content='Hello?', in_reply_to=u'unknown')
 
+    def test_reply_to_helper_metadata_not_allowed(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' is not allowed",
+            'reply_to',
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
+
+    def test_reply_to_helper_metadata_invalid(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' may only contain the following keys: voice",
+            'reply_to',
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
     @inlineCallbacks
+
     def test_reply_to_group(self):
         yield self.create_resource({})
         msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
@@ -277,6 +292,21 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         return self.assert_cmd_fails(
             "Could not find original message with id: u'unknown'",
             'reply_to_group', content='Hello?', in_reply_to=u'unknown')
+
+    def test_reply_to_group_helper_metadata_not_allowed(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' is not allowed",
+            'reply_to_group',
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
+
+    def test_reply_to_group_helper_metadata_invalid(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' may only contain the following keys: voice",
+            'reply_to_group',
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
 
     def assert_sent(self, to_addr, content, msg_options):
         self.app_worker.send_to.assert_called_once_with(
