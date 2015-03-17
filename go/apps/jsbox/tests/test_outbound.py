@@ -49,6 +49,11 @@ class StubbedAppWorker(DummyAppWorker):
     def add_inbound_message(self, msg):
         self._inbound_messages[msg['message_id']] = msg
 
+    def add_conv_to_msg_options(self, conv, msg_options):
+        helper_metadata = msg_options.setdefault('helper_metadata', {})
+        conv.set_go_helper_metadata(helper_metadata)
+        return msg_options
+
 
 class TestInboundPushTriggerUtils(VumiTestCase):
 
@@ -101,7 +106,6 @@ class TestGoOutboundResource(ResourceTestCaseBase):
     @inlineCallbacks
     def setUp(self):
         super(TestGoOutboundResource, self).setUp()
-        yield self.create_resource({})
         self.vumi_helper = yield self.add_helper(
             VumiApiHelper(), setup_vumi_api=True)
         self.app_helper = self.add_helper(
@@ -115,7 +119,8 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             self.assertEqual(reply[key], expected_value)
 
     @inlineCallbacks
-    def assert_cmd_fails(self, reason, cmd, **cmd_args):
+    def assert_cmd_fails(self, reason, cmd, resource_config=None, **cmd_args):
+        yield self.create_resource(resource_config or {})
         reply = yield self.dispatch_command(cmd, **cmd_args)
         self.check_reply(reply, success=False, reason=reason)
         self.assertFalse(self.app_worker.send_to.called)
@@ -140,6 +145,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_reply_to(self):
+        yield self.create_resource({})
         msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
         msg_reply = msg.reply('Reply!')
         self.app_worker.conversation.set_go_helper_metadata = (
@@ -156,6 +162,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_reply_to_with_null_content(self):
+        yield self.create_resource({})
         msg = self.make_inbound('Hello')
         msg_reply = msg.reply(None, continue_session=False)
         self.app_worker.conversation.set_go_helper_metadata = (
@@ -171,6 +178,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_reply_to_push_trigger(self):
+        yield self.create_resource({})
         conv = yield self.app_helper.create_conversation()
         msg = self.make_push_trigger("to-addr-1", conv)
 
@@ -193,6 +201,37 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 }
             })
 
+    @inlineCallbacks
+    def test_reply_to_with_helper_metadata(self):
+        yield self.create_resource({
+            'allowed_helper_metadata': ['voice'],
+        })
+
+        msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
+        msg_reply = msg.reply('Reply!')
+        self.app_worker.conversation.set_go_helper_metadata = (
+            self.dummy_metadata_adder)
+
+        reply = yield self.dispatch_command(
+            'reply_to', content=msg_reply['content'],
+            in_reply_to=msg['message_id'],
+            helper_metadata={
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            })
+
+        self.check_reply(reply)
+        self.app_worker.reply_to.assert_called_once_with(
+            msg, 'Reply!', continue_session=True,
+            helper_metadata={
+                'orig': 'data',
+                'new': 'foo',
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            })
+
     def test_reply_to_fails_with_no_content(self):
         return self.assert_cmd_fails(
             "'content' must be given in replies.",
@@ -213,8 +252,32 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             "Could not find original message with id: u'unknown'",
             'reply_to', content='Hello?', in_reply_to=u'unknown')
 
+    def test_reply_to_helper_metadata_not_allowed(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' is not allowed",
+            'reply_to',
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
+
+    def test_reply_to_helper_metadata_invalid(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' may only contain the following keys: voice",
+            'reply_to',
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
+
+    def test_reply_to_helper_metadata_wrong_type(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' must be object or null.",
+            'reply_to',
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata="Not a dict.")
+
     @inlineCallbacks
     def test_reply_to_group(self):
+        yield self.create_resource({})
         msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
         msg_reply = msg.reply('Reply!')
         self.app_worker.conversation.set_go_helper_metadata = (
@@ -231,6 +294,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_reply_to_group_push_trigger(self):
+        yield self.create_resource({})
         conv = yield self.app_helper.create_conversation()
         msg = self.make_push_trigger("to-addr-1", conv)
 
@@ -253,6 +317,37 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 }
             })
 
+    @inlineCallbacks
+    def test_reply_to_group_with_helper_metadata(self):
+        yield self.create_resource({
+            'allowed_helper_metadata': ['voice'],
+        })
+
+        msg = self.make_inbound('Hello', helper_metadata={'orig': 'data'})
+        msg_reply = msg.reply('Reply!')
+        self.app_worker.conversation.set_go_helper_metadata = (
+            self.dummy_metadata_adder)
+
+        reply = yield self.dispatch_command(
+            'reply_to_group', content=msg_reply['content'],
+            in_reply_to=msg['message_id'],
+            helper_metadata={
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            })
+
+        self.check_reply(reply)
+        self.app_worker.reply_to_group.assert_called_once_with(
+            msg, 'Reply!', continue_session=True,
+            helper_metadata={
+                'orig': 'data',
+                'new': 'foo',
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            })
+
     def test_reply_to_group_fails_with_no_content(self):
         return self.assert_cmd_fails(
             "'content' must be given in replies.",
@@ -268,6 +363,21 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             "Could not find original message with id: u'unknown'",
             'reply_to_group', content='Hello?', in_reply_to=u'unknown')
 
+    def test_reply_to_group_helper_metadata_not_allowed(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' is not allowed",
+            'reply_to_group',
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
+
+    def test_reply_to_group_helper_metadata_invalid(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' may only contain the following keys: voice",
+            'reply_to_group',
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
+
     def assert_sent(self, to_addr, content, msg_options):
         self.app_worker.send_to.assert_called_once_with(
             to_addr, content, **msg_options)
@@ -280,6 +390,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_send_to_tag(self):
+        yield self.create_resource({})
         with LogCatcher() as lc:
             reply = yield self.dispatch_command(
                 'send_to_tag', tagpool='pool1', tag='1234', to_addr='6789',
@@ -288,7 +399,10 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 "Sending outbound message to u'6789' via tag "
                 "(u'pool1', u'1234'), content: u'bar'"])
         self.check_reply(reply)
-        self.assert_sent('6789', 'bar', {'endpoint': 'pool1:1234'})
+        self.assert_sent('6789', 'bar', {
+            'endpoint': 'pool1:1234',
+            'helper_metadata': {},
+        })
 
     def test_send_to_tag_unacquired(self):
         return self.assert_send_to_tag_fails(
@@ -318,6 +432,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_send_to_endpoint(self):
+        yield self.create_resource({})
         with LogCatcher() as lc:
             reply = yield self.dispatch_command(
                 'send_to_endpoint', endpoint='extra_endpoint', to_addr='6789',
@@ -326,10 +441,14 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 "Sending outbound message to u'6789' via endpoint "
                 "u'extra_endpoint', content: u'bar'"])
         self.check_reply(reply)
-        self.assert_sent('6789', 'bar', {'endpoint': 'extra_endpoint'})
+        self.assert_sent('6789', 'bar', {
+            'endpoint': 'extra_endpoint',
+            'helper_metadata': {},
+        })
 
     @inlineCallbacks
     def test_send_to_endpoint_null_content(self):
+        yield self.create_resource({})
         with LogCatcher() as lc:
             reply = yield self.dispatch_command(
                 'send_to_endpoint', endpoint='extra_endpoint', to_addr='6789',
@@ -338,7 +457,38 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 "Sending outbound message to u'6789' via endpoint "
                 "u'extra_endpoint', content: None"])
         self.check_reply(reply)
-        self.assert_sent('6789', None, {'endpoint': 'extra_endpoint'})
+        self.assert_sent('6789', None, {
+            'endpoint': 'extra_endpoint',
+            'helper_metadata': {},
+        })
+
+    @inlineCallbacks
+    def test_send_to_endpoint_with_helper_metadata(self):
+        yield self.create_resource({
+            'allowed_helper_metadata': ['voice'],
+        })
+
+        with LogCatcher() as lc:
+            reply = yield self.dispatch_command(
+                'send_to_endpoint', endpoint='extra_endpoint', to_addr='6789',
+                content='bar',
+                helper_metadata={
+                    'voice': {
+                        'speech_url': 'http://www.example.com/audio.wav',
+                    },
+                })
+            self.assertEqual(lc.messages(), [
+                "Sending outbound message to u'6789' via endpoint "
+                "u'extra_endpoint', content: u'bar'"])
+        self.check_reply(reply)
+        self.assert_sent('6789', 'bar', {
+            'endpoint': 'extra_endpoint',
+            'helper_metadata': {
+                'voice': {
+                    'speech_url': 'http://www.example.com/audio.wav',
+                },
+            },
+        })
 
     def test_send_to_endpoint_not_configured(self):
         return self.assert_send_to_endpoint_fails(
@@ -375,3 +525,16 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         return self.assert_send_to_endpoint_fails(
             "'to_addr' must be given in sends.",
             to_addr=None, endpoint='extra_endpoint', content='bar')
+
+    def test_send_to_endpoint_helper_metadata_not_allowed(self):
+        return self.assert_send_to_endpoint_fails(
+            "'helper_metadata' is not allowed",
+            to_addr='6789', endpoint='extra_endpoint', content='bar',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
+
+    def test_send_to_endpoint_helper_metadata_invalid(self):
+        return self.assert_send_to_endpoint_fails(
+            "'helper_metadata' may only contain the following keys: voice",
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', endpoint='extra_endpoint', content='bar',
+            helper_metadata={'go': {'conversation': 'someone-elses'}})
