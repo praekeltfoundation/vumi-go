@@ -21,7 +21,8 @@ setup(
         'psycopg2==2.4',
         'celery==3.0.23',
         'django-celery==3.0.23',
-        'django-celery-email',
+        # https://github.com/pmclanahan/django-celery-email/pull/13
+        'django-celery-email==1.0.4',
         'Markdown==2.1.1',
         'django-registration==1.0',
         'lesscpy==0.9h',
@@ -39,7 +40,7 @@ setup(
         'django-loginas==0.1.3',
         'boto',
         'moto',
-        # 'https://github.com/sehmaschine/django-grappelli/issues/407
+        # https://github.com/sehmaschine/django-grappelli/issues/407
         'django-grappelli==2.4.8',
     ],
     classifiers=[
