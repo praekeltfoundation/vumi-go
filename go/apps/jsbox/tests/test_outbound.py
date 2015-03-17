@@ -49,6 +49,11 @@ class StubbedAppWorker(DummyAppWorker):
     def add_inbound_message(self, msg):
         self._inbound_messages[msg['message_id']] = msg
 
+    def add_conv_to_msg_options(self, conv, msg_options):
+        helper_metadata = msg_options.setdefault('helper_metadata', {})
+        conv.set_go_helper_metadata(helper_metadata)
+        return msg_options
+
 
 class TestInboundPushTriggerUtils(VumiTestCase):
 
@@ -288,7 +293,10 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 "Sending outbound message to u'6789' via tag "
                 "(u'pool1', u'1234'), content: u'bar'"])
         self.check_reply(reply)
-        self.assert_sent('6789', 'bar', {'endpoint': 'pool1:1234'})
+        self.assert_sent('6789', 'bar', {
+            'endpoint': 'pool1:1234',
+            'helper_metadata': {},
+        })
 
     def test_send_to_tag_unacquired(self):
         return self.assert_send_to_tag_fails(
@@ -326,7 +334,10 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 "Sending outbound message to u'6789' via endpoint "
                 "u'extra_endpoint', content: u'bar'"])
         self.check_reply(reply)
-        self.assert_sent('6789', 'bar', {'endpoint': 'extra_endpoint'})
+        self.assert_sent('6789', 'bar', {
+            'endpoint': 'extra_endpoint',
+            'helper_metadata': {},
+        })
 
     @inlineCallbacks
     def test_send_to_endpoint_null_content(self):
@@ -338,7 +349,10 @@ class TestGoOutboundResource(ResourceTestCaseBase):
                 "Sending outbound message to u'6789' via endpoint "
                 "u'extra_endpoint', content: None"])
         self.check_reply(reply)
-        self.assert_sent('6789', None, {'endpoint': 'extra_endpoint'})
+        self.assert_sent('6789', None, {
+            'endpoint': 'extra_endpoint',
+            'helper_metadata': {},
+        })
 
     def test_send_to_endpoint_not_configured(self):
         return self.assert_send_to_endpoint_fails(
