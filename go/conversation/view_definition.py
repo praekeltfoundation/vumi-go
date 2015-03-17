@@ -177,7 +177,6 @@ class ShowConversationView(ConversationTemplateView):
         params = {
             'conversation': conversation,
             'is_editable': self.view_def.is_editable,
-            'user_api': request.user_api,
             'actions': self.view_def.get_actions(),
         }
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
