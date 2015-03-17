@@ -267,6 +267,14 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             to_addr='6789', content='bar', in_reply_to=u'unknown',
             helper_metadata={'go': {'conversation': 'someone-elses'}})
 
+    def test_reply_to_helper_metadata_wrong_type(self):
+        return self.assert_cmd_fails(
+            "'helper_metadata' must be object or null.",
+            'reply_to',
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', content='bar', in_reply_to=u'unknown',
+            helper_metadata="Not a dict.")
+
     @inlineCallbacks
     def test_reply_to_group(self):
         yield self.create_resource({})
