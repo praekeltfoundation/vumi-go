@@ -79,17 +79,27 @@ class GoOutboundResource(SandboxResource):
     def _mkfaild(self, command, reason):
         return succeed(self._mkfail(command, reason))
 
-    def _check_helper_metadata(self, helper_metadata):
+    def _get_helper_metadata(self, command):
+        """
+        Get a legal helper_metadata dict from `command` or raise an
+        InvalidHelperMetadata exception with a suitable message.
+        """
+        helper_metadata = command.get('helper_metadata')
+        if helper_metadata in [None, {}]:
+            # No helper metadata, so return an empty dict.
+            return {}
+        if not self._allowed_helper_metadata:
+            raise InvalidHelperMetadata("'helper_metadata' is not allowed")
+        if not isinstance(helper_metadata, dict):
+            raise InvalidHelperMetadata(
+                "'helper_metadata' must be object or null.")
         if any(key not in self._allowed_helper_metadata
                for key in helper_metadata.iterkeys()):
-            if self._allowed_helper_metadata:
-                errmsg = (
-                    "'helper_metadata' may only contain the following keys: %s"
-                    % ', '.join(sorted(self._allowed_helper_metadata)))
-            else:
-                errmsg = (
-                    "'helper_metadata' is not allowed")
-            raise InvalidHelperMetadata(errmsg)
+            raise InvalidHelperMetadata(
+                "'helper_metadata' may only contain the following keys: %s"
+                % ', '.join(sorted(self._allowed_helper_metadata)))
+        # Anything we have left is valid.
+        return helper_metadata
 
     def _handle_reply(self, api, command, reply_func):
         if not 'content' in command:
@@ -105,12 +115,8 @@ class GoOutboundResource(SandboxResource):
             return self._mkfaild(
                 command, reason=u"'continue_session' must be either true or"
                 " false if given")
-        if not isinstance(command.get('helper_metadata'), (dict, type(None))):
-            return self._mkfaild(
-                command, reason=u"'helper_metadata' must be object or null.")
-        cmd_helper_metadata = command.get('helper_metadata', {})
         try:
-            self._check_helper_metadata(cmd_helper_metadata)
+            cmd_helper_metadata = self._get_helper_metadata(command)
         except InvalidHelperMetadata as err:
             return self._mkfaild(command, reason=unicode(err))
         orig_msg = api.get_inbound_message(command['in_reply_to'])
@@ -290,12 +296,8 @@ class GoOutboundResource(SandboxResource):
         if not isinstance(command.get('to_addr'), unicode):
             return self._mkfaild(
                 command, reason=u"'to_addr' must be given in sends.")
-        if not isinstance(command.get('helper_metadata'), (dict, type(None))):
-            return self._mkfaild(
-                command, reason=u"'helper_metadata' must be object or null.")
-        cmd_helper_metadata = command.get('helper_metadata', {})
         try:
-            self._check_helper_metadata(cmd_helper_metadata)
+            cmd_helper_metadata = self._get_helper_metadata(command)
         except InvalidHelperMetadata as err:
             return self._mkfaild(command, reason=unicode(err))
 
