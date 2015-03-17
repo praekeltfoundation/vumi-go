@@ -82,9 +82,14 @@ class GoOutboundResource(SandboxResource):
     def _check_helper_metadata(self, helper_metadata):
         if any(key not in self._allowed_helper_metadata
                for key in helper_metadata.iterkeys()):
-            raise InvalidHelperMetadata(
-                "'helper_metadata' may only contain the following keys: %s" %
-                ', '.join(sorted(self._allowed_helper_metadata)))
+            if self._allowed_helper_metadata:
+                errmsg = (
+                    "'helper_metadata' may only contain the following keys: %s"
+                    % ', '.join(sorted(self._allowed_helper_metadata)))
+            else:
+                errmsg = (
+                    "'helper_metadata' is not allowed")
+            raise InvalidHelperMetadata(errmsg)
 
     def _handle_reply(self, api, command, reply_func):
         if not 'content' in command:
