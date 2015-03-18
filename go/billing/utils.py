@@ -11,7 +11,7 @@ from twisted.internet import defer
 from twisted.web import server
 from twisted.web.test import test_web
 
-from txpostgres import txpostgres
+from txpostgres import txpostgres, reconnection
 
 from go.config import billing_quantization_exponent
 
@@ -78,6 +78,17 @@ class DictRowConnection(txpostgres.Connection):
     """
 
     connectionFactory = staticmethod(real_dict_connect)
+
+    def __init__(self, *args, **kw):
+        super(DictRowConnection, self).__init__(*args, **kw)
+        if self.detector is None:
+            self.detector = reconnection.DeadConnectionDetector()
+
+    def connect(self, *args, **kw):
+        d = super(DictRowConnection, self).connect(*args, **kw)
+        # We set self.detector in __init__ if there isn't one already.
+        d.addErrback(self.detector.checkForDeadConnection)
+        return d
 
     @property
     def closed(self):
@@ -150,3 +161,7 @@ class DummySite(server.Site):
                 return request.notifyFinish().addCallback(lambda _: request)
         else:
             raise ValueError("Unexpected return value: %r" % (result,))
+
+    @property
+    def connection_pool(self):
+        return self.resource._connection_pool
