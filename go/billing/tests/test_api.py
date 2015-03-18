@@ -63,18 +63,18 @@ class BillingApiTestCase(VumiTestCase):
 class TestHealthCheck(BillingApiTestCase):
 
     @inlineCallbacks
-    def test_ping_okay(self):
+    def test_health_okay(self):
         """
         The health check returns HTTP 200 if the database connections are
         alive.
         """
         billing_api = yield self.get_billing_api()
-        response = yield billing_api.get('ping')
+        response = yield billing_api.get('health')
         self.assertEqual(response.responseCode, 200)
         self.assertEqual(response.value(), 'OK\n')
 
     @inlineCallbacks
-    def test_ping_disconnected(self):
+    def test_health_disconnected(self):
         """
         The health check returns HTTP 503 if the database connections are dead.
         """
@@ -83,7 +83,7 @@ class TestHealthCheck(BillingApiTestCase):
         for conn in billing_api.connection_pool.connections:
             conn.detector = None
         yield billing_api.connection_pool.close()
-        response = yield billing_api.get('ping')
+        response = yield billing_api.get('health')
         self.assertEqual(response.responseCode, 503)
         self.assertEqual(response.value(), 'Database connection unavailable\n')
 

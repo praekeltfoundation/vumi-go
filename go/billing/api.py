@@ -500,7 +500,7 @@ class Root(BaseResource):
     def __init__(self, connection_pool):
         BaseResource.__init__(self, connection_pool)
         self.putChild('transactions', TransactionResource(connection_pool))
-        self.putChild('ping', HealthResource(self.health_check))
+        self.putChild('health', HealthResource(self.health_check))
 
     def getChild(self, name, request):
         if name == '':
