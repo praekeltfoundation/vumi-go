@@ -164,7 +164,6 @@ class TestTransaction(BillingApiTestCase):
             'session_length': None,
         }
         content.update(kwargs)
-        self.called_api = True
         return self.call_api(self.web, 'post', 'transactions', content=content)
 
     def assert_dict(self, dict_obj, **kw):
