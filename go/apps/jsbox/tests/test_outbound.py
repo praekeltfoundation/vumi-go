@@ -4,6 +4,7 @@ from mock import Mock
 
 from twisted.internet.defer import inlineCallbacks, succeed
 
+from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher, VumiTestCase
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
@@ -193,6 +194,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         self.app_worker.reply_to.assert_not_called()
         self.app_worker.send_to.assert_called_once_with(
             "to-addr-1", u'Reply!',
+            session_event=TransportUserMessage.SESSION_NEW,
             helper_metadata={
                 "go": {
                     "conversation_type": u'dummy',
@@ -309,6 +311,7 @@ class TestGoOutboundResource(ResourceTestCaseBase):
         self.app_worker.reply_to_group.assert_not_called()
         self.app_worker.send_to.assert_called_once_with(
             "to-addr-1", u'Reply!',
+            session_event=TransportUserMessage.SESSION_NEW,
             helper_metadata={
                 "go": {
                     "conversation_type": u'dummy',

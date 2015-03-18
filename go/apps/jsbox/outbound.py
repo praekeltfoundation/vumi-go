@@ -134,8 +134,10 @@ class GoOutboundResource(SandboxResource):
 
         # convert replies to push triggers into ordinary sends
         if is_inbound_push_trigger(orig_msg):
-            d = self.app_worker.send_to(orig_msg["from_addr"], content,
-                                        helper_metadata=helper_metadata)
+            d = self.app_worker.send_to(
+                orig_msg["from_addr"], content,
+                session_event=TransportUserMessage.SESSION_NEW,
+                helper_metadata=helper_metadata)
         else:
             d = reply_func(orig_msg, content,
                            continue_session=continue_session,
