@@ -490,8 +490,15 @@ class HealthResource(Resource):
         self._health_check_func = health_check_func
 
     def render_GET(self, request):
-        self._health_check_func(request)
+        self._render_health_check(request)
         return NOT_DONE_YET
+
+    @defer.inlineCallbacks
+    def _render_health_check(self, request):
+        code, content = yield self._health_check_func()
+        request.setResponseCode(code)
+        request.write(content + "\n")
+        request.finish()
 
 
 class Root(BaseResource):
@@ -512,19 +519,16 @@ class Root(BaseResource):
         return ''
 
     @defer.inlineCallbacks
-    def health_check(self, request):
+    def health_check(self):
         """
         We want our health check to be comprehensive, so we implement it here.
         """
         try:
             yield self._connection_pool.runQuery("SELECT 1")
         except (ConnectionDead, psycopg2.InterfaceError):
-            request.setResponseCode(503)
-            request.write("Database connection unavailable\n")
-        else:
-            request.setResponseCode(200)
-            request.write("OK\n")
-        request.finish()
+            defer.returnValue((503, "Database connection unavailable"))
+        # Everything's happy.
+        defer.returnValue((200, "OK"))
 
 
 def billing_api_resource():
