@@ -21,7 +21,7 @@ setup(
         'psycopg2==2.4',
         'celery==3.0.23',
         'django-celery==3.0.23',
-        # https://github.com/pmclanahan/django-celery-email/pull/13
+        # https://github.com/pmclanahan/django-celery-email/pull/14
         'django-celery-email==1.0.4',
         'Markdown==2.1.1',
         'django-registration==1.0',
