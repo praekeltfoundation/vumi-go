@@ -5,7 +5,8 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue, succeed
 
-from vumi.application.sandbox import SandboxResource
+from vxsandbox import SandboxResource
+
 from vumi.message import TransportUserMessage
 from vumi import log
 

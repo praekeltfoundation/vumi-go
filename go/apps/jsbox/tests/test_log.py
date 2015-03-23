@@ -8,8 +8,9 @@ import re
 from mock import Mock
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.tests.test_sandbox import (
-    ResourceTestCaseBase, DummyAppWorker)
+from vxsandbox.tests.utils import DummyAppWorker
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
+
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 from vumi.tests.utils import LogCatcher
 

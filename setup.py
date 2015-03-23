@@ -13,6 +13,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'vumi>=0.5.16',
+        'vxsandbox>=0.5.0',
         'vxpolls',
         'vumi-wikipedia',
         'Django==1.5.8',

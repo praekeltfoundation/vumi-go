@@ -7,7 +7,8 @@ import logging
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.sandbox import JsSandbox, SandboxResource
+from vxsandbox import JsSandbox, SandboxResource
+
 from vumi.config import ConfigDict
 from vumi import log
 

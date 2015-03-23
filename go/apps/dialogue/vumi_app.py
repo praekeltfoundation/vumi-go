@@ -3,7 +3,7 @@
 import pkg_resources
 import json
 
-from vumi.application.sandbox import SandboxResource
+from vxsandbox import SandboxResource
 
 from go.apps.jsbox.vumi_app import JsBoxConfig, JsBoxApplication
 from go.apps.dialogue.utils import dialogue_js_config

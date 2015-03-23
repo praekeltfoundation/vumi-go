@@ -6,7 +6,9 @@ import mock
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.sandbox import JsSandbox, SandboxCommand
+from vxsandbox import JsSandbox
+from vxsandbox.resources import SandboxCommand
+
 from vumi.application.tests.helpers import find_nodejs_or_skip_test
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.helpers import VumiTestCase
