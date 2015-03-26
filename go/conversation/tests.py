@@ -719,10 +719,9 @@ class TestConversationViews(BaseConversationViewTestCase):
 
     def test_message_list_inbound_uniques_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
+        self.msg_helper.add_inbound_to_conv(conv, 10)
         response = self.client.get(self.get_view_url(conv, 'message_list'))
-        # TODO fix once we support uniques properly again
-        self.assertContains(response, 'Messages from 0 unique people')
+        self.assertContains(response, 'Messages from 10 unique people')
 
     def test_message_list_inbound_download_links_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -739,13 +738,12 @@ class TestConversationViews(BaseConversationViewTestCase):
     def test_message_list_outbound_uniques_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
-        replies = self.msg_helper.add_replies_to_conv(conv, msgs)
+        self.msg_helper.add_replies_to_conv(conv, msgs)
         response = self.client.get(
             self.get_view_url(conv, 'message_list'), {
                 'direction': 'outbound'
             })
-        # TODO fix once we support uniques properly again
-        self.assertContains(response, 'Messages to 0 unique people')
+        self.assertContains(response, 'Messages to 10 unique people')
 
     def test_message_list_outbound_download_links_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
