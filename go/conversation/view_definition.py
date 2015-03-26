@@ -311,8 +311,8 @@ class MessageListView(ConversationTemplateView):
                                         in_reply_to, content)
                 messages.info(request, 'Reply scheduled for sending.')
             else:
-                messages.error(request,
-                    'Something went wrong. Please try again.')
+                messages.error(
+                    request, 'Something went wrong. Please try again.')
         return self.redirect_to(
             'message_list', conversation_key=conversation.key)
 
@@ -386,10 +386,10 @@ class EditConversationView(ConversationTemplateView):
 
     def _render_forms(self, request, conversation, edit_forms):
         return self.render_to_response({
-                'conversation': conversation,
-                'edit_forms_media': self.sum_media(edit_forms),
-                'edit_forms': edit_forms,
-                })
+            'conversation': conversation,
+            'edit_forms_media': self.sum_media(edit_forms),
+            'edit_forms': edit_forms,
+        })
 
     def get(self, request, conversation):
         edit_forms = self.make_forms(conversation)
