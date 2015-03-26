@@ -73,22 +73,22 @@ class TestConversationWrapper(VumiTestCase):
         # TODO fix once we support uniques properly again
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(self.conv, 3)
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 3)
         yield self.msg_helper.add_inbound_to_conv(self.conv, 4)
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 4)
         yield self.msg_helper.add_inbound_to_conv(self.conv, 2)
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 4)
 
     @inlineCallbacks
     def test_count_outbound_uniques(self):
         # TODO fix once we support uniques properly again
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 3)
-        self.assertEqual((yield self.conv.count_outbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 3)
         yield self.msg_helper.add_outbound_to_conv(self.conv, 4)
-        self.assertEqual((yield self.conv.count_outbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 4)
         yield self.msg_helper.add_outbound_to_conv(self.conv, 2)
-        self.assertEqual((yield self.conv.count_outbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 4)
 
     @inlineCallbacks
     def test_collect_messages(self):
