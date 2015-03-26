@@ -11,6 +11,7 @@ class ClientException(Exception):
 
 
 class Client(object):
+    # NOTE: This code is completely untested.
 
     def __init__(self, base_url):
         self.base_url = base_url

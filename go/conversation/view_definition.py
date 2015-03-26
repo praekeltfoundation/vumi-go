@@ -2,12 +2,10 @@ import csv
 import json
 import logging
 import functools
-import re
 import sys
 from StringIO import StringIO
 from collections import defaultdict
 
-from django.conf import settings
 from django.views.generic import View, TemplateView
 from django import forms
 from django.shortcuts import redirect, Http404
@@ -18,7 +16,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from vumi.message import parse_vumi_date
 
-from go.base import message_store_client as ms_client
 from go.base.utils import page_range_window, sendfile
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
@@ -242,11 +239,10 @@ class MessageListView(ConversationTemplateView):
         :param str query:
             The query string to search messages for in the batch's inbound
             messages.
+            NOTE: This is currently unused.
         """
         direction = request.GET.get('direction', 'inbound')
         page = request.GET.get('p', 1)
-        query = request.GET.get('q', None)
-        token = None
 
         batch_id = conversation.batch.key
 
@@ -270,32 +266,7 @@ class MessageListView(ConversationTemplateView):
             'message_direction': direction,
         }
 
-        # If we're doing a query we can shortcut the results as we don't
-        # need all the message paginator stuff since we're loading the results
-        # asynchronously with JavaScript.
-        client = ms_client.Client(settings.MESSAGE_STORE_API_URL)
-        if query and not token:
-            token = client.match(batch_id, direction, [{
-                'key': 'msg.content',
-                'pattern': re.escape(query),
-                'flags': 'i',
-                }])
-            tag_context.update({
-                'query': query,
-                'token': token,
-            })
-            return tag_context
-        elif query and token:
-            match_result = ms_client.MatchResult(client, batch_id, direction,
-                                                    token, page=int(page),
-                                                    page_size=20)
-            message_paginator = match_result.paginator
-            tag_context.update({
-                'token': token,
-                'query': query,
-                })
-
-        elif direction == 'inbound':
+        if direction == 'inbound':
             message_paginator = inbound_message_paginator
         else:
             message_paginator = outbound_message_paginator
