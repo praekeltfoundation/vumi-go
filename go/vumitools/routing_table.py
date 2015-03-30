@@ -258,6 +258,14 @@ class RoutingTable(object):
 
         return old_dest
 
+    def remove_endpoint(self, conn, endpoint):
+        src = self.lookup_source(conn, endpoint)
+
+        if src is not None:
+            self.remove_entry(*src)
+
+        self.remove_entry(conn, endpoint)
+
     def remove_connector(self, conn):
         """Remove all references to the given connector.
 

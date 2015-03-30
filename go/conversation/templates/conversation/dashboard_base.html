@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content_actions_right %}
-    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
+    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right" role="search">
         <div class="form-group">
             <input type="text" class="form-control" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
         </div>
@@ -21,7 +21,7 @@
 
 {% block content_main %}
     <div class="row">
-        <div class="col-md-3 sidebar">
+        <div class="col-md-3 sidebar" role="navigation">
             
             <p>
                 <a href="{% url 'routing' %}" class="btn btn-primary">Configure channels (alpha)</a>

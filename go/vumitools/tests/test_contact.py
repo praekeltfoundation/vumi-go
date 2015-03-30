@@ -102,23 +102,6 @@ class TestContactStore(VumiTestCase):
         self.assert_models_equal(group1, g1)
         self.assert_models_equal(group2, g2)
 
-    # TODO: Either implement unique group names or delete this test.
-    # @inlineCallbacks
-    # def test_new_group_exists(self):
-    #     self.assertEqual(None, (yield self.store.get_group(u'group1')))
-
-    #     group = yield self.store.new_group(u'group1')
-    #     self.assertEqual(u'group1', group.name)
-
-    #     try:
-    #         yield self.store.new_group(u'group1')
-    #         self.fail("Expected ValueError.")
-    #     except ValueError:
-    #         pass
-
-    #     dbgroup = yield self.store.get_group(u'group1')
-    #     self.assert_models_equal(group, dbgroup)
-
     @inlineCallbacks
     def test_per_user_groups(self):
         group = yield self.store.new_group(u'group1')
@@ -187,8 +170,10 @@ class TestContactStore(VumiTestCase):
         group1 = yield self.store.get_group(group1.key)
         group2 = yield self.store.get_group(group2.key)
 
-        self.assertEqual([contact.key], (yield group1.backlinks.contacts()))
-        self.assertEqual([contact.key], (yield group2.backlinks.contacts()))
+        contact_keys_page_g1 = yield group1.backlinks.contact_keys()
+        contact_keys_page_g2 = yield group2.backlinks.contact_keys()
+        self.assertEqual([contact.key], list(contact_keys_page_g1))
+        self.assertEqual([contact.key], list(contact_keys_page_g2))
 
     @inlineCallbacks
     def test_check_for_opted_out_contact(self):

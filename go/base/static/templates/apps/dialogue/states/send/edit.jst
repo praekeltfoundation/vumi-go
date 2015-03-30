@@ -1,0 +1,23 @@
+<div class="form-group">
+  <label class="control-label">Choose the channel type</label>
+
+  <select class="channel-type form-control">
+    <% if (!types.size()) { %>
+    <option value="none" selected>No channel types available</option>
+    <% } else { %>
+    <option value="unassigned">(No channel type assigned)</option>
+    <% } %>
+
+    <% types.each(function(t) { %>
+    <option value="<%= t.get('name') %>" <% if (t.get('name') === typeName) { %>selected<% } %>>
+      <%= t.get('label') %>
+    </option>
+    <% }); %>
+  </select>
+
+  <p><small>Channels must be connected to a conversation.</a></small></p>
+
+  <label class="control-label">Your message</label>
+
+  <textarea class="text form-control send-text"><%= text %></textarea>
+</div>

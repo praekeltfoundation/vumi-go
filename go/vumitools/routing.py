@@ -1,14 +1,17 @@
 # -*- test-case-name: go.vumitools.tests.test_routing -*-
 
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet import reactor
 
 from vumi.dispatchers.endpoint_dispatchers import RoutingTableDispatcher
-from vumi.config import ConfigDict, ConfigText
+from vumi.config import ConfigDict, ConfigText, ConfigFloat, ConfigBool
 from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
+from go.vumitools.model_object_cache import ModelObjectCache
 from go.vumitools.routing_table import GoConnector
+from go.vumitools.opt_out.utils import OptOutHelper
 
 
 class RoutingError(Exception):
@@ -219,6 +222,17 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         " `unroutable_inbound_reply`.",
         default="Vumi Go could not route your message. Please try again soon.",
         static=True, required=False)
+    account_cache_ttl = ConfigFloat(
+        "TTL (in seconds) for cached accounts. If less than or equal to"
+        " zero, routing tables will not be cached.",
+        static=True, default=5)
+    store_messages_to_transports = ConfigBool(
+        "If true (the default), outbound messages to transports will be"
+        " written to the message store.",
+        static=True, default=True)
+    optouts = ConfigDict(
+        "Configuration options for the opt out helper",
+        static=True, default={})
 
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
@@ -296,12 +310,18 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield super(AccountRoutingTableDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
         config = self.get_static_config()
+        self.account_cache = ModelObjectCache(
+            reactor, config.account_cache_ttl)
+
+        # Opt out and billing connectors
         self.opt_out_connector = config.opt_out_connector
         self.billing_inbound_connector = config.billing_inbound_connector
         self.billing_outbound_connector = config.billing_outbound_connector
         self.billing_connectors = set()
         self.billing_connectors.add(self.billing_inbound_connector)
         self.billing_connectors.add(self.billing_outbound_connector)
+
+        # Router connectors
         self.router_inbound_connector_mapping = (
             config.router_inbound_connector_mapping)
         self.router_outbound_connector_mapping = (
@@ -311,20 +331,32 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             config.router_inbound_connector_mapping.itervalues())
         self.router_connectors.update(
             config.router_outbound_connector_mapping.itervalues())
+
+        # Application connectors
         self.application_connector_mapping = (
             config.application_connector_mapping)
         self.application_connectors = set(
             config.application_connector_mapping.itervalues())
-        self.transport_connectors = set()
-        self.transport_connectors.update(
-            config.receive_inbound_connectors)
-        self.transport_connectors.discard(
-            self.router_connectors)
+
+        # Transport connectors
+        self.transport_connectors = set(config.receive_inbound_connectors)
+        self.transport_connectors -= self.router_connectors
+        self.transport_connectors -= self.billing_connectors
+
+        self.optouts = OptOutHelper(self.vumi_api, config.optouts)
 
     @inlineCallbacks
     def teardown_dispatcher(self):
+        yield self.account_cache.cleanup()
         yield self._go_teardown_worker()
         yield super(AccountRoutingTableDispatcher, self).teardown_dispatcher()
+
+    def get_user_account(self, user_api):
+        """
+        Get a user account object through the cache.
+        """
+        return self.account_cache.get_model(
+            user_api.api.get_user_account, user_api.user_account_key)
 
     @inlineCallbacks
     def get_config(self, msg):
@@ -359,7 +391,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 "No user account key or tag on message", msg)
 
         user_api = self.get_user_api(user_account_key)
-        routing_table = yield user_api.get_routing_table()
+        account = yield self.get_user_account(user_api)
+        routing_table = yield user_api.get_routing_table(account)
 
         config_dict = self.config.copy()
         config_dict['user_account_key'] = user_account_key
@@ -616,6 +649,21 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
+    def publish_outbound(self, msg, connector_name, endpoint):
+        """
+        Publish an outbound message, storing it if necessary.
+
+        We override the default outbound publisher here so we can write the
+        outbound message to the message store where we need to.
+        """
+        if connector_name in self.transport_connectors:
+            if self.get_static_config().store_messages_to_transports:
+                yield self.vumi_api.mdb.add_outbound_message(msg)
+
+        yield super(RoutingTableDispatcher, self).publish_outbound(
+            msg, connector_name, endpoint)
+
+    @inlineCallbacks
     def handle_unroutable_inbound_message(self, f, msg, connector_name):
         """Send a reply to the unroutable `msg` if the tagpool asks for one.
 
@@ -650,7 +698,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         # mark as an unroutable reply
         reply_rmeta = RoutingMetadata(reply)
         reply_rmeta.set_unroutable_reply()
-        self.publish_outbound(
+
+        yield self.publish_outbound(
             reply, dst_connector_name, dst_endpoint)
 
     def errback_inbound(self, f, msg, connector_name):
@@ -675,6 +724,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         * the billing worker
         """
         log.debug("Processing inbound: %r" % (msg,))
+
+        user_api = self.get_user_api(config.user_account_key)
+        account = yield self.get_user_account(user_api)
+        yield self.optouts.process_message(account, msg)
+
         msg_mdh = self.get_metadata_helper(msg)
         msg_mdh.set_user_account(config.user_account_key)
 

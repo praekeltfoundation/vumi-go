@@ -1,5 +1,7 @@
 import urlparse
+from datetime import datetime
 
+import mock
 from django.core.urlresolvers import reverse
 from django.core import mail
 from django.conf import settings
@@ -8,6 +10,18 @@ from go.account.utils import send_user_account_summary
 from go.account.tasks import send_scheduled_account_summary
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.tests.helpers import GoMessageHelper
+from go.billing.tests.helpers import mk_statement, get_billing_account
+
+
+def get_statement_html_url(statement_id):
+    return reverse(
+        'billing:html_statement',
+        kwargs={'statement_id': statement_id})
+
+
+def contains_in_order(haystack, needles):
+    indices = [haystack.find(needle) for needle in needles]
+    return (-1 not in indices) and (indices == sorted(indices))
 
 
 class TestAccountViews(GoDjangoTestCase):
@@ -88,7 +102,8 @@ class TestAccountViews(GoDjangoTestCase):
                 'existing_password': 'password',
                 '_account': True,
                 })
-            self.assertFormError(response, 'account_form', 'msisdn',
+            self.assertFormError(
+                response, 'account_form', 'msisdn',
                 'Please provide a valid phone number.')
             self.assertEqual([], mail.outbox)
             user_account = self.user_helper.get_user_account()
@@ -160,7 +175,8 @@ class TestAccountViews(GoDjangoTestCase):
             'existing_password': 'password',
             '_account': True,
             })
-        self.assertFormError(response, 'account_form', 'msisdn',
+        self.assertFormError(
+            response, 'account_form', 'msisdn',
             'Please provide a valid phone number.')
         self.assertEqual([], mail.outbox)
 
@@ -209,16 +225,17 @@ class TestEmail(GoDjangoTestCase):
         self.assertEqual(email.from_email, settings.DEFAULT_FROM_EMAIL)
         self.assertEqual(email.recipients(), [django_user.email])
         self.assertTrue('number of contacts: 2' in email.body)
-        self.assertTrue('number of unique contacts by contact number: 1'
-                            in email.body)
+        self.assertTrue(
+            'number of unique contacts by contact number: 1' in email.body)
         self.assertTrue('number of messages sent: 5' in email.body)
         self.assertTrue('number of messages received: 5' in email.body)
         self.assertTrue('Group Message' in email.body)
         self.assertTrue('Test Conversation' in email.body)
-        self.assertTrue('Sent: 5 to 5 uniques.' in email.body)
-        self.assertTrue('Received: 5 from 5 uniques.' in email.body)
         self.assertTrue('"Group Message" Sent: 5' in email.body)
         self.assertTrue('"Group Message" Received: 5' in email.body)
+
+        self.assertTrue('Sent: 5 to 5 uniques.' in email.body)
+        self.assertTrue('Received: 5 from 5 uniques.' in email.body)
 
     def test_send_scheduled_account_summary_task(self):
         user_account = self.user_helper.get_user_account()
@@ -239,3 +256,122 @@ class TestEmail(GoDjangoTestCase):
 
         [daily, weekly] = mail.outbox
         self.assertEqual(weekly.subject, 'Vumi Go Account Summary')
+
+    def test_billing_statements(self):
+        account = get_billing_account(self.user_helper.get_django_user())
+        s1 = mk_statement(account, from_date=datetime(2014, 1, 28))
+        s2 = mk_statement(account, from_date=datetime(2014, 2, 28))
+        s3 = mk_statement(account, from_date=datetime(2014, 3, 28))
+        resp = self.client.get(reverse('account:billing'))
+
+        self.assertContains(resp, '>Billing Statements<')
+        self.assertContains(resp, '>html<', count=3)
+
+        self.assertContains(resp, '>January 2014<')
+        self.assertContains(resp, get_statement_html_url(s1.id))
+
+        self.assertContains(resp, '>February 2014<')
+        self.assertContains(resp, get_statement_html_url(s2.id))
+
+        self.assertContains(resp, '>March 2014<')
+        self.assertContains(resp, get_statement_html_url(s3.id))
+
+    @mock.patch('go.billing.settings.STATEMENTS_PER_PAGE', 2)
+    @mock.patch('go.billing.settings.STATEMENTS_DEFAULT_ORDER_BY', 'from_date')
+    def test_billing_statements_pagination(self):
+        account = get_billing_account(self.user_helper.get_django_user())
+        mk_statement(account, from_date=datetime(2014, 1, 28))
+        mk_statement(account, from_date=datetime(2014, 2, 28))
+        mk_statement(account, from_date=datetime(2014, 3, 28))
+        mk_statement(account, from_date=datetime(2014, 4, 28))
+        mk_statement(account, from_date=datetime(2014, 5, 28))
+
+        resp = self.client.get(reverse('account:billing'), {'p': 1})
+        self.assertContains(resp, '>January 2014<')
+        self.assertContains(resp, '>February 2014<')
+        self.assertNotContains(resp, '>March 2014<')
+        self.assertNotContains(resp, '>April 2014<')
+        self.assertNotContains(resp, '>May 2014<')
+
+        resp = self.client.get(reverse('account:billing'), {'p': 2})
+        self.assertNotContains(resp, '>January 2014<')
+        self.assertNotContains(resp, '>February 2014<')
+        self.assertContains(resp, '>March 2014<')
+        self.assertContains(resp, '>April 2014<')
+        self.assertNotContains(resp, '>May 2014<')
+
+        resp = self.client.get(reverse('account:billing'), {'p': 3})
+        self.assertNotContains(resp, '>January 2014<')
+        self.assertNotContains(resp, '>February 2014<')
+        self.assertNotContains(resp, '>March 2014<')
+        self.assertNotContains(resp, '>April 2014<')
+        self.assertContains(resp, '>May 2014<')
+
+    @mock.patch('go.billing.settings.STATEMENTS_PER_PAGE', 2)
+    @mock.patch('go.billing.settings.STATEMENTS_DEFAULT_ORDER_BY', 'from_date')
+    def test_billing_statements_pagination_default(self):
+        account = get_billing_account(self.user_helper.get_django_user())
+        mk_statement(account, from_date=datetime(2014, 1, 28))
+        mk_statement(account, from_date=datetime(2014, 2, 28))
+        mk_statement(account, from_date=datetime(2014, 3, 28))
+
+        resp = self.client.get(reverse('account:billing'))
+        self.assertContains(resp, '>January 2014<')
+        self.assertContains(resp, '>February 2014<')
+        self.assertNotContains(resp, '>March 2014<')
+
+    @mock.patch('go.billing.settings.STATEMENTS_DEFAULT_ORDER_BY', 'from_date')
+    def test_billing_statements_default_order(self):
+        account = get_billing_account(self.user_helper.get_django_user())
+        mk_statement(account, from_date=datetime(2014, 3, 28))
+        mk_statement(account, from_date=datetime(2014, 1, 28))
+        mk_statement(account, from_date=datetime(2014, 2, 28))
+        resp = self.client.get(reverse('account:billing'))
+
+        self.assertTrue(contains_in_order(resp.content, [
+            '>January 2014<',
+            '>February 2014<',
+            '>March 2014<',
+        ]))
+
+    def test_billing_statements_ascending_order(self):
+        account = get_billing_account(self.user_helper.get_django_user())
+        mk_statement(account, from_date=datetime(2014, 3, 28))
+        mk_statement(account, from_date=datetime(2014, 1, 28))
+        mk_statement(account, from_date=datetime(2014, 2, 28))
+        resp = self.client.get(reverse('account:billing'), {'o': 'from_date'})
+
+        self.assertTrue(contains_in_order(resp.content, [
+            '>January 2014<',
+            '>February 2014<',
+            '>March 2014<',
+        ]))
+
+    def test_billing_statements_descending_order(self):
+        account = get_billing_account(self.user_helper.get_django_user())
+        mk_statement(account, from_date=datetime(2014, 3, 28))
+        mk_statement(account, from_date=datetime(2014, 1, 28))
+        mk_statement(account, from_date=datetime(2014, 2, 28))
+        resp = self.client.get(reverse('account:billing'), {'o': '-from_date'})
+
+        self.assertTrue(contains_in_order(resp.content, [
+            '>March 2014<',
+            '>February 2014<',
+            '>January 2014<',
+        ]))
+
+    @mock.patch('go.billing.settings.STATEMENTS_DEFAULT_ORDER_BY', 'from_date')
+    def test_billing_statements_default_order_action(self):
+        resp = self.client.get(reverse('account:billing'))
+        self.assertContains(resp, 'href="?o=-from_date"')
+        self.assertNotContains(resp, 'href="?o=from_date"')
+
+    def test_billing_statements_ascending_order_action(self):
+        resp = self.client.get(reverse('account:billing'), {'o': '-from_date'})
+        self.assertNotContains(resp, 'href="?o=-from_date"')
+        self.assertContains(resp, 'href="?o=from_date"')
+
+    def test_billing_statements_descending_order_action(self):
+        resp = self.client.get(reverse('account:billing'), {'o': 'from_date'})
+        self.assertContains(resp, 'href="?o=-from_date"')
+        self.assertNotContains(resp, 'href="?o=from_date"')

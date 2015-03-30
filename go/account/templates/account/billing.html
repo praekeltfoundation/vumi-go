@@ -3,7 +3,7 @@
 {% load go_tags %}
 
 {% block content_extraclass %}account{% endblock %}
-{% block content_title %}Statements{% endblock %}
+{% block content_title %}Billing Statements{% endblock %}
 
 {% block content_main %}
 <div class="row">
@@ -15,8 +15,8 @@
                     <tr>
                         <th></th>
                         <th>
-                            <a href="?{% if request.GET.o == 'from_date' %}{% add_params request o='-from_date' %}{% else %}{% add_params request o='from_date' %}{% endif %}">Date</a>
-                            <span class="glyphicon {% if request.GET.o == 'from_date' %}glyphicon-chevron-up{% elif request.GET.o == '-from_date' %}glyphicon-chevron-down{% endif %}"></span>
+                            <a href="?{% if order_by == 'from_date' %}{% add_params request o='-from_date' %}{% else %}{% add_params request o='from_date' %}{% endif %}">Date</a>
+                            <span class="glyphicon {% if order_by == 'from_date' %}glyphicon-chevron-up{% else %}glyphicon-chevron-down{% endif %}"></span>
                         </th>
                         <th>Statement</th>
                     </tr>
@@ -26,7 +26,7 @@
                     <tr>
                         <td></td>
                         <td>{{ statement.from_date|date:"F Y" }}</td>
-                        <td><a href="{% url 'account:statement_view' statement.id %}">View</a></td>
+                        <td><a href="{% url 'billing:html_statement' statement.id %}">html</a></td>
                     </tr>
                     {% empty %}
                     <tr>

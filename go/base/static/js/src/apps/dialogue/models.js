@@ -14,6 +14,10 @@
       GroupModel = contacts.GroupModel,
       GroupCollection = contacts.GroupCollection;
 
+  var channel = go.channel.models,
+      ChannelTypeModel = channel.ChannelTypeModel,
+      ChannelTypeCollection = channel.ChannelTypeCollection;
+
   var DialogueEndpointModel = EndpointModel.extend({
     defaults: function() { return {uuid: uuid.v4()}; }
   });
@@ -31,8 +35,6 @@
   });
 
   var DialogueStateModel = StateModel.extend({
-    storableOnContact: true,
-
     relations: [],
 
     subModelTypes: {
@@ -40,14 +42,15 @@
       choice: 'go.apps.dialogue.models.ChoiceStateModel',
       freetext: 'go.apps.dialogue.models.FreeTextStateModel',
       end: 'go.apps.dialogue.models.EndStateModel',
-      group: 'go.apps.dialogue.models.GroupStateModel'
+      group: 'go.apps.dialogue.models.GroupStateModel',
+      send: 'go.apps.dialogue.models.SendStateModel',
+      httpjson: 'go.apps.dialogue.models.HttpJsonStateModel'
     },
 
     defaults: function() {
       return {
         uuid: uuid.v4(),
         user_defined_store_as: false,
-        store_on_contact: false,
       };
     },
 
@@ -124,8 +127,6 @@
   });
 
   var GroupStateModel = DialogueStateModel.extend({
-    storableOnContact: false,
-
     relations: [{
       type: Backbone.HasOne,
       key: 'group',
@@ -150,9 +151,56 @@
     }
   });
 
-  var EndStateModel = DialogueStateModel.extend({
+  var SendStateModel = DialogueStateModel.extend({
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'channel_type',
+      includeInJSON: 'name',
+      relatedModel: ChannelTypeModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'entry_endpoint',
+      relatedModel: DialogueEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'exit_endpoint',
+      relatedModel: DialogueEndpointModel
+    }],
+
+    defaults: function() {
+      return _({
+        text: '',
+        channel_type: null,
+        entry_endpoint: {},
+        exit_endpoint: {}
+      }).defaults(GroupStateModel.__super__.defaults.call(this));
+    }
+  });
+
+  var HttpJsonStateModel = DialogueStateModel.extend({
     storableOnContact: false,
 
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'entry_endpoint',
+      relatedModel: DialogueEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'exit_endpoint',
+      relatedModel: DialogueEndpointModel
+    }],
+
+    defaults: function() {
+      return _({
+        url: '',
+        method: 'POST',
+        entry_endpoint: {},
+        exit_endpoint: {}
+      }).defaults(HttpJsonStateModel.__super__.defaults.call(this));
+    }
+  });
+
+  var EndStateModel = DialogueStateModel.extend({
     relations: [{
       type: Backbone.HasOne,
       key: 'entry_endpoint',
@@ -215,6 +263,11 @@
       relatedModel: GroupModel,
       collectionType: GroupCollection
     }, {
+      type: Backbone.HasMany,
+      key: 'channel_types',
+      relatedModel: ChannelTypeModel,
+      collectionType: ChannelTypeCollection
+    }, {
       type: Backbone.HasOne,
       key: 'poll_metadata',
       relatedModel: DialogueMetadataModel
@@ -260,6 +313,8 @@
     ChoiceStateModel: ChoiceStateModel,
     FreeTextStateModel: FreeTextStateModel,
     EndStateModel: EndStateModel,
-    GroupStateModel: GroupStateModel
+    GroupStateModel: GroupStateModel,
+    SendStateModel: SendStateModel,
+    HttpJsonStateModel: HttpJsonStateModel
   });
 })(go.apps.dialogue.models = {});

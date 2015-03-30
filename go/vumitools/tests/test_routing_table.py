@@ -197,6 +197,27 @@ class TestRoutingTable(VumiTestCase):
             (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
         ])
 
+    def test_remove_endpoint(self):
+        rt = self.make_rt({
+            self.CONV_1: {
+                "default1.1": [self.CHANNEL_2, "default2"],
+                "default1.2": [self.CHANNEL_3, "default3"]
+            },
+            self.CHANNEL_2: {
+                "default2": [self.CONV_1, "default1.1"],
+            },
+            self.CHANNEL_3: {
+                "default3": [self.CONV_2, "default"],
+            },
+        })
+
+        rt.remove_endpoint(self.CONV_1, "default1.1")
+
+        self.assert_routing_entries(rt, [
+            (self.CONV_1, 'default1.2', self.CHANNEL_3, 'default3'),
+            (self.CHANNEL_3, 'default3', self.CONV_2, 'default')
+        ])
+
     def test_remove_connector_source(self):
         rt = self.make_rt()
         rt.remove_connector(self.CONV_1)

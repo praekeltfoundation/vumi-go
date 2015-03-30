@@ -4,6 +4,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.connectors import IgnoreMessage
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
@@ -67,6 +68,19 @@ class TestGoApplicationWorker(VumiTestCase):
 
         self.app = yield self.app_helper.get_app_worker({})
         self.conv = yield self.app_helper.create_conversation()
+
+    @inlineCallbacks
+    def test_conversation_cache_ttl_config(self):
+        """
+        The conversation_cache_ttl config option is passed to the cache.
+        """
+        # When the config isn't provided, we use the default.
+        self.assertEqual(self.app._conversation_cache._ttl, 5)
+
+        app_helper2 = self.add_helper(AppWorkerHelper(DummyApplication))
+        app2 = yield app_helper2.get_app_worker(
+            {"conversation_cache_ttl": 0})
+        self.assertEqual(app2._conversation_cache._ttl, 0)
 
     @inlineCallbacks
     def test_message_not_processed_while_stopped(self):
@@ -147,6 +161,66 @@ class TestGoApplicationWorker(VumiTestCase):
     def test_control_queue_prefetch(self):
         self.assertEqual(self.app.control_consumer.prefetch_count, 1)
 
+    @inlineCallbacks
+    def test_command_ignored(self):
+        yield self.app_helper.start_conversation(self.conv)
+
+        def ignore_cmd_collect_metrics(cmd_id, conversation_key,
+                                       user_account_key):
+            raise IgnoreMessage("Ignoring message for conversation '%s'." % (
+                conversation_key,))
+
+        self.patch(
+            self.app, 'process_command_collect_metrics',
+            ignore_cmd_collect_metrics)
+
+        self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
+
+        lc = LogCatcher()
+        with lc:
+            yield self.app_helper.dispatch_command(
+                'collect_metrics',
+                conversation_key=self.conv.key,
+                user_account_key=self.conv.user_account.key)
+
+        [logmsg] = lc.messages()
+        self.assertTrue(logmsg.startswith("Ignoring msg due to IgnoreMessage"))
+        self.assertEqual(self.app_helper.get_published_metrics(self.app), [])
+
+    @inlineCallbacks
+    def test_conversation_lookup_cached_start_command(self):
+        """
+        When we process a start command, the conversation lookup is cached.
+        """
+        cache = self.app._conversation_cache
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.start_conversation(self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    @inlineCallbacks
+    def test_conversation_lookup_cached_for_message(self):
+        """
+        When we process a message, the conversation lookup is cached.
+        """
+        yield self.app_helper.start_conversation(self.conv)
+        cache = self.app._conversation_cache
+        cache.cleanup()
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.make_dispatch_inbound("inbound", conv=self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    @inlineCallbacks
+    def test_conversation_lookup_cached_for_event(self):
+        """
+        When we process an event, the conversation lookup is cached.
+        """
+        yield self.app_helper.start_conversation(self.conv)
+        cache = self.app._conversation_cache
+        cache.cleanup()
+        self.assertEqual(cache._models.keys(), [])
+        yield self.app_helper.make_dispatch_ack(conv=self.conv)
+        self.assertEqual(cache._models.keys(), [self.conv.key])
+
 
 class DummyRouter(GoRouterWorker):
     worker_name = 'dummy_router'
@@ -226,3 +300,26 @@ class TestGoRouterWorker(VumiTestCase):
             router=self.router, hops=hops, outbound_hops=outbound_hops)
         sent_events = yield self.rtr_helper.ro.get_dispatched_events()
         self.assertEqual(sent_events, [])
+
+    @inlineCallbacks
+    def test_command_ignored(self):
+        yield self.rtr_helper.start_router(self.router)
+
+        def ignore_cmd_collect_metrics(cmd_id, conversation_key,
+                                       user_account_key):
+            raise IgnoreMessage("Ignoring message for conversation '%s'." % (
+                conversation_key,))
+
+        self.patch(
+            self.rtr_worker, 'process_command_collect_metrics',
+            ignore_cmd_collect_metrics)
+
+        lc = LogCatcher()
+        with lc:
+            yield self.rtr_helper.dispatch_command(
+                'collect_metrics',
+                conversation_key=self.router.key,
+                user_account_key=self.router.user_account.key)
+
+        [logmsg] = lc.messages()
+        self.assertTrue(logmsg.startswith("Ignoring msg due to IgnoreMessage"))

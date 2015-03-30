@@ -37,7 +37,8 @@ class OptOutApplication(GoApplicationWorker):
         else:
             yield self.reply_to(message, "You have opted out")
 
-    def process_command_start(self, user_account_key, conversation_key):
+    def process_command_start(self, cmd_id, user_account_key,
+                              conversation_key):
         log.debug('OptOutApplication started: %s' % (conversation_key,))
         return super(OptOutApplication, self).process_command_start(
-            user_account_key, conversation_key)
+            cmd_id, user_account_key, conversation_key)

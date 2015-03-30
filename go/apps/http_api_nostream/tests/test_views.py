@@ -46,6 +46,7 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
                 'metric_store': 'foo_metric_store',
                 'ignore_events': False,
                 'ignore_messages': False,
+                'content_length_limit': None,
             }
         })
         self.assertEqual(conversation.config, {})
@@ -94,6 +95,7 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
                 'metric_store': 'foo_metric_store',
                 'ignore_events': False,
                 'ignore_messages': True,
+                'content_length_limit': None,
             }
         })
         self.assertEqual(conversation.config, {})
@@ -122,12 +124,65 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
                 'metric_store': 'foo_metric_store',
                 'ignore_events': True,
                 'ignore_messages': False,
+                'content_length_limit': None,
             }
         })
         self.assertEqual(conversation.config, {})
         response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertContains(response, 'foo_metric_store')
         self.assertEqual(response.status_code, 200)
+
+    def test_edit_view_content_length_limit(self):
+        conv_helper = self.app_helper.create_conversation_helper()
+        conversation = conv_helper.get_conversation()
+        self.assertEqual(conversation.config, {})
+        response = self.client.post(conv_helper.get_view_url('edit'), {
+            'http_api_nostream-api_tokens': 'token',
+            'http_api_nostream-push_message_url': 'http://messages/',
+            'http_api_nostream-push_event_url': 'http://events/',
+            'http_api_nostream-metric_store': 'foo_metric_store',
+            'http_api_nostream-content_length_limit': '160',
+        })
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+
+        reloaded_conv = conv_helper.get_conversation()
+        self.assertEqual(reloaded_conv.config, {
+            'http_api_nostream': {
+                'push_event_url': 'http://events/',
+                'push_message_url': 'http://messages/',
+                'api_tokens': ['token'],
+                'metric_store': 'foo_metric_store',
+                'ignore_events': False,
+                'ignore_messages': False,
+                'content_length_limit': 160,
+            }
+        })
+
+        # Now unset the limit
+        response = self.client.get(conv_helper.get_view_url('edit'))
+        self.assertContains(response, '160')
+        self.assertEqual(response.status_code, 200)
+        response = self.client.post(conv_helper.get_view_url('edit'), {
+            'http_api_nostream-api_tokens': 'token',
+            'http_api_nostream-push_message_url': 'http://messages/',
+            'http_api_nostream-push_event_url': 'http://events/',
+            'http_api_nostream-metric_store': 'foo_metric_store',
+            'http_api_nostream-content_length_limit': '',
+        })
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+
+        reloaded_conv = conv_helper.get_conversation()
+        self.assertEqual(reloaded_conv.config, {
+            'http_api_nostream': {
+                'push_event_url': 'http://events/',
+                'push_message_url': 'http://messages/',
+                'api_tokens': ['token'],
+                'metric_store': 'foo_metric_store',
+                'ignore_events': False,
+                'ignore_messages': False,
+                'content_length_limit': None,
+            }
+        })
 
     def test_get_edit_view_no_config(self):
         conv_helper = self.app_helper.create_conversation_helper()

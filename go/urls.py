@@ -15,6 +15,7 @@ def health(request):
 urlpatterns = patterns(
     '',
     # django admin site
+    url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
     url(r'^admin/', include(admin.site.urls)),
 
@@ -38,6 +39,7 @@ urlpatterns = patterns(
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
     url(r'^account/', include('go.account.urls', namespace='account')),
     url(r'^accounts/', include('registration.backends.default.urls')),
+    url(r'^billing/', include('go.billing.urls', namespace='billing')),
 
     url(r'^routing/$', 'go.routing.views.routing', name='routing'),
 
@@ -48,16 +50,20 @@ urlpatterns = patterns(
     url(r'^diamondash/', include('go.dashboard.urls', namespace='dashboard')),
 )
 
-urlpatterns += patterns('django.contrib.flatpages.views',
+urlpatterns += patterns(
+    'django.contrib.flatpages.views',
     url(r'^credits/$', 'flatpage', {'url': '/credits/'}, name='credits'),
     url(r'^help/$', 'flatpage', {'url': '/help/'}, name='help'),
 )
 
-urlpatterns += patterns('loginas.views',
-    url(r"^login/user/(?P<user_id>.+)/$", "user_login", name="loginas-user-login"),
+urlpatterns += patterns(
+    'loginas.views',
+    url(r"^login/user/(?P<user_id>.+)/$", "user_login",
+        name="loginas-user-login"),
 )
 
 # HAProxy health check
-urlpatterns += patterns('',
+urlpatterns += patterns(
+    '',
     url(r'^health/$', health, name='health'),
 )

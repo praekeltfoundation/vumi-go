@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.http_api_nostream.tests.test_vumi_app -*-
 import base64
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, Deferred, succeed
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
 
@@ -33,11 +33,167 @@ class HTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         default='/health/', static=True)
     concurrency_limit = ConfigInt(
         "Maximum number of clients per account. A value less than "
-        "zero disables the limit",
+        "zero disables the limit.",
         default=10)
     timeout = ConfigInt(
         "How long to wait for a response from a server when posting "
         "messages or events", default=5, static=True)
+    worker_concurrency_limit = ConfigInt(
+        "Maximum number of clients per account per worker. A value less than "
+        "zero disables the limit. (Unlike concurrency_limit, this queues "
+        "requests instead of rejecting them.)",
+        default=1, static=True)
+
+
+class ConcurrencyLimiterError(Exception):
+    """
+    Error raised by concurrency limiters.
+    """
+
+
+class ConcurrencyLimiter(object):
+    """
+    Concurrency limiter.
+
+    Each concurrent operation should call :meth:`start` and wait for the
+    deferred it returns to fire before doing any work. When it's done, it
+    should call :meth:`stop` to signal completion and allow the next queued
+    operation to begin.
+
+    Internally, we track two things:
+      * :attr:`_concurrents` holds the number of active operations, for which
+        the deferred returned by :meth:`start` has fired, but :meth:`stop` has
+        not been called.
+      * :attr:`_waiters` holds a list of pending deferreds that have been
+        returned by :meth:`start` but not yet fired.
+    """
+
+    def __init__(self, name, limit):
+        self._name = name
+        self._limit = limit
+        self._concurrents = 0
+        self._waiters = []
+
+    def _inc_concurrent(self):
+        self._concurrents += 1
+        return self._concurrents
+
+    def _dec_concurrent(self):
+        if self._concurrents <= 0:
+            raise ConcurrencyLimiterError(
+                "Can't decrement key below zero: %s" % (self._name,))
+        else:
+            self._concurrents -= 1
+        return self._concurrents
+
+    def _make_waiter(self):
+        d = Deferred()
+        self._waiters.append(d)
+        return d
+
+    def _pop_waiter(self):
+        if not self._waiters:
+            return None
+        return self._waiters.pop(0)
+
+    def _check_concurrent(self):
+        if self._concurrents >= self._limit:
+            return
+        d = self._pop_waiter()
+        if d is not None:
+            self._inc_concurrent()
+            d.callback(None)
+
+    def empty(self):
+        """
+        Check if this concurrency limiter is empty so it can be cleaned up.
+        """
+        return (not self._concurrents) and (not self._waiters)
+
+    def start(self):
+        """
+        Start a concurrent operation.
+
+        If we are below the limit, we increment the concurrency count and fire
+        the deferred we return. If not, we add the deferred to the waiters list
+        and return it unfired.
+        """
+        # While the implemetation matches the description in the docstring
+        # conceptually, it always adds a new waiter and then calls
+        # _check_concurrent() to handle the various cases.
+        if self._limit < 0:
+            # Special case for no limit, never block.
+            return succeed(None)
+        elif self._limit == 0:
+            # Special case for limit of zero, always block forever.
+            return Deferred()
+        d = self._make_waiter()
+        self._check_concurrent()
+        return d
+
+    def stop(self):
+        """
+        Stop a concurrent operation.
+
+        If there are waiting operations, we pop and fire the first. If not, we
+        decrement the concurrency count.
+        """
+        # While the implemetation matches the description in the docstring
+        # conceptually, it always decrements the concurrency counter and then
+        # calls _check_concurrent() to handle the various cases.
+        if self._limit <= 0:
+            # Special case for where we don't keep state.
+            return
+        self._dec_concurrent()
+        self._check_concurrent()
+
+
+class ConcurrencyLimitManager(object):
+    """
+    Concurrency limit manager.
+
+    Each concurrent operation should call :meth:`start` with a key and wait for
+    the deferred it returns to fire before doing any work. When it's done, it
+    should call :meth:`stop` to signal completion and allow the next queued
+    operation to begin.
+    """
+
+    def __init__(self, limit):
+        self._limit = limit
+        self._concurrency_limiters = {}
+
+    def _get_limiter(self, key):
+        if key not in self._concurrency_limiters:
+            self._concurrency_limiters[key] = ConcurrencyLimiter(
+                key, self._limit)
+        return self._concurrency_limiters[key]
+
+    def _cleanup_limiter(self, key):
+        limiter = self._concurrency_limiters.get(key)
+        if limiter and limiter.empty():
+            del self._concurrency_limiters[key]
+
+    def start(self, key):
+        """
+        Start a concurrent operation.
+
+        This gets the concurrency limiter for the given key (creating it if
+        necessary) and starts a concurrent operation on it.
+        """
+        start_d = self._get_limiter(key).start()
+        self._cleanup_limiter(key)
+        return start_d
+
+    def stop(self, key):
+        """
+        Stop a concurrent operation.
+
+        This gets the concurrency limiter for the given key (creating it if
+        necessary) and stops a concurrent operation on it. If the concurrency
+        limiter is empty, it is deleted.
+        """
+        self._get_limiter(key).stop()
+        self._cleanup_limiter(key)
 
 
 class NoStreamingHTTPWorker(GoApplicationWorker):
@@ -58,6 +214,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         self._event_handlers = {}
         self._session_handlers = {}
 
+        self.concurrency_limiter = ConcurrencyLimitManager(
+            config.worker_concurrency_limit)
         self.webserver = self.start_web_resources([
             (self.get_conversation_resource(), self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),
@@ -71,9 +229,11 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         yield super(NoStreamingHTTPWorker, self).teardown_application()
         yield self.webserver.loseConnection()
 
+    def get_all_api_config(self, conversation):
+        return conversation.config.get('http_api_nostream', {})
+
     def get_api_config(self, conversation, key, default=None):
-        return conversation.config.get(
-            'http_api_nostream', {}).get(key, default)
+        return self.get_all_api_config(conversation).get(key, default)
 
     @inlineCallbacks
     def consume_user_message(self, message):
@@ -98,15 +258,6 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
-        """
-        FIXME:  We're forced to do too much hoopla when trying to link events
-                back to the conversation the original message was part of.
-        """
-        outbound_message = yield self.find_outboundmessage_for_event(event)
-        if outbound_message is None:
-            log.warning('Unable to find message %s for event %s.' % (
-                event['user_message_id'], event['event_id']))
-
         config = yield self.get_message_config(event)
         conversation = config.conversation
         ignore = self.get_api_config(conversation, 'ignore_events', False)

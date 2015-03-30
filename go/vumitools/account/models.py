@@ -7,7 +7,7 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
-    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
+    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean, SetOf)
 
 from go.vumitools.account.fields import RoutingTableField
 from go.vumitools.account.migrations import UserAccountMigrator
@@ -26,10 +26,23 @@ class UserAppPermission(Model):
     application = Unicode(max_length=255)
 
 
+def flag_property(name):
+    def fget(self):
+        return name in self.flags
+
+    def fset(self, value):
+        if value:
+            self.flags.add(name)
+        else:
+            self.flags.discard(name)
+
+    return property(fget, fset)
+
+
 class UserAccount(Model):
     """A user account."""
 
-    VERSION = 4
+    VERSION = 6
     MIGRATOR = UserAccountMigrator
 
     # key is uuid
@@ -42,10 +55,17 @@ class UserAccount(Model):
     event_handler_config = Json(default=list)
     msisdn = Unicode(max_length=255, null=True)
     confirm_start_conversation = Boolean(default=False)
-    can_manage_optouts = Boolean(default=False)
     email_summary = Unicode(max_length=255, null=True)
     tags = Json(default=[])
     routing_table = RoutingTableField(default=RoutingTable({}))
+    flags = SetOf(Unicode(), index=True)
+
+    # Flag properties aren't the same as normal fields. Instead, they are just
+    # some sugar for modifying the model's `flags` field. For this reason, we
+    # don't need to bump the model version when adding a new flag property.
+    can_manage_optouts = flag_property(u'can_manage_optouts')
+    disable_optouts = flag_property(u'disable_optouts')
+    is_developer = flag_property(u'is_developer')
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):

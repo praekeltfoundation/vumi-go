@@ -1,0 +1,104 @@
+{% load compressed %}
+{% load billing_tags %}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Vumi Billing Statement</title>
+        <meta charset="utf-8">
+        {% compressed_css 'invoice' %}
+    </head>
+
+    <body>
+        <div class="inv-container">
+            <header class="inv-header">
+                <div class="inv-pull-left">
+                    <img class="inv-logo" alt="Logo" src="{{ STATIC_URL }}img/logo.svg">
+
+                    <address class="inv-contact">
+                        <span>{{ contact_details.tel }}</span><br>
+                        <a href={{ contact_details.email }}>{{ contact_details.email }}</a><br>
+                        <a href={{ contact_details.website }}>{{ contact_details.website }}</a>
+                    </address>
+                </div>
+
+                <div class="inv-pull-right">
+                    <h1>Vumi Billing Statement</h1>
+
+                    <table class="inv-context">
+                        <tr>
+                            <th>Account</th>
+                            <td>{{ statement.account.user.email }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date</th>
+                            <td>{{ statement.from_date }} to {{ statement.to_date }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </header>
+
+            {% for biller in billers %}
+            <div class="inv-section">
+                <h2>{{ biller.name }}{% if biller.channel_type != None %} ({{ biller.channel_type }}){% endif %}</h2>
+
+                {% for section in biller.sections %}
+                {% if section.name != None %}<h3>{{ section.name }}</h3>{% endif %}
+
+                <table class="inv-items">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Units</th>
+                            <th>Credits</th>
+                            <th>Unit Cost ($)</th>
+                            <th>Cost ($)</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                    {% for item in section.items %}
+                        <tr>
+                            <td>{% if item.description != None %}{{ item.description }}{% endif %}</th>
+                            <td>{{ item.units }}</th>
+                            <td>{% if item.credits != None %}{{ item.credits|format_credits }}{% endif %}</th>
+                            <td>{{ item.unit_cost|format_cents }}</th>
+                            <td>{{ item.cost|format_cents }}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td>Total</td>
+                            <td></td>
+                            <td>{{ section.totals.credits|format_credits }}</td>
+                            <td></td>
+                            <td>{{ section.totals.cost|format_cents }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div class="inv-section">
+                <table class="inv-items inv-items-totals">
+                    <thead>
+                        <th></th>
+                        <th></td>
+                        <th>Credits</td>
+                        <th></td>
+                        <th>Cost ($)</td>
+                    </thead>
+                    <tfoot>
+                        <td>Grand Total</td>
+                        <td></td>
+                        <td>{{ totals.credits|format_credits }}</td>
+                        <td></td>
+                        <td>{{ totals.cost|format_cents }}</td>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </body>
+</html>

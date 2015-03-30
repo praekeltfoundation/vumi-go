@@ -8,14 +8,15 @@ import pkg_resources
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.tests.helpers import find_nodejs_or_skip_test
-from vumi.application.tests.test_sandbox import (
-    ResourceTestCaseBase, DummyAppWorker)
+from vxsandbox.utils import find_nodejs_or_skip_test
+from vxsandbox.tests.utils import DummyAppWorker
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
+
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
-from go.apps.dialogue.vumi_app import (
-    DialogueApplication, PollConfigResource)
+from go.apps.dialogue.vumi_app import DialogueApplication, PollConfigResource
+from go.apps.dialogue.utils import dialogue_js_config
 from go.apps.dialogue.tests.dummy_polls import simple_poll
 from go.apps.tests.helpers import AppWorkerHelper
 
@@ -64,7 +65,7 @@ class TestDialogueApplication(VumiTestCase):
                     'cls': 'go.apps.jsbox.contacts.ContactsResource',
                 },
                 'kv': {
-                    'cls': 'vumi.application.sandbox.RedisResource',
+                    'cls': 'vxsandbox.RedisResource',
                     'redis_manager': {'FAKE_REDIS': self.kv_redis},
                 },
                 'outbound': {
@@ -257,17 +258,12 @@ class TestPollConfigResource(ResourceTestCaseBase):
         yield self.create_resource({})
 
     @inlineCallbacks
-    def test_config_delivery_class(self):
+    def test_get(self):
         conv = yield self.app_helper.create_conversation(
-            config={
-                'poll': {
-                    'poll_metadata': {'delivery_class': 'twitter'}
-                }
-            })
-
+            config={'poll': simple_poll()})
         self.app_worker.conv = conv
 
         reply = yield self.dispatch_command('get', key='config')
         config = json.loads(reply['value'])
 
-        self.assertEqual(config['delivery_class'], 'twitter')
+        self.assertEqual(config, dialogue_js_config(conv))

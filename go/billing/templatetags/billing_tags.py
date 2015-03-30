@@ -1,7 +1,30 @@
+from decimal import Decimal
+
 from django import template
 from django.utils.translation import ungettext
 
+from go.base.utils import format_currency
+from go.billing import settings
+
 register = template.Library()
+
+
+@register.filter
+def format_cents(v):
+    """Returns a formatted string representation of a number in dollars from a
+    decimal cents value (cents are the billing system's internal representation
+    for monetary amounts).
+    """
+    v = v / Decimal('100.0')
+    return format_currency(v, places=settings.DOLLAR_DECIMAL_PLACES)
+
+
+@register.filter
+def format_credits(v):
+    """Returns a formatted string representation of a number in credits from a
+    decimal credits value.
+    """
+    return format_currency(v)
 
 
 @register.simple_tag
@@ -10,13 +33,9 @@ def credit_balance(user):
 
     If the user has multiple accounts, the first one's balance is returned.
     """
-    try:
-        account = user.account_set.all()[0]
-        credit_balance = account.credit_balance
-    except IndexError:
-        credit_balance = 0
+    account = user.account_set.get()
+    credits = account.credit_balance
 
-    return ungettext(
-        "%(credit_balance)d credit",
-        "%(credit_balance)d credits",
-        credit_balance) % {'credit_balance': credit_balance}
+    return "%s %s" % (
+        format_credits(credits),
+        ungettext("credit", "credits", credits))

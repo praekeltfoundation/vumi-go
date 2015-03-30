@@ -34,3 +34,5 @@ distribute-0.6.10.tar.gz
 /.codeintel/
 mochacov.lcov
 /coverage/
+/go/static
+/build/

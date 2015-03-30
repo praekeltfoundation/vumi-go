@@ -73,3 +73,90 @@ class UserAccountMigrator(ModelMigrator):
         mdata.set_value('$VERSION', 4)
 
         return mdata
+
+    def migrate_from_4(self, mdata):
+        """
+        Add the disable_optouts boolean and default it to ``False``
+        """
+
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table',
+            'can_manage_optouts')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # set the default `disable_optouts` value
+        mdata.set_value('disable_optouts', False)
+
+        # increment version counter
+        mdata.set_value('$VERSION', 5)
+
+        return mdata
+
+    def reverse_from_5(self, mdata):
+        """
+        Remove disable_optouts boolean.
+        """
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table',
+            'can_manage_optouts')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # decrement version counter
+        mdata.set_value('$VERSION', 4)
+
+        return mdata
+
+    def migrate_from_5(self, mdata):
+        """
+        Remove the `disable_optouts` and `can_manage_optouts` fields, add the
+        `flags` field, then set `'disable_optouts'` and `'can_manage_optouts'`
+        as flags if their fields were `True`.
+        """
+
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # set the can_manage_optouts and disable_optouts
+        # flags if their fields were true
+        flags = set()
+
+        if mdata.old_data.get('can_manage_optouts'):
+            flags.add(u'can_manage_optouts')
+
+        if mdata.old_data.get('disable_optouts'):
+            flags.add(u'disable_optouts')
+
+        mdata.set_value('flags', sorted(flags))
+
+        # increment version counter
+        mdata.set_value('$VERSION', 6)
+
+        return mdata
+
+    def reverse_from_6(self, mdata):
+        """
+        Bring back the `can_manage_optouts` and `disable_optouts` fields,
+        setting them to `True` if corresponding values exist for them in the
+        `flags` field, then remove the flags field.
+        """
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config', 'routing_table')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        flags = mdata.old_data.get('flags')
+        mdata.set_value('disable_optouts', u'disable_optouts' in flags)
+        mdata.set_value('can_manage_optouts', u'can_manage_optouts' in flags)
+
+        # decrement version counter
+        mdata.set_value('$VERSION', 5)
+
+        return mdata

@@ -1,12 +1,12 @@
  /*!
- * jQuery Simulate v@VERSION - simulate browser mouse and keyboard events
+ * jQuery Simulate v1.0.0 - simulate browser mouse and keyboard events
  * https://github.com/jquery/jquery-simulate
  *
  * Copyright 2012 jQuery Foundation and other contributors
  * Released under the MIT license.
  * http://jquery.org/license
  *
- * Date: @DATE
+ * Date: 2014-08-22
  */
 
 ;(function( $, undefined ) {
@@ -144,7 +144,7 @@ $.extend( $.simulate.prototype, {
 				0: 1,
 				1: 4,
 				2: 2
-			}[ event.button ] || event.button;
+			}[ event.button ] || ( event.button === -1 ? 0 : event.button );
 		}
 
 		return event;
@@ -201,7 +201,9 @@ $.extend( $.simulate.prototype, {
 	},
 
 	dispatchEvent: function( elem, type, event ) {
-		if ( elem.dispatchEvent ) {
+		if ( elem[ type ] ) {
+			elem[ type ]();
+		} else if ( elem.dispatchEvent ) {
 			elem.dispatchEvent( event );
 		} else if ( elem.fireEvent ) {
 			elem.fireEvent( "on" + type, event );
@@ -277,18 +279,30 @@ function findCenter( elem ) {
 	};
 }
 
+function findCorner( elem ) {
+	var offset,
+		document = $( elem.ownerDocument );
+	elem = $( elem );
+	offset = elem.offset();
+
+	return {
+		x: offset.left - document.scrollLeft(),
+		y: offset.top - document.scrollTop()
+	};
+}
+
 $.extend( $.simulate.prototype, {
 	simulateDrag: function() {
 		var i = 0,
 			target = this.target,
 			options = this.options,
-			center = findCenter( target ),
+			center = options.handle === "corner" ? findCorner( target ) : findCenter( target ),
 			x = Math.floor( center.x ),
 			y = Math.floor( center.y ),
-			dx = options.dx || 0,
-			dy = options.dy || 0,
-			moves = options.moves || 3,
-			coord = { clientX: x, clientY: y };
+			coord = { clientX: x, clientY: y },
+			dx = options.dx || ( options.x !== undefined ? options.x - x : 0 ),
+			dy = options.dy || ( options.y !== undefined ? options.y - y : 0 ),
+			moves = options.moves || 3;
 
 		this.simulateEvent( target, "mousedown", coord );
 
@@ -301,11 +315,15 @@ $.extend( $.simulate.prototype, {
 				clientY: Math.round( y )
 			};
 
-			this.simulateEvent( document, "mousemove", coord );
+			this.simulateEvent( target.ownerDocument, "mousemove", coord );
 		}
 
-		this.simulateEvent( target, "mouseup", coord );
-		this.simulateEvent( target, "click", coord );
+		if ( $.contains( document, target ) ) {
+			this.simulateEvent( target, "mouseup", coord );
+			this.simulateEvent( target, "click", coord );
+		} else {
+			this.simulateEvent( document, "mouseup", coord );
+		}
 	}
 });
 

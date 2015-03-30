@@ -8,6 +8,7 @@ var FreeText = vumigo.states.FreeText;
 var Choice = vumigo.states.Choice;
 var ChoiceState = vumigo.states.ChoiceState;
 var InteractionMachine = vumigo.InteractionMachine;
+var JsonApi = vumigo.http.api.JsonApi;
 
 
 var DialogueApp = App.extend(function(self) {
@@ -46,9 +47,21 @@ var DialogueApp = App.extend(function(self) {
                 "Unknown dialogue state type: '" + desc.type + "'");
         }
 
+        self.states.remove(desc.uuid);
         return self.states.add(desc.uuid, function() {
             return type(desc);
         });
+    };
+
+    self.get_endpoint = function(channel_type) {
+        var d = _.find(self.poll.channel_types, {name: channel_type});
+
+        if (!d) {
+            throw new Error(
+                "No endpoint found for channel type '" + channel_type + "'");
+        }
+
+        return d.label;
     };
 
     self.next = function(endpoint) {
@@ -65,6 +78,28 @@ var DialogueApp = App.extend(function(self) {
         return state
             ? state.uuid
             : null;
+    };
+
+    self.store_answer = function(key, value) {
+        var re = new RegExp(key + '-[0-9]+');
+
+        var n = _.keys(self.contact.extra)
+            .filter(re.test, re)
+            .length;
+
+        self.contact.extra[key] = value;
+        self.contact.extra[[key, n + 1].join('-')] = value;
+    };
+
+    self.labelled_answers = function() {
+        return _.transform(
+            self.im.user.answers,
+            function(result, value, uuid) {
+                var desc = _.find(self.poll.states, {uuid: uuid});
+                if (typeof desc !== 'undefined') {
+                    result[desc.store_as] = value;
+                }
+            });
     };
 
     self.types = {};
@@ -85,7 +120,7 @@ var DialogueApp = App.extend(function(self) {
                 var endpoint = _.find(endpoints, {value: choice.value});
 
                 if (!endpoint) { return; }
-                self.contact.extra[desc.store_as] = endpoint.value;
+                self.store_answer(desc.store_as, endpoint.value);
 
                 return self
                     .im.contacts.save(self.contact)
@@ -99,7 +134,7 @@ var DialogueApp = App.extend(function(self) {
             question: desc.text,
 
             next: function(content) {
-                self.contact.extra[desc.store_as] = content;
+                self.store_answer(desc.store_as, content);
 
                 return self
                     .im.contacts.save(self.contact)
@@ -128,9 +163,43 @@ var DialogueApp = App.extend(function(self) {
         });
     };
 
+    self.types.send = function(desc) {
+        return self
+            .im.outbound.send({
+                to: self.contact,
+                content: desc.text,
+                endpoint: self.get_endpoint(desc.channel_type)
+            })
+            .then(function() {
+                return self.states.create(self.next(desc.exit_endpoint));
+            });
+    };
+
     self.states.add('states:start', function() {
         return self.states.create(self.poll.start_state.uuid);
     });
+
+    self.types.httpjson = function(desc) {
+        self.http = new JsonApi(self.im);
+
+        var payload = {
+            user: {
+                answers: self.labelled_answers(),
+            },
+            contact: self.contact,
+            conversation_key: self.poll.conversation_key
+        };
+
+        var data = desc.method !== 'GET' ? {
+                    data: JSON.stringify(payload)
+                } : null;
+
+        return self
+            .http.request(desc.method, desc.url, data)
+                .then(function(response) {
+                    return self.states.create(self.next(desc.exit_endpoint));
+        });
+    };
 });
 
 

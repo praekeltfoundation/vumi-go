@@ -18,7 +18,7 @@ from go.contacts.forms import (
 from go.contacts import tasks, utils
 from go.contacts.import_handlers import (
     handle_import_new_contacts, handle_import_existing_is_truth,
-    handle_import_upload_is_truth)
+    handle_import_upload_is_truth, ContactImportException)
 from go.contacts.parsers import ContactFileParser, ContactParserException
 from go.contacts.parsers.base import FieldNormalizer
 from go.vumitools.contact import ContactError
@@ -137,6 +137,18 @@ def _group(request, group_key):
         return _static_group(request, contact_store, group)
 
 
+def _get_count_and_keys_from_index(index_page, limit):
+    count = 0
+    keys = []
+    while index_page is not None:
+        page_keys = list(index_page)
+        count += len(page_keys)
+        if len(keys) < limit:
+            keys.extend(page_keys)
+        index_page = index_page.next_page()
+    return count, keys[:limit]
+
+
 @login_required
 @csrf_protect
 def _static_group(request, contact_store, group):
@@ -196,10 +208,15 @@ def _static_group(request, contact_store, group):
                     'We will notify you via email when the import '
                     'has been completed')
 
-            except (ContactParserException,):
-                messages.error(request, 'Something is wrong with the file')
+            except (ContactParserException, ContactImportException), e:
+                if isinstance(e, ContactImportException):
+                    error_msg = str(e)
+                else:
+                    error_msg = 'Something is wrong with the file'
+                messages.error(request, error_msg)
                 _, file_path = utils.get_file_hints_from_session(request)
                 default_storage.delete(file_path)
+                utils.clear_file_hints_from_session(request)
 
             return redirect(_group_url(group.key))
 
@@ -252,19 +269,20 @@ def _static_group(request, contact_store, group):
 
     query = request.GET.get('q', '')
     if query:
-        if not ':' in query:
+        if ':' not in query:
             query = 'name:%s' % (query,)
-        keys = contact_store.contacts.raw_search(query).get_keys()
+        keys_page = contact_store.search_contacts(query)
     else:
-        keys = contact_store.get_contacts_for_group(group)
+        keys_page = contact_store.get_contact_keys_for_group(group)
 
-    limit = min(int(request.GET.get('limit', 100)), len(keys))
+    limit = int(request.GET.get('limit', 100))
+    count, keys = _get_count_and_keys_from_index(keys_page, limit)
     if keys:
         messages.info(
             request,
-            "Showing %s of the group's %s contact(s)" % (limit, len(keys)))
+            "Showing %s of the group's %s contact(s)" % (len(keys), count))
 
-    contacts = utils.contacts_by_key(contact_store, *keys[:limit])
+    contacts = utils.contacts_by_key(contact_store, *keys)
     context.update({
         'query': request.GET.get('q'),
         'selected_contacts': contacts,
@@ -312,13 +330,14 @@ def _smart_group(request, contact_store, group):
             'query': group.query,
         })
 
-    keys = contact_store.get_contacts_for_group(group)
-    limit = min(int(request.GET.get('limit', 100)), len(keys))
+    limit = int(request.GET.get('limit', 100))
+    keys_page = contact_store.get_contact_keys_for_group(group)
+    count, keys = _get_count_and_keys_from_index(keys_page, limit)
 
     if keys:
         messages.info(
             request,
-            "Showing %s of the group's %s contact(s)" % (limit, len(keys)))
+            "Showing %s of the group's %s contact(s)" % (len(keys), count))
 
     contacts = utils.contacts_by_key(contact_store, *keys[:limit])
     return render(request, 'contacts/smart_group_detail.html', {

@@ -8,8 +8,9 @@ import re
 from mock import Mock
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.tests.test_sandbox import (
-    ResourceTestCaseBase, DummyAppWorker)
+from vxsandbox.tests.utils import DummyAppWorker
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
+
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 from vumi.tests.utils import LogCatcher
 
@@ -143,7 +144,7 @@ class TestGoLoggingResource(ResourceTestCaseBase, LogCheckerMixin):
             reply = yield self.dispatch_command('info', msg=u'Info message')
             msgs = lc.messages()
         self.assertEqual(msgs, [
-            '[Account: campaign-1, Conversation: conv-1] Info message',
+            "[Account: campaign-1, Conversation: conv-1] 'Info message'",
         ])
         self.check_reply(reply)
         logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
@@ -155,3 +156,18 @@ class TestGoLoggingResource(ResourceTestCaseBase, LogCheckerMixin):
     def test_handle_info_failure(self):
         yield self.assert_bad_command(
             'info', u'Value expected for msg')
+
+    @inlineCallbacks
+    def test_handle_unicode(self):
+        with LogCatcher(log_level=logging.INFO) as lc:
+            reply = yield self.dispatch_command('info', msg=u'Zoë message')
+            msgs = lc.messages()
+        self.assertEqual(msgs, [
+            ("[Account: campaign-1, Conversation: conv-1]"
+             " 'Zo\\xc3\\xab message'"),
+        ])
+        self.check_reply(reply)
+        logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
+        self.check_logs(logs, [
+            ("INFO", "Zo\xc3\xab message")
+        ])

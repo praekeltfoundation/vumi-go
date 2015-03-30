@@ -2,8 +2,8 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.tests.test_sandbox import (
-    ResourceTestCaseBase, DummyAppWorker)
+from vxsandbox.tests.utils import DummyAppWorker
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
 
 from go.apps.jsbox.message_store import MessageStoreResource
 from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper

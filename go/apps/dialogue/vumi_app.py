@@ -3,24 +3,10 @@
 import pkg_resources
 import json
 
-from vumi.application.sandbox import SandboxResource
+from vxsandbox import SandboxResource
 
 from go.apps.jsbox.vumi_app import JsBoxConfig, JsBoxApplication
-
-
-def dialogue_js_config(conv):
-    config = {
-        "name": "poll-%s" % conv.key
-    }
-
-    poll = conv.config.get("poll", {})
-    poll_metadata = poll.get('poll_metadata', {})
-    delivery_class = poll_metadata.get('delivery_class')
-
-    if delivery_class is not None:
-        config['delivery_class'] = delivery_class
-
-    return config
+from go.apps.dialogue.utils import dialogue_js_config
 
 
 class PollConfigResource(SandboxResource):

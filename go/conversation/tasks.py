@@ -74,9 +74,8 @@ def row_for_outbound_message(message, mdb):
 def load_messages_in_chunks(conversation, direction='inbound',
                             include_sensitive=False, scrubber=None):
     """
-    Load the conversation's messages in chunks of `size`.
-    Uses `proxy.load_all_bunches()` lower down but allows skipping and/or
-    scrubbing of messages depending on `include_sensitive` and `scrubber`.
+    Load the conversation's messages one index page at a time, skipping and/or
+    scrubbing messages depending on `include_sensitive` and `scrubber`.
 
     :param Conversation conv:
         The conversation.
@@ -90,19 +89,23 @@ def load_messages_in_chunks(conversation, direction='inbound',
         modified on the fly.
     """
     if direction == 'inbound':
-        bunches = conversation.mdb.inbound_messages.load_all_bunches(
-            conversation.inbound_keys())
+        index_page = conversation.mdb.batch_inbound_keys_page(
+            conversation.batch.key)
+        get_msg = conversation.mdb.get_inbound_message
     elif direction == 'outbound':
-        bunches = conversation.mdb.outbound_messages.load_all_bunches(
-            conversation.outbound_keys())
+        index_page = conversation.mdb.batch_outbound_keys_page(
+            conversation.batch.key)
+        get_msg = conversation.mdb.get_outbound_message
     else:
         raise ValueError('Invalid value (%s) received for `direction`. '
                          'Only `inbound` and `outbound` are allowed.' %
                          (direction,))
 
-    for messages in bunches:
+    while index_page is not None:
+        messages = [get_msg(key) for key in index_page]
         yield conversation.filter_and_scrub_messages(
             messages, include_sensitive=include_sensitive, scrubber=scrubber)
+        index_page = index_page.next_page()
 
 
 def email_export(user_profile, conversation, io):

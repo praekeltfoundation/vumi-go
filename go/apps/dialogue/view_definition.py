@@ -32,11 +32,17 @@ class DialogueEditView(ConversationTemplateView):
         contact_store = conversation.user_api.contact_store
         groups = contact_store.list_static_groups()
 
-        model_data = r.json['result']['poll']
+        delivery_classes = [{
+            'name': d_name,
+            'label': d['label']
+        } for d_name, d in DELIVERY_CLASSES.iteritems()]
+
+        model_data = r.json()['result']['poll']
         model_data.update({
             'campaign_id': request.user_api.user_account_key,
             'conversation_key': conversation.key,
             'groups': [g.get_data() for g in groups],
+            'channel_types': delivery_classes,
             'urls': {
                 'show': self.get_view_url(
                     'show',
@@ -46,8 +52,6 @@ class DialogueEditView(ConversationTemplateView):
 
         metadata = model_data.get('poll_metadata', {})
         delivery_class = metadata.get('delivery_class', DEFAULT_DELIVERY_CLASS)
-        delivery_classes = [
-            (d_name, d['label']) for d_name, d in DELIVERY_CLASSES.iteritems()]
 
         return self.render_to_response({
             'current_delivery_class': delivery_class,
@@ -58,16 +62,6 @@ class DialogueEditView(ConversationTemplateView):
         })
 
 
-class UserDataView(ConversationTemplateView):
-    view_name = 'user_data'
-    path_suffix = 'users.csv'
-
-    def get(self, request, conversation):
-        # TODO: write new CSV data export
-        csv_data = "TODO: write data export."
-        return HttpResponse(csv_data, content_type='application/csv')
-
-
 class SendDialogueForm(Form):
     # TODO: Something better than this?
     pass
@@ -75,10 +69,6 @@ class SendDialogueForm(Form):
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     edit_view = DialogueEditView
-
-    extra_views = (
-        UserDataView,
-    )
 
     action_forms = {
         'send_jsbox': SendDialogueForm,

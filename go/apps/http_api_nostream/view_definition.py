@@ -25,6 +25,10 @@ class TokenForm(forms.Form):
     metric_store = forms.CharField(
         help_text='Which store to publish metrics to.',
         required=False)
+    content_length_limit = forms.IntegerField(
+        help_text=('Optional content length limit. If set, messages with'
+                   ' content longer than this will be rejected.'),
+        required=False)
 
     def clean(self):
         cleaned_data = super(TokenForm, self).clean()
@@ -54,6 +58,7 @@ class TokenForm(forms.Form):
             'metric_store': data.get('metric_store', DEFAULT_METRIC_STORE),
             'ignore_events': data.get('ignore_events', False),
             'ignore_messages': data.get('ignore_messages', False),
+            'content_length_limit': data.get('content_length_limit', None),
         }
 
     def to_config(self):
@@ -65,6 +70,7 @@ class TokenForm(forms.Form):
             'metric_store': data.get('metric_store') or DEFAULT_METRIC_STORE,
             'ignore_events': data.get('ignore_events', False),
             'ignore_messages': data.get('ignore_messages', False),
+            'content_length_limit': data.get('content_length_limit', None),
         }
 
 

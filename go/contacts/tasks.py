@@ -33,10 +33,13 @@ def delete_group(account_key, group_key):
     # We do this one at a time because we're already saving them one at a time
     # and the boilerplate for fetching batches without having them all sit in
     # memory is ugly.
-    for contact_key in group.backlinks.contacts():
-        contact = contact_store.get_contact_by_key(contact_key)
-        contact.groups.remove(group)
-        contact.save()
+    contacts_page = group.backlinks.contact_keys()
+    while contacts_page is not None:
+        for contact_key in contacts_page:
+            contact = contact_store.get_contact_by_key(contact_key)
+            contact.groups.remove(group)
+            contact.save()
+        contacts_page = contacts_page.next_page()
     group.delete()
 
 
@@ -45,11 +48,17 @@ def delete_group_contacts(account_key, group_key):
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
-    contacts = contact_store.get_contacts_for_group(group)
+    contacts_page = contact_store.get_contact_keys_for_group(group)
+    # FIXME: We pull all keys into memory to avoid modifying search results if
+    #        we're deleting contacts that are part of a smart group.
+    contact_keys = []
+    while contacts_page is not None:
+        contact_keys.extend(contacts_page)
+        contacts_page = contacts_page.next_page()
     # We do this one at a time because we're already saving them one at a time
     # and the boilerplate for fetching batches without having them all sit in
     # memory is ugly.
-    for contact_key in contacts:
+    for contact_key in contact_keys:
         contact_store.get_contact_by_key(contact_key).delete()
 
 
@@ -114,10 +123,13 @@ def contacts_to_csv(contacts, include_extra=True):
 
 
 def get_group_contacts(contact_store, *groups):
+    # TODO: FIXME: Kill this thing. It keeps all contact objects in memory.
     contact_keys = []
     for group in groups:
-        contact_keys.extend(contact_store.get_contacts_for_group(group))
-
+        contacts_page = contact_store.get_contact_keys_for_group(group)
+        while contacts_page is not None:
+            contact_keys.extend(contacts_page)
+            contacts_page = contacts_page.next_page()
     return contacts_by_key(contact_store, *contact_keys)
 
 
@@ -327,7 +339,7 @@ def import_and_update_contacts(contact_mangler, account_key, group_key,
     errors = []
     counter = 0
 
-    for contact_dictionary in contact_dictionaries:
+    for idx, contact_dictionary in enumerate(contact_dictionaries):
         try:
             key = contact_dictionary.pop('key')
             contact = contact_store.get_contact_by_key(key)
@@ -335,7 +347,7 @@ def import_and_update_contacts(contact_mangler, account_key, group_key,
             contact_store.update_contact(key, **contact_dictionary)
             counter += 1
         except KeyError, e:
-            errors.append((key, 'No key provided'))
+            errors.append(('row %d' % (idx + 1,), 'No key provided'))
         except ContactNotFoundError, e:
             errors.append((key, str(e)))
         except Exception, e:

@@ -1,4 +1,5 @@
 from zope.interface import implements
+from twisted.internet import reactor
 from twisted.internet.defer import (
     inlineCallbacks, returnValue, maybeDeferred, gatherResults)
 
@@ -6,7 +7,8 @@ from vumi import log
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricPublisher, Metric
-from vumi.config import IConfigData, ConfigText, ConfigDict, ConfigField
+from vumi.config import (
+    IConfigData, ConfigText, ConfigDict, ConfigField, ConfigFloat)
 from vumi.connectors import IgnoreMessage
 
 from go.config import get_conversation_definition
@@ -15,6 +17,7 @@ from go.vumitools.api import (
     ApiEventPublisher)
 from go.vumitools.metrics import (
     get_account_metric_prefix, get_conversation_metric_prefix)
+from go.vumitools.model_object_cache import ModelObjectCache
 from go.vumitools.utils import MessageMetadataHelper
 
 
@@ -52,6 +55,10 @@ class GoWorkerConfigMixin(object):
         "Name of this worker.", required=True, static=True)
     riak_manager = ConfigDict("Riak config.", static=True)
     redis_manager = ConfigDict("Redis config.", static=True)
+    conversation_cache_ttl = ConfigFloat(
+        "TTL (in seconds) for cached conversations. If less than or equal to"
+        " zero, conversations will not be cached.",
+        static=True, default=5)
 
 
 class GoWorkerMixin(object):
@@ -91,10 +98,14 @@ class GoWorkerMixin(object):
     @inlineCallbacks
     def _go_setup_worker(self):
         self._metrics_conversations = set()
-        self._cache_recon_conversations = set()
         config = self.get_static_config()
         if config.worker_name is not None:
             self.worker_name = config.worker_name
+
+        # Not all workers need this, but it's cheap if unused and easier to put
+        # here than a bunch of more specific places.
+        self._conversation_cache = ModelObjectCache(
+            reactor, config.conversation_cache_ttl)
 
         self.metric_publisher = yield self.start_publisher(MetricPublisher)
 
@@ -105,6 +116,7 @@ class GoWorkerMixin(object):
 
     @inlineCallbacks
     def _go_teardown_worker(self):
+        yield self._conversation_cache.cleanup()
         # Sometimes something else closes our Redis connection.
         if self.redis is not None:
             yield self.redis.close_manager()
@@ -115,6 +127,10 @@ class GoWorkerMixin(object):
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
 
+    def _ignore_message(self, failure, msg):
+        failure.trap(IgnoreMessage)
+        log.debug("Ignoring msg due to %r: %r" % (failure.value, msg))
+
     def consume_control_command(self, command_message):
         """
         Handle a VumiApiCommand message that has arrived.
@@ -124,16 +140,20 @@ class GoWorkerMixin(object):
             The command message received for this application.
         """
         cmd_method_name = 'process_command_%(command)s' % command_message
+        command_id = command_message['command_id']
         args = command_message['args']
         kwargs = command_message['kwargs']
         cmd_method = getattr(self, cmd_method_name, None)
         if cmd_method:
-            return cmd_method(*args, **kwargs)
+            d = maybeDeferred(cmd_method, command_id, *args, **kwargs)
+            d.addErrback(self._ignore_message, command_message)
+            return d
         else:
-            return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
+            return self.process_unknown_cmd(
+                cmd_method_name, command_id, *args, **kwargs)
 
     @inlineCallbacks
-    def process_command_collect_metrics(self, conversation_key,
+    def process_command_collect_metrics(self, cmd_id, conversation_key,
                                         user_account_key):
         key_tuple = (conversation_key, user_account_key)
         if key_tuple in self._metrics_conversations:
@@ -146,49 +166,9 @@ class GoWorkerMixin(object):
         yield self.collect_metrics(user_api, conversation_key)
         self._metrics_conversations.remove(key_tuple)
 
-    @inlineCallbacks
-    def process_command_reconcile_cache(self, conversation_key,
-                                        user_account_key):
-        key_tuple = (conversation_key, user_account_key)
-        if key_tuple in self._cache_recon_conversations:
-            log.info("Ignoring conversation %s for user %s because the "
-                     "previous cache recon run is still going." % (
-                         conversation_key, user_account_key))
-            return
-        self._cache_recon_conversations.add(key_tuple)
-        user_api = self.get_user_api(user_account_key)
-        yield self.reconcile_cache(user_api, conversation_key)
-        self._cache_recon_conversations.remove(key_tuple)
-
-    def process_unknown_cmd(self, method_name, *args, **kwargs):
-        log.error("Unknown vumi API command: %s(%s, %s)" % (
-            method_name, args, kwargs))
-
-    @inlineCallbacks
-    def reconcile_cache(self, user_api, conversation_key, delta=0.01):
-        """Reconcile the cached values for the conversation.
-
-        Checks whether caches for a conversation are off by a given
-        delta and if so, initiates a full cache reconciliation.
-
-        :param VumiUserApi user_api:
-            The Api for this user
-        :param str conversation_key:
-            The key of the conversation to reconcile
-        :param float delta:
-            If the key count difference between the message_store and
-            the cache is bigger than the delta a reconciliation is initiated.
-        """
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
-        if conv is None:
-            log.error('Conversation does not exist: %s' % (conversation_key,))
-            return
-
-        log.msg('Reconciling cache for %s' % (conversation_key,))
-        message_store = user_api.api.mdb
-        if (yield message_store.needs_reconciliation(conv.batch.key, delta)):
-            yield message_store.reconcile_cache(conv.batch.key)
-        log.msg('Cache reconciled for %s' % (conversation_key,))
+    def process_unknown_cmd(self, method_name, command_id, *args, **kwargs):
+        log.error("Unknown vumi API command: %s(%s, %s) id=%s" % (
+            method_name, args, kwargs, command_id))
 
     @inlineCallbacks
     def get_contact_for_message(self, message, create=True):
@@ -206,14 +186,16 @@ class GoWorkerMixin(object):
 
     def get_conversation(self, user_account_key, conversation_key):
         user_api = self.get_user_api(user_account_key)
-        return user_api.get_wrapped_conversation(conversation_key)
+        return self._conversation_cache.get_model(
+            user_api.get_wrapped_conversation, conversation_key)
 
     def get_router(self, user_account_key, router_key):
         user_api = self.get_user_api(user_account_key)
         return user_api.get_router(router_key)
 
     def get_metadata_helper(self, msg):
-        return MessageMetadataHelper(self.vumi_api, msg)
+        return MessageMetadataHelper(
+            self.vumi_api, msg, conversation_cache=self._conversation_cache)
 
     @inlineCallbacks
     def find_outboundmessage_for_event(self, event):
@@ -334,7 +316,7 @@ class GoApplicationMixin(GoWorkerMixin):
         returnValue(self.get_config_for_conversation(conversation))
 
     @inlineCallbacks
-    def process_command_start(self, user_account_key, conversation_key):
+    def process_command_start(self, cmd_id, user_account_key, conversation_key):
         log.info("Starting conversation '%s' for user '%s'." % (
             conversation_key, user_account_key))
         conv = yield self.get_conversation(user_account_key, conversation_key)
@@ -353,7 +335,7 @@ class GoApplicationMixin(GoWorkerMixin):
         yield conv.save()
 
     @inlineCallbacks
-    def process_command_stop(self, user_account_key, conversation_key):
+    def process_command_stop(self, cmd_id, user_account_key, conversation_key):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
             log.warning(
@@ -370,8 +352,8 @@ class GoApplicationMixin(GoWorkerMixin):
         yield conv.save()
 
     @inlineCallbacks
-    def process_command_send_message(self, user_account_key, conversation_key,
-                                     command_data, **kwargs):
+    def process_command_send_message(self, cmd_id, user_account_key,
+                                     conversation_key, command_data, **kwargs):
         if kwargs:
             log.info("Received unexpected command args: %s" % (kwargs,))
         conv = yield self.get_conversation(user_account_key, conversation_key)
@@ -425,7 +407,7 @@ class GoRouterMixin(GoWorkerMixin):
         returnValue(self.get_config_for_router(router))
 
     @inlineCallbacks
-    def process_command_start(self, user_account_key, router_key):
+    def process_command_start(self, cmd_id, user_account_key, router_key):
         log.info("Starting router '%s' for user '%s'." % (
             router_key, user_account_key))
         router = yield self.get_router(user_account_key, router_key)
@@ -443,7 +425,7 @@ class GoRouterMixin(GoWorkerMixin):
         yield router.save()
 
     @inlineCallbacks
-    def process_command_stop(self, user_account_key, router_key):
+    def process_command_stop(self, cmd_id, user_account_key, router_key):
         log.info("Stopping router '%s' for user '%s'." % (
             router_key, user_account_key))
         router = yield self.get_router(user_account_key, router_key)

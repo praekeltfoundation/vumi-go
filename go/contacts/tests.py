@@ -35,6 +35,19 @@ def group_url(group_key):
     return reverse('contacts:group', kwargs={'group_key': group_key})
 
 
+def get_all_contact_keys_for_group(contact_store, group):
+    """
+    Walk the index pages returned from get_contact_keys_for_group() and collect
+    all the keys.
+    """
+    keys = []
+    index_page = contact_store.get_contact_keys_for_group(group)
+    while index_page is not None:
+        keys.extend(index_page)
+        index_page = index_page.next_page()
+    return keys
+
+
 class BaseContactsTestCase(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
@@ -60,6 +73,18 @@ class BaseContactsTestCase(GoDjangoTestCase):
             name=unicode(name or TEST_CONTACT_NAME),
             surname=unicode(surname or TEST_CONTACT_SURNAME),
             msisdn=unicode(msisdn), **kwargs)
+
+    def get_group_contact_keys(self, group):
+        contact_keys = []
+        contact_keys_page = group.backlinks.contact_keys()
+        while contact_keys_page is not None:
+            contact_keys.extend(contact_keys_page)
+            contact_keys_page = contact_keys_page.next_page()
+        return contact_keys
+
+    def assert_group_contacts_count(self, group, count):
+        contact_keys = self.get_group_contact_keys(group)
+        self.assertEqual(len(contact_keys), count)
 
 
 class TestContacts(BaseContactsTestCase):
@@ -245,7 +270,8 @@ class TestContacts(BaseContactsTestCase):
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
-    def specify_columns(self, group_key, columns=None, import_rule=None):
+    def specify_columns(self, group_key, columns=None, import_rule=None,
+                        follow=False):
         group_url = reverse('contacts:group', kwargs={
             'group_key': group_key,
         })
@@ -262,7 +288,7 @@ class TestContacts(BaseContactsTestCase):
             defaults.update(columns)
         if import_rule is not None:
             defaults['import_rule'] = import_rule
-        return self.client.post(group_url, defaults)
+        return self.client.post(group_url, defaults, follow=follow)
 
     def test_contact_upload_into_new_group(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
@@ -276,11 +302,11 @@ class TestContacts(BaseContactsTestCase):
         group = newest(self.contact_store.list_groups())
         self.assertEqual(group.name, u"a new group")
         self.assertRedirects(response, group_url(group.key))
-        self.assertEqual(len(group.backlinks.contacts()), 0)
+        self.assert_group_contacts_count(group, 0)
 
         response = self.specify_columns(group.key)
         self.assertRedirects(response, group_url(group.key))
-        self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assert_group_contacts_count(group, 3)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_upload_into_existing_group(self):
@@ -294,10 +320,10 @@ class TestContacts(BaseContactsTestCase):
 
         self.assertRedirects(response, group_url(group.key))
         group = self.contact_store.get_group(group.key)
-        self.assertEqual(len(group.backlinks.contacts()), 0)
+        self.assert_group_contacts_count(group, 0)
         response = self.specify_columns(group.key)
         self.assertRedirects(response, group_url(group.key))
-        self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assert_group_contacts_count(group, 3)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_unicode_chars_in_csv(self):
@@ -314,7 +340,7 @@ class TestContacts(BaseContactsTestCase):
         response = self.specify_columns(group.key)
         self.assertRedirects(response, group_url(group.key))
         group = self.contact_store.get_group(group.key)
-        self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assert_group_contacts_count(group, 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
@@ -351,7 +377,7 @@ class TestContacts(BaseContactsTestCase):
         })
         self.assertRedirects(response, group_url(group.key))
         group = self.contact_store.get_group(group.key)
-        self.assertEqual(len(group.backlinks.contacts()), 2)
+        self.assert_group_contacts_count(group, 2)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
@@ -375,7 +401,7 @@ class TestContacts(BaseContactsTestCase):
         self.assertRedirects(response, group_url(group.key))
 
         group = self.contact_store.get_group(group.key)
-        self.assertEqual(len(group.backlinks.contacts()), 2)
+        self.assert_group_contacts_count(group, 2)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
@@ -438,7 +464,7 @@ class TestContacts(BaseContactsTestCase):
             contact.save()
             # what we're going to update
             contact_data.append({
-                u'created_at': '2014-01-0%d' % (i + 1,),
+                u'created_at': '2014-01-0%dT00:00:00' % (i + 1,),
                 u'key': contact.key,
                 u'name': u'name %s' % (i,),
                 u'surname': u'surname %s' % (i,),
@@ -477,7 +503,7 @@ class TestContacts(BaseContactsTestCase):
         self.assertRedirects(response, group_url(group.key))
 
         group = self.contact_store.get_group(group.key)
-        self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assert_group_contacts_count(group, 3)
         [email] = mail.outbox
 
         self.assertEqual('Contact import completed.', email.subject)
@@ -590,7 +616,7 @@ class TestContacts(BaseContactsTestCase):
         self.assertRedirects(response, group_url(group1.key))
 
         group = self.contact_store.get_group(group1.key)
-        self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assert_group_contacts_count(group, 3)
         [email] = mail.outbox
 
         self.assertEqual('Contact import completed.', email.subject)
@@ -651,6 +677,68 @@ class TestContacts(BaseContactsTestCase):
 
         os.unlink(csv.name)
 
+    def test_import_existing_is_truth_fail_on_empty_key(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        # create existing contacts that'll be updated.
+        contact_data = []
+        contacts = []
+        for i in range(3):
+            # the original contact
+            contact = self.mkcontact(
+                name='foo', surname='bar', msisdn='270000000')
+            # what we're going to update
+            contacts.append(contact)
+            contact_data.append({
+                u'key': contact.key,
+                u'twitter_handle': u'tweetor%d' % (i,),
+            })
+
+        # add a bad key
+        contact_data[1]['key'] = ''
+
+        csv = self.create_csv(['key', 'twitter_handle'], contact_data)
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': group.key,
+            'file': csv,
+        })
+
+        self.assertRedirects(response, group_url(group.key))
+        response = self.specify_columns(group.key, columns={
+            'column-0': 'key',
+            'column-1': 'twitter_handle',
+            'normalize-0': '',
+            'normalize-1': '',
+        }, import_rule='existing_is_truth')
+        self.assertRedirects(response, group_url(group.key))
+
+        [email] = mail.outbox
+
+        self.assertEqual('Contact import completed.', email.subject)
+        self.assertTrue(
+            "We've successfully imported 2 of your contact(s)" in email.body)
+        self.assertTrue(
+            "Unfortunately there were also 1 errors. These are listed below:"
+            in email.body)
+        self.assertTrue(
+            "row 2: No key provided" in email.body)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+        new_contact = self.contact_store.get_contact_by_key(contacts[0].key)
+        self.assertEqual(new_contact.twitter_handle, 'tweetor0')
+        self.assertEqual(new_contact.groups.keys(), [group.key])
+
+        new_contact = self.contact_store.get_contact_by_key(contacts[1].key)
+        self.assertEqual(new_contact.twitter_handle, None)
+        self.assertEqual(new_contact.groups.keys(), [])
+
+        new_contact = self.contact_store.get_contact_by_key(contacts[2].key)
+        self.assertEqual(new_contact.twitter_handle, 'tweetor2')
+        self.assertEqual(new_contact.groups.keys(), [group.key])
+
+        os.unlink(csv.name)
+
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         new_group_name = u'Testing a ünicode grøüp'
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
@@ -666,7 +754,7 @@ class TestContacts(BaseContactsTestCase):
         self.assertRedirects(response, group_url(group.key))
         response = self.specify_columns(group_key=group.key)
         self.assertRedirects(response, group_url(group.key))
-        self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assert_group_contacts_count(group, 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
@@ -701,7 +789,7 @@ class TestContacts(BaseContactsTestCase):
         self.assertEqual(file_name, 'sample-contacts.csv')
 
         # Nothing should have been written to the db by now.
-        self.assertEqual(len(list(group.backlinks.contacts())), 0)
+        self.assert_group_contacts_count(group, 0)
 
         # Now submit the column names and check that things have been written
         # to the db
@@ -709,7 +797,7 @@ class TestContacts(BaseContactsTestCase):
         # Check the redirect
         self.assertRedirects(response, group_url)
         # 3 records should have been written to the db.
-        self.assertEqual(len(list(group.backlinks.contacts())), 3)
+        self.assert_group_contacts_count(group, 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
@@ -765,20 +853,54 @@ class TestContacts(BaseContactsTestCase):
         # We only get one column here.
         self.assertContains(response, 'column-0')
         self.assertNotContains(response, 'column-1')
-        # Pretend we got all three so we can explode again in the next bit.
+        # Now we follow the response and check that we fail sensibly by
+        # reporting that we don't have the expected fields.
+        response = self.specify_columns(group_key=group.key, columns={
+            'column-0': 'name',
+            'normalize-0': '',
+        }, follow=True)
+        self.assertRedirects(response, group_url(group.key))
+
+        messages = [(m.tags, m.message) for m in response.context['messages']]
+        self.assertEqual(messages, [
+            ("error", "Please specify a Contact Number field."),
+        ])
+
+        group = newest(self.contact_store.list_groups())
+        self.assert_group_contacts_count(group, 0)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
+
+    def test_contact_parsing_failure_no_msisdn_field(self):
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+                        'fixtures', 'sample-contacts.csv'))
+        response = self.client.post(reverse('contacts:people'), {
+            'name': 'broken contacts group',
+            'file': csv_file,
+        }, follow=True)
+        group = newest(self.contact_store.list_groups())
+        self.assertRedirects(response, group_url(group.key))
+
+        # Here we don't specify an msisdn field, so that we explode in
+        # the next bit.
         response = self.specify_columns(group_key=group.key, columns={
             'column-0': 'name',
             'column-1': 'surname',
-            'column-2': 'msisdn',
+            'column-2': 'accidental_extra',
             'normalize-0': '',
             'normalize-1': '',
             'normalize-2': '',
-        })
+        }, follow=True)
+        self.assertRedirects(response, group_url(group.key))
+
+        messages = [(m.tags, m.message) for m in response.context['messages']]
+        self.assertEqual(messages, [
+            ("error", "Please specify a Contact Number field."),
+        ])
+
         group = newest(self.contact_store.list_groups())
-        contacts = group.backlinks.contacts()
-        self.assertEqual(len(contacts), 0)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertTrue('went wrong' in mail.outbox[0].subject)
+        self.assert_group_contacts_count(group, 0)
+        self.assertEqual(len(mail.outbox), 0)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_normalization(self):
@@ -802,7 +924,7 @@ class TestContacts(BaseContactsTestCase):
             'normalize-3': 'float',
             'normalize-4': 'msisdn_za',
         })
-        contacts = self.get_all_contacts(group.backlinks.contacts())
+        contacts = self.get_all_contacts(self.get_group_contact_keys(group))
 
         self.assertTrue(all([contact.msisdn == '+27761234561' for contact in
                         contacts]))
@@ -943,7 +1065,7 @@ class TestGroups(BaseContactsTestCase):
 
         self.assertEqual(
             [c2.key],
-            self.contact_store.get_contacts_for_group(group))
+            get_all_contact_keys_for_group(self.contact_store, group))
 
     def test_group_empty_post(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
@@ -1007,7 +1129,7 @@ class TestGroups(BaseContactsTestCase):
         self.assertRedirects(response, group_url)
 
         self.assertEqual(
-            self.contact_store.get_contacts_for_group(group), [])
+            [], get_all_contact_keys_for_group(self.contact_store, group))
         self.assertFalse(contact in self.contact_store.list_contacts())
 
     def test_group_contact_export(self):
@@ -1197,15 +1319,16 @@ class TestSmartGroups(BaseContactsTestCase):
     def test_smart_group_clearing(self):
         contact = self.mkcontact()
         group = self.mksmart_group('msisdn:\+12*')
-        self.assertEqual([contact.key],
-                         self.contact_store.get_contacts_for_group(group))
+        self.assertEqual(
+            [contact.key],
+            get_all_contact_keys_for_group(self.contact_store, group))
         response = self.client.post(
             reverse('contacts:group', kwargs={'group_key': group.key}),
             {'_delete_group_contacts': 1})
         self.assertRedirects(response, reverse('contacts:group', kwargs={
             'group_key': group.key}))
         self.assertEqual(
-            [], self.contact_store.get_contacts_for_group(group))
+            [], get_all_contact_keys_for_group(self.contact_store, group))
 
     def test_smart_group_updating(self):
         group = self.mksmart_group('msisdn:\+12*')
@@ -1253,9 +1376,10 @@ class TestSmartGroups(BaseContactsTestCase):
         self.assertEqual(u'a smart group', group.name)
         self.assertEqual(u'msisdn:\+12*', group.query)
         self.assertEqual(
-            self.contact_store.get_static_contacts_for_group(group), [])
+            list(self.contact_store.get_static_contact_keys_for_group(group)),
+            [])
         self.assertEqual(
-            self.contact_store.get_dynamic_contacts_for_group(group),
+            list(self.contact_store.get_dynamic_contact_keys_for_group(group)),
             [contact.key])
         self.assertEqual(
             self.contact_store.get_contacts_for_conversation(conversation),
@@ -1346,7 +1470,7 @@ class TestSmartGroups(BaseContactsTestCase):
         self.assertEqual(group.name, 'a smart group')
         response = self.client.post(group_url, {'_export': True})
 
-        contacts = self.contact_store.get_contacts_for_group(group)
+        contacts = get_all_contact_keys_for_group(self.contact_store, group)
         self.assertEqual(len(contacts), 3)
 
         self.assertRedirects(response, group_url)

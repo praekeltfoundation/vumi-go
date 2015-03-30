@@ -72,8 +72,8 @@ class StreamingHTTPWorker(NoStreamingHTTPWorker):
     def get_conversation_resource(self):
         return AuthorizedResource(self, StreamingConversationResource)
 
-    def get_api_config(self, conversation, key, default=None):
-        return conversation.config.get('http_api', {}).get(key, default)
+    def get_all_api_config(self, conversation):
+        return conversation.config.get('http_api', {})
 
     def stream(self, stream_class, conversation_key, message):
         # Publish the message by manually specifying the routing key

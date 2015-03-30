@@ -19,6 +19,12 @@ from go.base import utils as base_utils
 from go.vumitools.tests.helpers import VumiApiHelper, PatchHelper
 
 
+class CommandIO(object):
+    def __init__(self):
+        self.stdout = StringIO()
+        self.stderr = StringIO()
+
+
 class GoDjangoTestCase(TestCase):
     implements(IHelperEnabledTestCase)
 

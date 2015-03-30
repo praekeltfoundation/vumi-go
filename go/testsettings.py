@@ -55,7 +55,8 @@ del VUMIGO_TEST_DB
 # test client was logged in as will suddenly not exist).
 CELERY_DB_REUSE_MAX = 100
 
-EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+CELERY_EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'
@@ -71,3 +72,5 @@ DISALLOWED_MIDDLEWARE = set([
 MIDDLEWARE_CLASSES = tuple([x for x in MIDDLEWARE_CLASSES
                             if x not in DISALLOWED_MIDDLEWARE])
 del DISALLOWED_MIDDLEWARE
+
+GOOGLE_ANALYTICS_UA = "TEST-GA-UA"

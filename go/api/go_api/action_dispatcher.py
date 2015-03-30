@@ -94,7 +94,7 @@ class ConversationActionDispatcher(ActionDispatcher):
     dispatcher_type_name = "conversation"
 
     def get_object_by_key(self, user_api, conversation_key):
-        return user_api.get_conversation(conversation_key)
+        return user_api.get_wrapped_conversation(conversation_key)
 
 
 class RouterActionDispatcher(ActionDispatcher):

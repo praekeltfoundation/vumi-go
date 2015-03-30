@@ -22,11 +22,12 @@ def get_uniques(contact_store, contact_keys=None,
 def get_messages_count(conversations):
     totals = {}
     for conv in conversations:
-        totals.setdefault(conv.conversation_type, {})
-        totals[conv.conversation_type].setdefault('sent', 0)
-        totals[conv.conversation_type].setdefault('received', 0)
-        totals[conv.conversation_type]['sent'] += conv.count_sent_messages()
-        totals[conv.conversation_type]['received'] += conv.count_replies()
+        conv_type = conv.conversation_type
+        totals.setdefault(conv_type, {})
+        totals[conv_type].setdefault('sent', 0)
+        totals[conv_type].setdefault('received', 0)
+        totals[conv_type]['sent'] += conv.count_outbound_messages()
+        totals[conv_type]['received'] += conv.count_inbound_messages()
     return totals
 
 

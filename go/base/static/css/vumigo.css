@@ -4,11 +4,11 @@ body {
 }
 a:link,
 button {
-  -webkit-transition: color 0s, background 0s;
-  -moz-transition: color 0s, background 0s;
-  -o-transition: color 0s, background 0s;
-  -ms-transition: color 0s, background 0s;
-  transition: color 0s, background 0s;
+  -webkit-transition: color 0.1s, background 0.1s;
+  -moz-transition: color 0.1s, background 0.1s;
+  -o-transition: color 0.1s, background 0.1s;
+  -ms-transition: color 0.1s, background 0.1s;
+  transition: color 0.1s, background 0.1s;
 }
 .btn.disabled {
   pointer-events: auto;
@@ -566,6 +566,9 @@ button {
 }
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
+}
+.dialogue #diagram .send.state .preview.mode .channel-type {
+  font-weight: bold;
 }
 .conversation.groups .group-table th:first-child,
 .conversation.groups .group-table td:first-child {

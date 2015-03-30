@@ -102,6 +102,17 @@ class ComplexEditViewDefinition(ConversationViewDefinitionBase):
     edit_view = ComplexEditView
 
 
+class DefaultConfigConversationDefinition(ConversationDefinitionBase):
+    conversation_type = 'default_config'
+    conversation_display_name = 'Default Config Conversation'
+
+    def get_default_config(self, name, description):
+        return {
+            'name': name,
+            'description': description,
+        }
+
+
 DUMMY_CONVERSATION_DEFS = {
     'dummy': (
         DummyConversationDefinition, ConversationViewDefinitionBase),
@@ -113,6 +124,8 @@ DUMMY_CONVERSATION_DEFS = {
         SimpleEditConversationDefinition, SimpleEditViewDefinition),
     'complex_edit': (
         ComplexEditConversationDefinition, ComplexEditViewDefinition),
+    'default_config': (
+        DefaultConfigConversationDefinition, ConversationViewDefinitionBase),
 }
 
 
@@ -176,6 +189,7 @@ class TestConversationsDashboardView(BaseConversationViewTestCase):
         myconv = self.user_helper.create_conversation(u'dummy', name=u'myconv')
         response = self.client.get(reverse('conversations:index'))
         self.assertContains(response, u'myconv')
+        self.assertContains(response, u'Dummy Conversation')
 
         self.assertContains(response, self.get_view_url(myconv, 'show'))
         self.assertContains(response, self.get_view_url(
@@ -307,6 +321,20 @@ class TestNewConversationView(BaseConversationViewTestCase):
         self.assertEqual(conv.name, 'new conv')
         self.assertEqual(conv.conversation_type, 'extra_endpoints')
         self.assertEqual(list(conv.extra_endpoints), [u'extra'])
+
+    def test_post_new_conversation_default_config(self):
+        self.user_helper.add_app_permission(u'gotest.default_config')
+        conv_data = {
+            'name': 'new conv',
+            'description': 'a new conversation',
+            'conversation_type': 'default_config',
+        }
+        self.client.post(reverse('conversations:new_conversation'), conv_data)
+        [conv] = self.user_helper.user_api.active_conversations()
+        self.assertEqual(conv.config, {
+            'name': 'new conv',
+            'description': 'a new conversation'
+        })
 
 
 class TestConversationViews(BaseConversationViewTestCase):
@@ -500,6 +528,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         [start_cmd] = self.get_api_commands_sent()
         self.assertEqual(start_cmd, VumiApiCommand.command(
             '%s_application' % (conv.conversation_type,), 'start',
+            command_id=start_cmd["command_id"],
             user_account_key=conv.user_account.key, conversation_key=conv.key))
 
     def test_stop(self):
@@ -575,6 +604,18 @@ class TestConversationViews(BaseConversationViewTestCase):
             'attachment; filename=%s-inbound.json' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
+    def test_download_csv_messages_inbound(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get("%s?format=csv" % (
+            self.get_view_url(conv, 'export_messages')))
+        self.assertEqual(
+            response['X-Accel-Redirect'],
+            '/message_store_exporter/%s/inbound.csv' % (conv.batch.key,))
+        self.assertEqual(
+            response['Content-Disposition'],
+            'attachment; filename=%s-inbound.csv' % (conv.key,))
+        self.assertEqual(response['X-Accel-Buffering'], 'no')
+
     def test_download_json_messages_outbound(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         response = self.client.get('%s?direction=outbound' % (
@@ -586,6 +627,30 @@ class TestConversationViews(BaseConversationViewTestCase):
             response['Content-Disposition'],
             'attachment; filename=%s-outbound.json' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
+
+    def test_download_csv_messages_outbound(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get('%s?direction=outbound&format=csv' % (
+            self.get_view_url(conv, 'export_messages'),))
+        self.assertEqual(
+            response['X-Accel-Redirect'],
+            '/message_store_exporter/%s/outbound.csv' % (conv.batch.key,))
+        self.assertEqual(
+            response['Content-Disposition'],
+            'attachment; filename=%s-outbound.csv' % (conv.key,))
+        self.assertEqual(response['X-Accel-Buffering'], 'no')
+
+    def test_download_messages_unknown_direction_404(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get('%s?direction=unknown&format=json' % (
+            self.get_view_url(conv, 'export_messages'),))
+        self.assertEqual(response.status_code, 404)
+
+    def test_download_messages_unknown_format_404(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get('%s?direction=outbound&format=unknown' % (
+            self.get_view_url(conv, 'export_messages'),))
+        self.assertEqual(response.status_code, 404)
 
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -654,21 +719,46 @@ class TestConversationViews(BaseConversationViewTestCase):
 
     def test_message_list_inbound_uniques_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
+        self.msg_helper.add_inbound_to_conv(conv, 10)
         response = self.client.get(self.get_view_url(conv, 'message_list'))
-        self.assertContains(
-            response, 'Messages from 10 unique people')
+        self.assertContains(response, 'Messages from 10 unique people')
+
+    def test_message_list_inbound_download_links_display(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get(self.get_view_url(conv, 'message_list'))
+        inbound_json_url = ('%s?direction=inbound&format=json' %
+                            self.get_view_url(conv, 'export_messages'))
+        self.assertContains(response, 'href="%s"' % inbound_json_url)
+        self.assertContains(response, "Download received messages as JSON")
+        inbound_csv_url = ('%s?direction=inbound&format=csv' %
+                           self.get_view_url(conv, 'export_messages'))
+        self.assertContains(response, 'href="%s"' % inbound_csv_url)
+        self.assertContains(response, "Download received messages as CSV")
 
     def test_message_list_outbound_uniques_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
-        replies = self.msg_helper.add_replies_to_conv(conv, msgs)
+        self.msg_helper.add_replies_to_conv(conv, msgs)
         response = self.client.get(
             self.get_view_url(conv, 'message_list'), {
                 'direction': 'outbound'
             })
-        self.assertContains(
-            response, 'Messages to 10 unique people')
+        self.assertContains(response, 'Messages to 10 unique people')
+
+    def test_message_list_outbound_download_links_display(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        response = self.client.get(
+            self.get_view_url(conv, 'message_list'), {
+                'direction': 'outbound'
+            })
+        outbound_json_url = ('%s?direction=outbound&format=json' %
+                             self.get_view_url(conv, 'export_messages'))
+        self.assertContains(response, 'href="%s"' % outbound_json_url)
+        self.assertContains(response, "Download sent messages as JSON")
+        outbound_csv_url = ('%s?direction=outbound&format=csv' %
+                            self.get_view_url(conv, 'export_messages'))
+        self.assertContains(response, 'href="%s"' % outbound_csv_url)
+        self.assertContains(response, "Download sent messages as CSV")
 
     def test_message_list_no_sensitive_msgs(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -932,9 +1022,10 @@ class TestConversationTasks(GoDjangoTestCase):
             email, 'messages-export.zip', 'messages-export.csv')
         reader = csv.DictReader(fp)
         message_ids = [row['message_id'] for row in reader]
-        self.assertEqual(
-            set(message_ids),
-            set(conv.inbound_keys() + conv.outbound_keys()))
+        all_keys = set()
+        all_keys.update(conv.mdb.batch_inbound_keys(conv.batch.key))
+        all_keys.update(conv.mdb.batch_outbound_keys(conv.batch.key))
+        self.assertEqual(set(message_ids), all_keys)
 
     def test_export_conversation_message_session_events(self):
         conv = self.create_conversation(reply_count=0)

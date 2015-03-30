@@ -2,6 +2,17 @@ from go.vumitools.metrics import (
     ConversationMetricSet, MessagesSentMetric, MessagesReceivedMetric)
 
 
+def detach_removed_endpoints(conv, user_account, old, new):
+    conn = conv.get_connector()
+    rt = user_account.routing_table
+
+    for endpoint in set(old) - set(new):
+        rt.remove_endpoint(conn, endpoint)
+
+    rt.validate_all_entries()
+    return user_account.save()
+
+
 class ConversationDefinitionBase(object):
     """Definition of conversation lifecycle and possible actions.
 
@@ -28,6 +39,14 @@ class ConversationDefinitionBase(object):
     def __init__(self, conv=None):
         self.conv = conv
 
+    @classmethod
+    def get_default_config(cls, name, description):
+        """
+        Override to provide conversation type-specific defaults for a
+        conversation config.
+        """
+        return {}
+
     def get_actions(self):
         return [action(self.conv) for action in self.actions]
 
@@ -38,6 +57,25 @@ class ConversationDefinitionBase(object):
 
     def configured_endpoints(self, config):
         return []
+
+    def get_endpoints(self, config):
+        endpoints = list(self.extra_static_endpoints)
+
+        for endpoint in self.configured_endpoints(config):
+            if (endpoint != 'default') and (endpoint not in endpoints):
+                endpoints.append(endpoint)
+
+        return endpoints
+
+    def update_config(self, user_account, config):
+        old_endpoints = self.get_endpoints(self.conv.config)
+        endpoints = self.get_endpoints(config)
+
+        self.conv.set_config(config)
+        self.conv.c.extra_endpoints = endpoints
+
+        return detach_removed_endpoints(
+            self.conv, user_account, old_endpoints, endpoints)
 
     def is_config_valid(self):
         raise NotImplementedError()

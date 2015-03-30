@@ -55,6 +55,7 @@ class TestWikipediaViews(GoDjangoTestCase):
             'include_url_in_sms': True,
             'mobi_url_host': 'http://mobi/',
             'shortening_api_url': 'http://wtxt.io/api/',
+            'transliterate_unicode': True,
         }, follow=True)
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         reloaded_conv = conv_helper.get_conversation()
@@ -63,6 +64,7 @@ class TestWikipediaViews(GoDjangoTestCase):
             'include_url_in_sms': True,
             'mobi_url_host': 'http://mobi/',
             'shortening_api_url': 'http://wtxt.io/api/',
+            'transliterate_unicode': True,
         })
 
     def test_edit_set_no_fields(self):
@@ -78,4 +80,5 @@ class TestWikipediaViews(GoDjangoTestCase):
         reloaded_conv = conv_helper.get_conversation()
         self.assertEqual(reloaded_conv.config, {
             'include_url_in_sms': False,
+            'transliterate_unicode': False,
         })

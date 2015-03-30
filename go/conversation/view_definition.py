@@ -2,11 +2,10 @@ import csv
 import json
 import logging
 import functools
-import re
 import sys
 from StringIO import StringIO
+from collections import defaultdict
 
-from django.conf import settings
 from django.views.generic import View, TemplateView
 from django import forms
 from django.shortcuts import redirect, Http404
@@ -15,8 +14,8 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from vumi.message import parse_vumi_date
 
-from go.base import message_store_client as ms_client
 from go.base.utils import page_range_window, sendfile
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
@@ -203,17 +202,22 @@ class ExportMessageView(ConversationApiView):
         if direction not in ['inbound', 'outbound']:
             raise Http404()
 
-        url = '/message_store_exporter/%s/%s.json' % (conversation.batch.key,
-                                                      direction)
-        return sendfile(url, buffering=False, filename='%s-%s.json' % (
-            conversation.key, direction))
+        export_format = request.GET.get('format', 'json')
+        if export_format not in ['csv', 'json']:
+            raise Http404()
+
+        url = '/message_store_exporter/%s/%s.%s' % (
+            conversation.batch.key, direction, export_format)
+        return sendfile(url, buffering=False, filename='%s-%s.%s' % (
+            conversation.key, direction, export_format))
 
     def post(self, request, conversation):
         export_conversation_messages_unsorted.delay(
             request.user_api.user_account_key, conversation.key)
-        messages.info(request, 'Conversation messages CSV file export '
-                                'scheduled. CSV file should arrive in '
-                                'your mailbox shortly.')
+        messages.info(
+            request,
+            'Conversation messages CSV file export scheduled. CSV file should'
+            ' arrive in your mailbox shortly.')
         return self.redirect_to(
             'message_list', conversation_key=conversation.key)
 
@@ -235,23 +239,22 @@ class MessageListView(ConversationTemplateView):
         :param str query:
             The query string to search messages for in the batch's inbound
             messages.
+            NOTE: This is currently unused.
         """
         direction = request.GET.get('direction', 'inbound')
         page = request.GET.get('p', 1)
-        query = request.GET.get('q', None)
-        token = None
 
         batch_id = conversation.batch.key
 
         # Paginator starts counting at 1 so 0 would also be invalid
-        inbound_message_paginator = Paginator(
-            PagedMessageCache(conversation.count_replies(),
-                lambda start, stop: conversation.received_messages_in_cache(
-                    start, stop)), 20)
-        outbound_message_paginator = Paginator(
-            PagedMessageCache(conversation.count_sent_messages(),
-                lambda start, stop: conversation.sent_messages_in_cache(
-                    start, stop)), 20)
+        inbound_message_paginator = Paginator(PagedMessageCache(
+            conversation.count_inbound_messages(),
+            lambda start, stop: conversation.received_messages_in_cache(
+                start, stop)), 20)
+        outbound_message_paginator = Paginator(PagedMessageCache(
+            conversation.count_outbound_messages(),
+            lambda start, stop: conversation.sent_messages_in_cache(
+                start, stop)), 20)
 
         tag_context = {
             'batch_id': batch_id,
@@ -263,32 +266,7 @@ class MessageListView(ConversationTemplateView):
             'message_direction': direction,
         }
 
-        # If we're doing a query we can shortcut the results as we don't
-        # need all the message paginator stuff since we're loading the results
-        # asynchronously with JavaScript.
-        client = ms_client.Client(settings.MESSAGE_STORE_API_URL)
-        if query and not token:
-            token = client.match(batch_id, direction, [{
-                'key': 'msg.content',
-                'pattern': re.escape(query),
-                'flags': 'i',
-                }])
-            tag_context.update({
-                'query': query,
-                'token': token,
-            })
-            return tag_context
-        elif query and token:
-            match_result = ms_client.MatchResult(client, batch_id, direction,
-                                                    token, page=int(page),
-                                                    page_size=20)
-            message_paginator = match_result.paginator
-            tag_context.update({
-                'token': token,
-                'query': query,
-                })
-
-        elif direction == 'inbound':
+        if direction == 'inbound':
             message_paginator = inbound_message_paginator
         else:
             message_paginator = outbound_message_paginator
@@ -333,8 +311,8 @@ class MessageListView(ConversationTemplateView):
                                         in_reply_to, content)
                 messages.info(request, 'Reply scheduled for sending.')
             else:
-                messages.error(request,
-                    'Something went wrong. Please try again.')
+                messages.error(
+                    request, 'Something went wrong. Please try again.')
         return self.redirect_to(
             'message_list', conversation_key=conversation.key)
 
@@ -408,10 +386,10 @@ class EditConversationView(ConversationTemplateView):
 
     def _render_forms(self, request, conversation, edit_forms):
         return self.render_to_response({
-                'conversation': conversation,
-                'edit_forms_media': self.sum_media(edit_forms),
-                'edit_forms': edit_forms,
-                })
+            'conversation': conversation,
+            'edit_forms_media': self.sum_media(edit_forms),
+            'edit_forms': edit_forms,
+        })
 
     def get(self, request, conversation):
         edit_forms = self.make_forms(conversation)
@@ -464,9 +442,9 @@ class EditConversationView(ConversationTemplateView):
                 config = self.process_form(edit_form)
             else:
                 config[key] = self.process_form(edit_form)
-        conversation.set_config(config)
-        conversation.c.extra_endpoints = self.view_def.get_endpoints(config)
 
+        user_account = request.user_api.get_user_account()
+        self.view_def._conv_def.update_config(user_account, config)
         conversation.save()
 
 
@@ -578,9 +556,28 @@ class AggregatesConversationView(ConversationTemplateView):
         sio = StringIO()
         writer = csv.writer(sio)
         direction = request.GET.get('direction', 'inbound')
-        writer.writerows(conversation.get_aggregate_count(direction))
-        return HttpResponse(sio.getvalue(),
-            content_type='text/csv; charset=utf-8')
+        writer.writerows(self.get_aggregate_counts(conversation, direction))
+        return HttpResponse(
+            sio.getvalue(), content_type='text/csv; charset=utf-8')
+
+    def get_aggregate_counts(self, conv, direction):
+        """
+        Get aggregated total count of messages handled bucketed per day.
+        """
+        message_callback = {
+            'inbound': conv.mdb.batch_inbound_keys_with_timestamps,
+            'outbound': conv.mdb.batch_outbound_keys_with_timestamps,
+        }.get(direction, conv.mdb.batch_inbound_keys_with_timestamps)
+
+        aggregates = defaultdict(int)
+        index_page = message_callback(conv.batch.key)
+        while index_page is not None:
+            for key, timestamp in index_page:
+                timestamp = parse_vumi_date(timestamp)
+                aggregates[timestamp.date()] += 1
+            index_page = index_page.next_page()
+
+        return sorted(aggregates.items())
 
 
 class EditConversationGroupsView(ConversationTemplateView):
@@ -765,11 +762,7 @@ class ConversationViewDefinitionBase(object):
         return self._conv_def.extra_static_endpoints
 
     def get_endpoints(self, config):
-        endpoints = list(self.extra_static_endpoints)
-        for endpoint in self._conv_def.configured_endpoints(config):
-            if (endpoint != 'default') and (endpoint not in endpoints):
-                endpoints.append(endpoint)
-        return endpoints
+        return self._conv_def.get_endpoints(config)
 
     @property
     def is_editable(self):

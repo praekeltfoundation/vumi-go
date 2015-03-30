@@ -46,7 +46,7 @@ DATABASES = {
 
 INTERNAL_IPS = (
     '127.0.0.1',
-    )
+)
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -155,6 +155,7 @@ INSTALLED_APPS = (
     'django.contrib.flatpages',
     'django.contrib.humanize',
     # Uncomment the next line to enable the admin:
+    'grappelli',
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
@@ -276,7 +277,7 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 VUMI_API_CONFIG = {
     'redis_manager': {'key_prefix': 'vumigo', 'db': 1},
     'riak_manager': {'bucket_prefix': 'vumigo.'},
-    }
+}
 
 VXPOLLS_REDIS_CONFIG = {
     'key_prefix': 'vumigo',
@@ -305,10 +306,10 @@ CELERYBEAT_SCHEDULE = {
         'schedule': crontab(hour=0, minute=0),
         'args': ('daily',)
     },
-#    'generate-monthly-account-statements': {
-#        'task': 'go.billing.tasks.generate_monthly_account_statements',
-#        'schedule': crontab(day_of_month=1),
-#    },
+    # 'generate-monthly-account-statements': {
+    #     'task': 'go.billing.tasks.generate_monthly_account_statements',
+    #     'schedule': crontab(day_of_month=1),
+    # },
 }
 
 try:
@@ -350,6 +351,10 @@ PIPELINE_CSS = {
         'source_filenames': static_paths(paths['client']['styles']['go']),
         'output_filename': 'export/go.css',
     },
+    'invoice': {
+        'source_filenames': static_paths(paths['client']['styles']['invoice']),
+        'output_filename': 'export/go-invoice.css',
+    },
 }
 
 PIPELINE_TEMPLATE_FUNC = '_.template'
@@ -372,3 +377,5 @@ PIPELINE_JS = {
 }
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
+GRAPPELLI_ADMIN_TITLE = "Vumi Go Admin"

@@ -3,52 +3,55 @@
 {% load billing_tags %}
 
 {% block navigation %}
-<nav class="main-nav navbar navbar-default">
-    <ul class="nav navbar-nav pull-left">
-        <li class="navbar-brand">
-            <a class="navbar-brand" href="/">
-                <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo" width="63">
-            </a>
-        </li>
-        {% if request.user.is_authenticated %}
-        <li><a href="{% url 'conversations:index' %}">Dashboard</a></li>
-        <li><a href="{% url 'contacts:people' %}">Contacts</a></li>
-        {% endif %}
-    </ul>
+<div class="main-nav navbar navbar-default" role="banner">
+    <nav role="navigation">
+        <ul class="nav navbar-nav pull-left">
+            <li class="navbar-brand">
+                <a class="navbar-brand" href="/">
+                    <img src="{{ STATIC_URL }}img/logo-sml.png" alt="Vumi Go" class="logo" width="63">
+                </a>
+            </li>
+            {% if request.user.is_authenticated %}
+            <li><a href="{% url 'conversations:index' %}">Dashboard</a></li>
+            <li><a href="{% url 'contacts:people' %}">Contacts</a></li>
+            {% endif %}
+        </ul>
 
-    <ul class="nav navbar-nav pull-right">
-        {% comment %}
-        TODO
-        <li class="dropdown">
-            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                Balance
-                <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu" role="menu">
-                <li><a href="{% url 'wizard:pricing' %}">Pricing</a></li>
-            </ul>
-        </li>
-        {% endcomment %}
+        <ul class="nav navbar-nav pull-right">
+            {% comment %}
+            TODO
+            <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                    Balance
+                    <b class="caret"></b>
+                </a>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="{% url 'wizard:pricing' %}">Pricing</a></li>
+                </ul>
+            </li>
+            {% endcomment %}
 
-        <li><a href="{% url 'help' %}">Help</a></li>
-        {% if request.user.is_authenticated %}
-        <li class="dropdown">
-            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                Account
-                <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu" role="menu">
-                {% if user.is_staff %}
-                <li><a href="{% url 'admin:index' %}">Site Admin</a></li>
-                {% endif %}
-                <li><a href="{% url 'account:details' %}">Details</a></li>
-                <li><a href="{% url 'auth_logout' %}">Logout</a></li>
-                <li><span class="status">{% credit_balance request.user %}</span></li>
-            </ul>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
+            <li><a href="{% url 'help' %}">Help</a></li>
+            {% if request.user.is_authenticated %}
+            <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                    Account
+                    <b class="caret"></b>
+                </a>
+                <ul class="dropdown-menu" role="menu">
+                    {% if user.is_staff %}
+                    <li><a href="{% url 'admin:index' %}">Site Admin</a></li>
+                    {% endif %}
+                    <li><a href="{% url 'account:details' %}">Details</a></li>
+                    <li><a href="{% url 'account:billing' %}">Billing Statements</a></li>
+                    <li><a href="{% url 'auth_logout' %}">Logout</a></li>
+                </ul>
+            </li>
+            <li><a href="{% url 'account:billing' %}">{% credit_balance request.user %}</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -83,8 +86,6 @@
     {% block content_main %}
     {% endblock %}
 
-    {% block content_main_footer %}
-    {% endblock %}
 </div>
 {% endblock %}
 

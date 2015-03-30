@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block content_actions_right %}
-    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
+    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right" role="search">
         <div class="form-group">
             <input type="text" id="search-filter-input" class="form-control" name="q" value="{{query|default:''}}" placeholder="Find people...">
         <button type="submit" id="search-filter-btn" class="btn btn-default">Search</button>
@@ -23,7 +23,7 @@
 
 {% block content_main %}
     <div class="row">
-        <div class="col-md-3 sidebar">
+        <div class="col-md-3 sidebar" role="navigation">
             <div class="nav nav-list extra-actions">
                 <a class="btn btn-link" href="{% url 'contacts:new_person' %}">New contact...</a>
             </div>

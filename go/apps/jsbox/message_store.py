@@ -10,7 +10,7 @@ from functools import wraps
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.sandbox import SandboxResource
+from vxsandbox import SandboxResource
 
 
 def conversation_owner(func):
@@ -105,7 +105,7 @@ class MessageStoreResource(SandboxResource):
             - ``reason``: Reason for the failure.
 
         """
-        count = yield conversation.count_replies()
+        count = yield conversation.count_inbound_messages()
         returnValue(self.reply(command, success=True, count=count))
 
     @conversation_owner
@@ -131,7 +131,7 @@ class MessageStoreResource(SandboxResource):
             - ``reason``: Reason for the failure.
 
         """
-        count = yield conversation.count_sent_messages()
+        count = yield conversation.count_outbound_messages()
         returnValue(self.reply(command, success=True, count=count))
 
     @conversation_owner

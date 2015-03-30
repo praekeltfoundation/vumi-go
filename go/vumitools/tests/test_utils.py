@@ -1,7 +1,9 @@
+from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.tests.helpers import VumiTestCase, MessageHelper
 
+from go.vumitools.model_object_cache import ModelObjectCache
 from go.vumitools.utils import MessageMetadataDictHelper, MessageMetadataHelper
 from go.vumitools.tests.helpers import VumiApiHelper
 
@@ -227,6 +229,29 @@ class TestMessageMetadataHelper(VumiTestCase):
         })
         md_conv = yield md.get_conversation()
         self.assertEqual(md_conv.key, conversation.key)
+
+    @inlineCallbacks
+    def test_get_conversation_with_cache(self):
+        """
+        If we're given a conversation cache, we fetch the conversation through
+        that.
+        """
+        conv_cache = ModelObjectCache(reactor, 5)
+        self.add_cleanup(conv_cache.cleanup)
+        conversation = yield self.user_helper.create_conversation(
+            u'bulk_message')
+        msg = self.mk_msg(go_metadata={
+            'user_account': self.user_helper.account_key,
+            'conversation_key': conversation.key,
+        })
+        md = MessageMetadataHelper(
+            self.vumi_helper.get_vumi_api(), msg,
+            conversation_cache=conv_cache)
+
+        self.assertEqual(conv_cache._models.keys(), [])
+        md_conv = yield md.get_conversation()
+        self.assertEqual(md_conv.key, conversation.key)
+        self.assertEqual(conv_cache._models.keys(), [conversation.key])
 
     @inlineCallbacks
     def test_clear_object_cache(self):

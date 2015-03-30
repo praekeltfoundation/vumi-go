@@ -39,8 +39,7 @@ class ApplicationMultiplexerConfig(GoRouterWorker.CONFIG_CLASS):
 
 class ApplicationMultiplexer(GoRouterWorker):
     """
-    Router that multiplexes between different endpoints
-    on the outbound path.
+    Router that multiplexes between different endpoints on the outbound path.
 
     State Diagram (for fun):
 
@@ -63,7 +62,7 @@ class ApplicationMultiplexer(GoRouterWorker):
     |  selected      +
     |                |
     +----------------+
-"""
+    """
 
     CONFIG_CLASS = ApplicationMultiplexerConfig
 
@@ -112,7 +111,7 @@ class ApplicationMultiplexer(GoRouterWorker):
             log.msg("Creating session for user %s" % user_id)
             session = {}
             state = self.STATE_START
-            yield session_manager.create_session(user_id)
+            yield session_manager.create_session(user_id, state=state)
         elif session_event == TransportUserMessage.SESSION_CLOSE:
             yield self.handle_session_close(config, session, msg)
             return

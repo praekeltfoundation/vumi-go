@@ -7,7 +7,8 @@ from django.forms.models import BaseModelFormSet
 
 from go.vumitools.api import VumiApi
 
-from go.billing.models import Account, TagPool, MessageCost, Transaction
+from go.billing.models import Account, TagPool, MessageCost
+from go.billing.django_utils import load_account_credits
 
 
 def cost_rounded_to_zero(a, context):
@@ -28,14 +29,18 @@ class MessageCostForm(ModelForm):
 
         * the resulting message credit cost does not underflow to zero.
         * the resulting session credit cost does not underflow to zero.
+        * the resulting storage credit cost does not underflow to zero.
+        * the resulting session unit credit cost does not underflow to zero.
         * that if the tag pool is not set, neither is the account (
           this is because our message cost lookup currently ignore
           such message costs)
         """
         cleaned_data = super(MessageCostForm, self).clean()
         message_cost = cleaned_data.get('message_cost')
+        storage_cost = cleaned_data.get('storage_cost')
         session_cost = cleaned_data.get('session_cost')
         markup_percent = cleaned_data.get('markup_percent')
+        session_unit_cost = cleaned_data.get('session_unit_cost')
 
         if message_cost and markup_percent:
             context = Context()
@@ -46,6 +51,15 @@ class MessageCostForm(ModelForm):
                     "The resulting cost per message (in credits) was rounded"
                     " to 0.")
 
+        if storage_cost and markup_percent:
+            context = Context()
+            credit_cost = MessageCost.calculate_storage_credit_cost(
+                storage_cost, markup_percent, context=context)
+            if cost_rounded_to_zero(credit_cost, context):
+                raise forms.ValidationError(
+                    "The resulting storage cost per message (in credits) was "
+                    "rounded to 0.")
+
         if session_cost and markup_percent:
             context = Context()
             session_credit_cost = MessageCost.calculate_session_credit_cost(
@@ -54,6 +68,15 @@ class MessageCostForm(ModelForm):
                 raise forms.ValidationError(
                     "The resulting cost per session (in credits) was rounded"
                     " to 0.")
+
+        if session_unit_cost and markup_percent:
+            context = Context()
+            credit_cost = MessageCost.calculate_session_unit_credit_cost(
+                session_unit_cost, markup_percent, context=context)
+            if cost_rounded_to_zero(credit_cost, context):
+                raise forms.ValidationError(
+                    "The resulting cost per session time length (in credits)"
+                    " was rounded to 0.")
 
         if not cleaned_data.get("tag_pool") and cleaned_data.get("account"):
             raise forms.ValidationError(
@@ -81,23 +104,7 @@ class CreditLoadForm(ModelForm):
         self.fields['account_number'].widget = forms.HiddenInput()
 
     def load_credits(self):
-        account = self.instance
-
-        # Create a new transaction
-        transaction = Transaction.objects.create(
-            account_number=account.account_number,
-            credit_amount=self.cleaned_data['credit_amount'])
-
-        # Update the selected account's credit balance
-        account.credit_balance += transaction.credit_amount
-        account.alert_credit_balance = account.credit_balance * \
-            account.alert_threshold / Decimal(100.0)
-
-        account.save()
-
-        # Update the transaction's status to Completed
-        transaction.status = Transaction.STATUS_COMPLETED
-        transaction.save()
+        load_account_credits(self.instance, self.cleaned_data['credit_amount'])
 
     class Meta:
         model = Account

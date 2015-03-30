@@ -1,0 +1,11 @@
+<p class="text">
+Recipients are sent a message over:
+
+<% if (!typeLabel) { %>
+<span class='channel-type'>No channel type assigned</span>
+<% } else { %>
+<span class='channel-type'><%= typeLabel %></span>
+<% } %>
+</p>
+
+<p class="text send-text"><%= text %></p>

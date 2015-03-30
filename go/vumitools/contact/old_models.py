@@ -64,7 +64,6 @@ class ContactVNone(Model):
             # FIXME: Find a better way to do get delivery_class and get rid of
             #        this hack.
             return self.msisdn
-        # TODO: delivery classes need to be defined somewhere
         if delivery_class in ('sms', 'ussd'):
             return self.msisdn
         elif delivery_class == 'gtalk':
@@ -120,7 +119,6 @@ class ContactV1(Model):
             # FIXME: Find a better way to do get delivery_class and get rid of
             #        this hack.
             return self.msisdn
-        # TODO: delivery classes need to be defined somewhere
         if delivery_class in ('sms', 'ussd'):
             return self.msisdn
         elif delivery_class == 'gtalk':

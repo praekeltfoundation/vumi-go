@@ -8,9 +8,8 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 
 from vumi import errors
-from vumi.blinkenlights import metrics
+from vumi.blinkenlights.metrics import Aggregator
 from vumi.message import TransportUserMessage
-from vumi.errors import InvalidMessage
 from vumi.config import ConfigContext
 from vumi import log
 
@@ -44,6 +43,7 @@ class BaseResource(resource.Resource):
         return user_api.get_wrapped_conversation(conversation_key)
 
     def finish_response(self, request, body, code, status=None):
+        request.setHeader('Content-Type', 'application/json; charset=utf-8')
         request.setResponseCode(code, status)
         request.write(body)
         request.finish()
@@ -74,8 +74,9 @@ class MsgOptions(object):
     """Helper for sanitizing msg options from clients."""
 
     WHITELIST = {}
+    VALIDATION = ()
 
-    def __init__(self, payload):
+    def __init__(self, payload, api_config):
         self.errors = []
         for key, checker in sorted(self.WHITELIST.iteritems()):
             value = payload.get(key)
@@ -84,6 +85,11 @@ class MsgOptions(object):
                     "Invalid or missing value for payload key %r" % (key,))
             else:
                 setattr(self, key, value)
+
+        for checker in self.VALIDATION:
+            error = checker(payload, api_config)
+            if error is not None:
+                self.errors.append(error)
 
     @property
     def is_valid(self):
@@ -101,6 +107,10 @@ class MsgOptions(object):
 
 class MsgCheckHelpers(object):
     @staticmethod
+    def is_unicode(value):
+        return isinstance(value, unicode)
+
+    @staticmethod
     def is_unicode_or_none(value):
         return (value is None) or (isinstance(value, unicode))
 
@@ -108,14 +118,34 @@ class MsgCheckHelpers(object):
     def is_session_event(value):
         return value in TransportUserMessage.SESSION_EVENTS
 
+    # The following checkers perform more complex validation based on the
+    # entire payload and the API config.
+
+    @staticmethod
+    def is_within_content_length_limit(payload, api_config):
+        """
+        Check that the message content is within the configured length limit.
+        """
+        length_limit = api_config.get("content_length_limit")
+        if (length_limit is not None) and (payload["content"] is not None):
+            content_length = len(payload["content"])
+            if content_length > length_limit:
+                return "Payload content too long: %s > %s" % (
+                    content_length, length_limit)
+        return None
+
 
 class SendToOptions(MsgOptions):
     """Payload options for messages sent with `.send_to(...)`."""
 
     WHITELIST = {
         'content': MsgCheckHelpers.is_unicode_or_none,
-        'to_addr': MsgCheckHelpers.is_unicode_or_none,
+        'to_addr': MsgCheckHelpers.is_unicode,
     }
+
+    VALIDATION = (
+        MsgCheckHelpers.is_within_content_length_limit,
+    )
 
 
 class ReplyToOptions(MsgOptions):
@@ -125,6 +155,10 @@ class ReplyToOptions(MsgOptions):
         'content': MsgCheckHelpers.is_unicode_or_none,
         'session_event': MsgCheckHelpers.is_session_event,
     }
+
+    VALIDATION = (
+        MsgCheckHelpers.is_within_content_length_limit,
+    )
 
 
 class MessageResource(BaseResource):
@@ -163,10 +197,17 @@ class MessageResource(BaseResource):
             return
 
         in_reply_to = payload.get('in_reply_to')
-        if in_reply_to:
-            yield self.handle_PUT_in_reply_to(request, payload, in_reply_to)
-        else:
-            yield self.handle_PUT_send_to(request, payload)
+        user_account = request.getUser()
+        d = self.worker.concurrency_limiter.start(user_account)
+        try:
+            yield d  # Wait for our concurrency limiter to let us move on.
+            if in_reply_to:
+                yield self.handle_PUT_in_reply_to(
+                    request, payload, in_reply_to)
+            else:
+                yield self.handle_PUT_send_to(request, payload)
+        finally:
+            self.worker.concurrency_limiter.stop(user_account)
 
     @inlineCallbacks
     def handle_PUT_in_reply_to(self, request, payload, in_reply_to):
@@ -189,7 +230,8 @@ class MessageResource(BaseResource):
             self.client_error_response(request, 'Invalid in_reply_to value')
             return
 
-        msg_options = ReplyToOptions(payload)
+        msg_options = ReplyToOptions(
+            payload, self.worker.get_all_api_config(conversation))
         if not msg_options.is_valid:
             self.client_error_response(request, msg_options.error_msg)
             return
@@ -208,9 +250,22 @@ class MessageResource(BaseResource):
     @inlineCallbacks
     def handle_PUT_send_to(self, request, payload):
         user_account = request.getUser()
+        account = yield self.worker.vumi_api.get_user_account(user_account)
+        if not account.disable_optouts:
+            optout_store = self.worker.vumi_api.get_user_api(user_account) \
+                .optout_store
+            to_addr_type = payload.get('to_addr_type', 'msisdn')
+            to_addr = payload.get('to_addr')
+            optout = yield optout_store.get_opt_out(to_addr_type, to_addr)
+            if optout:
+                self.client_error_response(
+                    request, 'Recipient with %s %s has opted out' % (
+                        str(to_addr_type), str(to_addr)))
+                return
         conversation = yield self.get_conversation(user_account)
 
-        msg_options = SendToOptions(payload)
+        msg_options = SendToOptions(
+            payload, self.worker.get_all_api_config(conversation))
         if not msg_options.is_valid:
             self.client_error_response(request, msg_options.error_msg)
             return
@@ -233,9 +288,13 @@ class MetricResource(BaseResource):
         return NOT_DONE_YET
 
     def find_aggregate(self, name):
-        agg_class = getattr(metrics, name, None)
-        if agg_class is None:
-            raise InvalidAggregate('%s is not a valid aggregate.' % (name,))
+        if not isinstance(name, basestring):
+            raise InvalidAggregate('%r is not a valid aggregate.' % (name,))
+        agg_name = str(name).lower()
+        try:
+            agg_class = Aggregator.from_name(agg_name)
+        except KeyError:
+            raise InvalidAggregate("'%s' is not a valid aggregate." % (name,))
         return agg_class
 
     def parse_metrics(self, data):
@@ -253,8 +312,8 @@ class MetricResource(BaseResource):
 
         try:
             metrics = self.parse_metrics(data)
-        except (ValueError, InvalidAggregate, InvalidMessage):
-            self.client_error_response(request, 'Invalid Message')
+        except InvalidAggregate as err:
+            self.client_error_response(request, str(err))
             return
 
         conversation = yield self.get_conversation(user_account)

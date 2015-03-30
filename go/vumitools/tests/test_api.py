@@ -11,10 +11,11 @@ from vumi.errors import VumiError
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
-from go.vumitools.api import VumiUserApi, VumiApiCommand, VumiApiEvent
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 from go.vumitools.routing_table import GoConnector, RoutingTable
 from go.vumitools.tests.helpers import VumiApiHelper
+from go.vumitools.api import (
+    VumiUserApi, VumiApiCommand, VumiApiEvent, TagpoolSet)
 
 
 class TestTxVumiApi(VumiTestCase):
@@ -37,13 +38,34 @@ class TestTxVumiApi(VumiTestCase):
     def test_send_command(self):
         for addr in ["+12", "+34"]:
             yield self.vumi_api.send_command(
-                    "dummy_worker", "send",
-                    batch_id="b123", content="Hello!",
-                    msg_options={'from_addr': '+56'}, to_addr=addr)
+                "dummy_worker", "send", batch_id="b123", content="Hello!",
+                msg_options={'from_addr': '+56'}, to_addr=addr)
 
         [cmd1, cmd2] = self.vumi_helper.get_dispatched_commands()
         self.assertEqual(cmd1.payload['kwargs']['to_addr'], '+12')
         self.assertEqual(cmd2.payload['kwargs']['to_addr'], '+34')
+
+    @inlineCallbacks
+    def test_tagpool_set(self):
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1'], {
+            'display_name': 'Pool 1'
+        })
+
+        yield self.vumi_helper.setup_tagpool(u'pool2', [u'1.1'], {
+            'display_name': 'Pool 2'
+        })
+
+        pools = yield self.vumi_api.tagpool_set([u'pool1', u'pool2'])
+        self.assertEqual(sorted(pools.pools()), [u'pool1', u'pool2'])
+        self.assertEqual(pools.display_name('pool1'), 'Pool 1')
+        self.assertEqual(pools.display_name('pool2'), 'Pool 2')
+
+    @inlineCallbacks
+    def test_known_tagpools(self):
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1'])
+        yield self.vumi_helper.setup_tagpool(u'pool2', [u'2.1'])
+        pools = yield self.vumi_api.known_tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1', u'pool2'])
 
 
 class TestVumiApi(TestTxVumiApi):
@@ -257,6 +279,9 @@ class TestTxVumiUserApi(VumiTestCase):
 
     @inlineCallbacks
     def test_get_routing_table(self):
+        """
+        .get_routing_table() returns the correct routing table data.
+        """
         conv = yield self._setup_routing_table_test_new_conv()
         channel = yield self.user_api.get_channel((u'pool1', u'1234'))
         user = yield self.user_api.get_user_account()
@@ -271,7 +296,19 @@ class TestTxVumiUserApi(VumiTestCase):
                     u'CONVERSATION:bulk_message:%s' % conv.key, u'default']},
         }))
 
-        # TODO: This belongs in a different test.
+    @inlineCallbacks
+    def test_archived_routing_table(self):
+        """
+        Archiving a conversation removes routing entries for that conversation.
+        """
+        conv = yield self._setup_routing_table_test_new_conv()
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
+        user = yield self.user_api.get_user_account()
+        self._set_routing_table(user, [(conv, channel), (channel, conv)])
+        yield user.save()
+        routing_table = yield self.user_api.get_routing_table()
+        self.assertNotEqual(routing_table, RoutingTable())
+
         yield conv.archive_conversation()
 
         routing_table = yield self.user_api.get_routing_table()
@@ -364,6 +401,54 @@ class TestTxVumiUserApi(VumiTestCase):
                 'namespace': 'bulk_message',
             }})
 
+    @inlineCallbacks
+    def test_tagpools(self):
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1'])
+        yield self.vumi_helper.setup_tagpool(u'pool2', [u'2.1'])
+        yield self.user_helper.add_tagpool_permission(u'pool1')
+        yield self.user_helper.add_tagpool_permission(u'pool2')
+
+        pools = yield self.user_api.tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1', u'pool2'])
+
+    @inlineCallbacks
+    def test_tagpools_max_keys(self):
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1', u'1.2'])
+        yield self.user_helper.add_tagpool_permission(u'pool1', max_keys=2)
+
+        pools = yield self.user_api.tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1'])
+
+        yield self.user_api.acquire_specific_tag((u'pool1', u'1.1'))
+        pools = yield self.user_api.tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1'])
+
+        yield self.user_api.acquire_specific_tag((u'pool1', u'1.2'))
+        pools = yield self.user_api.tagpools()
+        self.assertEqual(pools.pools(), [])
+
+    @inlineCallbacks
+    def test_tagpools_available(self):
+        user2_helper = yield self.vumi_helper.make_user(u'User 2')
+        user2_api = user2_helper.user_api
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1', u'1.2'])
+        yield self.user_helper.add_tagpool_permission(u'pool1')
+        yield user2_helper.add_tagpool_permission(u'pool1')
+
+        yield user2_api.acquire_specific_tag((u'pool1', u'1.1'))
+        pools = yield self.user_api.tagpools()
+        self.assertEqual(sorted(pools.pools()), [u'pool1'])
+
+        yield user2_api.acquire_specific_tag((u'pool1', u'1.2'))
+        pools = yield self.user_api.tagpools()
+        self.assertEqual(pools.pools(), [])
+
+    @inlineCallbacks
+    def test_tagpools_accessible(self):
+        yield self.vumi_helper.setup_tagpool(u'pool1', [u'1.1'])
+        pools = yield self.user_api.tagpools()
+        self.assertEqual(pools.pools(), [])
+
 
 class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True
@@ -380,7 +465,7 @@ class TestTxVumiRouterApi(VumiTestCase):
         self.user_api = self.user_helper.user_api
 
     def create_router(self, **kw):
-        # TODO: Fix test infrastructe to avoid duplicating this stuff.
+        # TODO: Fix test infrastructure to avoid duplicating this stuff.
         router_type = kw.pop('router_type', u'keyword')
         name = kw.pop('name', u'routername')
         description = kw.pop('description', u'')
@@ -511,3 +596,107 @@ class TestVumiApiEvent(VumiTestCase):
         self.assertEqual(event['conversation_key'], 'my_conv')
         self.assertEqual(event['event_type'], 'my_event')
         self.assertEqual(event['content'], {"foo": "bar"})
+
+
+class TestTagpoolSet(VumiTestCase):
+    def test_pools(self):
+        pools = TagpoolSet({
+            'pool1': {},
+            'pool2': {}
+        })
+
+        self.assertEqual(sorted(pools.pools()), ['pool1', 'pool2'])
+
+    def test_display_name(self):
+        pools = TagpoolSet({
+            'pool1': {'display_name': 'Pool 1'},
+            'pool2': {'display_name': 'Pool 2'}
+        })
+
+        self.assertEqual(pools.display_name('pool1'), 'Pool 1')
+        self.assertEqual(pools.display_name('pool2'), 'Pool 2')
+
+    def test_display_name_fallback(self):
+        pools = TagpoolSet({
+            'pool1': {'display_name': 'Pool 1'},
+            'pool2': {}
+        })
+
+        self.assertEqual(pools.display_name('pool1'), 'Pool 1')
+        self.assertEqual(pools.display_name('pool2'), 'pool2')
+
+    def test_country_name(self):
+        pools = TagpoolSet({
+            'pool1': {'country_name': 'Foo'},
+            'pool2': {'country_name': 'Bar'}
+        })
+
+        self.assertEqual(pools.country_name('pool1', None), 'Foo')
+        self.assertEqual(pools.country_name('pool2', None), 'Bar')
+
+    def test_country_name_default(self):
+        pools = TagpoolSet({
+            'pool1': {'country_name': 'Foo'},
+            'pool2': {}
+        })
+
+        self.assertEqual(pools.country_name('pool1', 'Baz'), 'Foo')
+        self.assertEqual(pools.country_name('pool2', 'Bar'), 'Bar')
+
+    def test_user_selects_tag(self):
+        pools = TagpoolSet({
+            'pool1': {'user_selects_tag': True},
+            'pool2': {'user_selects_tag': False}
+        })
+
+        self.assertTrue(pools.user_selects_tag('pool1'))
+        self.assertFalse(pools.user_selects_tag('pool2'))
+
+    def test_user_selects_tag_fallback(self):
+        pools = TagpoolSet({
+            'pool1': {'user_selects_tag': True},
+            'pool2': {}
+        })
+
+        self.assertTrue(pools.user_selects_tag('pool1'))
+        self.assertFalse(pools.user_selects_tag('pool2'))
+
+    def test_delivery_class(self):
+        pools = TagpoolSet({
+            'pool1': {'delivery_class': 'sms'},
+            'pool2': {'delivery_class': 'ussd'}
+        })
+
+        self.assertEqual(pools.delivery_class('pool1'), 'sms')
+        self.assertEqual(pools.delivery_class('pool2'), 'ussd')
+
+    def test_delivery_class_fallback(self):
+        pools = TagpoolSet({
+            'pool1': {'delivery_class': 'sms'},
+            'pool2': {}
+        })
+
+        self.assertEqual(pools.delivery_class('pool1'), 'sms')
+        self.assertEqual(pools.delivery_class('pool2'), None)
+
+    def test_delivery_classes(self):
+        pools = TagpoolSet({
+            'pool1': {'delivery_class': 'sms'},
+            'pool2': {'delivery_class': 'ussd'},
+        })
+
+        self.assertEqual(pools.delivery_classes(), ['sms', 'ussd'])
+
+    def test_delivery_classes_unspecifieds(self):
+        pools = TagpoolSet({
+            'pool1': {'delivery_class': 'sms'},
+            'pool2': {},
+        })
+
+        self.assertEqual(pools.delivery_classes(), ['sms'])
+
+    def test_delivery_class_name(self):
+        pools = TagpoolSet({})
+        self.assertEqual(pools.delivery_class_name('sms'), 'SMS')
+        self.assertEqual(pools.delivery_class_name('ussd'), 'USSD')
+        self.assertEqual(pools.delivery_class_name('gtalk'), 'Gtalk')

@@ -20,8 +20,8 @@ Totals per conversation type:
 {{type}}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {% for conversation in conversations %}{{conversation.name}}
-    Sent: {{conversation.count_sent_messages}} to {{conversation.count_outbound_uniques }} uniques.
-    Received: {{conversation.count_replies}} from {{conversation.count_inbound_uniques }} uniques.
+    Sent: {{conversation.count_outbound_messages}} to {{conversation.count_outbound_uniques }} uniques.
+    Received: {{conversation.count_inbound_messages}} from {{conversation.count_inbound_uniques }} uniques.
 
 {% endfor %}
 {% endfor %}

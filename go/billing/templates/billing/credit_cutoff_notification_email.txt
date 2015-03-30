@@ -1,0 +1,15 @@
+
+Hi {{user.get_full_name}}!
+
+Please note that your Vumi Go account ({{account.user.email}}) has reached {{threshold_percent}}% used of the total available credits. Your remaining balance is {{credit_balance}} credits.
+
+You will no longer be able to send messages. Contacts on campaigns over USSD or Voice will receive a notification saying that your account has run out of credits. All incoming messages will be received as normal.
+
+To top up your credits contact your Praekelt programme manager with the number of messages/sessions you want loaded. Once you have loaded enough credits, all messages will be sent and received as normal.
+
+
+Regards,
+
+The Vumi Go Team.
+
+Notification reference number: {{reference}}

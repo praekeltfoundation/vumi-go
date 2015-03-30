@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -56,32 +56,21 @@ class TestConversationWrapper(VumiTestCase):
         yield user_account.save()
 
     @inlineCallbacks
-    def test_count_replies(self):
+    def test_count_inbound_messages(self):
         # XXX: Does this test make sense at all?
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
-        self.assertEqual((yield self.conv.count_replies()), 5)
+        self.assertEqual((yield self.conv.count_inbound_messages()), 5)
 
     @inlineCallbacks
-    def test_inbound_keys(self):
-        messages = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
-        keys = set([message['message_id'] for message in messages])
-        self.assertEqual(set((yield self.conv.inbound_keys())), keys)
-
-    @inlineCallbacks
-    def test_count_sent_messages(self):
+    def test_count_outbound_messages(self):
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        self.assertEqual((yield self.conv.count_sent_messages()), 5)
-
-    @inlineCallbacks
-    def test_outbound_keys(self):
-        messages = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        keys = set([message['message_id'] for message in messages])
-        self.assertEqual(set((yield self.conv.outbound_keys())), keys)
+        self.assertEqual((yield self.conv.count_outbound_messages()), 5)
 
     @inlineCallbacks
     def test_count_inbound_uniques(self):
+        # TODO fix once we support uniques properly again
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(self.conv, 3)
         self.assertEqual((yield self.conv.count_inbound_uniques()), 3)
@@ -92,6 +81,7 @@ class TestConversationWrapper(VumiTestCase):
 
     @inlineCallbacks
     def test_count_outbound_uniques(self):
+        # TODO fix once we support uniques properly again
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 3)
         self.assertEqual((yield self.conv.count_outbound_uniques()), 3)
@@ -99,6 +89,30 @@ class TestConversationWrapper(VumiTestCase):
         self.assertEqual((yield self.conv.count_outbound_uniques()), 4)
         yield self.msg_helper.add_outbound_to_conv(self.conv, 2)
         self.assertEqual((yield self.conv.count_outbound_uniques()), 4)
+
+    @inlineCallbacks
+    def test_collect_messages(self):
+        yield self.conv.start()
+        created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        collected_msgs = yield self.conv.collect_messages(
+            [msg['message_id'] for msg in created_msgs],
+            self.conv.mdb.get_inbound_message,
+            include_sensitive=False, scrubber=lambda msg: msg)
+        self.assertEqual(
+            [msg['message_id'] for msg in collected_msgs],
+            [msg['message_id'] for msg in created_msgs])
+
+    @inlineCallbacks
+    def test_collect_messages_with_unknown_key(self):
+        yield self.conv.start()
+        created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        collected_msgs = yield self.conv.collect_messages(
+            [msg['message_id'] for msg in created_msgs] + [u'unknown-key'],
+            self.conv.mdb.get_inbound_message,
+            include_sensitive=False, scrubber=lambda msg: msg)
+        self.assertEqual(
+            [msg['message_id'] for msg in collected_msgs],
+            [msg['message_id'] for msg in created_msgs])
 
     @inlineCallbacks
     def test_received_messages(self):
@@ -282,20 +296,51 @@ class TestConversationWrapper(VumiTestCase):
         })
 
     @inlineCallbacks
-    def test_get_progress_percentage_acks(self):
-        yield self.conv.start()
-        self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        yield self.store_events(outbound, 'ack', count=4)
-        self.assertEqual((yield self.conv.get_progress_percentage()), 80)
+    def test_get_opted_in_contact_address(self):
+        """
+        If we ask for the opted-in address of a contact that has a suitable
+        address and isn't opted out, we get that address.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, None)
+
+        self.assertEqual(contact_addr, contact.msisdn)
 
     @inlineCallbacks
-    def test_get_progress_percentage_nacks(self):
-        yield self.conv.start()
-        self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        outbound = yield self.msg_helper.add_outbound_to_conv(self.conv, 5)
-        yield self.store_events(outbound, 'nack', count=4)
-        self.assertEqual((yield self.conv.get_progress_percentage()), 80)
+    def test_get_opted_in_contact_address_opted_out(self):
+        """
+        If we ask for the opted-in address of a contact that has a suitable
+        address and is opted out, we get None.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        user_account = yield self.user_helper.get_user_account()
+        opt_out_store = OptOutStore.from_user_account(user_account)
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+        yield opt_out_store.new_opt_out(u"msisdn", contact.msisdn, {
+            "message_id": u"some-message-id",
+        })
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, None)
+
+        self.assertEqual(contact_addr, None)
+
+    @inlineCallbacks
+    def test_get_opted_in_contact_address_no_address(self):
+        """
+        If we ask for the opted-in address of a contact that doesn't have a
+        suitable address, we get None.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, "gtalk")
+
+        self.assertEqual(contact_addr, None)
 
     @inlineCallbacks
     def test_get_opted_in_contact_bunches(self):
@@ -367,127 +412,6 @@ class TestConversationWrapper(VumiTestCase):
             (yield self.conv.get_outbound_throughput(sample_time=20)), 60)
 
     @inlineCallbacks
-    def do_search(self, conv, direction, *args, **kwargs):
-        search_callback = {
-            'inbound': conv.find_inbound_messages_matching,
-            'outbound': conv.find_outbound_messages_matching,
-        }[direction]
-
-        results_callback = {
-            'inbound': conv.get_inbound_messages_for_token,
-            'outbound': conv.get_outbound_messages_for_token,
-        }[direction]
-
-        kwargs.update({'wait': True})
-        token = yield search_callback(*args, **kwargs)
-        messages = yield results_callback(token)
-        returnValue(messages)
-
-    @inlineCallbacks
-    def test_find_inbound_messages_matching(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_inbound_to_conv(self.conv, count=11)
-        matching = yield self.do_search(self.conv, 'inbound', 'inbound')
-        self.assertEqual(len(matching), 11)
-        matching = yield self.do_search(self.conv, 'inbound', 'inbound 0')
-        self.assertEqual(len(matching), 1)
-        matching = yield self.do_search(self.conv, 'inbound', 'inbound 1')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(self.conv, 'inbound', 'inbound 1$')
-        self.assertEqual(len(matching), 1)
-
-    @inlineCallbacks
-    def test_find_inbound_messages_matching_flags(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_inbound_to_conv(self.conv, count=2)
-        matching = yield self.do_search(
-            self.conv, 'inbound', 'INBOUND', flags="i")
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(
-            self.conv, 'inbound', 'INBOUND', flags="")
-        self.assertEqual(len(matching), 0)
-
-    @inlineCallbacks
-    def test_find_inbound_messages_matching_flags_custom_key(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_inbound_to_conv(self.conv, count=2)
-        matching = yield self.do_search(
-            self.conv, 'inbound', 'FROM', flags='i', key='msg.from_addr')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(
-            self.conv, 'inbound', 'FROM', flags='', key='msg.from_addr')
-        self.assertEqual(len(matching), 0)
-
-    @inlineCallbacks
-    def test_find_outbound_messages_matching(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(self.conv, count=11)
-        matching = yield self.do_search(self.conv, 'outbound', 'outbound')
-        self.assertEqual(len(matching), 11)
-        matching = yield self.do_search(self.conv, 'outbound', 'outbound 0')
-        self.assertEqual(len(matching), 1)
-        matching = yield self.do_search(self.conv, 'outbound', 'outbound 1')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(self.conv, 'outbound', 'outbound 1$')
-        self.assertEqual(len(matching), 1)
-
-    @inlineCallbacks
-    def test_find_outbound_messages_matching_flags(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(self.conv, count=2)
-        matching = yield self.do_search(
-            self.conv, 'outbound', 'OUTBOUND', flags='i')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(
-            self.conv, 'outbound', 'OUTBOUND', flags='')
-        self.assertEqual(len(matching), 0)
-
-    @inlineCallbacks
-    def test_find_outbound_messages_matching_flags_custom_key(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(self.conv, count=2)
-        matching = yield self.do_search(
-            self.conv, 'outbound', 'TO', flags='i', key='msg.to_addr')
-        self.assertEqual(len(matching), 2)
-        matching = yield self.do_search(
-            self.conv, 'outbound', 'TO', flags='', key='msg.to_addr')
-        self.assertEqual(len(matching), 0)
-
-    @inlineCallbacks
-    def test_get_aggregate_keys(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(
-            self.conv, 20, time_multiplier=12)
-        inbound_aggregate = yield self.conv.get_aggregate_keys('inbound')
-        self.assertEqual(inbound_aggregate, [])
-        outbound_aggregate = yield self.conv.get_aggregate_keys('outbound')
-        bucket_keys = [bucket for bucket, _ in outbound_aggregate]
-        buckets = [keys for _, keys in outbound_aggregate]
-        self.assertEqual(
-            bucket_keys,
-            [datetime.now().date() - timedelta(days=i)
-                for i in range(9, -1, -1)])
-        for bucket in buckets:
-            self.assertEqual(len(bucket), 2)
-
-    @inlineCallbacks
-    def test_get_aggregate_count(self):
-        yield self.conv.start()
-        yield self.msg_helper.add_outbound_to_conv(
-            self.conv, 20, time_multiplier=12)
-        inbound_aggregate = yield self.conv.get_aggregate_count('inbound')
-        self.assertEqual(inbound_aggregate, [])
-        outbound_aggregate = yield self.conv.get_aggregate_count('outbound')
-        bucket_keys = [bucket for bucket, _ in outbound_aggregate]
-        buckets = [keys for _, keys in outbound_aggregate]
-        self.assertEqual(
-            bucket_keys,
-            [datetime.now().date() - timedelta(days=i)
-                for i in range(9, -1, -1)])
-        for bucket in buckets:
-            self.assertEqual(bucket, 2)
-
-    @inlineCallbacks
     def test_get_groups(self):
         groups = yield self.user_helper.user_api.list_groups()
         self.assertEqual([], groups)
@@ -503,3 +427,13 @@ class TestConversationWrapper(VumiTestCase):
             'conversation_type': self.conv.conversation_type,
             'conversation_key': self.conv.key,
         }})
+
+    @inlineCallbacks
+    def test_conversation_type_display_name(self):
+        conv = yield self.user_helper.create_conversation(u'static_reply')
+        self.assertEqual(
+            conv.conversation_type_display_name, 'Static Reply')
+
+    def test_conversation_type_display_name_fallback(self):
+        self.assertEqual(
+            self.conv.conversation_type_display_name, u'dummy')

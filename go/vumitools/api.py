@@ -3,6 +3,7 @@
 
 """Convenience API, mostly for working with various datastores."""
 
+from uuid import uuid4
 from collections import defaultdict
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -20,9 +21,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.service import Publisher
 from vumi import log
 
-from go.config import (
-    configured_conversations,
-    configured_routers)
+from go.config import configured_conversations, configured_routers
 from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
@@ -151,13 +150,13 @@ class VumiUserApi(object):
         returnValue(channel)
 
     @Manager.calls_manager
-    def finished_conversations(self):
+    def archived_conversations(self):
         conv_store = self.conversation_store
         keys = yield conv_store.list_conversations()
         conversations = []
         for bunch in conv_store.conversations.load_all_bunches(keys):
             conversations.extend((yield bunch))
-        returnValue([c for c in conversations if c.ended()])
+        returnValue([c for c in conversations if c.archived()])
 
     @Manager.calls_manager
     def active_conversations(self):
@@ -181,9 +180,10 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def draft_conversations(self):
-        # TODO: Get rid of this once the old UI finally goes away.
+        # TODO: This should probably be `stopped_conversations` instead, but we
+        #       still apparently use `draft` in the UI in places.
         conversations = yield self.active_conversations()
-        returnValue([c for c in conversations if c.is_draft()])
+        returnValue([c for c in conversations if c.stopped()])
 
     @Manager.calls_manager
     def active_routers(self):
@@ -194,6 +194,15 @@ class VumiUserApi(object):
         for routers_bunch in self.router_store.load_all_bunches(keys):
             routers.extend((yield routers_bunch))
         returnValue(routers)
+
+    @Manager.calls_manager
+    def archived_routers(self):
+        conv_store = self.router_store
+        keys = yield conv_store.list_routers()
+        routers = []
+        for bunch in conv_store.routers.load_all_bunches(keys):
+            routers.extend((yield bunch))
+        returnValue([r for r in routers if r.archived()])
 
     @Manager.calls_manager
     def active_channels(self):
@@ -228,9 +237,7 @@ class VumiUserApi(object):
             if free_tags:
                 available_pools.append(pool)
 
-        pool_data = dict([(pool, (yield self.api.tpm.get_metadata(pool)))
-                          for pool in available_pools])
-        returnValue(TagpoolSet(pool_data))
+        returnValue((yield self.api.tagpool_set(available_pools)))
 
     @Manager.calls_manager
     def applications(self):
@@ -241,12 +248,11 @@ class VumiUserApi(object):
         for permissions in user_account.applications.load_all_bunches():
             app_permissions.extend((yield permissions))
         applications = [permission.application for permission
-                            in app_permissions]
+                        in app_permissions]
         app_settings = configured_conversations()
-        returnValue(SortedDict([(application,
-                        app_settings[application])
-                        for application in sorted(applications)
-                        if application in app_settings]))
+        returnValue(SortedDict([(application, app_settings[application])
+                                for application in sorted(applications)
+                                if application in app_settings]))
 
     @Manager.calls_manager
     def router_types(self):
@@ -511,11 +517,11 @@ class VumiApi(object):
         self.redis = redis
 
         self.tpm = TagpoolManager(self.redis.sub_manager('tagpool_store'))
-        self.mdb = MessageStore(self.manager,
-                                self.redis.sub_manager('message_store'))
+        self.mdb = MessageStore(
+            self.manager, self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
         self.token_manager = TokenManager(
-                                self.redis.sub_manager('token_manager'))
+            self.redis.sub_manager('token_manager'))
         self.session_manager = SessionManager(
             self.redis.sub_manager('session_manager'))
         self.mapi = sender
@@ -584,6 +590,18 @@ class VumiApi(object):
             raise VumiError("No metric publisher available.")
         return MetricManager(prefix, publisher=self.metric_publisher)
 
+    @Manager.calls_manager
+    def tagpool_set(self, pools):
+        pool_data = dict([
+            (pool, (yield self.tpm.get_metadata(pool)))
+            for pool in pools])
+        returnValue(TagpoolSet(pool_data))
+
+    @Manager.calls_manager
+    def known_tagpools(self):
+        pools = yield self.tpm.list_pools()
+        returnValue((yield self.tagpool_set(pools)))
+
 
 class SyncMessageSender(object):
     def __init__(self, amqp_client):
@@ -624,16 +642,33 @@ class ApiEventPublisher(Publisher):
 
 
 class VumiApiCommand(Message):
+    @staticmethod
+    def generate_id():
+        """
+        Generate a unique command id.
+
+        There are places where we want an identifier before we can build a
+        complete command. This lets us do that in a consistent manner.
+        """
+        return uuid4().get_hex()
+
+    def process_fields(self, fields):
+        fields.setdefault('command_id', self.generate_id())
+        return fields
+
     @classmethod
     def command(cls, worker_name, command_name, *args, **kwargs):
-        return cls(**{
+        params = {
             'worker_name': worker_name,
             'command': command_name,
             'args': list(args),  # turn to list to make sure input & output
                                  # stay the same when encoded & decoded as
                                  # JSON.
             'kwargs': kwargs,
-        })
+        }
+        if "command_id" in kwargs:
+            params["command_id"] = kwargs.pop("command_id")
+        return cls(**params)
 
     @classmethod
     def conversation_command(cls, worker_name, command_name, user_account_key,

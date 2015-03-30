@@ -24,6 +24,10 @@ class TokenForm(forms.Form):
     metric_store = forms.CharField(
         help_text='Which store to publish metrics to.',
         required=False)
+    content_length_limit = forms.IntegerField(
+        help_text=('Optional content length limit. If set, messages with'
+                   ' content longer than this will be rejected.'),
+        required=False)
 
     @staticmethod
     def initial_from_config(data):
@@ -34,6 +38,7 @@ class TokenForm(forms.Form):
             'push_message_url': data.get('push_message_url', None),
             'push_event_url': data.get('push_event_url', None),
             'metric_store': data.get('metric_store', DEFAULT_METRIC_STORE),
+            'content_length_limit': data.get('content_length_limit', None),
         }
 
     def to_config(self):
@@ -43,6 +48,7 @@ class TokenForm(forms.Form):
             'push_message_url': data['push_message_url'] or None,
             'push_event_url': data['push_event_url'] or None,
             'metric_store': data.get('metric_store') or DEFAULT_METRIC_STORE,
+            'content_length_limit': data.get('content_length_limit', None),
             # The worker code checks these, but we don't provide config UI for
             # them. They should always be False.
             'ignore_events': False,

@@ -5,7 +5,7 @@
 
 import re
 
-from vumi.application.sandbox import SandboxResource
+from vxsandbox import SandboxResource
 
 from vumi.blinkenlights.metrics import SUM, AVG, MIN, MAX, LAST
 
@@ -24,7 +24,7 @@ class MetricEvent(object):
         'last': LAST
     }
 
-    NAME_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9._]{,100}$")
+    NAME_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9._-]{,100}$")
 
     def __init__(self, store, metric, value, agg):
         self.store = store

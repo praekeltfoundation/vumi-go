@@ -1,0 +1,12 @@
+Hi {{user.get_full_name}}!
+
+Please note that your Vumi Go account ({{account.user.email}}) has reached {{threshold_percent}}% used of the total available credits. Your remaining balance is {{credit_balance}} credits.
+
+To top up your credits contact your Praekelt programme manager with the number of messages/sessions you want loaded.
+
+
+Regards,
+
+The Vumi Go Team.
+
+Notification reference number: {{reference}}

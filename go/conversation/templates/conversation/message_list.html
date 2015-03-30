@@ -25,26 +25,20 @@
         <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
         -->
         <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export CSV via email</a>
-        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}">
+        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}&format=json">
           Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as JSON
         </a>
+        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}&format=csv">
+          Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as CSV
+        </a>
     </div>
-
-    <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right">
-        <input type="hidden" name="direction" value="{{message_direction}}">
-
-        <div class="form-group">
-            <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="form-control">
-        </div>
-        <button type="submit" class="btn btn-default">Search</button>
-    </form>
 
 {% endblock %}
 
 {% block content_main %}
 
     <div class="row">
-        <div class="col-md-3 sidebar">
+        <div class="col-md-3 sidebar" role="navigation">
 
             <ul class="nav nav-list">
                 <li>
@@ -92,7 +86,10 @@
                     {% with conversation.get_progress_status as status %}
                       <div class="well">
                         <table class="table table-condensed">
-                        <caption><h3>Outbound message statistics</h3></caption>
+                        <caption>
+                          <h3>Outbound message statistics</h3>
+                          <p>Sorry, we're having trouble tracking message statistics at the moment, but we are working on it.<br />That means the <strong>statistics might be out of date.</strong></p>
+                        </caption>
                         <thead>
                           <th></th><th>Count</th><th>Percentage</th>
                         </thead>

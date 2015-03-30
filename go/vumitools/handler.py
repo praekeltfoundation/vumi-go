@@ -65,7 +65,7 @@ class SendMessageCommandHandler(EventHandler):
 
         log.info(
             "SendMessageCommandHandler handling event: %s with config: %s" % (
-            event, handler_config))
+                event, handler_config))
 
         user_api = self.get_user_api(event.payload['account_key'])
         conv = yield user_api.conversation_store.get_conversation_by_key(
@@ -81,11 +81,10 @@ class SendMessageCommandHandler(EventHandler):
         }
 
         sm_cmd = VumiApiCommand.command(
-                handler_config['worker_name'],
-                "send_message",
-                command_data=command_data,
-                conversation_key=handler_config['conversation_key'],
-                account_key=event.payload['account_key']
-                )
+            handler_config['worker_name'],
+            "send_message",
+            command_data=command_data,
+            conversation_key=handler_config['conversation_key'],
+            account_key=event.payload['account_key'])
         log.info("Publishing command: %s" % sm_cmd)
         self.dispatcher.api_command_publisher.publish_message(sm_cmd)
