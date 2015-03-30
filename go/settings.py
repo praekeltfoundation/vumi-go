@@ -4,9 +4,13 @@ import os
 import djcelery
 import yaml
 
-# For psycopg2.
-from psycopg2cffi import compat
-compat.register()
+# For psycopg2, if we're using it.
+try:
+    from psycopg2cffi import compat
+except ImportError:
+    pass
+else:
+    compat.register()
 
 djcelery.setup_loader()
 

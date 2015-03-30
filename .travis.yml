@@ -36,13 +36,13 @@ install:
 before_script:
   - "psql -c \"create user go with createdb password 'go';\" -U postgres"
   - "psql -c 'create database go owner go;' -U postgres"
+  - "export VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10"
   - "export PYTHONPATH=."
   - "django-admin.py syncdb --migrate --noinput --settings=go.testsettings"
   - "pip list"
   # To see what version of Riak we're running and check that it's happy.
   - riak version
   - sudo riak-admin member-status
-  - "export VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10"
 script:
   - ./run-tests.sh
   - grunt test
