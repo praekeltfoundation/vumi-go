@@ -2,20 +2,23 @@ language: python
 python:
   - "2.6"
   - "2.7"
-  - "pypy"
 node_js:
   - "0.10"
 env:
-  - RIAK_VERSION="1.4.12-1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
-## Riak 2.0 sometimes doesn't have enough file descriptors:
-## https://github.com/travis-ci/travis-ci/issues/3328
-## Until that's fixed, don't build against new Riak.
-# matrix:
-#   include:
-#     # Test against the Travis-provided version of Riak (currently 2.0.x).
-#     # This is a separate matrix inclusion to avoid spawning unnecessary builds.
-#     - python: "2.7"
-#       env: RIAK_VERSION=current VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+  - RIAK_VERSION="1.4.12-1"
+matrix:
+  include:
+    # Riak 2.0 sometimes doesn't have enough file descriptors:
+    # https://github.com/travis-ci/travis-ci/issues/3328
+    # Until that's fixed, don't build against new Riak.
+    # # Test against the Travis-provided version of Riak (currently 2.0.x).
+    # # This is a separate matrix inclusion to avoid spawning unnecessary builds.
+    # - python: "2.7"
+    #   env: RIAK_VERSION=current
+    # Test on pypy without coverage, because it's unnecessary and very slow.
+    - python: "pypy"
+      env: NO_COVERAGE="1" RIAK_VERSION="1.4.12-1"
+
 services:
   - postgresql
   - redis-server
@@ -39,6 +42,7 @@ before_script:
   # To see what version of Riak we're running and check that it's happy.
   - riak version
   - sudo riak-admin member-status
+  - "export VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10"
 script:
   - ./run-tests.sh
   - grunt test
@@ -46,4 +50,4 @@ after_script:
   - "psql -c 'drop database go;' -U postgres"
   - "psql -c 'drop user go;' -U postgres"
 after_success:
-  - overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info
+  - if [ -z "$NO_COVERAGE" ]; then overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info; fi
