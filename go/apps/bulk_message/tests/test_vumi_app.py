@@ -17,6 +17,12 @@ from go.apps.tests.helpers import AppWorkerHelper
 from go.vumitools.api import VumiApiCommand
 
 
+class BreakerError(Exception):
+    """
+    An exception we can flush without clearing other errors.
+    """
+
+
 class MessageSendBreaker(object):
     """
     A helper to break message sending during a bulk send.
@@ -39,7 +45,7 @@ class MessageSendBreaker(object):
         Send up to self.allow messages, then raise an exception.
         """
         if self._messages_sent >= self.allow:
-            raise Exception("oops")
+            raise BreakerError("oops")
         self._messages_sent += 1
         return self._send_message_via_window(*args, **kw)
 
@@ -359,6 +365,8 @@ class TestBulkMessageApplication(VumiTestCase):
         send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, None)
 
+        self.flushLoggedErrors(BreakerError)
+
     @inlineCallbacks
     def test_interrupted_bulk_send_command_with_duplicates_dedupe(self):
         """
@@ -425,6 +433,8 @@ class TestBulkMessageApplication(VumiTestCase):
 
         send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, None)
+
+        self.flushLoggedErrors(BreakerError)
 
     @inlineCallbacks
     def test_overlapping_bulk_send_commands(self):
