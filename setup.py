@@ -13,9 +13,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         'vumi>=0.5.16',
-        'vxsandbox>=0.5.0',
+        'vxsandbox>=0.5.1',
         'vxpolls',
-        'vumi-wikipedia',
+        'vumi-wikipedia>=0.2.0',
         'Django==1.5.8',
         'gunicorn==0.15.0',
         'South==0.8.2',
