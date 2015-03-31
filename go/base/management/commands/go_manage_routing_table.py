@@ -121,8 +121,8 @@ class Command(BaseCommand):
             return
 
         self.stdout.write("Routing table:\n")
-        for source, values in routing_table._routing_table.iteritems():
+        for source, values in sorted(routing_table._routing_table.iteritems()):
             self.stdout.write("  %s\n" % (source,))
-            for endpoint, dest in values.iteritems():
+            for endpoint, dest in sorted(values.iteritems()):
                 self.stdout.write("      %s  ->  %s - %s\n" % (
                     endpoint, dest[0], dest[1]))
