@@ -520,10 +520,16 @@ def low_credit_notification_confirm_sent(res, notification_id):
         return None
 
 
-@task()
-def create_low_credit_notification(account_number, threshold, balance, cutoff_notification):
+@task(ignore_result=True)
+def create_low_credit_notification(
+        account_number, threshold, balance, cutoff_notification):
     """
     Sends a low credit notification. Returns (model instance id, email_task).
+
+    The result of this task is ignored because nothing checks it and
+    success is ensured by ending the task with a call to
+    :func:`low_credit_notification_confirm_sent` which records whether or not
+    the notification was successfully sent.
     """
     account = Account.objects.get(account_number=account_number)
     notification = LowCreditNotification(
@@ -541,7 +547,7 @@ def create_low_credit_notification(account_number, threshold, balance, cutoff_no
         template = 'billing/credit_cutoff_notification_email.txt'
     else:
         template = 'billing/low_credit_notification_email.txt'
-	
+
     message = render_to_string(
         template,
         {
