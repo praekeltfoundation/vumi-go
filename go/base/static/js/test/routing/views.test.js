@@ -107,8 +107,8 @@ describe("go.routing (views)", function() {
   });
 
   describe(".RoutingStateView", function() {
-    var ChannelModel = routing.models.ChannelModel,
-        RoutingStateView = routing.views.RoutingStateView;
+    var RouterStateView = routing.views.RouterStateView,
+        RouterModel = routing.models.RouterModel;
 
     var diagram,
         state,
@@ -118,53 +118,100 @@ describe("go.routing (views)", function() {
       setUp();
       diagram = newRoutingDiagram();
 
-      var model = new ChannelModel({
-        uuid: 'channel4',
-        tag: ['invisible_sms', '*181#'],
-        name: '*181#',
-        description: 'Invisible Sms: *181#',
-        endpoints: [
-          {uuid: 'endpoint80', name: 'default'},
-          {uuid: 'endpoint81', name: 'secondary'}]
+      var model = new RouterModel({
+        uuid: 'router3',
+        type: 'keyword',
+        name: 'keyword-router',
+        description: 'Keyword',
+        channel_endpoints: [{uuid: 'endpoint12', name: 'default'}],
+        conversation_endpoints: [
+          {uuid: 'endpoint13', name: 'default'},
+          {uuid: 'endpoint14', name: 'default'},
+          {uuid: 'endpoint15', name: 'default'},
+          {uuid: 'endpoint16', name: 'default'}
+        ]
       });
 
-      state = diagram.states.add('channels', new RoutingStateView({
+      state = diagram.states.add('routers', new RouterStateView({
         model: model,
         diagram: diagram,
-        collection: diagram.states.members.get('channels')
+        collection: diagram.states.members.get('routers')
       }), {render: false, silent: true});
+
     });
 
     afterEach(function() {
       tearDown();
     });
 
+    describe(".endpointsForSide", function() {
+      it("should return the endpoints for a side", function() {
+        assert.deepEqual(
+          state.endpointsForSide('left'),
+          [state.endpoints.get('endpoint12')]
+        );
+        assert.deepEqual(state.endpointsForSide('right'), [
+          state.endpoints.get('endpoint13'),
+          state.endpoints.get('endpoint14'),
+          state.endpoints.get('endpoint15'),
+          state.endpoints.get('endpoint16')
+        ]);
+      });
+    });
+
+    // .findMaxEndpoints
+
+    // describe(".tooManyEndpoints", function() {
+    //   it("should check if there are too many endpoints", function() {
+    //     state.render();
+    //   });
+    // });
+
+    // describe(".stretchedHeight", function() {
+    //   it("should get the height");
+    // });
+
     describe(".render", function() {
       beforeEach(function() {
-        $column = $('#diagram #channels');
+        $column = $('#diagram #routers');
       });
 
       it("should append the state to its column", function() {
-        assert(noElExists($column.find('[data-uuid="channel4"]')));
+        assert(noElExists($column.find('[data-uuid="router3"]')));
         state.render();
-        assert(oneElExists($column.find('[data-uuid="channel4"]')));
+        assert(oneElExists($column.find('[data-uuid="router3"]')));
       });
 
-      it("should render its endpoints", function() {
-        assert(noElExists($column.find('[data-uuid="channel4"] .endpoint')));
+      it("should not set a new height for few endpoints", function(){
+        state.maxEndpoints = 3;
+        state.model.get('conversation_endpoints')
+           .remove(['endpoint15', 'endpoint16'], {silent: true});
+        state.$el.height(10);
         state.render();
-        assert(oneElExists('[data-uuid="channel4"] [data-uuid="endpoint80"]'));
-        assert(oneElExists('[data-uuid="channel4"] [data-uuid="endpoint81"]'));
+        assert.equal(state.$el.height(), 10);
+      });
+
+      // it("should set a new heightfor many endpoints");
+        // state.heightPerEndpoint = 15;
+
+      it("should render its endpoints", function() {
+        assert(noElExists($column.find('[data-uuid="router3"] .endpoint')));
+        state.render();
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint12"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint13"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint14"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint15"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint16"]'));
       });
 
       it("should display the state's name", function() {
-        assert(noElExists('[data-uuid="channel4"] .name'));
+        assert(noElExists('[data-uuid="router3"] .name'));
         state.render();
 
-        assert(oneElExists('[data-uuid="channel4"] .name'));
+        assert(oneElExists('[data-uuid="router3"] .name'));
         assert.equal(
-          $('[data-uuid="channel4"] .name').text(),
-          '*181#');
+          $('[data-uuid="router3"] .name').text(),
+          'keyword-router');
       });
     });
   });

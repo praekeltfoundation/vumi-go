@@ -71,10 +71,31 @@
   var RoutingStateView = StateView.extend({
     endpointType: RoutingEndpointView,
     endpointCollectionType: AligningEndpointCollection,
+    maxEndpoints: 3,
+    heightPerEndpoint: 15,
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
       this.$name = $('<span></span>').attr('class', 'name');
+    },
+
+    endpointsForSide: function(side){
+      return this.endpoints.where({side: side});
+    },
+
+    findMaxEndpoints: function(){
+      return Math.max(
+        this.endpointsForSide('left').length,
+        this.endpointsForSide('right').length
+      );
+    },
+
+    tooManyEndpoints: function() {
+      return this.findMaxEndpoints() < this.maxEndpoints;
+    },
+
+    stretchedHeight: function() {
+      return this.findMaxEndpoints() * this.heightPerEndpoint;
     },
 
     render: function() {
@@ -83,6 +104,10 @@
       this.$el
         .css('position', 'relative')
         .append(this.$name);
+      
+      if(this.tooManyEndpoints()) {
+        this.$el.height(this.stretchedHeight());
+      }
 
       this.$name.text(this.model.get('name'));
       this.endpoints.render();
