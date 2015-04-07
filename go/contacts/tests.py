@@ -221,6 +221,64 @@ class TestContacts(BaseContactsTestCase):
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
+    def test_contact_exporting_too_many(self):
+        """
+        If we have too many contacts to export, we only export a subset.
+        """
+        self.vumi_helper.patch_settings(CONTACT_EXPORT_TASK_LIMIT=2)
+
+        c1 = self.mkcontact()
+        c1.extra['foo'] = u'bar'
+        c1.save()
+
+        c2 = self.mkcontact()
+        c2.extra['foo'] = u'baz'
+        c2.save()
+
+        c3 = self.mkcontact()
+        c3.extra['foo'] = u'quux'
+        c3.save()
+
+        response = self.client.post(reverse('contacts:people'), {
+            '_export': True,
+            'contact': [c1.key, c2.key, c3.key],
+        })
+
+        self.assertContains(
+            response,
+            "The export is scheduled and should complete within a few"
+            " minutes.")
+
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(email.recipients(), [self.user_email])
+        self.assertTrue('Contacts export' in email.subject)
+        self.assertTrue(
+            'NOTE: There are too many contacts to export.' in email.body)
+        self.assertTrue('2 (out of 3) contacts' in email.body)
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, c1_data, c2_data, _] = csv_contents.split('\r\n')
+
+        self.assertEqual(
+            header,
+            ','.join([
+                'key', 'name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'mxit_id', 'wechat_id', 'created_at', 'foo']))
+
+        self.assertTrue(c1_data.startswith(c1.key))
+        self.assertTrue(c1_data.endswith(',bar'))
+        self.assertTrue(c2_data.startswith(c2.key))
+        self.assertTrue(c2_data.endswith(',baz'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'application/zip')
+
     def test_exporting_all_contacts(self):
         c1 = self.mkcontact()
         c1.extra['foo'] = u'bar'

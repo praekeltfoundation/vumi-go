@@ -309,6 +309,10 @@ CELERYBEAT_SCHEDULE = {
     # },
 }
 
+
+# Exporting hundreds of thousands of contacts makes celery use all the memory.
+CONTACT_EXPORT_TASK_LIMIT = 100000
+
 try:
     from production_settings import *
 except ImportError as err:
