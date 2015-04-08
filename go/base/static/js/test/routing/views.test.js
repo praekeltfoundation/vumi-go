@@ -159,17 +159,24 @@ describe("go.routing (views)", function() {
       });
     });
 
-    // .findMaxEndpoints
+    describe(".findMaxEndpoints", function() {
+      it("should return the max of two endpoint arrays", function() {
+        assert.equal(state.findMaxEndpoints(), 4);
+      });
+    });
 
-    // describe(".tooManyEndpoints", function() {
-    //   it("should check if there are too many endpoints", function() {
-    //     state.render();
-    //   });
-    // });
+    describe(".tooManyEndpoints", function() {
+      it("should check if there are too many endpoints", function() {
+        assert.equal(state.tooManyEndpoints(), true);
+      });
+    });
 
-    // describe(".stretchedHeight", function() {
-    //   it("should get the height");
-    // });
+    describe(".stretchedHeight", function() {
+      it.only("should calculate the new height", function() {
+        state.heightPerEndpoint = 15;
+        assert.equal(state.stretchedHeight(), 4 * 15);
+      });
+    });
 
     describe(".render", function() {
       beforeEach(function() {
@@ -191,7 +198,7 @@ describe("go.routing (views)", function() {
         assert.equal(state.$el.height(), 10);
       });
 
-      // it("should set a new heightfor many endpoints");
+      it("should set a new heightfor many endpoints");
         // state.heightPerEndpoint = 15;
 
       it("should render its endpoints", function() {
