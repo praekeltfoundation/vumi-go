@@ -172,7 +172,7 @@ describe("go.routing (views)", function() {
     });
 
     describe(".stretchedHeight", function() {
-      it.only("should calculate the new height", function() {
+      it("should calculate the new height", function() {
         state.heightPerEndpoint = 15;
         assert.equal(state.stretchedHeight(), 4 * 15);
       });
@@ -190,16 +190,20 @@ describe("go.routing (views)", function() {
       });
 
       it("should not set a new height for few endpoints", function(){
-        state.maxEndpoints = 3;
-        state.model.get('conversation_endpoints')
-           .remove(['endpoint15', 'endpoint16'], {silent: true});
+        state.maxEndpoints = 5;
         state.$el.height(10);
         state.render();
         assert.equal(state.$el.height(), 10);
       });
 
-      it("should set a new heightfor many endpoints");
-        // state.heightPerEndpoint = 15;
+      it("should set a new heightfor many endpoints", function(){
+        state.maxEndpoints = 3;
+        state.heightPerEndpoint = 15;
+        state.model.get('conversation_endpoints');
+        state.$el.height(10);
+        state.render();
+        assert.equal(state.$el.height(), 4 * 15);
+      });
 
       it("should render its endpoints", function() {
         assert(noElExists($column.find('[data-uuid="router3"] .endpoint')));
