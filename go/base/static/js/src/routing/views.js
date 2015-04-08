@@ -91,7 +91,7 @@
     },
 
     tooManyEndpoints: function() {
-      return this.findMaxEndpoints() < this.maxEndpoints;
+      return this.findMaxEndpoints() > this.maxEndpoints;
     },
 
     stretchedHeight: function() {
