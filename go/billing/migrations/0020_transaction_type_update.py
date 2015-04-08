@@ -8,14 +8,16 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        messages = orm.Transaction.objects.exclude(message_direction='')
-        topups = orm.Transaction.objects.filter(message_direction='')
+        if not db.dry_run:
+            messages = orm.Transaction.objects.exclude(message_direction='')
+            topups = orm.Transaction.objects.filter(message_direction='')
 
-        messages.update(transaction_type='Message')
-        topups.update(transaction_type='Top Up')
+            messages.update(transaction_type='Message')
+            topups.update(transaction_type='Top Up')
 
     def backwards(self, orm):
-        orm.Transaction.objects.update(transaction_type=None)
+        if not db.dry_run:
+            orm.Transaction.objects.update(transaction_type=None)
 
     models = {
         u'auth.group': {
