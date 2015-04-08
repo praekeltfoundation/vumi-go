@@ -5,6 +5,7 @@
 (function(exports) {
   var urls = {
     loaders: {
+      dots: '/static/img/loaders/dots.gif',
       circles: {
         info: '/static/img/loaders/circles/info.gif'
       }
