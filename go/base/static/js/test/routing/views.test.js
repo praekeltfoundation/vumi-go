@@ -167,7 +167,7 @@ describe("go.routing (views)", function() {
 
     describe(".tooManyEndpoints", function() {
       it("should check if there are too many endpoints", function() {
-        assert.equal(state.tooManyEndpoints(), true);
+        assert(state.tooManyEndpoints());
       });
     });
 
