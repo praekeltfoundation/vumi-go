@@ -72,7 +72,7 @@
     endpointType: RoutingEndpointView,
     endpointCollectionType: AligningEndpointCollection,
     maxEndpoints: 3,
-    heightPerEndpoint: 15,
+    heightPerEndpoint: 30,
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
