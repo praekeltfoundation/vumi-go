@@ -408,7 +408,24 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(response, 'field value 1')
         self.assertContains(response, 'field value 2')
 
-    def test_edit_conversation_details(self):
+    def test_edit_conversation_details_get(self):
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'test-name', description=u'test-desc')
+
+        response = self.client.get(
+            reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': 'edit_detail/',
+            }))
+
+        print response
+        self.assertContains(response, "Edit test-name details")
+        self.assertContains(response, "Save")
+        self.assertContains(response, "Conversation name")
+        self.assertContains(response, 'value="test-name"')
+        self.assertContains(response, "Conversation description")
+        self.assertContains(response, 'value="test-desc"')
+
+    def test_edit_conversation_details_submit(self):
         conv = self.user_helper.create_conversation(
             u'dummy', name=u'test', description=u'test')
 
@@ -425,6 +442,24 @@ class TestConversationViews(BaseConversationViewTestCase):
         reloaded_conv = self.user_helper.get_conversation(conv.key)
         self.assertEqual(reloaded_conv.name, 'foo')
         self.assertEqual(reloaded_conv.description, 'bar')
+
+    def test_edit_conversation_details_submit_invalid_form(self):
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'test-name', description=u'test-desc')
+
+        response = self.client.post(
+            reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': 'edit_detail/',
+            }), {
+                'name': '',
+                'description': 'bar',
+            })
+
+        self.assertContains(response, "This field is required.")
+
+        reloaded_conv = self.user_helper.get_conversation(conv.key)
+        self.assertEqual(reloaded_conv.name, 'test-name')
+        self.assertEqual(reloaded_conv.description, 'test-desc')
 
     def test_conversation_contact_group_listing(self):
         conv = self.user_helper.create_conversation(
