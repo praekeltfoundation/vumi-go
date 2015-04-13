@@ -167,7 +167,7 @@ describe("go.conversation.groups", function() {
           view.$('.save').click();
           server.respond();
 
-          assert.include(view.save.notifier.$el.text(), "Save successful!");
+          assert.include(view.save.notifier.$el.text(), "Save successful.");
         });
 
         it("should redirect the user to the conversation show page",
@@ -189,7 +189,7 @@ describe("go.conversation.groups", function() {
           view.$('.save').click();
           server.respond();
 
-          assert.include(view.save.notifier.$el.text(), "Save failed :/");
+          assert.include(view.save.notifier.$el.text(), "Save failed.");
         });
       });
     });

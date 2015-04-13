@@ -394,7 +394,7 @@ describe("go.routing (views)", function() {
         view.$('#save').click();
         server.respond();
 
-        assert.include(view.save.notifier.$el.text(), "Save successful!");
+        assert.include(view.save.notifier.$el.text(), "Save successful.");
       });
 
       it("should notify the user if an error occured", function() {
@@ -403,7 +403,7 @@ describe("go.routing (views)", function() {
         view.$('#save').click();
         server.respond();
 
-        assert.include(view.save.notifier.$el.text(), "Save failed :/");
+        assert.include(view.save.notifier.$el.text(), "Save failed.");
       });
     });
 
@@ -425,7 +425,7 @@ describe("go.routing (views)", function() {
       it("should notify the user", function() {
         view.$('#reset').click();
         view.reset.once('success', function() {
-          assert.include(view.reset.notifier.$el.text(), "Reset successful!");
+          assert.include(view.reset.notifier.$el.text(), "Reset successful.");
         });
       });
     });
