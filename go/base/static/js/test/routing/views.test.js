@@ -215,13 +215,13 @@ describe("go.routing (views)", function() {
         assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint16"]'));
       });
 
-      it("should display the state's name", function() {
-        assert(noElExists('[data-uuid="router3"] .name'));
+      it("should display the state's name as a link", function() {
+        assert(noElExists('[data-uuid="router3"] a.name'));
         state.render();
 
-        assert(oneElExists('[data-uuid="router3"] .name'));
+        assert(oneElExists('[data-uuid="router3"] a.name'));
         assert.equal(
-          $('[data-uuid="router3"] .name').text(),
+          $('[data-uuid="router3"] a.name').text(),
           'keyword-router');
       });
     });
