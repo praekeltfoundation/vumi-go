@@ -34,7 +34,10 @@ var stateMachine = go.components.stateMachine,
       type: Backbone.HasMany,
       key: 'endpoints',
       relatedModel: RoutingEndpointModel
-    }]
+    }],
+    viewURL: function(){
+      return '/channels/' + encodeURIComponent(this.get('tag').join(':')) + '/';
+    }
   });
 
   var RouterModel = StateModel.extend({
@@ -46,7 +49,10 @@ var stateMachine = go.components.stateMachine,
       type: Backbone.HasMany,
       key: 'channel_endpoints',
       relatedModel: RoutingEndpointModel
-    }]
+    }],
+    viewURL: function(){
+      return '/routers/' + encodeURI(this.id) + '/edit/';
+    }
   });
 
   var ConversationModel = StateModel.extend({
@@ -54,7 +60,10 @@ var stateMachine = go.components.stateMachine,
       type: Backbone.HasMany,
       key: 'endpoints',
       relatedModel: RoutingEndpointModel
-    }]
+    }],
+    viewURL: function(){
+      return '/conversations/' + encodeURI(this.id) + '/edit/';
+    }
   });
 
   var RoutingModel = StateMachineModel.extend({

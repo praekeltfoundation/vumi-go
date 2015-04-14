@@ -110,7 +110,8 @@
       }
 
       this.$name.text(this.model.get('name'));
-      this.$name.attr('href', encodeURI(this.uuid()));
+      this.$name.attr('href', this.model.viewURL());
+
       this.endpoints.render();
 
       return this;
