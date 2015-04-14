@@ -741,8 +741,30 @@ describe("go.components.structures", function() {
         views.remove('c');
       });
 
-      it("should call the view's destroy() function if it exists", function() {
+      it("should call the view's destroy() method if it exists", function() {
         assert(views.remove('c').destroyed);
+      });
+
+      it("should pass options to the view's .destroy() method", function() {
+        var destroyOptions;
+
+        var ToyView = Backbone.View.extend({
+          id: function() {
+            return this.model.id;
+          },
+          destroy: function(options) {
+            destroyOptions = options;
+          }
+        });
+
+        var views = new ToyViewCollection({
+          type: ToyView,
+          models: models
+        });
+
+        assert.isUndefined(destroyOptions);
+        views.remove('a', {foo: 23});
+        assert.equal(destroyOptions.foo, 23);
       });
 
       it("should remove the view's model if 'removeModel' is true", function() {
