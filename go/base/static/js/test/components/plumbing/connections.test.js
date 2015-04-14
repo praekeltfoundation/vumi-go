@@ -52,7 +52,7 @@ describe("go.components.plumbing.connections", function() {
         assert.isNull(x3_y2.plumbConnection);
       });
 
-      it("should not detach an already detached connection", function() {
+      it("should not detach if told not to", function() {
         var plumbConnection = x3_y2.plumbConnection;
         var detached = false;
         jsPlumb.detach(plumbConnection);
