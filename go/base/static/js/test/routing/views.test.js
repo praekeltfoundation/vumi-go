@@ -123,6 +123,7 @@ describe("go.routing (views)", function() {
         type: 'keyword',
         name: 'keyword-router',
         description: 'Keyword',
+        // viewURL: '/routers/' + encodeURI(this.id) + '/edit/'
         channel_endpoints: [{uuid: 'endpoint12', name: 'default'}],
         conversation_endpoints: [
           {uuid: 'endpoint13', name: 'default'},
