@@ -76,7 +76,7 @@
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
-      this.$name = $('<span></span>').attr('class', 'name');
+      this.$name = $('<a class="name" href=""></a>');
     },
 
     endpointsForSide: function(side){
@@ -110,6 +110,7 @@
       }
 
       this.$name.text(this.model.get('name'));
+      this.$name.attr('href', encodeURI(this.uuid()));
       this.endpoints.render();
 
       return this;
@@ -136,6 +137,8 @@
       side: 'right',
       type: RouterConversationEndpointView
     }]
+
+    // this.$name.attr('href', encodeURI(this.uuid()));
   });
 
   var ConversationStateView = RoutingStateView.extend({
