@@ -55,13 +55,11 @@
     },
 
     destroy: function() {
-      var plumbConnection = this.plumbConnection;
-
-      if (plumbConnection) {
-        this.plumbConnection = null;
-        jsPlumb.detach(plumbConnection);
+      if (this.plumbConnection && this.plumbConnection.endpoints) {
+        jsPlumb.detach(this.plumbConnection);
       }
 
+      this.plumbConnection = null;
       return this;
     },
 
