@@ -43,7 +43,7 @@ describe("go.components.plumbing.connections", function() {
           done();
         });
 
-        x3_y2.destroy();
+        x3_y2.destroy({fireDetach: true});
       });
 
       it("should unset the jsPlumb connection", function() {
@@ -57,7 +57,10 @@ describe("go.components.plumbing.connections", function() {
         var detached = false;
         jsPlumb.detach(plumbConnection);
         jsPlumb.bind('connectionDetached', function() { detached = true; });
-        x3_y2.destroy();
+        x3_y2.destroy({
+          detach: false,
+          fireDetach: true
+        });
         assert(!detached);
       });
     });
