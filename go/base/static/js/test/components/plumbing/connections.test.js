@@ -56,7 +56,7 @@ describe("go.components.plumbing.connections", function() {
         var plumbConnection = x3_y2.plumbConnection;
         var detached = false;
         jsPlumb.detach(plumbConnection);
-        jsPlumb.bind('connectionDetached', function(e) { detached = true; });
+        jsPlumb.bind('connectionDetached', function() { detached = true; });
         x3_y2.destroy();
         assert(!detached);
       });
