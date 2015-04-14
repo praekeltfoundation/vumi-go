@@ -33,8 +33,14 @@
 
     // The params passed to jsPlumb when configuring the element as a
     // connection source/target
-    plumbSourceOptions: {anchor: 'Continuous', maxConnections: 1},
-    plumbTargetOptions: {anchor: 'Continuous'},
+    plumbSourceOptions: {
+      anchor: 'Continuous',
+      maxConnections: 1
+    },
+
+    plumbTargetOptions: {
+      anchor: 'Continuous'
+    },
 
     initialize: function(options) {
       // the state view that this endpoint is part of
@@ -43,14 +49,6 @@
 
       // the collection of endpoint views that this endpoint is part of
       this.collection = options.collection;
-
-      if (this.isSource) {
-        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOptions'));
-      }
-
-      if (this.isTarget) {
-        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOptions'));
-      }
     },
 
     isConnected: function() {
@@ -67,6 +65,14 @@
 
     render: function() {
       this.collection.appendToView(this);
+
+      if (this.isSource) {
+        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOptions'));
+      }
+
+      if (this.isTarget) {
+        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOptions'));
+      }
     }
   });
 
