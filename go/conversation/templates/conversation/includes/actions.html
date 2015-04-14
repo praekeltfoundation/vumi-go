@@ -4,17 +4,16 @@
     {% if conversation.stopped %}
         <div class="btn-group">
           <button
-           class="btn action" 
-           data-action='activate'
-           data-url="{% conversation_screen conversation 'start' %}"
-           disabled>
-              &nbsp;
+              class="btn btn-danger action" 
+              data-action='activate'
+              data-url="{% conversation_screen conversation 'start' %}">
+                Stopped
           </button>
           <button
-            class="btn btn-primary action" 
-            data-action='stop'
-            data-url="{% conversation_screen conversation 'start' %}">
-              Running
+              class="btn action" 
+              data-action='activate'
+              data-url="{% conversation_screen conversation 'start' %}">
+              &nbsp;
           </button>
         </div>
 
@@ -27,42 +26,33 @@
     {% elif conversation.running %}
         <div class="btn-group">
           <button
-              class="btn btn-danger action" 
-              data-action='activate'
-              data-url="{% conversation_screen conversation 'stop' %}">
-                Stopped
+           class="btn action" 
+           data-action='stop'
+           data-url="{% conversation_screen conversation 'stop' %}">
+              &nbsp;
           </button>
           <button
-              class="btn action" 
-              data-action='stop'
-              data-url="{% conversation_screen conversation 'stop' %}"
-              disabled>
-              &nbsp;
+            class="btn btn-primary action" 
+            data-action='stop'
+            data-url="{% conversation_screen conversation 'stop' %}">
+              Running
           </button>
         </div>
     {% elif conversation.stopping %}
       <div class="btn-group">
-        <button
-         class="btn action" 
-         disabled>
+        <button class="btn action">
             &nbsp;
         </button>
-        <button
-          class="btn btn-primary action" 
-          disabled>
+        <button class="btn btn-primary action">
             Deactivating
         </button>
       </div>
     {% elif conversation.starting %}
       <div class="btn-group">
-        <button
-          class="btn btn-danger action" 
-          disabled>
+        <button class="btn btn-danger action">
             Activating
         </button>
-        <button
-         class="btn action" 
-         disabled>
+        <button class="btn action">
             &nbsp;
         </button>
       </div>
