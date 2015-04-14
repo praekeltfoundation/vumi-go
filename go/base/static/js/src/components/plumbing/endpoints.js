@@ -49,6 +49,14 @@
 
       // the collection of endpoint views that this endpoint is part of
       this.collection = options.collection;
+
+      if (this.isSource) {
+        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOptions'));
+      }
+
+      if (this.isTarget) {
+        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOptions'));
+      }
     },
 
     isConnected: function() {
@@ -65,14 +73,6 @@
 
     render: function() {
       this.collection.appendToView(this);
-
-      if (this.isSource) {
-        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOptions'));
-      }
-
-      if (this.isTarget) {
-        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOptions'));
-      }
     }
   });
 
