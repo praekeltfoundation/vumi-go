@@ -242,12 +242,13 @@
 
       calcChars: function() {
       var numChars = this.model.get('choice_endpoints')
-        .reduce(function(choice, count){
+        .reduce(function(count, choice) {
           return ('N. ' + choice.get('label') + '\n').length + count;
         }, 0);
+
       // Remove the '\n' from the last choice_endpoint
       numChars--;
-      numChars += this.model.get('text');
+      numChars += this.model.get('text').length;
       return numChars;
     }
   });
