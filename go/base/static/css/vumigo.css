@@ -428,7 +428,7 @@ button {
   background: #b41e31;
   opacity: 0.75;
 }
-.dialogue #diagram .endpoint.is-endpoint-hovered-target {
+.dialogue #diagram .endpoint.is-hovered-target {
   background: #b41e31;
   opacity: 0.75;
 }
@@ -713,6 +713,12 @@ button {
 }
 .routing #diagram .column-container .endpoint:hover {
   cursor: pointer;
+  background: #b41e31;
+  opacity: 0.75;
+}
+.routing #diagram .column-container .endpoint.is-hovered-target {
+  background: #b41e31;
+  opacity: 0.75;
 }
 .routing #diagram ._jsPlumb_endpoint,
 .routing #diagram ._jsPlumb_connector {
@@ -723,11 +729,11 @@ button {
 }
 .routing #diagram ._jsPlumb_connector {
   z-index: 1;
-  opacity: 0.85;
+  opacity: 0.75;
 }
 .routing #diagram ._jsPlumb_endpoint {
   z-index: 5;
-  opacity: 0.85;
+  opacity: 0.75;
 }
 .routing #diagram ._jsPlumb_endpoint svg circle:hover {
   cursor: move;

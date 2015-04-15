@@ -41,7 +41,7 @@
     plumbTargetOptions: {
       anchor: 'Continuous',
       dropOptions: {
-        hoverClass: 'is-endpoint-hovered-target'
+        hoverClass: 'is-hovered-target'
       }
     },
 
