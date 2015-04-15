@@ -14,7 +14,8 @@
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
       DialogueStatePreviewView = states.DialogueStatePreviewView,
-      TextEditView = states.partials.TextEditView;
+      TextEditView = states.partials.TextEditView,
+      maxChars = states.maxChars;
 
   var plumbing = go.components.plumbing,
       EndpointViewCollection = plumbing.endpoints.EndpointViewCollection,
@@ -123,6 +124,7 @@
       this.model.set(
         'label',
         this.$('.choice-label').prop('value'));
+      this.mode.render();
     },
 
     onRemoveClick: function(e) {
@@ -161,15 +163,16 @@
   });
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
+    maxChars: maxChars,
     events: _({
-      'click .new-choice': 'onNewChoice'
+      'click .new-choice': 'onNewChoice',
+      'change .text': 'onTextChange'
     }).defaults(DialogueStateEditView.prototype.events),
 
     bodyOptions: function() {
       return {
         jst: 'JST.apps_dialogue_states_choice_edit',
         partials: {
-          text: new TextEditView({mode: this}),
           choices: new ChoiceEditCollection({
             mode: this,
             models: this.state.model.get('choice_endpoints')
@@ -191,6 +194,14 @@
         this.state.render();
       }
     },
+
+    onTextChange: function(e) {
+      this.state.model.set('text', $(e.target).val(), {silent: true});
+      this.state.render();
+    },
+
+    // onChoiceChange: function(e) {
+    // },
 
     onNewChoice: function(e) {
       e.preventDefault();
@@ -227,7 +238,18 @@
       attr: 'choice_endpoints',
       type: ChoiceEndpointView,
       collectionType: ChoiceEndpointCollection
-    }]
+    }],
+
+      calcChars: function() {
+      var numChars = this.model.get('choice_endpoints')
+        .reduce(function(choice, count){
+          return ('N. ' + choice.get('label') + '\n').length + count;
+        }, 0);
+      // Remove the '\n' from the last choice_endpoint
+      numChars--;
+      numChars += this.model.get('text');
+      return numChars;
+    }
   });
 
   _(exports).extend({

@@ -1,5 +1,6 @@
 <div class="form-group">
   <label class="control-label">Define the question</label>
+  <textarea class="text form-control"><%= model.get('text') %></textarea>
   <%= partials.text %>
 </div>
 
@@ -11,6 +12,8 @@
     <% }); %>
   </ol>
 </div>
+
+<div><!-- view.calcChars(); --></div>
 
 <div class="pull-right">
   <button class="new-choice btn btn-primary btn-sm">Add another answer</button>
