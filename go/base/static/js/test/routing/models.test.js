@@ -13,9 +13,13 @@ describe("go.routing (models)", function() {
 
   describe(".ChannelModel", function() {
     var ChannelModel = routing.models.ChannelModel;
-    var model = new ChannelModel({
-      uuid: 'channel1',
-      tag: ['apposit_sms', '*121#']
+    var model;
+
+    beforeEach(function() {
+      model = new ChannelModel({
+        uuid: 'channel1',
+        tag: ['apposit_sms', '*121#']
+      });  
     });
 
     describe(".viewURL", function() {
@@ -165,12 +169,19 @@ describe("go.routing (models)", function() {
       });
     });
 
-    describe(".viewURL", function() {
-      var RouterModel = routing.models.RouterModel;
-      var model = new RouterModel({
+  });
+
+  describe(".RouterModel", function() {
+    var RouterModel = routing.models.RouterModel;
+    var model;
+
+    beforeEach(function() {
+      model = new RouterModel({
         uuid: 'router1'
       });
+    });
 
+    describe(".viewURL", function() {
       it("should return the router's view url", function(){
         assert.equal(model.viewURL(), '/routers/router1/edit/');
       });
@@ -179,8 +190,12 @@ describe("go.routing (models)", function() {
 
   describe(".ConversationModel", function() {
     var ConversationModel = routing.models.ConversationModel;
-    var model = new ConversationModel({
-      uuid: 'conversation1'
+    var model;
+
+    beforeEach(function() {
+      model = new ConversationModel({
+        uuid: 'conversation1'
+      });
     });
 
     describe(".viewURL", function() {
