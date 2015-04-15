@@ -432,7 +432,7 @@ button {
   opacity: 0.75;
 }
 .dialogue #diagram .endpoint-source {
-  cursor: pointer;
+  cursor: move;
 }
 .dialogue #diagram .grid {
   text-align: center;
@@ -722,7 +722,7 @@ button {
   opacity: 0.75;
 }
 .routing #diagram .column-container .endpoint-source {
-  cursor: pointer;
+  cursor: move;
 }
 .routing #diagram ._jsPlumb_endpoint,
 .routing #diagram ._jsPlumb_connector {
