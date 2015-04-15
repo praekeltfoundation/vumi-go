@@ -142,9 +142,9 @@
     },
 
     onPlumbConnect: function(e) {
-      var sourceId = $(e.source).attr('data-uuid'),
-          targetId = $(e.target).attr('data-uuid'),
-          connectionId = idOfConnection(sourceId, targetId);
+      var sourceId = $(e.source).attr('data-uuid');
+      var targetId = $(e.target).attr('data-uuid');
+      var connectionId = idOfConnection(sourceId, targetId);
 
       // Case 1:
       // -------
@@ -176,11 +176,18 @@
     },
 
     onPlumbDisconnect: function(e) {
-      var sourceId = $(e.source).attr('data-uuid'),
-          targetId = $(e.target).attr('data-uuid'),
-          connectionId = idOfConnection(sourceId, targetId);
+      var sourceId = $(e.source).attr('data-uuid');
+      var targetId = $(e.target).attr('data-uuid');
+      var connectionId;
 
       // Case 1:
+      // -------
+      // A new connection was created in the UI, but dropped before it reached
+      // a target, we can ignore it.
+      if (typeof targetId == 'undefined') { return; }
+      connectionId = idOfConnection(sourceId, targetId);
+
+      // Case 2:
       // -------
       // The connection model and its view have been removed from its
       // collection, so its connection view was destroyed (along with the
@@ -188,7 +195,7 @@
       // and view since they no longer exists.
       if (!this.has(connectionId)) { return; }
 
-      // Case 2:
+      // Case 3:
       // -------
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.

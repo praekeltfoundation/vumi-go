@@ -225,6 +225,23 @@ describe("go.components.plumbing.connections", function() {
 
         jsPlumb.detach(a1L2_b2R2.plumbConnection);
       });
+
+      it("should ignore the event if the connection has no target", function() {
+        var a1L2 = diagram.endpoints.get('a1L2');
+        var b2R2 = diagram.endpoints.get('b2R2');
+        var a1L2_b2R2 = connections.get('a1L2-b2R2');
+        var plumbConnection = a1L2_b2R2.plumbConnection;
+
+        plumbConnection.target = null;
+        a1L2_b2R2.plumbConnection.target = null;
+
+        sinon.spy(console, 'log');
+        jsPlumb.detach(a1L2_b2R2.plumbConnection);
+
+        // jsPlumb logs errors instead of throwing them
+        assert(!console.log.called);
+        console.log.restore();
+      });
     });
   });
 });
