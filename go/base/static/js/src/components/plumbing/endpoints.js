@@ -35,7 +35,7 @@
     // connection source/target
     plumbSourceOptions: {
       anchor: 'Continuous',
-      maxConnections: 1,
+      maxConnections: 1
     },
 
     plumbTargetOptions: {
@@ -75,6 +75,8 @@
     },
 
     render: function() {
+      if (this.isSource) { this.$el.addClass('endpoint-source') }
+      if (this.isTarget) { this.$el.addClass('endpoint-target') }
       this.collection.appendToView(this);
     }
   });
