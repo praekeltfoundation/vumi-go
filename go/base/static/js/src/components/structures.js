@@ -425,7 +425,7 @@
           view = this.get(id);
 
       if (!view) { return; }
-      if (typeof view.destroy === 'function') { view.destroy(); }
+      if (typeof view.destroy === 'function') { view.destroy(options); }
 
       var model = view.model;
       if (model && this.models.get(model)) {

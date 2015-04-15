@@ -33,8 +33,14 @@
 
     // The params passed to jsPlumb when configuring the element as a
     // connection source/target
-    plumbSourceOptions: {anchor: 'Continuous', maxConnections: 1},
-    plumbTargetOptions: {anchor: 'Continuous'},
+    plumbSourceOptions: {
+      anchor: 'Continuous',
+      maxConnections: 1
+    },
+
+    plumbTargetOptions: {
+      anchor: 'Continuous'
+    },
 
     initialize: function(options) {
       // the state view that this endpoint is part of
