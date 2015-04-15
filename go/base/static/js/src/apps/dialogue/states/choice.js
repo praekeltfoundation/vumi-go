@@ -162,8 +162,7 @@
     }
   });
 
-  var ChoiceStateEditView = DialogueStateEditView.extend({
-    maxChars: maxChars,
+  var ChoiceStateEditView = DialogueStateEditView.extend({    
     events: _({
       'click .new-choice': 'onNewChoice',
       'change .text': 'onTextChange'
@@ -226,6 +225,8 @@
   });
 
   var ChoiceStateView = DialogueStateView.extend({
+    maxChars: 140, // set this in states/state.js
+
     typeName: 'choice',
 
     editModeType: ChoiceStateEditView,
@@ -240,7 +241,7 @@
       collectionType: ChoiceEndpointCollection
     }],
 
-      calcChars: function() {
+    calcChars: function() {
       var numChars = this.model.get('choice_endpoints')
         .reduce(function(count, choice) {
           return ('N. ' + choice.get('label') + '\n').length + count;
@@ -250,6 +251,10 @@
       numChars--;
       numChars += this.model.get('text').length;
       return numChars;
+    },
+
+    charsLeft: function() {
+      return this.maxChars - this.calcChars();
     }
   });
 
