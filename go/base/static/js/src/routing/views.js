@@ -138,8 +138,6 @@
       side: 'right',
       type: RouterConversationEndpointView
     }]
-
-    // this.$name.attr('href', encodeURI(this.uuid()));
   });
 
   var ConversationStateView = RoutingStateView.extend({
