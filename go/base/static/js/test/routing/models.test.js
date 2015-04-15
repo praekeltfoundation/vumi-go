@@ -11,6 +11,21 @@ describe("go.routing (models)", function() {
     go.testHelpers.unregisterModels();
   });
 
+  describe(".ChannelModel", function() {
+    var ChannelModel = routing.models.ChannelModel;
+    var model = new ChannelModel({
+      uuid: 'channel1',
+      tag: ['apposit_sms', '*121#']
+    });
+
+    describe(".viewURL", function() {
+      it("should return the channel's view url", function() {
+        assert.equal(model.viewURL(), '/channels/apposit_sms%3A*121%23/');
+      });
+    });
+
+  });
+
   describe(".RoutingModel", function() {
     var RoutingModel = routing.models.RoutingModel;
 
@@ -149,5 +164,30 @@ describe("go.routing (models)", function() {
         server.respond();
       });
     });
+
+    describe(".viewURL", function() {
+      var RouterModel = routing.models.RouterModel;
+      var model = new RouterModel({
+        uuid: 'router1'
+      });
+
+      it("should return the router's view url", function(){
+        assert.equal(model.viewURL(), '/routers/router1/edit/');
+      });
+    });
+  });
+
+  describe(".ConversationModel", function() {
+    var ConversationModel = routing.models.ConversationModel;
+    var model = new ConversationModel({
+      uuid: 'conversation1'
+    });
+
+    describe(".viewURL", function() {
+      it("should return the conversation's view url", function() {
+        assert.equal(model.viewURL(), '/conversations/conversation1/edit/');
+      });
+    });
+
   });
 });
