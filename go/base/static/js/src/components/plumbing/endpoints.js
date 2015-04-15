@@ -35,11 +35,14 @@
     // connection source/target
     plumbSourceOptions: {
       anchor: 'Continuous',
-      maxConnections: 1
+      maxConnections: 1,
     },
 
     plumbTargetOptions: {
-      anchor: 'Continuous'
+      anchor: 'Continuous',
+      dropOptions: {
+        hoverClass: 'is-endpoint-hovered-target'
+      }
     },
 
     initialize: function(options) {

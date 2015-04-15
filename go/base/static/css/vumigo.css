@@ -400,7 +400,7 @@ button {
   z-index: 5;
   opacity: 0.75;
 }
-.dialogue #diagram ._jsPlumb_endpoint svg circle:hover {
+.dialogue #diagram ._jsPlumb_endpoint {
   cursor: move;
 }
 .dialogue #diagram ._jsPlumb_dragging {
@@ -409,6 +409,27 @@ button {
 }
 .dialogue #diagram ._jsPlumb_hover {
   z-index: 3;
+  opacity: 0.75;
+}
+.dialogue #diagram .endpoint {
+  cursor: pointer;
+  z-index: 4;
+  width: 15px;
+  height: 15px;
+  background: #428bca;
+  -webkit-border-radius: 15px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 15px;
+  -moz-background-clip: padding;
+  border-radius: 15px;
+  background-clip: padding-box;
+}
+.dialogue #diagram .endpoint:hover {
+  background: #b41e31;
+  opacity: 0.75;
+}
+.dialogue #diagram .endpoint.is-endpoint-hovered-target {
+  background: #b41e31;
   opacity: 0.75;
 }
 .dialogue #diagram .grid {
@@ -531,21 +552,6 @@ button {
   text-align: center;
   font-size: 10px;
   font-weight: bold;
-}
-.dialogue #diagram .endpoint {
-  z-index: 4;
-  background: #428bca;
-  width: 15px;
-  height: 15px;
-  -webkit-border-radius: 15px;
-  -webkit-background-clip: padding-box;
-  -moz-border-radius: 15px;
-  -moz-background-clip: padding;
-  border-radius: 15px;
-  background-clip: padding-box;
-}
-.dialogue #diagram .endpoint:hover {
-  cursor: pointer;
 }
 .dialogue #diagram .search_enabled input {
   margin: 0;
