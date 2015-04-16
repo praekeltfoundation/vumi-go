@@ -181,6 +181,7 @@
       // Allow the user to 'shuffle' the states in the column, repainting the
       // jsPlumb connections and endpoints on each update hook
       this.$el.sortable({
+        cursor: 'move',
         start: this.repaint,
         sort: this.repaint,
         stop: this.repaint

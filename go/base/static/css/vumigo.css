@@ -714,22 +714,20 @@ button {
   background: #888;
   padding: 3px;
 }
-.routing #diagram .column-container .endpoint:hover {
-  background: #b41e31;
-  opacity: 0.75;
-}
 .routing #diagram .column-container .endpoint.is-hovered-target {
   background: #b41e31;
   opacity: 0.75;
 }
-.routing #diagram .column-container .endpoint-source {
+.routing #diagram .column-container .endpoint-source:hover {
   cursor: move;
+  background: #b41e31;
+  opacity: 0.75;
 }
 .routing #diagram ._jsPlumb_endpoint,
 .routing #diagram ._jsPlumb_connector {
   z-index: 200;
 }
-.routing #diagram ._jsPlumb_endpoint svg circle:hover {
+.routing #diagram ._jsPlumb_endpoint {
   cursor: move;
 }
 .routing #diagram ._jsPlumb_connector {

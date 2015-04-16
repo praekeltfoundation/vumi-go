@@ -48,17 +48,12 @@
       }
 
       .state:hover {
-        cursor:move;
+        cursor: move;
       }
 
       .endpoint {
         background: #888;
         padding: 3px;
-      }
-
-      .endpoint:hover {
-        background: @color-hover;
-        opacity: @secondary-opacity;
       }
 
       // need to also select by .endpoint in order to override the normal color
@@ -67,8 +62,10 @@
         opacity: @secondary-opacity;
       }
 
-      .endpoint-source {
+      .endpoint-source:hover {
         cursor: move;
+        background: @color-hover;
+        opacity: @secondary-opacity;
       }
     }
 
@@ -76,7 +73,7 @@
       z-index:200;
     }
 
-    ._jsPlumb_endpoint svg circle:hover {
+    ._jsPlumb_endpoint {
       cursor: move;
     }
 
