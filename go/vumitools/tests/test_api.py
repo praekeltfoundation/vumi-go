@@ -223,9 +223,13 @@ class TestTxVumiUserApi(VumiTestCase):
         def mkconn(thing):
             if isinstance(thing, basestring):
                 return GoConnector.parse(thing)
-            else:
-                # Assume it's a conversation/channel/router.
+            elif isinstance(thing, GoConnector):
+                return thing
+            elif hasattr(thing, 'get_connector'):
+                # Assume it's a conversation/channel
                 return thing.get_connector()
+            else:
+                raise ValueError("Unknown routing thing %r" % (thing,))
 
         for src, dst in entries:
             routing_table.add_entry(
@@ -278,6 +282,26 @@ class TestTxVumiUserApi(VumiTestCase):
         returnValue(conv)
 
     @inlineCallbacks
+    def _setup_routing_table_test_new_router(self, routing_table=None):
+        tag1, tag2, tag3 = yield self.vumi_helper.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"])
+        yield self.user_helper.add_tagpool_permission(u"pool1")
+        yield self.user_api.acquire_specific_tag(tag1)
+        router = yield self.user_api.new_router(
+            u'keyword', u'name', u'desc', {})
+        # We don't want to actually send commands here.
+        router.dispatch_command = lambda *args, **kw: None
+        router_api = self.user_api.get_router_api(
+            router.router_type, router.key)
+        yield router_api.start_router()
+
+        # Set the status manually, because it's in `starting', not `running'
+        router.set_status_started()
+        yield router.save()
+
+        returnValue(router)
+
+    @inlineCallbacks
     def test_get_routing_table(self):
         """
         .get_routing_table() returns the correct routing table data.
@@ -320,6 +344,30 @@ class TestTxVumiUserApi(VumiTestCase):
         channel = yield self.user_api.get_channel((u'pool1', u'1234'))
         user = yield self.user_api.get_user_account()
         self._set_routing_table(user, [(conv, channel), (channel, conv)])
+        yield user.save()
+        yield self.user_api.validate_routing_table(user)
+
+    @inlineCallbacks
+    def test_routing_table_validation_with_valid_channel_to_router(self):
+        channel = yield self.user_api.get_channel((u'pool1', u'1234'))
+        router = yield self._setup_routing_table_test_new_router()
+        router_conn = GoConnector.for_router(
+            router.router_type, router.key, GoConnector.INBOUND)
+        user = yield self.user_api.get_user_account()
+        self._set_routing_table(user, [
+            (router_conn, channel), (channel, router_conn)])
+        yield user.save()
+        yield self.user_api.validate_routing_table(user)
+
+    @inlineCallbacks
+    def test_routing_table_validation_with_valid_router_to_conversation(self):
+        router = yield self._setup_routing_table_test_new_router()
+        router_conn = GoConnector.for_router(
+            router.router_type, router.key, GoConnector.OUTBOUND)
+        conv = yield self._setup_routing_table_test_new_conv()
+        user = yield self.user_api.get_user_account()
+        self._set_routing_table(user, [
+            (router_conn, conv), (conv, router_conn)])
         yield user.save()
         yield self.user_api.validate_routing_table(user)
 
