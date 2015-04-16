@@ -573,6 +573,9 @@ button {
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
 }
+.dialogue #diagram .choice.state .preview.mode .choices .choice {
+  padding: 4px 0;
+}
 .dialogue #diagram .send.state .preview.mode .channel-type {
   font-weight: bold;
 }
