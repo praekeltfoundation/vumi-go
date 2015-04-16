@@ -9,7 +9,8 @@
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
       DialogueStatePreviewView = states.DialogueStatePreviewView,
-      TextEditView = states.partials.TextEditView;
+      TextEditView = states.partials.TextEditView,
+      maxChars = states.maxChars;
 
   var FreeTextStateEditView = DialogueStateEditView.extend({
     bodyOptions: function() {
@@ -29,6 +30,8 @@
   });
 
   var FreeTextStateView = DialogueStateView.extend({
+    maxChars: 140, // set this in states/state.js
+
     typeName: 'freetext',
 
     editModeType: FreeTextStateEditView,
@@ -36,7 +39,19 @@
 
     endpointSchema: [
       {attr: 'entry_endpoint', type: EntryEndpointView},
-      {attr: 'exit_endpoint', type: ExitEndpointView}]
+      {attr: 'exit_endpoint', type: ExitEndpointView}],
+
+    calcChars: function() {
+      return this.model.get('text').length;
+    },
+
+    charsLeft: function() {
+      return this.maxChars - this.calcChars();
+    },
+
+    tooManyChars: function() {
+      return (this.charsLeft() < 0) ? 'text-danger' : '';
+    }
   });
 
   _(exports).extend({
