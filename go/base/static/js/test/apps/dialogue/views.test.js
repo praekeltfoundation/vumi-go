@@ -24,7 +24,7 @@ describe("go.apps.dialogue.views", function() {
 
       view = new DialogueView({
         el: $('.dialogue'),
-        model: new DialogueModel(modelData),
+        model: new DialogueModel(modelData()),
         sessionId: '123'
       });
 
@@ -53,7 +53,7 @@ describe("go.apps.dialogue.views", function() {
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint3');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), modelData());
 
         view.$('#save').click();
         server.respond();

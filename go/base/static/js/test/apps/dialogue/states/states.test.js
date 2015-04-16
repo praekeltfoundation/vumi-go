@@ -1,8 +1,7 @@
 describe("go.apps.dialogue.states", function() {
   var testHelpers = go.testHelpers,
       oneElExists = testHelpers.oneElExists,
-      noElExists = testHelpers.noElExists,
-      unregisterModels = testHelpers.unregisterModels;
+      noElExists = testHelpers.noElExists;
 
   var dialogue = go.apps.dialogue;
 
@@ -100,8 +99,6 @@ describe("go.apps.dialogue.states", function() {
   });
 
   describe(".DialogueStateEditView", function() {
-    var DialogueStateEditView = dialogue.states.DialogueStateEditView;
-
     var state,
         editMode;
 
@@ -114,63 +111,34 @@ describe("go.apps.dialogue.states", function() {
     describe("on 'activate'", function() {
       it("should keep a backup of the state's model's attributes",
       function(done) {
-        editMode.on('activate', function() {
-          assert.deepEqual(editMode.modelBackup, {
-            uuid: 'state4',
-            name: 'New Dummy',
-            type: 'dummy',
-            store_as: 'new-dummy',
-            entry_endpoint: {'uuid':'endpoint6'},
-            exit_endpoint: {'uuid':'endpoint7'},
-            user_defined_store_as: false,
-            ordinal: 3
-          });
+        var newData;
+        var oldData;
 
+        editMode.on('activate', function() {
+          assert.deepEqual(editMode.modelBackup, newData);
+          assert.notDeepEqual(editMode.modelBackup, oldData);
           done();
         });
 
-        assert.deepEqual(editMode.modelBackup, {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
-
+        oldData = state.model.toJSON();
         state.model.set('name', 'New Dummy');
+        newData = state.model.toJSON();
         editMode.trigger('activate');
       });
     });
 
     describe(".cancel", function() {
       it("should change the model back to its old state", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
+        var newData;
+        var oldData;
 
+        oldData = state.model.toJSON();
         state.model.set('name', 'New Dummy');
-        editMode.cancel();
+        newData = state.model.toJSON();
 
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
+        editMode.cancel();
+        assert.deepEqual(state.model.toJSON(), oldData);
+        assert.notDeepEqual(state.model.toJSON(), newData);
       });
     });
 
@@ -259,30 +227,17 @@ describe("go.apps.dialogue.states", function() {
 
     describe("when the '.cancel' button is clicked", function() {
       it("should change the model back to its old state", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
+        var newData;
+        var oldData;
 
+        oldData = state.model.toJSON();
         state.model.set('name', 'New Dummy');
+        newData = state.model.toJSON();
         editMode.$('.cancel').click();
 
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
+        editMode.cancel();
+        assert.deepEqual(state.model.toJSON(), oldData);
+        assert.notDeepEqual(state.model.toJSON(), newData);
       });
 
       it("should switch back to the preview view", function() {
@@ -302,8 +257,6 @@ describe("go.apps.dialogue.states", function() {
   });
 
   describe(".DialogueStatePreviewView", function() {
-    var DialogueStatePreviewView = dialogue.states.DialogueStatePreviewView;
-
     var state,
         previewMode;
 
@@ -323,8 +276,6 @@ describe("go.apps.dialogue.states", function() {
   });
 
   describe(".DialogueStateView", function() {
-    var DummyStateModel = dialogue.models.DummyStateModel;
-
     var state;
 
     beforeEach(function() {

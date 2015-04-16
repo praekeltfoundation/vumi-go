@@ -122,25 +122,25 @@ describe("go.apps.dialogue.models", function() {
 
       it("should update the model on the client side", function() {
         var model = new DialogueModel();
-        server.respondWith(response({poll: modelData}));
+        server.respondWith(response({poll: modelData()}));
 
         model.fetch();
         server.respond();
 
-        assert.deepEqual(model.toJSON(), modelData);
+        assert.deepEqual(model.toJSON(), modelData());
       });
     });
 
     describe(".save", function() {
       it("should issue the correct api request", function(done) {
-        var model = new DialogueModel(modelData);
+        var model = new DialogueModel(modelData());
 
         server.respondWith(function(req) {
           assertRequest(
             req,
             '/api/v1/go/api',
             'conversation.dialogue.save_poll',
-            ['campaign-1', 'conversation-1', {poll: modelData}]);
+            ['campaign-1', 'conversation-1', {poll: modelData()}]);
 
           done();
         });
