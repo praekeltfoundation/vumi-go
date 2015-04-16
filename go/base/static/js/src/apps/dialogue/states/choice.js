@@ -162,7 +162,7 @@
     }
   });
 
-  var ChoiceStateEditView = DialogueStateEditView.extend({    
+  var ChoiceStateEditView = DialogueStateEditView.extend({
     events: _({
       'click .new-choice': 'onNewChoice',
       'change .text': 'onTextChange'
@@ -198,9 +198,6 @@
       this.state.model.set('text', $(e.target).val(), {silent: true});
       this.state.render();
     },
-
-    // onChoiceChange: function(e) {
-    // },
 
     onNewChoice: function(e) {
       e.preventDefault();
@@ -255,6 +252,10 @@
 
     charsLeft: function() {
       return this.maxChars - this.calcChars();
+    },
+
+    tooManyChars: function() {
+      return (this.charsLeft() < 0) ? 'text-danger' : '';
     }
   });
 

@@ -13,7 +13,9 @@
   </ol>
 </div>
 
-<div class="text-right"><strong><%= state.charsLeft() %></strong> characters left of <%= state.maxChars %>.</div>
+<div class="form-group text-right <%= state.tooManyChars() %>">
+  <strong><%= state.charsLeft() %></strong> characters left of <%= state.maxChars %>
+</div>
 
 <div class="pull-right">
   <button class="new-choice btn btn-primary btn-sm">Add another answer</button>

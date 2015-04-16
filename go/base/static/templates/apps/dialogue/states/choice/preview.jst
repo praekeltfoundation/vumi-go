@@ -9,4 +9,6 @@
 <% }); %>
 </ol>
 
-<div class="text-right"><strong><%= state.charsLeft() %></strong> characters left of <%= state.maxChars %>.</div>
+<div class="form-group text-right <%= state.tooManyChars() %>">
+  <strong><%= state.charsLeft() %></strong> characters left of <%= state.maxChars %>
+</div>
