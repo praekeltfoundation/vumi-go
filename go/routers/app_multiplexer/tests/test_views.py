@@ -30,7 +30,11 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         router = response.context[0].get('router')
         self.assertEqual(router.name, u"myrouter")
         self.assertContains(response, rtr_helper.get_view_url('start'))
-        self.assertNotContains(response, rtr_helper.get_view_url('stop'))
+        self.assertContains(
+            response,
+            '<button class="btn btn-danger action" data-action="stop" ' +
+            ' data-url="%s" disabled>Deactivate</button>'
+            % rtr_helper.get_view_url('stop'), html=True)
 
     def test_show_running(self):
         rtr_helper = self.router_helper.create_router_helper(
@@ -38,7 +42,11 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         response = self.client.get(rtr_helper.get_view_url('show'))
         router = response.context[0].get('router')
         self.assertEqual(router.name, u"myrouter")
-        self.assertNotContains(response, rtr_helper.get_view_url('start'))
+        self.assertContains(
+            response,
+            '<button class="btn btn-primary action" data-action="activate" ' +
+            'data-url="%s" disabled>Activate</button>'
+            % rtr_helper.get_view_url('start'), html=True)
         self.assertContains(response, rtr_helper.get_view_url('stop'))
 
     def test_start(self):
