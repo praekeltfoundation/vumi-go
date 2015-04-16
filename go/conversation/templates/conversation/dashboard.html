@@ -11,7 +11,6 @@
             <tr>
                 <th>{# Action markers go here, dashboard does not use them #}</th>
                 <th>Campaigns</th>
-                <th>Status</th>
                 <th>Interactions</th>
                 <!-- TODO: We don't have a backend service yet for this value -->
                 <!-- <th>In Last</th> -->
@@ -39,7 +38,6 @@
                           {% endfor %}
                         </ul>
                     </td>
-                    <td class="status {{ conversation.get_status }}">{{ conversation.get_status }}</td>
                     <td>{{ conversation.count_inbound_messages|add:conversation.count_outbound_messages }} </td>
                     <!-- <td></td> -->
                     <td title="{{conversation.created_at }}">{{ conversation.created_at|naturalday }}</td>
@@ -55,7 +53,7 @@
 
             {% else %}
             <tr>
-                <td colspan="9">
+                <td colspan="8">
                 {% if query %}
                     No contacts match <strong>{{ query }}</strong>
                 {% else %}

@@ -3,6 +3,7 @@ import datetime
 from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
+from django.db.utils import DatabaseError
 
 
 class Migration(SchemaMigration):
@@ -14,16 +15,24 @@ class Migration(SchemaMigration):
         # Adding unique constraint on 'MessageCost', fields ['account', 'tag_pool', 'message_direction', 'provider']
         db.create_unique(u'billing_messagecost', ['account_id', 'tag_pool_id', 'message_direction', 'provider'])
 
-        # Removing index on 'MessageCost', fields ['account', 'tag_pool', 'message_direction']
-        db.delete_index(u'billing_messagecost', ['account_id', 'tag_pool_id', 'message_direction'])
+        try:
+            # Removing index on 'MessageCost', fields ['account', 'tag_pool', 'message_direction']
+            db.delete_index(u'billing_messagecost', ['account_id', 'tag_pool_id', 'message_direction'])
+        except DatabaseError as e:
+            if not str(e).startswith("no such index: billing_messagecost_account_id_"):
+                raise
 
         # Adding index on 'MessageCost', fields ['account', 'tag_pool', 'message_direction', 'provider']
         db.create_index(u'billing_messagecost', ['account_id', 'tag_pool_id', 'message_direction', 'provider'])
 
 
     def backwards(self, orm):
-        # Removing index on 'MessageCost', fields ['account', 'tag_pool', 'message_direction', 'provider']
-        db.delete_index(u'billing_messagecost', ['account_id', 'tag_pool_id', 'message_direction', 'provider'])
+        try:
+            # Removing index on 'MessageCost', fields ['account', 'tag_pool', 'message_direction', 'provider']
+            db.delete_index(u'billing_messagecost', ['account_id', 'tag_pool_id', 'message_direction', 'provider'])
+        except DatabaseError as e:
+            if not str(e).startswith("no such index: billing_messagecost_account_id_"):
+                raise
 
         # Adding index on 'MessageCost', fields ['account', 'tag_pool', 'message_direction']
         db.create_index(u'billing_messagecost', ['account_id', 'tag_pool_id', 'message_direction'])

@@ -54,14 +54,22 @@
       }, _(this).result('plumbOptions'));
     },
 
-    destroy: function() {
-      var plumbConnection = this.plumbConnection;
+    destroy: function(options) {
+      options = _.defaults(options || {}, {
+        detach: true,
+        fireDetach: false
+      });
 
-      if (plumbConnection) {
-        this.plumbConnection = null;
-        jsPlumb.detach(plumbConnection);
+      if (this.plumbConnection && options.detach) {
+        // `fireEvent` defaults to `false` according to the docs, not setting
+        // it to `false` appears to cause endless recursion for user-initiated
+        // detaches in jsPlumb 1.7.5 (what one would expect if `fireEvent` was
+        // set to `true`).
+        // jsplumbtoolkit.com/apidocs/classes/jsPlumb.html#method_detach
+        jsPlumb.detach(this.plumbConnection, {fireEvent: options.fireDetach});
       }
 
+      this.plumbConnection = null;
       return this;
     },
 
@@ -184,7 +192,7 @@
       // -------
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.
-      this.remove(connectionId);
+      this.remove(connectionId, {detach: false});
     }
   });
 

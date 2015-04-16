@@ -75,7 +75,7 @@ describe("go.components.actions", function() {
 
       it("should show a notification", function() {
         action.trigger('success');
-        assert.include(notifier.$el.text(), 'Crimp successful!');
+        assert.include(notifier.$el.text(), 'Crimp successful.');
       });
 
       it("set the appropriate class name on the popover element", function() {
@@ -102,7 +102,7 @@ describe("go.components.actions", function() {
 
       it("should show a notification", function() {
         action.trigger('error');
-        assert.include(notifier.$el.text(), 'Crimp failed :/');
+        assert.include(notifier.$el.text(), 'Crimp failed.');
       });
 
       it("set the appropriate class name on the popover element", function() {

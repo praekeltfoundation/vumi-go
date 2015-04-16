@@ -28,7 +28,7 @@ setup(
         'django-registration==1.0',
         'lesscpy==0.9h',
         'xlrd==0.8.0',
-        'requests',
+        'requests>=1.0',
         'mock==1.0.1',
         'raven>=2.0,<3.0',
         'django-debug-toolbar==0.9.4',

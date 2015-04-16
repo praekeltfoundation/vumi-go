@@ -341,7 +341,7 @@ class EditConversationDetailView(ConversationTemplateView):
     def process_form(self, request, conversation):
         form = self.edit_form(request.POST)
         if not form.is_valid():
-            return self._render_forms(request, conversation, form)
+            return self._render_form(request, conversation, form)
 
         # NOTE: we're dealing with a conversation wrapper here so set the
         #       internal `c` object's attributes.

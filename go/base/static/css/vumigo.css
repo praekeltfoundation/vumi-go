@@ -735,6 +735,9 @@ button {
 .contacts .smart-group-search form {
   display: inline;
 }
+.contacts .smart-group-search .form-control {
+  width: 20em;
+}
 .contacts .details hr {
   border: 1px solid #d9d8d3;
   border-top: none;
@@ -790,7 +793,6 @@ button {
   margin-bottom: 0;
 }
 .table-form-view td {
-  color: #2f3436;
   vertical-align: middle !important;
 }
 .table-form-view td:first-child,
@@ -846,3 +848,4 @@ table tbody.loading td {
   padding: 6px;
   font-size: 16px;
 }
+/*# sourceMappingURL=vumigo.css.map */

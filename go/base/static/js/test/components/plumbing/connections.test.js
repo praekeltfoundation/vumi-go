@@ -35,18 +35,33 @@ describe("go.components.plumbing.connections", function() {
     });
 
     describe(".destroy", function() {
-      it("should remove the actual jsPlumb connection", function(done) {
+      it("should detach the connection", function(done) {
         var plumbConnection = x3_y2.plumbConnection;
-
-        assert(plumbConnection);
 
         jsPlumb.bind('connectionDetached', function(e) {
           assert.equal(plumbConnection, e.connection);
-          assert.isNull(x3_y2.plumbConnection);
           done();
         });
 
+        x3_y2.destroy({fireDetach: true});
+      });
+
+      it("should unset the jsPlumb connection", function() {
+        assert.isNotNull(x3_y2.plumbConnection);
         x3_y2.destroy();
+        assert.isNull(x3_y2.plumbConnection);
+      });
+
+      it("should not detach if told not to", function() {
+        var plumbConnection = x3_y2.plumbConnection;
+        var detached = false;
+        jsPlumb.detach(plumbConnection);
+        jsPlumb.bind('connectionDetached', function() { detached = true; });
+        x3_y2.destroy({
+          detach: false,
+          fireDetach: true
+        });
+        assert(!detached);
       });
     });
 
