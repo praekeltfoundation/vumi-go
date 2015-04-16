@@ -737,11 +737,9 @@ button {
   opacity: 0.75;
 }
 .routing #diagram ._jsPlumb_endpoint {
+  cursor: move;
   z-index: 5;
   opacity: 0.75;
-}
-.routing #diagram ._jsPlumb_endpoint svg circle:hover {
-  cursor: move;
 }
 .routing #diagram ._jsPlumb_dragging {
   opacity: 0.5;
