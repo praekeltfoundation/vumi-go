@@ -18,6 +18,8 @@
       ParametricEndpointView = endpoints.ParametricEndpointView,
       AligningEndpointCollection = endpoints.AligningEndpointCollection;
 
+  var maxChars = 140;
+
   var DialogueEndpointView = ParametricEndpointView.extend();
 
   var EntryEndpointView = DialogueEndpointView.extend({
@@ -123,7 +125,11 @@
     detach: function() {
       this.$el.detach();
       return this;
-    }
+    },
+
+    // maxChars: function() {
+    //   return 140;
+    // }
   });
 
   // Mode allowing the user to make changes to the dialogue state. Acts as a
