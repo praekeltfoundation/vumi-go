@@ -416,11 +416,11 @@ button {
   width: 15px;
   height: 15px;
   background: #428bca;
-  -webkit-border-radius: 15px;
+  -webkit-border-radius: 3px;
   -webkit-background-clip: padding-box;
-  -moz-border-radius: 15px;
+  -moz-border-radius: 3px;
   -moz-background-clip: padding;
-  border-radius: 15px;
+  border-radius: 3px;
   background-clip: padding-box;
 }
 .dialogue #diagram .endpoint.is-hovered-target {
