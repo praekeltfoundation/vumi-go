@@ -487,6 +487,8 @@
 
     DialogueStateView: DialogueStateView,
     DialogueStateGridView: DialogueStateGridView,
-    DialogueStateCollection: DialogueStateCollection
+    DialogueStateCollection: DialogueStateCollection,
+
+    maxChars: maxChars
   });
 })(go.apps.dialogue.states = {});

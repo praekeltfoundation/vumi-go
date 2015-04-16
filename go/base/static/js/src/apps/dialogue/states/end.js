@@ -30,7 +30,7 @@
   });
 
   var EndStateView = DialogueStateView.extend({
-    maxChars: 140, // set this in states/state.js
+    maxChars: maxChars,
 
     typeName: 'end',
 
