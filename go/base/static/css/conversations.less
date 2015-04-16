@@ -76,19 +76,16 @@
       .border-radius(15px);
     }
 
-    .endpoint:hover {
-      background: @color-hover;
-      opacity: @secondary-opacity;
-    }
-
     // need to also select by .endpoint in order to override the normal color
     .endpoint.is-hovered-target {
       background: @color-hover;
       opacity: @secondary-opacity;
     }
 
-    .endpoint-source {
+    .endpoint-source:hover {
       cursor: move;
+      background: @color-hover;
+      opacity: @secondary-opacity;
     }
 
     .grid {

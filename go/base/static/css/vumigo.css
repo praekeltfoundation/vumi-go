@@ -423,16 +423,14 @@ button {
   border-radius: 15px;
   background-clip: padding-box;
 }
-.dialogue #diagram .endpoint:hover {
-  background: #b41e31;
-  opacity: 0.75;
-}
 .dialogue #diagram .endpoint.is-hovered-target {
   background: #b41e31;
   opacity: 0.75;
 }
-.dialogue #diagram .endpoint-source {
+.dialogue #diagram .endpoint-source:hover {
   cursor: move;
+  background: #b41e31;
+  opacity: 0.75;
 }
 .dialogue #diagram .grid {
   text-align: center;
