@@ -3,8 +3,7 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var GridView = go.components.grid.GridView,
-      ConfirmView = go.components.views.ConfirmView,
+  var ConfirmView = go.components.views.ConfirmView,
       PopoverView = go.components.views.PopoverView,
       TemplateView = go.components.views.TemplateView;
 
@@ -232,7 +231,7 @@
     switchModeDefaults: {render: true, silent: false},
 
     className: function() {
-      return 'state box item col-md-3 ' + this.typeName || '';
+      return ('state box item ' + (this.typeName || '')).trim();
     },
 
     editModeType: DialogueStateEditView,
@@ -321,67 +320,6 @@
     }
   });
 
-  var DialogueStateGridView = GridView.extend({
-    className: 'grid container boxes',
-
-    events: {
-      'click .add': 'onAddClick'
-    },
-
-    sortableOptions: {
-      items: '.item:not(.add-container)',
-      handle: '.titlebar',
-      placeholder: 'placeholder',
-      sort: function() { jsPlumb.repaintEverything(); },
-      stop: function() { jsPlumb.repaintEverything(); }
-    },
-
-    initialize: function(options) {
-      DialogueStateGridView.__super__.initialize.call(this, options);
-
-      this.states = options.states;
-
-      this.states.eachItem(function(id, state) {
-        this.addState(id, state, {sort: false});
-      }, this);
-
-      this.items.sort();
-
-      this.add(
-        'add-btn',
-        $(JST.apps_dialogue_inlineAdd()),
-        {index: Infinity});
-
-      this.listenTo(this.states, 'add', this.addState);
-      this.listenTo(this.states, 'remove', this.remove);
-      this.on('reorder', this.onReorder, this);
-    },
-
-    onAddClick: function(e) {
-      e.preventDefault();
-      this.states.add();
-    },
-
-    onReorder: function(keys) {
-      // The grid items have their indices reset when the user sorts the items
-      // in the UI. We need to ensure the add button stays at the end, so we
-      // need to change it back to `Infinity` each reorder
-      this.items
-        .get('add-btn')
-        .data('grid:index', Infinity);
-
-      // Remove the add button from the keys
-      keys.pop();
-
-      this.states.rearrange(keys);
-    },
-
-    addState: function(id, state, options) {
-      options = _(options || {}).defaults({index: state.model.get('ordinal')});
-      return this.add(id, state, options);
-    }
-  });
-
   var DialogueStateCollection = StateViewCollection.extend({
     type: DialogueStateView,
 
@@ -410,7 +348,6 @@
 
     constructor: function(options) {
       DialogueStateCollection.__super__.constructor.call(this, options);
-      this.grid = new DialogueStateGridView({states: this});
 
       if (!this.size()) {
         this.add();
@@ -441,10 +378,11 @@
     },
 
     render: function() {
-      this.view.$el.append(this.grid.$el);
-      this.grid.render();
+      this.each(function(s) {
+        this.view.$el.append(s.$el);
+        s.render();
+      }, this);
 
-      this.each(function(s) { s.render(); });
       return this;
     },
 
@@ -459,10 +397,7 @@
 
     bindings: {
       // We need to reset the start state whenever a state is removed or
-      // whenever the ordering of the states changes. Adding states may affect
-      // the ordering, but we resort the states and trigger a 'sort' event when
-      // a state is added, so that case is covered by the 'sort' binding below
-      'sort': function() { this.resetStartState(); },
+      // whenever the ordering of the states changes.
       'remove': function() {
         this.resetStartState();
         this.render();
@@ -480,7 +415,6 @@
     DialogueStateEditView: DialogueStateEditView,
 
     DialogueStateView: DialogueStateView,
-    DialogueStateGridView: DialogueStateGridView,
     DialogueStateCollection: DialogueStateCollection
   });
 })(go.apps.dialogue.states = {});

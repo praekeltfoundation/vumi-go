@@ -411,40 +411,9 @@ button {
   z-index: 3;
   opacity: 0.75;
 }
-.dialogue #diagram .grid {
-  text-align: center;
-  margin: 0 auto;
-}
-.dialogue #diagram .grid .placeholder {
-  background: #2f3436;
-  width: 8px;
-  height: 200px;
-  float: left;
-  -webkit-border-radius: 10px;
-  -webkit-background-clip: padding-box;
-  -moz-border-radius: 10px;
-  -moz-background-clip: padding;
-  border-radius: 10px;
-  background-clip: padding-box;
-}
-.dialogue #diagram .grid .row {
-  margin: 0;
-}
-.dialogue #diagram .grid .item {
-  margin: 40px 40px;
-  float: left;
-  z-index: 2;
-}
-.dialogue #diagram .add {
-  width: 85px;
-  line-height: normal;
-  font-family: serif;
-  font-size: 55px;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
 .dialogue #diagram .state {
+  width: 280px;
+  margin: 20px;
   float: left;
   font-size: 12px;
   text-align: left;

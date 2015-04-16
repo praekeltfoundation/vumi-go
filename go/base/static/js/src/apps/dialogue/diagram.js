@@ -14,6 +14,8 @@
 
   // The main view containing all the dialogue states and connections
   var DialogueDiagramView = DiagramView.extend({
+    className: 'boxes',
+
     stateType: states.DialogueStateView,
     stateCollectionType: states.DialogueStateCollection,
 
@@ -33,6 +35,11 @@
       'error:unsupported connections': function(source, target, plumbConnection) {
         jsPlumb.detach(plumbConnection, {fireEvent: false});
       }
+    },
+
+    render: function() {
+      this.$el.addClass(this.className);
+      DialogueDiagramView.__super__.render.call(this);
     }
   });
 

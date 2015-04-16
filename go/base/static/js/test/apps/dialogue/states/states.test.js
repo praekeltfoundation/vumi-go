@@ -369,88 +369,6 @@ describe("go.apps.dialogue.states", function() {
     });
   });
 
-  describe(".DialogueStateGridView", function() {
-    var states,
-        grid;
-
-    beforeEach(function() {
-      states = diagram.states.members.get('states');
-      grid = states.grid;
-    });
-
-    describe("when a state is added", function() {
-      it("should add the state to the grid", function(done) {
-        grid.items.on('add', function(key) {
-          assert.equal(key, 'new-state');
-          done();
-        });
-
-        states.add({model: {uuid: 'new-state'}});
-      });
-    });
-
-    describe("when a state is removed", function() {
-      it("should remove the state from the grid", function(done) {
-        grid.items.on('remove', function(key) {
-          assert.equal(key, 'state4');
-          done();
-        });
-
-        states.remove('state4');
-      });
-    });
-
-    describe("when the user tries to drag a state", function() {
-      beforeEach(function() {
-        diagram.render();
-      });
-
-      it("should allow the state to be sorted", function() {
-        assert.deepEqual(
-          states.keys(),
-          ['state1','state2','state3','state4', 'state5']);
-
-        $('[data-uuid="state3"] .titlebar')
-          .simulate('mousedown')
-          .simulate('drag', {dx: -550});
-
-        assert.deepEqual(
-          states.keys(),
-          ['state1','state3','state2','state4', 'state5']);
-      });
-    });
-
-    describe("when the user clicks the '.add' button", function() {
-      var i;
-
-      beforeEach(function() {
-        i = 0;
-        sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
-        diagram.render();
-      });
-
-      afterEach(function() {
-        uuid.v4.restore();
-      });
-
-      it("should add a new state", function() {
-        assert(!diagram.states.has('new-state'));
-        assert.isUndefined(diagram.model.get('states').get('new-state'));
-
-        grid.$('.add').click();
-
-        assert(diagram.states.has('new-state'));
-        assert.isDefined(diagram.model.get('states').get('new-state'));
-      });
-
-      it("should keep the button at the end of the grid", function() {
-        assert.equal(grid.items.indexOfKey('add-btn'), 5);
-        grid.$('.add').click();
-        assert.equal(grid.items.indexOfKey('add-btn'), 6);
-      });
-    });
-  });
-
   describe(".DialogueStateCollection", function() {
     var DummyStateView = dialogue.states.dummy.DummyStateView;
 
@@ -458,35 +376,6 @@ describe("go.apps.dialogue.states", function() {
 
     beforeEach(function() {
       states = diagram.states.members.get('states');
-    });
-
-    describe("when its states are reordered", function() {
-      beforeEach(function() {
-        diagram.render();
-      });
-
-      it("should change its diagram's model's start state accordingly",
-      function() {
-        assert.equal(
-          diagram.model.get('start_state'),
-          states.get('state1').model);
-
-        assert.deepEqual(
-          states.keys(),
-          ['state1', 'state2', 'state3', 'state4', 'state5']);
-
-        $('[data-uuid="state3"] .titlebar')
-          .simulate('mousedown')
-          .simulate('drag', {dx: -750});
-
-        assert.deepEqual(
-          states.keys(),
-          ['state3','state1','state2','state4', 'state5']);
-
-        assert.equal(
-          diagram.model.get('start_state'),
-          states.get('state3').model);
-      });
     });
 
     describe("when a state is removed", function() {
@@ -527,6 +416,26 @@ describe("go.apps.dialogue.states", function() {
 
         old.model.set('ordinal', 3);
         states.reset(old, 'dummy');
+      });
+    });
+
+    describe(".render", function() {
+      it("should render its states", function() {
+        var state = states.get('state4');
+        assert.equal(state.$('.main').text().trim(), '');
+
+        states.render();
+
+        assert.equal(
+          state.$('.main').text().trim(),
+          'dummy preview mode: Dummy Message 1');
+      });
+
+      it("should append its state elements to the diagram element", function() {
+        var state = states.get('state4');
+        assert(noElExists(diagram.$('[data-uuid="state4"]')));
+        states.render();
+        assert(oneElExists(diagram.$('[data-uuid="state4"]')));
       });
     });
   });
