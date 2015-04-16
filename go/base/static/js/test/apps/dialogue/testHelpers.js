@@ -50,7 +50,11 @@
            label: 'Blue',
            uuid: 'endpoint2',
            user_defined_value : false
-         }]
+         }],
+         layout: {
+           x: 10,
+           y: 20
+         }
        }, {
          uuid: 'state2',
          name: 'Message 2',
@@ -59,7 +63,11 @@
          user_defined_store_as: false,
          entry_endpoint: {uuid: 'endpoint3'},
          exit_endpoint: {uuid: 'endpoint4'},
-         text: 'What is your name?'
+         text: 'What is your name?',
+         layout: {
+           x: 70,
+           y: 80
+         }
        }, {
          uuid: 'state3',
          name: 'Ending 1',
@@ -67,7 +75,11 @@
          store_as: 'ending-1',
          user_defined_store_as: false,
          entry_endpoint: {uuid: 'endpoint5'},
-         text: 'Thank you for taking our survey'
+         text: 'Thank you for taking our survey',
+         layout: {
+           x: 130,
+           y: 140
+         }
        }, {
          uuid: 'state4',
          name: 'Dummy Message 1',
@@ -75,7 +87,11 @@
          user_defined_store_as: false,
          store_as: 'dummy-message-1',
          entry_endpoint: {uuid: 'endpoint6'},
-         exit_endpoint: {uuid: 'endpoint7'}
+         exit_endpoint: {uuid: 'endpoint7'},
+         layout: {
+           x: 190,
+           y: 200
+         }
        }, {
          uuid: 'state5',
          name: 'Message 5',
@@ -84,7 +100,11 @@
          user_defined_store_as: false,
          store_as: 'message-5',
          entry_endpoint: {uuid: 'endpoint8'},
-         exit_endpoint: {uuid: 'endpoint9'}
+         exit_endpoint: {uuid: 'endpoint9'},
+         layout: {
+           x: 250,
+           y: 260
+         }
        }],
        connections: [{
          uuid: 'endpoint1-endpoint3',

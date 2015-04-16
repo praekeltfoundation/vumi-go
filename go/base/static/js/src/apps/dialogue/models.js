@@ -34,8 +34,21 @@
     setValue: function(v) { return this.set('value', go.utils.slugify(v)); }
   });
 
+  var DialogueStateLayoutModel = Model.extend({
+    defaults: function() {
+      return {
+        x: null,
+        y: null
+      };
+    }
+  });
+
   var DialogueStateModel = StateModel.extend({
-    relations: [],
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'layout',
+      relatedModel: DialogueStateLayoutModel
+    }],
 
     subModelTypes: {
       dummy: 'go.apps.dialogue.models.DummyStateModel',
