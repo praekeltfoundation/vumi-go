@@ -47,8 +47,7 @@ describe("go.apps.dialogue.states.end", function() {
   });
 
   describe(".EndStateView", function() {
-    var state,
-        charsLeft;
+    var state;
 
     beforeEach(function() {
       state = diagram.states.get('state3');
@@ -57,7 +56,7 @@ describe("go.apps.dialogue.states.end", function() {
 
     describe(".calcChars", function(){
       it("should calculate the number of characters used", function(){
-        assert.equal(state.model.get('text').length, 31);
+        assert.equal(state.calcChars(), 31);
       });
     });
 
