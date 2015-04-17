@@ -213,4 +213,36 @@ describe("go.apps.dialogue.states.choice", function() {
       });
     });
   });
+
+  describe(".ChoiceStateView", function() {
+    var state;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      state.maxChars = 100;
+    });
+
+    describe(".calcChars", function(){
+      it("should calculate the number of characters used", function(){
+        assert.equal(state.calcChars(), 44);
+      });
+    });
+
+    describe(".charsLeft", function(){
+      it("should calculate the number of characters left", function(){
+        assert.equal(state.charsLeft(), 56);
+      });
+    });
+
+    describe(".tooManyChars", function(){
+      it("should not add a class when character count is in limit", function(){
+        assert.equal(state.tooManyChars(),'');
+      });
+
+      it("should add a class when character count is not in limit", function(){
+        state.maxChars = 5;
+        assert.equal(state.tooManyChars(), 'text-danger');
+      });
+    });
+  });
 });
