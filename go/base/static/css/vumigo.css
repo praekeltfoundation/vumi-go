@@ -392,6 +392,9 @@ button {
 .dialogue .actions .form-group select.form-control {
   width: auto;
 }
+.dialogue #diagram {
+  position: relative;
+}
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
   opacity: 0.75;

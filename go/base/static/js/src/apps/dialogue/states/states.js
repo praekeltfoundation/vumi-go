@@ -7,15 +7,16 @@
       PopoverView = go.components.views.PopoverView,
       TemplateView = go.components.views.TemplateView;
 
-  var plumbing = go.components.plumbing;
-
-  var states = plumbing.states,
+  var plumbing = go.components.plumbing,
+      states = plumbing.states,
       StateView = states.StateView,
       StateViewCollection = states.StateViewCollection;
 
   var endpoints = plumbing.endpoints,
       ParametricEndpointView = endpoints.ParametricEndpointView,
       AligningEndpointCollection = endpoints.AligningEndpointCollection;
+
+  var DialogueStateLayout = go.apps.dialogue.layout.DialogueStateLayout;
 
   var DialogueEndpointView = ParametricEndpointView.extend();
 
@@ -310,15 +311,12 @@
     },
 
     render: function() {
-      this.mode
-        .render()
-        .$el
-        .appendTo(this.$el);
-
+      this.mode.render().$el.appendTo(this.$el);
       this.endpoints.render();
       return this;
     }
   });
+
 
   var DialogueStateCollection = StateViewCollection.extend({
     type: DialogueStateView,
@@ -348,6 +346,7 @@
 
     constructor: function(options) {
       DialogueStateCollection.__super__.constructor.call(this, options);
+      this.layout = new DialogueStateLayout({states: this});
 
       if (!this.size()) {
         this.add();
@@ -357,7 +356,6 @@
       // Change the default mode to edit once initialisation is done so new
       // states can be rendered in edit mode.
       this.defaultMode = 'edit';
-
       go.utils.bindEvents(this.bindings, this);
     },
 
@@ -378,12 +376,14 @@
     },
 
     render: function() {
-      this.each(function(s) {
-        this.view.$el.append(s.$el);
-        s.render();
-      }, this);
-
+      this.each(this.renderState, this);
+      this.layout.render();
       return this;
+    },
+
+    renderState: function(state) {
+      this.view.$el.append(state.$el);
+      state.render();
     },
 
     resetStartState: function() {

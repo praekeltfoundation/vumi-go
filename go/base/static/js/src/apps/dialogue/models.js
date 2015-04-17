@@ -35,10 +35,17 @@
   });
 
   var DialogueStateLayoutModel = Model.extend({
+    coords: function() {
+      return {
+        x: this.get('x'),
+        y: this.get('y')
+      };
+    },
+
     defaults: function() {
       return {
-        x: null,
-        y: null
+        x: 0,
+        y: 0
       };
     }
   });

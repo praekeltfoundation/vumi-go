@@ -432,10 +432,30 @@ describe("go.apps.dialogue.states", function() {
       });
 
       it("should append its state elements to the diagram element", function() {
-        var state = states.get('state4');
         assert(noElExists(diagram.$('[data-uuid="state4"]')));
         states.render();
         assert(oneElExists(diagram.$('[data-uuid="state4"]')));
+      });
+
+      it("should render the layout", function() {
+        var state = states.get('state4');
+
+        state.model.get('layout').set({
+          x: 40,
+          y: 40
+        });
+
+        assert.notDeepEqual(state.$el.offset(), states.layout.offsetOf({
+          x: 40,
+          y: 40
+        }));
+
+        states.render();
+
+        assert.deepEqual(state.$el.offset(), states.layout.offsetOf({
+          x: 40,
+          y: 40
+        }));
       });
     });
   });
