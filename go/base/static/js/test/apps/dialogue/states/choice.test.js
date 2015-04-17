@@ -235,11 +235,11 @@ describe("go.apps.dialogue.states.choice", function() {
     });
 
     describe(".tooManyChars", function(){
-      it("should not add a class when character count is in limit", function(){
+      it("should not add a class when maxChars exceeds calcChars", function(){
         assert.equal(state.tooManyChars(),'');
       });
 
-      it("should add a class when character count is not in limit", function(){
+      it("should add a class when calcChars exceeds maxChars", function(){
         state.maxChars = 5;
         assert.equal(state.tooManyChars(), 'text-danger');
       });
