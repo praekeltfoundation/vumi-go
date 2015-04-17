@@ -45,4 +45,37 @@ describe("go.apps.dialogue.states.end", function() {
       });
     });
   });
+
+  describe(".EndStateView", function() {
+    var state,
+        charsLeft;
+
+    beforeEach(function() {
+      state = diagram.states.get('state3');
+      state.maxChars = 100;
+    });
+
+    describe(".calcChars", function(){
+      it("should calculate the number of characters used", function(){
+        assert.equal(state.model.get('text').length, 31);
+      });
+    });
+
+    describe(".charsLeft", function(){
+      it("should calculate the number of characters left", function(){
+        assert.equal(state.charsLeft(), 69);
+      });
+    });
+
+    describe(".tooManyChars", function(){
+      it("should not add a class when character count is in limit", function(){
+        assert.equal(state.tooManyChars(),'');
+      });
+
+      it("should add a class when character count is not in limit", function(){
+        state.maxChars = 5;
+        assert.equal(state.tooManyChars(), 'text-danger');
+      });
+    });
+  });
 });
