@@ -38,14 +38,17 @@ describe("go.apps.dialogue.layout", function() {
 
         state2.$el
           .css('margin', 20)
+          .width(202)
           .height(200);
 
         state3.$el
           .css('margin', 30)
+          .width(303)
           .height(300);
 
         state4.$el
           .css('margin', 40)
+          .height(404)
           .height(400);
 
         layout.render();
@@ -56,13 +59,13 @@ describe("go.apps.dialogue.layout", function() {
         });
 
         assert.deepEqual(state3.model.get('layout').coords(), {
-          x: 250,
+          x: 272,
           y: 30
         });
 
         assert.deepEqual(state4.model.get('layout').coords(), {
           x: 40,
-          y: 300
+          y: 280
         });
       });
 
@@ -82,14 +85,17 @@ describe("go.apps.dialogue.layout", function() {
 
         state2.$el
           .css('margin', 20)
+          .width(202)
           .height(200);
 
         state3.$el
           .css('margin', 30)
+          .width(303)
           .height(300);
 
         state4.$el
           .css('margin', 40)
+          .width(404)
           .height(400);
 
         layout.render();
@@ -100,13 +106,13 @@ describe("go.apps.dialogue.layout", function() {
         }));
 
         assert.deepEqual(state3.$el.offset(), layout.offsetOf({
-          x: 250,
+          x: 272,
           y: 30
         }));
 
         assert.deepEqual(state4.$el.offset(), layout.offsetOf({
           x: 40,
-          y: 300
+          y: 280
         }));
       });
 

@@ -416,7 +416,7 @@ button {
 }
 .dialogue #diagram .state {
   width: 280px;
-  margin: 20px;
+  margin: 30px 120px;
   float: left;
   font-size: 12px;
   text-align: left;

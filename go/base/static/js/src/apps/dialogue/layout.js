@@ -4,10 +4,7 @@
 
   var DialogueStateLayout = Backbone.View.extend({
     initialize: function(options) {
-      options = _.defaults(options, {
-        numCols: 3,
-        colWidth: 480
-      });
+      options = _.defaults(options, {numCols: 3});
 
       this.states = options.states;
       this.numCols = options.numCols;
@@ -44,8 +41,8 @@
       var marginTop = parseInt(state.$el.css('marginTop'));
 
       var cell = this.grid.add({
-        width: this.colWidth,
-        height: state.$el.outerHeight(true)
+        width: state.$el.outerWidth(true) - marginLeft,
+        height: state.$el.outerHeight(true) - marginTop
       });
 
       state.model.set('layout', {
@@ -53,6 +50,7 @@
         y: cell.y + marginTop
       }, {silent: true});
     }
+
   });
 
 
