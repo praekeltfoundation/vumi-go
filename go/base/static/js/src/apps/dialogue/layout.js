@@ -11,6 +11,7 @@
       this.colWidth = options.colWidth;
       this.setElement(this.states.view.$el);
       this.grid = new Grid({numCols: this.numCols});
+      this.initDragging();
     },
 
     render: function() {
@@ -48,10 +49,44 @@
       state.model.set('layout', {
         x: cell.x + marginLeft,
         y: cell.y + marginTop
-      }, {silent: true});
-    }
+      });
+    },
 
+    initDragging: function() {
+      var onDrag = this.onDrag.bind(this);
+
+      this.states.each(function(state) {
+        state.$el.draggable({
+          drag: onDrag,
+          handle: '.titlebar'
+        });
+      }, this);
+    },
+
+    repaint: function() {
+      // TODO only repaint the relevant connections
+      jsPlumb.repaintEverything();
+      this.trigger('repaint');
+    },
+
+    onDrag: function(e) {
+      var state = this.states.get($(e.target).attr('data-uuid'));
+
+      state.model
+        .get('layout')
+        .set(offsetCoords(state.$el.position()), {silent: true});
+
+      this.repaint();
+    }
   });
+
+
+  function offsetCoords(offset) {
+    return {
+      x: offset.left,
+      y: offset.top
+    };
+  }
 
 
   exports.DialogueStateLayout = DialogueStateLayout;
