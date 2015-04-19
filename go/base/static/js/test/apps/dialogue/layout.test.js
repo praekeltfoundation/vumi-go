@@ -45,6 +45,34 @@ describe("go.apps.dialogue.layout", function() {
       assert.notDeepEqual(state2.$el.position(), oldPosition);
     });
 
+    describe("when the layout is double-clicked", function() {
+      it("should create a new state at the mouse position", function() {
+        var offset = layout.offsetOf({
+          x: 21,
+          y: 23
+        }) ;
+
+        assert.strictEqual(states.size(), 5);
+
+        layout.$el.trigger($.Event('dblclick', {
+          pageX: offset.left,
+          pageY: offset.top
+        }));
+
+        assert.strictEqual(states.size(), 6);
+
+        var state = states.last();
+        assert.deepEqual(state.model.get('layout').coords(), {
+          x: 21,
+          y: 23
+        });
+        assert.deepEqual(state.$el.offset(), layout.offsetOf({
+          x: 21,
+          y: 23
+        }));
+      });
+    });
+
     describe("when a new state is added", function() {
       it("should set up dragging for the state", function() {
         var state = states.add();
@@ -107,7 +135,6 @@ describe("go.apps.dialogue.layout", function() {
 
       it("should resize its height to fit the state's new position", function() {
         var state2 = states.get('state2');
-
         diagram.model.get('states').set([state2.model]);
 
         layout.$el

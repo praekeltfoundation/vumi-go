@@ -17,6 +17,12 @@
       go.utils.bindEvents(this.bindings, this);
     },
 
+    events: {
+      'dblclick': function(e) {
+        this.addAtEvent(e);
+      }
+    },
+
     bindings: {
       'add states': function(id, state) {
         this.initDragging(state);
@@ -37,6 +43,19 @@
         left: offset.left + coords.x,
         top: offset.top + coords.y
       };
+    },
+
+    addAtEvent: function(e) {
+      var state = this.states.add();
+      var offset = this.$el.offset();
+
+      state.model.set('layout', {
+        x: e.pageX - offset.left,
+        y: e.pageY - offset.top
+      });
+
+      this.renderState(state);
+      return state;
     },
 
     repaint: function() {
