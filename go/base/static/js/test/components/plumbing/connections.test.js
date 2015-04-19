@@ -187,9 +187,88 @@ describe("go.components.plumbing.connections", function() {
             assert(a1L1.$el.is(plumbConnection.source));
             assert(a1L2.$el.is(plumbConnection.target));
             done();
+      it("should fire an event if the source is not part of the diagram",
+      function(done) {
+        var source = $('<div>').appendTo(diagram.$el);
+        var a1L1 = diagram.endpoints.get('a1L1');
+        var conn;
+
+        diagram.connections.on('error:unknown', function(e) {
+          assert(source.is(e.source));
+          assert(a1L1.$el.is(e.target));
+          assert(source.is(e.connection.source));
+          assert(a1L1.$el.is(e.connection.target));
+          done();
+        });
+
+        jsPlumb.connect({
+          source: source,
+          target: a1L1.$el
+        });
+      });
           });
 
         jsPlumb.connect({source: a1L1.$el, target: a1L2.$el});
+      });
+
+      it("should fire an event if the source is not part of the diagram",
+      function(done) {
+        var source = $('<div>').appendTo(diagram.$el);
+        var a1L1 = diagram.endpoints.get('a1L1');
+        var conn;
+
+        diagram.connections.on('error:unknown', function(e) {
+          assert(source.is(e.source));
+          assert(a1L1.$el.is(e.target));
+          assert(source.is(e.connection.source));
+          assert(a1L1.$el.is(e.connection.target));
+          done();
+        });
+
+        jsPlumb.connect({
+          source: source,
+          target: a1L1.$el
+        });
+      });
+
+      it("should fire an event if the source is not part of the diagram",
+      function(done) {
+        var source = $('<div>').appendTo(diagram.$el);
+        var a1L1 = diagram.endpoints.get('a1L1');
+        var conn;
+
+        diagram.connections.on('error:unknown', function(e) {
+          assert(source.is(e.source));
+          assert(a1L1.$el.is(e.target));
+          assert(source.is(e.connection.source));
+          assert(a1L1.$el.is(e.connection.target));
+          done();
+        });
+
+        jsPlumb.connect({
+          source: source,
+          target: a1L1.$el
+        });
+      });
+
+      it("should fire an event if the target is not part of the diagram",
+      function(done) {
+        var target = $('<div>').appendTo(diagram.$el);
+        var a1L1 = diagram.endpoints.get('a1L1');
+        var conn;
+
+        diagram.connections.on('error:unknown', function(e) {
+          assert(a1L1.$el.is(e.source));
+          assert(target.is(e.target));
+          assert(a1L1.$el.is(e.connection.source));
+          assert(target.is(e.connection.target));
+          done();
+        });
+
+        jsPlumb.connect({
+          source: a1L1.$el,
+          target: target
+        });
       });
     });
 
