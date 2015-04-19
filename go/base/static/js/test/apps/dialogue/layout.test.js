@@ -24,6 +24,36 @@ describe("go.apps.dialogue.layout", function() {
       tearDown();
     });
 
+    it("should set up dragging for states", function() {
+      var state2 = states.get('state2');
+      var oldPosition = state2.$el.position();
+
+      state2.$('.titlebar')
+        .simulate('mousedown')
+        .simulate('drag', {
+          dx: 4,
+          dy: 5
+         });
+
+      assert.notDeepEqual(state2.$el.position(), oldPosition);
+    });
+
+    describe("when a new state is added", function() {
+      it("should set up dragging for the state", function() {
+        var state = states.add();
+        var oldPosition = state.$el.position();
+
+        state.$('.titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {
+            dx: 4,
+            dy: 5
+           });
+
+        assert.notDeepEqual(state.$el.position(), oldPosition);
+      });
+    });
+
     describe("when a state is dragged", function() {
       it("should repaint", function() {
         var repainted = false;

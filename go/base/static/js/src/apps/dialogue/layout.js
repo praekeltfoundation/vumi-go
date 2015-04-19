@@ -11,7 +11,16 @@
       this.colWidth = options.colWidth;
       this.setElement(this.states.view.$el);
       this.grid = new Grid({numCols: this.numCols});
-      this.initDragging();
+
+      this.onDrag = this.onDrag.bind(this);
+      this.states.each(this.initDragging, this);
+      go.utils.bindEvents(this.bindings, this);
+    },
+
+    bindings: {
+      'add states': function(id, state) {
+        this.initDragging(state);
+      }
     },
 
     render: function() {
@@ -65,15 +74,11 @@
       });
     },
 
-    initDragging: function() {
-      var onDrag = this.onDrag.bind(this);
-
-      this.states.each(function(state) {
-        state.$el.draggable({
-          drag: onDrag,
-          handle: '.titlebar'
-        });
-      }, this);
+    initDragging: function(state) {
+      state.$el.draggable({
+        drag: this.onDrag,
+        handle: '.titlebar'
+      });
     },
 
     onDrag: function(e) {
