@@ -24,6 +24,9 @@
     },
 
     render: function() {
+      // so people dont see an awkwardly 'growing' page when they drag states
+      this.$el.css('margin-bottom', $(window).height());
+
       this.states.each(this.renderState, this);
     },
 

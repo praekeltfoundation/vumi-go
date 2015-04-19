@@ -24,6 +24,13 @@ describe("go.apps.dialogue.layout", function() {
       tearDown();
     });
 
+    it("should set the margin to the screen height", function() {
+      var height = $(window).height();
+      assert.notStrictEqual(parseInt(layout.$el.css('margin-bottom')), height);
+      layout.render();
+      assert.strictEqual(parseInt(layout.$el.css('margin-bottom')), height);
+    });
+
     it("should set up dragging for states", function() {
       var state2 = states.get('state2');
       var oldPosition = state2.$el.position();

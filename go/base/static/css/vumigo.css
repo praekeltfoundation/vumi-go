@@ -394,7 +394,6 @@ button {
 }
 .dialogue #diagram {
   position: relative;
-  min-height: 800px;
 }
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
