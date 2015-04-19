@@ -4,7 +4,7 @@
 
 (function(exports) {
   var colors = {
-    normal: '#2f3436',
+    normal: '#585858',
     hover: '#b41e31'
   };
 
@@ -12,7 +12,7 @@
     jsPlumb.Defaults.Connector = ['StateMachine'];
 
     _(jsPlumb.Defaults.EndpointStyle).extend({
-      radius: 4,
+      radius: 5,
       fillStyle: colors.normal
     });
 

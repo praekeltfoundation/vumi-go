@@ -19,6 +19,10 @@
 }
 
 .dialogue {
+  @color-normal: #428bca;
+  @color-hover: #b41e31;
+  @secondary-opacity: 0.75;
+
   .actions {
     .sidebar {
       background: #d9d8d3;
@@ -44,26 +48,46 @@
 
     ._jsPlumb_connector {
       z-index: 1;
-      opacity: 0.75;
+      opacity: @secondary-opacity;
     }
 
     ._jsPlumb_endpoint {
       z-index: 5;
-      opacity: 0.75;
+      opacity: @secondary-opacity;
     }
 
-    ._jsPlumb_endpoint svg circle:hover {
+    ._jsPlumb_endpoint {
       cursor: move;
     }
 
     ._jsPlumb_dragging {
       z-index: 3;
-      opacity: 0.75;
+      opacity: @secondary-opacity;
     }
 
     ._jsPlumb_hover {
       z-index: 3;
-      opacity: 0.75;
+      opacity: @secondary-opacity;
+    }
+
+    .endpoint {
+      z-index: 4;
+      width: 15px;
+      height: 15px;
+      background: @color-normal;
+      .border-radius(3px);
+    }
+
+    // need to also select by .endpoint in order to override the normal color
+    .endpoint.is-hovered-target {
+      background: @color-hover;
+      opacity: @secondary-opacity;
+    }
+
+    .endpoint-source:hover {
+      cursor: move;
+      background: @color-hover;
+      opacity: @secondary-opacity;
     }
 
     .state {
@@ -167,18 +191,6 @@
       }
     }
 
-    .endpoint {
-      z-index: 4;
-      background: #428bca;
-      width: 15px;
-      height: 15px;
-      .border-radius(15px);
-    }
-
-    .endpoint:hover {
-      cursor: pointer;
-    }
-
     .search_enabled {
       input {
         margin: 0;
@@ -204,6 +216,10 @@
       .preview.mode {
         .choices {
           text-align: left;
+
+          .choice {
+            padding: 4px 0;
+          }
         }
       }
     }
