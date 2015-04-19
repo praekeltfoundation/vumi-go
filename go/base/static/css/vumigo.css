@@ -404,7 +404,6 @@ button {
   opacity: 0.75;
 }
 .dialogue #diagram ._jsPlumb_endpoint {
-  z-index: 5;
   opacity: 0.75;
 }
 .dialogue #diagram ._jsPlumb_endpoint {
@@ -419,7 +418,6 @@ button {
   opacity: 0.75;
 }
 .dialogue #diagram .endpoint {
-  z-index: 4;
   width: 15px;
   height: 15px;
   background: #428bca;
@@ -440,6 +438,7 @@ button {
   opacity: 0.75;
 }
 .dialogue #diagram .state {
+  z-index: 2;
   width: 280px;
   margin: 30px 120px;
   float: left;
