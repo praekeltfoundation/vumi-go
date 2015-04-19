@@ -96,7 +96,8 @@
     initDragging: function(state) {
       state.$el.draggable({
         drag: this.onDrag,
-        handle: '.titlebar'
+        handle: '.titlebar',
+        containment: 'parent'
       });
     },
 
