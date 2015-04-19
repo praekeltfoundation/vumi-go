@@ -8,12 +8,13 @@ describe("go.apps.dialogue.layout", function() {
       newDialogueDiagram = dialogue.testHelpers.newDialogueDiagram;
 
   describe(".DialogueStateLayout", function() {
-    var states,
+    var diagram,
+        states,
         layout;
 
     beforeEach(function() {
       setUp();
-      var diagram = newDialogueDiagram();
+      diagram = newDialogueDiagram();
       states = diagram.states.members.get('states');
       layout = states.layout;
       diagram.render();
@@ -65,6 +66,35 @@ describe("go.apps.dialogue.layout", function() {
           x: state2.$el.position().left,
           y: state2.$el.position().top
         });
+      });
+
+      it("should resize its height to fit the state's new position", function() {
+        var state2 = states.get('state2');
+
+        diagram.model.get('states').set([state2.model]);
+
+        layout.$el
+          .css('min-height', 10)
+          .height(10);
+
+        state2.$el
+          .css('padding', 0)
+          .css('margin', 0)
+          .height(80);
+
+        state2.model
+          .get('layout')
+          .set('y', 0);
+
+        layout.render();
+
+        assert.strictEqual(layout.$el.height(), 80);
+
+        state2.$('.titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dy: 1});
+
+        assert.strictEqual(layout.$el.height(), state2.$el.position().top + 80);
       });
     });
 
@@ -199,6 +229,42 @@ describe("go.apps.dialogue.layout", function() {
           x: 40,
           y: 400
         }));
+      });
+      
+      it("should resize its height to fit all its states", function() {
+        var state2 = states.get('state2');
+        var state3 = states.get('state3');
+
+        diagram.model.get('states').set([
+          state2.model,
+          state3.model
+        ]);
+
+        layout.$el
+          .css('min-height', 10)
+          .height(200);
+
+        state2.$el
+          .css('padding', 0)
+          .css('margin', 20)
+          .height(200);
+
+        state3.$el
+          .css('padding', 0)
+          .css('margin', 30)
+          .height(300);
+
+        state2.model
+          .get('layout')
+          .set('y', 40);
+
+        state3.model
+          .get('layout')
+          .set('y', 60);
+
+        layout.render();
+
+        assert.strictEqual(layout.$el.height(), 30 + 300 + 60);
       });
     });
 

@@ -18,11 +18,6 @@
       this.states.each(this.renderState, this);
     },
 
-    renderState: function(state) {
-      var layout = this.ensureLayout(state);
-      state.$el.offset(this.offsetOf(layout.coords()));
-    },
-
     offsetOf: function(coords) {
       var offset = this.$el.offset();
 
@@ -30,6 +25,24 @@
         left: offset.left + coords.x,
         top: offset.top + coords.y
       };
+    },
+
+    repaint: function() {
+      // TODO only repaint the relevant connections
+      jsPlumb.repaintEverything();
+      this.trigger('repaint');
+    },
+
+    resizeToFit: function(state) {
+      var height = this.$el.height();
+      var y = state.$el.position().top + state.$el.outerHeight(true);
+      this.$el.height(Math.max(height, y));
+    },
+
+    renderState: function(state) {
+      var layout = this.ensureLayout(state);
+      state.$el.offset(this.offsetOf(layout.coords()));
+      this.resizeToFit(state);
     },
 
     ensureLayout: function(state) {
@@ -63,12 +76,6 @@
       }, this);
     },
 
-    repaint: function() {
-      // TODO only repaint the relevant connections
-      jsPlumb.repaintEverything();
-      this.trigger('repaint');
-    },
-
     onDrag: function(e) {
       var state = this.states.get($(e.target).attr('data-uuid'));
 
@@ -77,6 +84,7 @@
         .set(offsetCoords(state.$el.position()), {silent: true});
 
       this.repaint();
+      this.resizeToFit(state);
     }
   });
 
