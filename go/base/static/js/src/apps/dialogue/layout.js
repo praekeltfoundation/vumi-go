@@ -42,6 +42,12 @@
       };
     },
 
+    dragMargin: function() {
+      // give an extra screen size's space so that users don't need to see the
+      // bottom of the page grow
+      return $(window).height();
+    },
+
     addAtEvent: function(e) {
       var state = this.states.add();
       var offset = this.$el.offset();
@@ -63,8 +69,13 @@
 
     resizeToFit: function(state) {
       var height = this.$el.height();
-      var y = state.$el.position().top + state.$el.outerHeight(true);
-      this.$el.height(Math.max(height, y));
+      this.$el.height(Math.max(height, this.maxYOf(state)));
+    },
+
+    maxYOf: function(state) {
+      var top = state.$el.position().top;
+      var height = state.$el.outerHeight(true);
+      return top + height + this.dragMargin();
     },
 
     renderState: function(state) {
