@@ -326,6 +326,16 @@ class VumiUserApi(object):
             if conv_conn in routing_connectors:
                 routing_connectors.remove(conv_conn)
 
+        # And lasting with active routers
+        routers = yield self.active_routers()
+        for router in routers:
+            router_inbound_conn = router.get_inbound_connector()
+            if router_inbound_conn in routing_connectors:
+                routing_connectors.remove(router_inbound_conn)
+            router_outbound_conn = router.get_outbound_connector()
+            if router_outbound_conn in routing_connectors:
+                routing_connectors.remove(router_outbound_conn)
+
         if routing_connectors:
             raise VumiError(
                 "Routing table contains illegal connector names: %s" % (

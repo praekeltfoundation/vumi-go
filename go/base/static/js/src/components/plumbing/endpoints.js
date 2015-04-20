@@ -39,7 +39,10 @@
     },
 
     plumbTargetOptions: {
-      anchor: 'Continuous'
+      anchor: 'Continuous',
+      dropOptions: {
+        hoverClass: 'is-hovered-target'
+      }
     },
 
     initialize: function(options) {
@@ -72,6 +75,8 @@
     },
 
     render: function() {
+      if (this.isSource) { this.$el.addClass('endpoint-source'); }
+      if (this.isTarget) { this.$el.addClass('endpoint-target');}
       this.collection.appendToView(this);
     }
   });

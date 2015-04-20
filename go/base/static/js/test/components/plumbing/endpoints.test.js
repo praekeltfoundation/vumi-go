@@ -70,6 +70,26 @@ describe("go.components.plumbing.endpoints", function() {
         x4.render();
         assert(oneElExists('[data-uuid="x4"]'));
       });
+
+      it("should add a source endpoint class if is is a source", function() {
+        x4.isSource = false;
+        x4.render();
+        assert(!x4.$el.hasClass('endpoint-source'));
+
+        x4.isSource = true;
+        x4.render();
+        assert(x4.$el.hasClass('endpoint-source'));
+      });
+
+      it("should add a target endpoint class if is is a target", function() {
+        x4.isTarget = false;
+        x4.render();
+        assert(!x4.$el.hasClass('endpoint-target'));
+
+        x4.isTarget = true;
+        x4.render();
+        assert(x4.$el.hasClass('endpoint-target'));
+      });
     });
   });
 
