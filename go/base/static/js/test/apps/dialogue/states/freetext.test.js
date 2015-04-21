@@ -44,6 +44,27 @@ describe("go.apps.dialogue.states.freetext", function() {
           'What is your parrot doing?');
       });
     });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '122 left of 140');
+      });
+    });
+  });
+
+  describe(".FreeTextStatePreviewView", function() {
+    var state;
+
+    beforeEach(function() {
+      state = diagram.states.get('state2');
+      state.preview();
+    });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '122 left of 140');
+      });
+    });
   });
 
   describe(".FreeStateView", function() {
