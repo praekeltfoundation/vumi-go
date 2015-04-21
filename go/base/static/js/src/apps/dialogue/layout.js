@@ -13,19 +13,12 @@
       this.grid = new Grid({numCols: this.numCols});
 
       this.onDrag = this.onDrag.bind(this);
-      this.states.each(this.initDragging, this);
       go.utils.bindEvents(this.bindings, this);
     },
 
     events: {
       'dblclick': function(e) {
         this.addAtEvent(e);
-      }
-    },
-
-    bindings: {
-      'add states': function(id, state) {
-        this.initDragging(state);
       }
     },
 
@@ -89,6 +82,12 @@
     },
 
     renderState: function(state) {
+      state.$el.draggable({
+        drag: this.onDrag,
+        handle: '.titlebar',
+        containment: 'parent'
+      });
+
       var layout = this.ensureLayout(state);
       state.$el.offset(this.offsetOf(layout.coords()));
       this.resizeToFit(state);
@@ -111,14 +110,6 @@
       state.model.set('layout', {
         x: cell.x + marginLeft,
         y: cell.y + marginTop
-      });
-    },
-
-    initDragging: function(state) {
-      state.$el.draggable({
-        drag: this.onDrag,
-        handle: '.titlebar',
-        containment: 'parent'
       });
     },
 
