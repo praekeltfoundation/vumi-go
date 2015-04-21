@@ -25,17 +25,17 @@ describe("go.apps.dialogue.layout", function() {
     });
 
     it("should set up dragging for states", function() {
-      var state2 = states.get('state2');
-      var oldPosition = state2.$el.position();
+      var state = states.get('state2');
+      var oldPosition = state.$el.position();
 
-      state2.$('.titlebar')
+      state.$('.titlebar')
         .simulate('mousedown')
         .simulate('drag', {
           dx: 4,
           dy: 5
-         });
+        });
 
-      assert.notDeepEqual(state2.$el.position(), oldPosition);
+      assert.notDeepEqual(state.$el.position(), oldPosition);
     });
 
     describe("when the layout is double-clicked", function() {
@@ -76,7 +76,7 @@ describe("go.apps.dialogue.layout", function() {
           .simulate('drag', {
             dx: 4,
             dy: 5
-           });
+          });
 
         assert.notDeepEqual(state.$el.position(), oldPosition);
       });
@@ -85,17 +85,17 @@ describe("go.apps.dialogue.layout", function() {
     describe("when a state is dragged", function() {
       it("should repaint", function() {
         var repainted = false;
-        var state2 = states.get('state2');
+        var state = states.get('state2');
         layout.on('repaint', function() { repainted = true; });
 
         assert(!repainted);
 
-        state2.$('.titlebar')
+        state.$('.titlebar')
           .simulate('mousedown')
           .simulate('drag', {
             dx: 4,
             dy: 5
-           });
+          });
 
         assert(repainted);
       });
@@ -125,20 +125,20 @@ describe("go.apps.dialogue.layout", function() {
       });
 
       it("should resize its height to fit the state's new position", function() {
-        var state2 = states.get('state2');
-        diagram.model.get('states').set([state2.model]);
+        var state = states.get('state2');
+        diagram.model.get('states').set([state.model]);
         layout.dragMargin = go.utils.functor(10);
 
         layout.$el
           .css('min-height', 10)
           .height(10);
 
-        state2.$el
+        state.$el
           .css('padding', 0)
           .css('margin', 0)
           .height(80);
 
-        state2.model
+        state.model
           .get('layout')
           .set('y', 0);
 
@@ -146,13 +146,13 @@ describe("go.apps.dialogue.layout", function() {
 
         assert.strictEqual(layout.$el.height(), 80 + 10);
 
-        state2.$('.titlebar')
+        state.$('.titlebar')
           .simulate('mousedown')
           .simulate('drag', {dy: 1});
 
         assert.strictEqual(
           layout.$el.height(),
-          state2.$el.position().top + 80 + 10);
+          state.$el.position().top + 80 + 10);
       });
     });
 
