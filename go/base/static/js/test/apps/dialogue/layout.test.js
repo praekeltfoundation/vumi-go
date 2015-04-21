@@ -111,7 +111,7 @@ describe("go.apps.dialogue.layout", function() {
       it("should resize its height to fit the state's new position", function() {
         var state = states.get('state2');
         diagram.model.get('states').set([state.model]);
-        layout.dragMargin = go.utils.functor(10);
+        layout.dragMargin = function() { return 10; };
 
         layout.$el
           .css('min-height', 10)
@@ -261,7 +261,7 @@ describe("go.apps.dialogue.layout", function() {
       it("should resize its height to fit all its states", function() {
         var state2 = states.get('state2');
         var state3 = states.get('state3');
-        layout.dragMargin = go.utils.functor(10);
+        layout.dragMargin = function() { return 10; };
 
         diagram.model.get('states').set([
           state2.model,
