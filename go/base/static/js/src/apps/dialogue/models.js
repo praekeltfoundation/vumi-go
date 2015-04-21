@@ -85,7 +85,8 @@
 
   var DialogueStateModelCollection = Backbone.Collection.extend({
     model: DialogueStateModel,
-    comparator: function(state) { return state.get('ordinal'); }
+    ordered: true,
+    comparator: 'ordinal'
   });
 
   var DummyStateModel = DialogueStateModel.extend({
@@ -335,6 +336,8 @@
     EndStateModel: EndStateModel,
     GroupStateModel: GroupStateModel,
     SendStateModel: SendStateModel,
-    HttpJsonStateModel: HttpJsonStateModel
+    HttpJsonStateModel: HttpJsonStateModel,
+
+    DialogueStateModelCollection: DialogueStateModelCollection 
   });
 })(go.apps.dialogue.models = {});

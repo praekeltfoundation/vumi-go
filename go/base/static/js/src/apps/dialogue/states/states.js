@@ -320,15 +320,6 @@
 
   var DialogueStateCollection = StateViewCollection.extend({
     type: DialogueStateView,
-
-    ordered: true,
-    comparator: function(state) { return state.model.get('ordinal'); },
-
-    arrangeable: true,
-    arranger: function(state, ordinal) {
-      state.model.set('ordinal', ordinal, {silent: true});
-    },
-
     defaultMode: 'preview',
 
     viewOptions: function() {
@@ -356,7 +347,6 @@
       // Change the default mode to edit once initialisation is done so new
       // states can be rendered in edit mode.
       this.defaultMode = 'edit';
-      go.utils.bindEvents(this.bindings, this);
     },
 
     // Removes a state and creates a new state of a different type in the same
@@ -364,14 +354,15 @@
     reset: function(state, type) {
       this.remove(state);
 
-      this.add({
+      state = this.add({
         model: {
           type: type,
           name: state.model.get('name'),
-          ordinal: state.model.get('ordinal')
+          layout: state.model.get('layout')
         }
       });
 
+      this.renderState(state);
       return this;
     },
 
@@ -394,16 +385,6 @@
 
       this.view.model.set('start_state', model);
       return this;
-    },
-
-    bindings: {
-      // We need to reset the start state whenever a state is removed or
-      // whenever the ordering of the states changes.
-      'remove': function() {
-        this.resetStartState();
-        this.render();
-        jsPlumb.repaintEverything();
-      },
     }
   });
 

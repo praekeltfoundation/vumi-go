@@ -102,7 +102,8 @@ describe("go.apps.dialogue.views", function() {
       });
     });
 
-    describe("when '#new-state' is clicked", function() {
+    // this will be going soon
+    describe.skip("when '#new-state' is clicked", function() {
       var i;
 
       beforeEach(function() {

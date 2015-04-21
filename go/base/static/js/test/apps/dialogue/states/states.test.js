@@ -378,25 +378,6 @@ describe("go.apps.dialogue.states", function() {
       states = diagram.states.members.get('states');
     });
 
-    describe("when a state is removed", function() {
-      beforeEach(function() {
-        diagram.render();
-      });
-
-      it("should change its diagram's model's start state accordingly",
-      function() {
-        assert.equal(
-          diagram.model.get('start_state'),
-          states.get('state1').model);
-
-        states.remove('state1');
-
-        assert.equal(
-          diagram.model.get('start_state'),
-          states.get('state2').model);
-      });
-    });
-
     describe(".reset", function() {
       it("should remove the old state", function(){
         assert(states.has('state3'));
@@ -408,13 +389,21 @@ describe("go.apps.dialogue.states", function() {
       function(done){
         var old = states.get('state3');
 
+        old.model.get('layout').set({
+          x: 23,
+          y: 21
+        });
+
         states.on('add', function(id, state) {
           assert(state instanceof DummyStateView);
-          assert.equal(state.model.get('ordinal'), 3);
+          assert.deepEqual(state.model.get('layout').coords(), {
+            x: 23,
+            y: 21
+          });
+
           done();
         });
 
-        old.model.set('ordinal', 3);
         states.reset(old, 'dummy');
       });
     });
