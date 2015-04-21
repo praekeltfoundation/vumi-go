@@ -126,7 +126,7 @@ describe("go.apps.dialogue.layout", function() {
           .get('layout')
           .set('y', 0);
 
-        layout.render();
+        layout.renderState(state);
 
         assert.strictEqual(layout.$el.height(), 80 + 10);
 
@@ -140,8 +140,8 @@ describe("go.apps.dialogue.layout", function() {
       });
     });
 
-    describe(".render", function() {
-      it("should initialise states without a layout )using the grid", function() {
+    describe(".renderState", function() {
+      it("should initialise states without a layout using the grid", function() {
         var layout = new DialogueStateLayout({
           states: states,
           numCols: 2
@@ -169,7 +169,9 @@ describe("go.apps.dialogue.layout", function() {
           .height(404)
           .height(400);
 
-        layout.render();
+        layout.renderState(state2);
+        layout.renderState(state3);
+        layout.renderState(state4);
 
         assert.deepEqual(state2.model.get('layout').coords(), {
           x: 20,
@@ -216,7 +218,9 @@ describe("go.apps.dialogue.layout", function() {
           .width(404)
           .height(400);
 
-        layout.render();
+        layout.renderState(state2);
+        layout.renderState(state3);
+        layout.renderState(state4);
 
         assert.deepEqual(state2.$el.offset(), layout.offsetOf({
           x: 20,
@@ -255,7 +259,9 @@ describe("go.apps.dialogue.layout", function() {
           y: 400
         });
 
-        layout.render();
+        layout.renderState(state2);
+        layout.renderState(state3);
+        layout.renderState(state4);
 
         assert.deepEqual(state2.$el.offset(), layout.offsetOf({
           x: 20,
@@ -305,7 +311,8 @@ describe("go.apps.dialogue.layout", function() {
           .get('layout')
           .set('y', 60);
 
-        layout.render();
+        layout.renderState(state2);
+        layout.renderState(state3);
 
         assert.strictEqual(layout.$el.height(), 30 + 300 + 60 + 10);
       });

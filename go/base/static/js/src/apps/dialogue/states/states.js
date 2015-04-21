@@ -384,6 +384,7 @@
     renderState: function(state) {
       this.view.$el.append(state.$el);
       state.render();
+      this.layout.renderState(state);
     },
 
     resetStartState: function() {

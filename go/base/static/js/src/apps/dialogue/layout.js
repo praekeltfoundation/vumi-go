@@ -22,10 +22,6 @@
       }
     },
 
-    render: function() {
-      this.states.each(this.renderState, this);
-    },
-
     offsetOf: function(coords) {
       var offset = this.$el.offset();
 
@@ -60,7 +56,7 @@
         y: e.pageY - offset.top
       });
 
-      this.renderState(state);
+      this.states.renderState(state);
       return state;
     },
 
