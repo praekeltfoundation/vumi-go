@@ -2,6 +2,6 @@
 <p class="hint text-info">Recipients can't answer</p>
 <p class="hint text-danger">Session ends</p>
 
-<div class="form-group text-right <%= state.tooManyChars() %>">
+<div class="char-count form-group text-right <%= state.tooManyChars() %>">
   <strong><%= state.charsLeft() %></strong> left of <%= state.maxChars %>
 </div>

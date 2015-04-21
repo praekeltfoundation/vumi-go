@@ -49,15 +49,23 @@ describe("go.apps.dialogue.states.end", function() {
     });
 
     describe(".render", function() {
-      it.only("should display the char count", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '109 left of 140');
+      });
+    });
+  });
 
-      // <div class="form-group text-right ">
-      //   <strong>109</strong> left of 140
-      // </div></div>
+  describe(".EndStatePreviewView", function() {
+    var state;
 
-        assert(noElExists('.char-count'));
-        state.render();
-        assert(oneElExists('.char-count'));
+    beforeEach(function() {
+      state = diagram.states.get('state3');
+      state.preview();
+    });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '109 left of 140');
       });
     });
   });
