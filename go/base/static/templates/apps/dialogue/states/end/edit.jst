@@ -6,5 +6,5 @@
 <p class="hint text-info">Recipients can't answer</p>
 
 <div class="char-count form-group text-right <%= state.tooManyChars() %>">
-  <strong><%= state.charsLeft() %></strong> left of <%= state.maxChars %>
+  <%= state.calcChars() %> characters used.
 </div>

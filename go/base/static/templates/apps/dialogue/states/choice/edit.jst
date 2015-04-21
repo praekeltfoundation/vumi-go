@@ -14,7 +14,7 @@
 </div>
 
 <div class="char-count form-group text-right <%= state.tooManyChars() %>">
-  <strong><%= state.charsLeft() %></strong> left of <%= state.maxChars %>
+  <%= state.calcChars() %> characters used.
 </div>
 
 <div class="pull-right">

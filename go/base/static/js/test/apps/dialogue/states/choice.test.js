@@ -218,7 +218,7 @@ describe("go.apps.dialogue.states.choice", function() {
     describe(".render", function() {
       it("should display the char count", function() {
 
-        assert.equal(state.$('.char-count').text().trim(), '96 left of 140');
+        assert.equal(state.$('.char-count').text().trim(), '44 characters used.');
 
         choice1 = editMode.partials.body.partials.choices
                   .get('choice:endpoint1');
@@ -228,7 +228,7 @@ describe("go.apps.dialogue.states.choice", function() {
         choice2.model.set('label', 'Even longer labels');
         state.model.set('text', 'Some text for testing char count');
         state.render();
-        assert.equal(state.$('.char-count').text().trim(), '71 left of 140');
+        assert.equal(state.$('.char-count').text().trim(), '69 characters used.');
       });
     });
   });
@@ -249,10 +249,10 @@ describe("go.apps.dialogue.states.choice", function() {
 
     describe(".render", function() {
       it("should display the char count", function() {
-        assert.equal(state.$('.char-count').text().trim(), '96 left of 140');
+        assert.equal(state.$('.char-count').text().trim(), '44 characters used.');
         state.model.set('text', 'Some text for testing char count');
         state.render();
-        assert.equal(state.$('.char-count').text().trim(), '94 left of 140');
+        assert.equal(state.$('.char-count').text().trim(), '46 characters used.');
       });
     });
   });

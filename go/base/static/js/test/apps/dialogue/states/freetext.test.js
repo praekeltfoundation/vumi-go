@@ -47,11 +47,11 @@ describe("go.apps.dialogue.states.freetext", function() {
 
     describe(".render", function() {
       it("should display the char count", function() {
-        assert.equal(state.$('.char-count').text().trim(), '122 left of 140');
+        assert.equal(state.$('.char-count').text().trim(), '18 characters used.');
 
         state.model.set('text', 'Some text for testing char count');
         state.render();
-        assert.equal(state.$('.char-count').text().trim(), '108 left of 140');
+        assert.equal(state.$('.char-count').text().trim(), '32 characters used.');
       });
     });
   });
@@ -66,11 +66,11 @@ describe("go.apps.dialogue.states.freetext", function() {
 
     describe(".render", function() {
       it("should display the char count", function() {
-        assert.equal(state.$('.char-count').text().trim(), '122 left of 140');
+        assert.equal(state.$('.char-count').text().trim(), '18 characters used.');
 
         state.model.set('text', 'Some text for testing char count');
         state.render();
-        assert.equal(state.$('.char-count').text().trim(), '108 left of 140');
+        assert.equal(state.$('.char-count').text().trim(), '32 characters used.');
       });
     });
   });
