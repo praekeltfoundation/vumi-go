@@ -42,13 +42,12 @@
       {attr: 'exit_endpoint', type: ExitEndpointView}],
 
     events: _({
-      'keyup .text': 'onTextChange'
+      'change .text': 'onTextChange'
     }).defaults(DialogueStateEditView.prototype.events),
 
     onTextChange: function(e) {
       this.model.set('text', $(e.target).val(), {silent: true});
       this.render();
-      $(e.target).focus();
     },
 
     calcChars: function() {

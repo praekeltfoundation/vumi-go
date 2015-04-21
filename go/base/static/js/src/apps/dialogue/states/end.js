@@ -40,13 +40,12 @@
     endpointSchema: [{attr: 'entry_endpoint', type: EntryEndpointView}],
 
     events: _({
-      'keyup .text': 'onTextChange'
+      'change .text': 'onTextChange'
     }).defaults(DialogueStateEditView.prototype.events),
 
     onTextChange: function(e) {
       this.model.set('text', $(e.target).val(), {silent: true});
       this.render();
-      $(e.target).focus();
     },
 
     calcChars: function() {
