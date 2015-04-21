@@ -5,10 +5,8 @@
   var DialogueStateLayout = Backbone.View.extend({
     initialize: function(options) {
       options = _.defaults(options, {numCols: 3});
-
-      this.states = options.states;
       this.numCols = options.numCols;
-      this.colWidth = options.colWidth;
+      this.states = options.states;
       this.setElement(this.states.view.$el);
       this.grid = new Grid({numCols: this.numCols});
 
@@ -20,6 +18,25 @@
       'dblclick': function(e) {
         this.addAtEvent(e);
       }
+    },
+
+    numCols: 3,
+
+    cellWidth: function() {
+      return this.$el.width() / this.numCols;
+    },
+
+    cellHeight: function(state) {
+      return state.$el.outerHeight(true);
+    },
+
+    colOffset: function(state) {
+      var center = (this.cellWidth(state) - state.$el.outerWidth(true)) / 2;
+      return center + 35;
+    },
+
+    rowMargin: function() {
+      return 30;
     },
 
     offsetOf: function(coords) {
@@ -95,17 +112,17 @@
     },
 
     initLayout: function(state) {
-      var marginLeft = parseInt(state.$el.css('marginLeft'));
-      var marginTop = parseInt(state.$el.css('marginTop'));
+      var colOffset = this.colOffset(state);
+      var rowMargin = this.rowMargin(state);
 
       var cell = this.grid.add({
-        width: state.$el.outerWidth(true) - marginLeft,
-        height: state.$el.outerHeight(true) - marginTop
+        width: this.cellWidth(state),
+        height: this.cellHeight(state) + rowMargin
       });
 
       state.model.set('layout', {
-        x: cell.x + marginLeft,
-        y: cell.y + marginTop
+        x: cell.x + colOffset,
+        y: cell.y + rowMargin
       });
     },
 

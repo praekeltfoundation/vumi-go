@@ -147,54 +147,48 @@ describe("go.apps.dialogue.layout", function() {
           numCols: 2
         });
 
+        layout.cellWidth = function() { return 23 };
+        layout.cellHeight = function() { return 21 };
+        layout.colOffset = function() { return 2 };
+        layout.rowMargin = function() { return 3 };
+
         var state2 = states.get('state2');
         var state3 = states.get('state3');
         var state4 = states.get('state4');
         state2.model.unset('layout');
         state3.model.unset('layout');
         state4.model.unset('layout');
-
-        state2.$el
-          .css('margin', 20)
-          .width(202)
-          .height(200);
-
-        state3.$el
-          .css('margin', 30)
-          .width(303)
-          .height(300);
-
-        state4.$el
-          .css('margin', 40)
-          .height(404)
-          .height(400);
 
         layout.renderState(state2);
         layout.renderState(state3);
         layout.renderState(state4);
 
         assert.deepEqual(state2.model.get('layout').coords(), {
-          x: 20,
-          y: 20
+          x: 2,
+          y: 3
         });
 
         assert.deepEqual(state3.model.get('layout').coords(), {
-          x: 272,
-          y: 30
+          x: 25,
+          y: 3
         });
 
         assert.deepEqual(state4.model.get('layout').coords(), {
-          x: 40,
-          y: 280
+          x: 2,
+          y: 27
         });
       });
 
       it("should position states without a layout using the grid", function() {
         var layout = new DialogueStateLayout({
           states: states,
-          numCols: 2,
-          colWidth: 220
+          numCols: 2
         });
+
+        layout.cellWidth = function() { return 23 };
+        layout.cellHeight = function() { return 21 };
+        layout.colOffset = function() { return 2 };
+        layout.rowMargin = function() { return 3 };
 
         var state2 = states.get('state2');
         var state3 = states.get('state3');
@@ -203,38 +197,23 @@ describe("go.apps.dialogue.layout", function() {
         state3.model.unset('layout');
         state4.model.unset('layout');
 
-        state2.$el
-          .css('margin', 20)
-          .width(202)
-          .height(200);
-
-        state3.$el
-          .css('margin', 30)
-          .width(303)
-          .height(300);
-
-        state4.$el
-          .css('margin', 40)
-          .width(404)
-          .height(400);
-
         layout.renderState(state2);
         layout.renderState(state3);
         layout.renderState(state4);
 
         assert.deepEqual(state2.$el.offset(), layout.offsetOf({
-          x: 20,
-          y: 20
+          x: 2,
+          y: 3
         }));
 
         assert.deepEqual(state3.$el.offset(), layout.offsetOf({
-          x: 272,
-          y: 30
+          x: 25,
+          y: 3
         }));
 
         assert.deepEqual(state4.$el.offset(), layout.offsetOf({
-          x: 40,
-          y: 280
+          x: 2,
+          y: 27
         }));
       });
 
