@@ -134,7 +134,9 @@ describe("go.apps.dialogue.states.choice", function() {
     var ChoiceStateEditView = states.choice.ChoiceStateEditView;
 
     var state,
-        editMode;
+        editMode,
+        choice1,
+        choice2;
 
     beforeEach(function() {
       state = diagram.states.get('state1');
@@ -215,22 +217,42 @@ describe("go.apps.dialogue.states.choice", function() {
 
     describe(".render", function() {
       it("should display the char count", function() {
+
         assert.equal(state.$('.char-count').text().trim(), '96 left of 140');
+
+        choice1 = editMode.partials.body.partials.choices
+                  .get('choice:endpoint1');
+        choice1.model.set('label', 'Longer label');
+        choice2 = editMode.partials.body.partials.choices
+                  .get('choice:endpoint2');
+        choice2.model.set('label', 'Even longer labels');
+        state.model.set('text', 'Some text for testing char count');
+        state.render();
+        assert.equal(state.$('.char-count').text().trim(), '71 left of 140');
       });
     });
   });
 
   describe(".ChoiceStatePreviewView", function() {
-    var state;
+    var ChoiceStatePreviewView = states.choice.ChoiceStatePreviewView;
+
+    var state,
+        previewMode,
+        choice1,
+        choice2;
 
     beforeEach(function() {
       state = diagram.states.get('state1');
+      previewMode = state.modes.preview;
       state.preview();
     });
 
     describe(".render", function() {
       it("should display the char count", function() {
         assert.equal(state.$('.char-count').text().trim(), '96 left of 140');
+        state.model.set('text', 'Some text for testing char count');
+        state.render();
+        assert.equal(state.$('.char-count').text().trim(), '94 left of 140');
       });
     });
   });
