@@ -6,9 +6,6 @@ describe("go.apps.dialogue.states.end", function() {
       tearDown = dialogue.testHelpers.tearDown,
       newDialogueDiagram = dialogue.testHelpers.newDialogueDiagram;
 
-  var oneElExists = go.testHelpers.oneElExists,
-      noElExists = go.testHelpers.noElExists;
-
   var diagram;
 
   beforeEach(function() {
