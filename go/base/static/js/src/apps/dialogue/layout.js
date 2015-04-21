@@ -42,6 +42,16 @@
       };
     },
 
+    coordsOf: function(state) {
+      var offset = this.$el.offset();
+      var elOffset = state.$el.offset();
+
+      return {
+        x: elOffset.left - offset.left,
+        y: elOffset.top - offset.top
+      };
+    },
+
     dragMargin: function() {
       // give an extra screen size's space so that users don't need to see the
       // bottom of the page grow
@@ -117,20 +127,12 @@
 
       state.model
         .get('layout')
-        .set(offsetCoords(state.$el.position()), {silent: true});
+        .set(this.coordsOf(state), {silent: true});
 
       this.repaint();
       this.resizeToFit(state);
     }
   });
-
-
-  function offsetCoords(offset) {
-    return {
-      x: offset.left,
-      y: offset.top
-    };
-  }
 
 
   exports.DialogueStateLayout = DialogueStateLayout;

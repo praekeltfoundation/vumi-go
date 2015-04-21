@@ -101,29 +101,27 @@ describe("go.apps.dialogue.layout", function() {
       });
 
       it("should update the relevant state's layout", function() {
-        var state2 = states.get('state2');
+        var state = states.get('state2');
 
-        state2.model.get('layout').set({
+        state.model.get('layout').set({
           x: 0,
           y: 0
         });
 
-        assert.notDeepEqual(state2.model.get('layout').coords(), {
-          x: state2.$el.position().left,
-          y: state2.$el.position().top
-        });
+        assert.notDeepEqual(
+          state.model.get('layout').coords(),
+          layout.coordsOf(state));
 
-        state2.$('.titlebar')
+        state.$('.titlebar')
           .simulate('mousedown')
           .simulate('drag', {
             dx: 1,
             dy: 1
-           });
+          });
 
-        assert.deepEqual(state2.model.get('layout').coords(), {
-          x: state2.$el.position().left,
-          y: state2.$el.position().top
-        });
+        assert.deepEqual(
+          state.model.get('layout').coords(),
+          layout.coordsOf(state));
       });
 
       it("should resize its height to fit the state's new position", function() {
@@ -331,8 +329,6 @@ describe("go.apps.dialogue.layout", function() {
 
     describe(".offsetOf", function() {
       it("should calculate the offset of the given coordinates", function() {
-        var layout = new DialogueStateLayout({states: states});
-
         layout.$el.offset({
           left: 23,
           top: 32
@@ -342,8 +338,29 @@ describe("go.apps.dialogue.layout", function() {
           x: -2,
           y: 1
         }), {
-          left: 21,
-          top: 33 
+          left: 23 - 2,
+          top: 32 + 1 
+        });
+      });
+    });
+
+    describe(".coordsOf", function() {
+      it("should calculate coords of the given state", function() {
+        var state = states.get('state2');
+
+        layout.$el.offset({
+          left: 23,
+          top: 32
+        });
+
+        state.$el.offset({
+          left: 200,
+          top: 300
+        });
+
+        assert.deepEqual(layout.coordsOf(state), {
+          x: 200 - 23,
+          y: 300 - 32 
         });
       });
     });
