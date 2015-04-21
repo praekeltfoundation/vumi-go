@@ -247,7 +247,7 @@
       // Remove the '\n' from the last choice_endpoint
       numChars--;
       numChars += this.model.get('text').length;
-      return numChars;
+      return Math.max(numChars, 0);
     },
 
     charsLeft: function() {
