@@ -212,6 +212,27 @@ describe("go.apps.dialogue.states.choice", function() {
           editMode.$('[data-uuid="choice:new-endpoint"]')));
       });
     });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '96 left of 140');
+      });
+    });
+  });
+
+  describe(".ChoiceStatePreviewView", function() {
+    var state;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      state.preview();
+    });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '96 left of 140');
+      });
+    });
   });
 
   describe(".ChoiceStateView", function() {
