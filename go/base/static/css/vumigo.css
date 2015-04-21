@@ -444,7 +444,7 @@ button {
   float: left;
   font-size: 12px;
   text-align: left;
-  position: relative;
+  position: absolute;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
