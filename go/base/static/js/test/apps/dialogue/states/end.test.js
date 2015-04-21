@@ -6,6 +6,9 @@ describe("go.apps.dialogue.states.end", function() {
       tearDown = dialogue.testHelpers.tearDown,
       newDialogueDiagram = dialogue.testHelpers.newDialogueDiagram;
 
+  var oneElExists = go.testHelpers.oneElExists,
+      noElExists = go.testHelpers.noElExists;
+
   var diagram;
 
   beforeEach(function() {
@@ -42,6 +45,19 @@ describe("go.apps.dialogue.states.end", function() {
         assert.equal(
           state.model.get('text'),
           'So Long, and Thanks for All the Fish');
+      });
+    });
+
+    describe(".render", function() {
+      it.only("should display the char count", function() {
+
+      // <div class="form-group text-right ">
+      //   <strong>109</strong> left of 140
+      // </div></div>
+
+        assert(noElExists('.char-count'));
+        state.render();
+        assert(oneElExists('.char-count'));
       });
     });
   });
