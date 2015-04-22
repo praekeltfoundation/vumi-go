@@ -134,9 +134,7 @@ describe("go.apps.dialogue.states.choice", function() {
     var ChoiceStateEditView = states.choice.ChoiceStateEditView;
 
     var state,
-        editMode,
-        choice1,
-        choice2;
+        editMode;
 
     beforeEach(function() {
       state = diagram.states.get('state1');
@@ -219,16 +217,13 @@ describe("go.apps.dialogue.states.choice", function() {
       it("should display the char count", function() {
 
         assert.equal(state.$('.char-count').text().trim(), '44 characters used.');
+        var endpoints = state.model.get('choice_endpoints');
+        endpoints.at(0).set('label', 'A new label');
+        endpoints.at(1).set('label', 'Another  new label');
 
-        choice1 = editMode.partials.body.partials.choices
-                  .get('choice:endpoint1');
-        choice1.model.set('label', 'Longer label');
-        choice2 = editMode.partials.body.partials.choices
-                  .get('choice:endpoint2');
-        choice2.model.set('label', 'Even longer labels');
         state.model.set('text', 'Some text for testing char count');
         state.render();
-        assert.equal(state.$('.char-count').text().trim(), '69 characters used.');
+        assert.equal(state.$('.char-count').text().trim(), '68 characters used.');
       });
     });
   });
