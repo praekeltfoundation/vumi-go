@@ -250,9 +250,12 @@ describe("go.apps.dialogue.states.choice", function() {
     describe(".render", function() {
       it("should display the char count", function() {
         assert.equal(state.$('.char-count').text().trim(), '44 characters used.');
+        var endpoints = state.model.get('choice_endpoints');
+        endpoints.at(0).set('label', 'A new label');
+        endpoints.at(1).set('label', 'Another  new label');
         state.model.set('text', 'Some text for testing char count');
         state.render();
-        assert.equal(state.$('.char-count').text().trim(), '46 characters used.');
+        assert.equal(state.$('.char-count').text().trim(), '68 characters used.');
       });
     });
   });
