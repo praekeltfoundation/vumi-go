@@ -1,3 +1,6 @@
+@import "./lesshat";
+
+
 .confirm {
   .details {
     table {
@@ -88,6 +91,19 @@
       cursor: move;
       background: @color-hover;
       opacity: @secondary-opacity;
+    }
+
+    .entry-point {
+      left: 10px;
+      top: 15px;
+      position: absolute;
+      min-height: 0;
+      .user-select(none);
+    }
+
+    .endpoint-entry {
+      margin: 0 auto;
+      margin-bottom: -15px;
     }
 
     .state {

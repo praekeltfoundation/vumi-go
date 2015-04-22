@@ -10,7 +10,8 @@
 
   var dialogue = go.apps.dialogue,
       connections = dialogue.connections,
-      states = dialogue.states;
+      states = dialogue.states,
+      entry = dialogue.entry;
 
   // The main view containing all the dialogue states and connections
   var DialogueDiagramView = DiagramView.extend({
@@ -24,6 +25,7 @@
 
     initialize: function(options) {
       DialogueDiagramView.__super__.initialize.call(this, options);
+      this.entryPoint = new entry.DialogueEntryPointView({diagram: this});
       go.utils.bindEvents(this.bindings, this);
     },
 
@@ -39,7 +41,9 @@
 
     render: function() {
       this.$el.addClass(this.className);
+      this.entryPoint.$el.appendTo(this.$el);
       DialogueDiagramView.__super__.render.call(this);
+      this.entryPoint.render();
     }
   });
 
