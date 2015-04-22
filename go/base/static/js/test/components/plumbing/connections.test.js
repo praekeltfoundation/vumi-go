@@ -1,6 +1,4 @@
 describe("go.components.plumbing.connections", function() {
-  var stateMachine = go.components.stateMachine;
-
   var plumbing = go.components.plumbing;
 
   var testHelpers = plumbing.testHelpers,
@@ -18,9 +16,6 @@ describe("go.components.plumbing.connections", function() {
   });
 
   describe(".ConnectionView", function() {
-    var ConnectionModel = stateMachine.ConnectionModel,
-        ConnectionView = plumbing.connections.ConnectionView;
-
     var diagram,
         x1,
         y1,
@@ -110,8 +105,6 @@ describe("go.components.plumbing.connections", function() {
   });
 
   describe(".DiagramConnectionGroup", function() {
-    var DiagramConnectionGroup = plumbing.connections.DiagramConnectionGroup;
-
     var diagram,
         connections,
         leftToRight;
@@ -140,11 +133,6 @@ describe("go.components.plumbing.connections", function() {
     });
 
     describe("on 'connection' jsPlumb events", function() {
-      var EndpointView = plumbing.endpoints.EndpointView,
-          EndpointModel = stateMachine.EndpointModel;
-
-      var UnknownEndpointView = EndpointView.extend();
-
       beforeEach(function() {
         // render the diagram to ensure the jsPlumb endpoints are drawn
         diagram.render();
@@ -196,7 +184,6 @@ describe("go.components.plumbing.connections", function() {
       function(done) {
         var source = $('<div>').appendTo(diagram.$el);
         var a1L1 = diagram.endpoints.get('a1L1');
-        var conn;
 
         diagram.connections.on('error:unknown', function(e) {
           assert(source.is(e.source));
@@ -216,7 +203,6 @@ describe("go.components.plumbing.connections", function() {
       function(done) {
         var target = $('<div>').appendTo(diagram.$el);
         var a1L1 = diagram.endpoints.get('a1L1');
-        var conn;
 
         diagram.connections.on('error:unknown', function(e) {
           assert(a1L1.$el.is(e.source));
@@ -267,8 +253,6 @@ describe("go.components.plumbing.connections", function() {
       });
 
       it("should ignore the event if the connection has no target", function() {
-        var a1L2 = diagram.endpoints.get('a1L2');
-        var b2R2 = diagram.endpoints.get('b2R2');
         var a1L2_b2R2 = connections.get('a1L2-b2R2');
         var plumbConnection = a1L2_b2R2.plumbConnection;
 
