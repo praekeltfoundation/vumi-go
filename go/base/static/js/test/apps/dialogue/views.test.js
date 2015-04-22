@@ -102,22 +102,6 @@ describe("go.apps.dialogue.views", function() {
       });
     });
 
-    // this will be going soon
-    describe.skip("when '#new-state' is clicked", function() {
-      var i;
-
-      beforeEach(function() {
-        i = 0;
-        sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
-      });
-
-      it("should add a new state to the diagram", function() {
-        assert(noElExists('[data-uuid=new-state]'));
-        view.$('#new-state').click();
-        assert(oneElExists('[data-uuid=new-state]'));
-      });
-    });
-
     describe("when '#repeatable' is changed", function() {
       it("should change the model metadata's 'repeatable' attribute",
       function() {
