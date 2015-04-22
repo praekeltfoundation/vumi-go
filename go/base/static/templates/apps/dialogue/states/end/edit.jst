@@ -4,3 +4,7 @@
 </div>
 
 <p class="hint text-info">Recipients can't answer</p>
+
+<div class="char-count form-group text-right <%= state.tooManyChars() %>">
+  <%= state.calcChars() %> characters used.
+</div>

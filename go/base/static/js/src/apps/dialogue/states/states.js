@@ -18,6 +18,8 @@
       ParametricEndpointView = endpoints.ParametricEndpointView,
       AligningEndpointCollection = endpoints.AligningEndpointCollection;
 
+  var maxChars = 140;
+
   var DialogueEndpointView = ParametricEndpointView.extend();
 
   var EntryEndpointView = DialogueEndpointView.extend({
@@ -481,6 +483,8 @@
 
     DialogueStateView: DialogueStateView,
     DialogueStateGridView: DialogueStateGridView,
-    DialogueStateCollection: DialogueStateCollection
+    DialogueStateCollection: DialogueStateCollection,
+
+    maxChars: maxChars
   });
 })(go.apps.dialogue.states = {});

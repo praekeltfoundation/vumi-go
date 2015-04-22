@@ -9,7 +9,8 @@
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
       DialogueStatePreviewView = states.DialogueStatePreviewView,
-      TextEditView = states.partials.TextEditView;
+      TextEditView = states.partials.TextEditView,
+      maxChars = states.maxChars;
 
   var EndStateEditView = DialogueStateEditView.extend({
     bodyOptions: function() {
@@ -29,12 +30,35 @@
   });
 
   var EndStateView = DialogueStateView.extend({
+    maxChars: maxChars,
+
     typeName: 'end',
 
     editModeType: EndStateEditView,
     previewModeType: EndStatePreviewView,
 
-    endpointSchema: [{attr: 'entry_endpoint', type: EntryEndpointView}]
+    endpointSchema: [{attr: 'entry_endpoint', type: EntryEndpointView}],
+
+    events: _({
+      'change .text': 'onTextChange'
+    }).defaults(DialogueStateEditView.prototype.events),
+
+    onTextChange: function(e) {
+      this.model.set('text', $(e.target).val(), {silent: true});
+      this.render();
+    },
+
+    calcChars: function() {
+      return this.model.get('text').length;
+    },
+
+    charsLeft: function() {
+      return this.maxChars - this.calcChars();
+    },
+
+    tooManyChars: function() {
+      return (this.charsLeft() < 0) ? 'text-danger' : '';
+    }
   });
 
   _(exports).extend({
