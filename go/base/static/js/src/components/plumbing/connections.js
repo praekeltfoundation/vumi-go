@@ -194,9 +194,19 @@
       // A new connection was created in the UI, but dropped before it reached
       // a target, we can ignore it.
       if (typeof targetId == 'undefined') { return; }
-      connectionId = idOfConnection(sourceId, targetId);
 
       // Case 2:
+      // -------
+      // The source doesn't have a uuid, so this isn't a connection we can
+      // manage. Trigger an event and exit early.
+      if (typeof sourceId == 'undefined') {
+        this.trigger('error:unknown', e);
+        return;
+      }
+
+      connectionId = idOfConnection(sourceId, targetId);
+
+      // Case 3:
       // -------
       // The connection model and its view have been removed from its
       // collection, so its connection view was destroyed (along with the
@@ -204,7 +214,7 @@
       // and view since they no longer exists.
       if (!this.has(connectionId)) { return; }
 
-      // Case 3:
+      // Case 4:
       // -------
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.

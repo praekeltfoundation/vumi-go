@@ -266,6 +266,27 @@ describe("go.components.plumbing.connections", function() {
         assert(!console.log.called);
         console.log.restore();
       });
+
+      it("should fire an event if the source is not part of the diagram",
+      function(done) {
+        var source = $('<div>').appendTo(diagram.$el);
+        var a1L1 = diagram.endpoints.get('a1L1');
+
+        var conn = jsPlumb.connect({
+          source: source,
+          target: a1L1.$el
+        });
+
+        diagram.connections.on('error:unknown', function(e) {
+          assert(source.is(e.source));
+          assert(a1L1.$el.is(e.target));
+          assert(source.is(e.connection.source));
+          assert(a1L1.$el.is(e.connection.target));
+          done();
+        });
+
+        jsPlumb.detach(conn);
+      });
     });
   });
 });
