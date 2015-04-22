@@ -1,5 +1,6 @@
 <div class="form-group">
   <label class="control-label">Define the question</label>
+  <textarea class="text form-control"><%= model.get('text') %></textarea>
   <%= partials.text %>
 </div>
 
@@ -10,6 +11,10 @@
       <%= choice %>
     <% }); %>
   </ol>
+</div>
+
+<div class="char-count form-group text-right <%= state.tooManyChars() %>">
+  <%= state.calcChars() %> characters used.
 </div>
 
 <div class="pull-right">

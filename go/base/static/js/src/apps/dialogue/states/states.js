@@ -18,6 +18,8 @@
 
   var DialogueStateLayout = go.apps.dialogue.layout.DialogueStateLayout;
 
+  var maxChars = 140;
+
   var DialogueEndpointView = ParametricEndpointView.extend();
 
   var EntryEndpointView = DialogueEndpointView.extend({
@@ -397,6 +399,8 @@
     DialogueStateEditView: DialogueStateEditView,
 
     DialogueStateView: DialogueStateView,
-    DialogueStateCollection: DialogueStateCollection
+    DialogueStateCollection: DialogueStateCollection,
+
+    maxChars: maxChars
   });
 })(go.apps.dialogue.states = {});
