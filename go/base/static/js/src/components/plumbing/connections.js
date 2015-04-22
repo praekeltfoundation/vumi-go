@@ -149,7 +149,7 @@
       // -------
       // Either the source, target or both don't have uuids, so this isn't a
       // connection we can manage. Trigger an event and exit early.
-      if (!sourceId || !targetId) {
+      if ((typeof sourceId == 'undefined') || typeof targetId == 'undefined') {
         this.trigger('error:unknown', e);
         return;
       }
