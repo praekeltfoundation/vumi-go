@@ -392,6 +392,13 @@ button {
 .dialogue .actions .form-group select.form-control {
   width: auto;
 }
+.dialogue .info-add-state {
+  z-index: 3;
+  position: absolute;
+  width: 380px;
+  margin-left: -190px;
+  left: 50%;
+}
 .dialogue #diagram {
   position: relative;
   min-height: 800px;
