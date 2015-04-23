@@ -47,6 +47,30 @@
     ._jsPlumb_connector {
       z-index: 1;
       opacity: @secondary-opacity;
+      &:nth-of-type(2), &:nth-of-type(6) {
+        path {
+          stroke: yellow;
+          fill: yellow;
+        }
+      }
+      &:nth-of-type(3), &:nth-of-type(7) {
+        path {
+          stroke: green;
+          fill: green;
+        }
+      }
+      &:nth-of-type(4), &:nth-of-type(8) {
+        path {
+          stroke: orange;
+          fill: orange;
+        }
+      }
+      &:nth-of-type(5), &:nth-of-type(9) {
+        path {
+          stroke: white;
+          fill: white;
+        }
+      }
     }
 
     ._jsPlumb_endpoint {
