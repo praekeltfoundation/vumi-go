@@ -8,10 +8,6 @@
 
   var DialogueView = Backbone.View.extend({
     events: {
-      'click #new-state': function() {
-        this.diagram.newState();
-      },
-
       'change #repeatable': function(e) {
         this.model
           .get('poll_metadata')

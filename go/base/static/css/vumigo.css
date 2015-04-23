@@ -392,12 +392,24 @@ button {
 .dialogue .actions .form-group select.form-control {
   width: auto;
 }
+.dialogue .info-add-state {
+  z-index: 3;
+  position: relative;
+  width: 30%;
+  margin: 0 auto;
+}
+.dialogue #diagram {
+  position: relative;
+  min-height: 800px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
   opacity: 0.75;
 }
 .dialogue #diagram ._jsPlumb_endpoint {
-  z-index: 5;
   opacity: 0.75;
 }
 .dialogue #diagram ._jsPlumb_endpoint {
@@ -412,7 +424,6 @@ button {
   opacity: 0.75;
 }
 .dialogue #diagram .endpoint {
-  z-index: 4;
   width: 15px;
   height: 15px;
   background: #428bca;
@@ -432,44 +443,27 @@ button {
   background: #b41e31;
   opacity: 0.75;
 }
-.dialogue #diagram .grid {
-  text-align: center;
-  margin: 0 auto;
-}
-.dialogue #diagram .grid .placeholder {
-  background: #2f3436;
-  width: 8px;
-  height: 200px;
-  float: left;
-  -webkit-border-radius: 10px;
-  -webkit-background-clip: padding-box;
-  -moz-border-radius: 10px;
-  -moz-background-clip: padding;
-  border-radius: 10px;
-  background-clip: padding-box;
-}
-.dialogue #diagram .grid .row {
-  margin: 0;
-}
-.dialogue #diagram .grid .item {
-  margin: 40px 40px;
-  float: left;
-  z-index: 2;
-}
-.dialogue #diagram .add {
-  width: 85px;
-  line-height: normal;
-  font-family: serif;
-  font-size: 55px;
+.dialogue #diagram .entry-point {
+  left: 10px;
+  top: 15px;
+  position: absolute;
+  min-height: 0;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
+.dialogue #diagram .endpoint-entry {
+  margin: 0 auto;
+  margin-bottom: -15px;
+}
 .dialogue #diagram .state {
+  z-index: 2;
+  width: 280px;
+  margin: 10px;
   float: left;
   font-size: 12px;
   text-align: left;
-  position: relative;
+  position: absolute;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;

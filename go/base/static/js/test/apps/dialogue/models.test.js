@@ -10,6 +10,46 @@ describe("go.apps.dialogue.models", function() {
     go.testHelpers.unregisterModels();
   });
 
+  describe(".DialogueStateModelCollection", function() {
+    var DialogueStateModelCollection = dialogue.models.DialogueStateModelCollection;
+
+    describe("ordering", function() {
+      it("should sort states with ordinal fields", function() {
+        var data = modelData().states.slice(0, 3);
+        data[0].uuid = 'a';
+        data[0].ordinal = 2;
+
+        data[1].uuid = 'b';
+        data[1].ordinal = 3;
+
+        data[2].uuid = 'c';
+        data[2].ordinal = 1;
+
+        var collection = new DialogueStateModelCollection(data);
+        assert.deepEqual(collection.pluck('uuid'), ['c', 'a', 'b']);
+      });
+
+      it("should move states without ordinal fields to the end", function() {
+        var data = modelData().states.slice(0, 4);
+
+        data[0].uuid = 'a';
+        data[0].ordinal = 2;
+
+        data[1].uuid = 'b';
+        delete data[1].ordinal
+
+        data[2].uuid = 'c';
+        data[2].ordinal = 1;
+
+        data[3].uuid = 'd';
+        delete data[3].ordinal;
+
+        var collection = new DialogueStateModelCollection(data);
+        assert.deepEqual(collection.pluck('uuid'), ['c', 'a', 'b', 'd']);
+      });
+    });
+  });
+
   describe(".ChoiceEndpointModel", function() {
     var ChoiceEndpointModel = dialogue.models.ChoiceEndpointModel;
 
@@ -122,25 +162,25 @@ describe("go.apps.dialogue.models", function() {
 
       it("should update the model on the client side", function() {
         var model = new DialogueModel();
-        server.respondWith(response({poll: modelData}));
+        server.respondWith(response({poll: modelData()}));
 
         model.fetch();
         server.respond();
 
-        assert.deepEqual(model.toJSON(), modelData);
+        assert.deepEqual(model.toJSON(), modelData());
       });
     });
 
     describe(".save", function() {
       it("should issue the correct api request", function(done) {
-        var model = new DialogueModel(modelData);
+        var model = new DialogueModel(modelData());
 
         server.respondWith(function(req) {
           assertRequest(
             req,
             '/api/v1/go/api',
             'conversation.dialogue.save_poll',
-            ['campaign-1', 'conversation-1', {poll: modelData}]);
+            ['campaign-1', 'conversation-1', {poll: modelData()}]);
 
           done();
         });

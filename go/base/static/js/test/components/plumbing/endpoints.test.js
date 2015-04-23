@@ -52,6 +52,14 @@ describe("go.components.plumbing.endpoints", function() {
         x1.destroy();
         assert(noElExists('[data-uuid="x1"]'));
       });
+
+      it("should emit an 'ending' event before destroying itself", function(done) {
+        x1.on('ending', function() {
+            assert(oneElExists('[data-uuid="x1"]'));
+            done();
+          })
+          .destroy();
+      });
     });
 
     describe(".render", function() {
