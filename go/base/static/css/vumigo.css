@@ -409,13 +409,6 @@ button {
   z-index: 1;
   opacity: 0.75;
 }
-.dialogue #diagram ._jsPlumb_connector:before {
-  content: "1";
-  position: absolute;
-  top: 5em;
-  left: 5em;
-  font-size: 5em;
-}
 .dialogue #diagram ._jsPlumb_connector:nth-of-type(2) path,
 .dialogue #diagram ._jsPlumb_connector:nth-of-type(7) path,
 .dialogue #diagram ._jsPlumb_connector:nth-of-type(12) path {
