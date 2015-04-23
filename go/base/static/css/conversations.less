@@ -1,3 +1,6 @@
+@import "./lesshat";
+
+
 .confirm {
   .details {
     table {
@@ -43,7 +46,18 @@
     }
   }
 
+  .info-add-state {
+    z-index: 3;
+    position: relative;
+    width: 30%;
+    margin: 0 auto;
+  }
+
   #diagram {
+    position: relative;
+    min-height: 800px;
+    .user-select(none);
+
     ._jsPlumb_connector {
       z-index: 1;
       opacity: @secondary-opacity;
@@ -74,7 +88,6 @@
     }
 
     ._jsPlumb_endpoint {
-      z-index: 5;
       opacity: @secondary-opacity;
     }
 
@@ -93,7 +106,6 @@
     }
 
     .endpoint {
-      z-index: 4;
       width: 15px;
       height: 15px;
       background: @color-normal;
@@ -112,42 +124,27 @@
       opacity: @secondary-opacity;
     }
 
-    .grid {
-      text-align: center;
-      margin: 0 auto;
-
-      .placeholder {
-        background: #2f3436;
-        width: 8px;
-        height: 200px;
-        float: left;
-        .border-radius(10px);
-      }
-
-      .row {
-        margin: 0;
-      }
-
-      .item {
-        margin: 40px 40px;
-        float: left;
-        z-index: 2;
-      }
-    }
-
-    .add {
-      width: 85px;
-      line-height: normal;
-      font-family: serif;
-      font-size: 55px;
+    .entry-point {
+      left: 10px;
+      top: 15px;
+      position: absolute;
+      min-height: 0;
       .user-select(none);
     }
 
+    .endpoint-entry {
+      margin: 0 auto;
+      margin-bottom: -15px;
+    }
+
     .state {
+      z-index: 2;
+      width: 280px;
+      margin: 10px;
       float: left;
       font-size: 12px;
       text-align: left;
-      position: relative;
+      position: absolute;
       .user-select(none);
 
       label {
@@ -264,15 +261,6 @@
     }
 
     .choice.state {
-      .edit.mode {
-        .choices {
-          .choice {
-            .composite-control {
-            }
-          }
-        }
-      }
-
       .preview.mode {
         .choices {
           text-align: left;

@@ -336,6 +336,21 @@ class TestNewConversationView(BaseConversationViewTestCase):
             'description': 'a new conversation'
         })
 
+    def test_post_new_conversation_starting(self):
+        self.user_helper.add_app_permission(u'gotest.dummy')
+
+        conv_data = {
+            'name': 'new conv',
+            'conversation_type': 'dummy',
+        }
+
+        response = self.client.post(
+            reverse('conversations:new_conversation'),
+            conv_data)
+
+        [conv] = self.user_helper.user_api.active_conversations()
+        self.assertTrue(conv.starting())
+
 
 class TestConversationViews(BaseConversationViewTestCase):
     def setUp(self):
