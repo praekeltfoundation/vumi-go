@@ -1,6 +1,4 @@
 describe("go.components.plumbing.states", function() {
-  var stateMachine = go.components.stateMachine;
-
   var plumbing = go.components.plumbing;
 
   var testHelpers = plumbing.testHelpers,
@@ -72,6 +70,47 @@ describe("go.components.plumbing.states", function() {
         a1.endpoints.each(function(e) { assert(!e.rendered); });
         a1.render();
         a1.endpoints.each(function(e) { assert(e.rendered); });
+      });
+    });
+
+    describe(".connectedEndpoints", function() {
+      it("should return all endpoints connected to this state", function() {
+        var endpoints = diagram.endpoints;
+        diagram.render();
+        jsPlumb.detachEveryConnection();
+
+        connect(endpoints.get('a2R1'), endpoints.get('a1L1'));
+        connect(endpoints.get('a1R1'), endpoints.get('b1L1'));
+        connect(endpoints.get('a1R2'), endpoints.get('b2L1'));
+
+        var actual = diagram.states
+          .get('a1')
+          .connectedEndpoints()
+          .map(idFor)
+          .sort();
+
+        assert.deepEqual(actual, [
+            'a2R1',
+            'a1L1',
+            'a1R1',
+            'b1L1',
+            'a1R2',
+            'b2L1'
+          ]
+          .map(endpoints.get, endpoints)
+          .map(idFor)
+          .sort());
+
+        function idFor(obj) {
+          return obj.model.id;
+        }
+
+        function connect(source, target) {
+          jsPlumb.connect({
+            source: source.$el,
+            target: target.$el
+          });
+        }
       });
     });
   });
