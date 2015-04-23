@@ -147,10 +147,10 @@ describe("go.apps.dialogue.layout", function() {
           numCols: 2
         });
 
-        layout.cellWidth = function() { return 23 };
-        layout.cellHeight = function() { return 21 };
-        layout.colOffset = function() { return 2 };
-        layout.rowMargin = function() { return 3 };
+        layout.cellWidth = function() { return 23; };
+        layout.cellHeight = function() { return 21; };
+        layout.colOffset = function() { return 2; };
+        layout.rowMargin = function() { return 3; };
 
         var state2 = states.get('state2');
         var state3 = states.get('state3');
@@ -185,10 +185,10 @@ describe("go.apps.dialogue.layout", function() {
           numCols: 2
         });
 
-        layout.cellWidth = function() { return 23 };
-        layout.cellHeight = function() { return 21 };
-        layout.colOffset = function() { return 2 };
-        layout.rowMargin = function() { return 3 };
+        layout.cellWidth = function() { return 23; };
+        layout.cellHeight = function() { return 21; };
+        layout.colOffset = function() { return 2; };
+        layout.rowMargin = function() { return 3; };
 
         var state2 = states.get('state2');
         var state3 = states.get('state3');
