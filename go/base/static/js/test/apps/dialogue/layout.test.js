@@ -337,14 +337,33 @@ describe("go.apps.dialogue.layout", function() {
 
     describe(".repaint", function() {
       it("should repaint the relevant jsPlumb connections", function() {
-        sinon.spy(jsPlumb, 'repaintEverything');
+        sinon.spy(jsPlumb, 'repaint');
 
-        var layout = new DialogueStateLayout({states: states});
-        assert(!jsPlumb.repaintEverything.called);
-        layout.repaint();
-        assert(jsPlumb.repaintEverything.called);
+        var endpoints = diagram.endpoints;
+        var state1 = states.add({model: {type: 'dummy'}});
+        var state2 = states.add({model: {type: 'dummy'}});
+        var endpoint1 = endpoints.get(state1.model.get('exit_endpoint').id);
+        var endpoint2 = endpoints.get(state2.model.get('entry_endpoint').id);
 
-        jsPlumb.repaintEverything.restore();
+        diagram.render();
+        jsPlumb.connect({
+          source: endpoint1.$el,
+          target: endpoint2.$el
+        });
+
+        assert(!jsPlumb.repaint.called);
+        layout.repaint(state1);
+
+        var actual = _.chain(jsPlumb.repaint.args)
+          .map(function(args) { return args[0]; })
+          .sortBy(function($el) { return $el.attr('id'); })
+          .value();
+
+        assert(diagram.entryPoint.$endpoint.is(actual[0]));
+        assert(endpoint1.$el.is(actual[1]));
+        assert(endpoint2.$el.is(actual[2]));
+
+        jsPlumb.repaint.restore();
       });
     });
   });
