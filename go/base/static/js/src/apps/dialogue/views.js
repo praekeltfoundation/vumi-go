@@ -25,12 +25,25 @@
       },
     },
 
+    bindings: {
+      'success saveAndExit': function() {
+        go.utils.redirect(this.model.get('urls').get('show'));
+      }
+    },
+
     initialize: function(options) {
       this.sessionId = options.sessionId;
 
       this.diagram = new DialogueDiagramView({
         el: this.$('#diagram'),
         model: this.model
+      });
+
+      this.saveAndExit = new SaveActionView({
+        el: this.$('#save-and-exit'),
+        model: this.model,
+        sessionId: this.sessionId,
+        useNotifier: true
       });
 
       this.save = new SaveActionView({
@@ -40,16 +53,14 @@
         useNotifier: true
       });
 
-      this.listenTo(this.save, 'success', function() {
-        go.utils.redirect(this.model.get('urls').get('show'));
-      });
-
+      go.utils.bindEvents(this.bindings, this);
       go.apps.dialogue.style.initialize();
     },
 
     remove: function() {
       DialogueView.__super__.remove.call(this);
       this.save.remove();
+      this.saveAndExit.remove();
     },
 
     render: function() {
