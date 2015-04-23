@@ -141,6 +141,7 @@
               .attr('value', 'twitter')
               .text('Twitter')))
         .append($('<button>').attr('id', 'new-state'))
+        .append($('<button>').attr('id', 'save-and-exit'))
         .append($('<button>').attr('id', 'save'))
         .append($('<div>').attr('id', 'diagram')));
   };
