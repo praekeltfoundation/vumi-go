@@ -7,6 +7,24 @@
   var DialogueDiagramView = go.apps.dialogue.diagram.DialogueDiagramView;
 
   var DialogueView = Backbone.View.extend({
+    events: {
+      'click #new-state': function() {
+        this.diagram.newState();
+      },
+
+      'change #repeatable': function(e) {
+        this.model
+          .get('poll_metadata')
+          .set('repeatable', $(e.target).prop('checked'));
+      },
+
+      'change #delivery-class': function(e) {
+        this.model
+          .get('poll_metadata')
+          .set('delivery_class', $(e.target).val());
+      },
+    },
+
     initialize: function(options) {
       this.sessionId = options.sessionId;
 
@@ -43,24 +61,6 @@
       if (metadata.get('delivery_class')) {
         this.$('#delivery-class').val(metadata.get('delivery_class'));
       }
-    },
-
-    events: {
-      'click #new-state': function() {
-        this.diagram.newState();
-      },
-
-      'change #repeatable': function(e) {
-        this.model
-          .get('poll_metadata')
-          .set('repeatable', $(e.target).prop('checked'));
-      },
-
-      'change #delivery-class': function(e) {
-        this.model
-          .get('poll_metadata')
-          .set('delivery_class', $(e.target).val());
-      },
     }
   });
 
