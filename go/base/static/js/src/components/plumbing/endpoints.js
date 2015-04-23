@@ -70,6 +70,7 @@
     },
 
     destroy: function() {
+      this.trigger('ending');
       this.$el.remove();
       return this;
     },

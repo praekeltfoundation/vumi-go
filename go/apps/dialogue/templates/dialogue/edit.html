@@ -4,9 +4,6 @@
 {% block content_extraclass %}campaigns dialogue{% endblock %}
 
 {% block content_actions_left %}
-    <button class="btn btn-primary" id='new-state'>
-        Create new message
-    </button>
 {% endblock %}
 
 {% block content_actions_right %}
@@ -37,7 +34,14 @@
 
 {% block content_main %}
     <div class="main-content">
-        <div id="diagram"></div>
+        <div id="diagram">
+            <div class="alert alert-info alert-dismissible info-add-state" role="alert">
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+              </button>
+              Double click anywhere to add a new screen
+            </div>
+        </div>
     </div>
 {% endblock %}
 

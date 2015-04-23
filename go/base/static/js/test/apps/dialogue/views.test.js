@@ -24,7 +24,7 @@ describe("go.apps.dialogue.views", function() {
 
       view = new DialogueView({
         el: $('.dialogue'),
-        model: new DialogueModel(modelData),
+        model: new DialogueModel(modelData()),
         sessionId: '123'
       });
 
@@ -53,7 +53,7 @@ describe("go.apps.dialogue.views", function() {
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint3');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), modelData());
 
         view.$('#save').click();
         server.respond();
@@ -99,21 +99,6 @@ describe("go.apps.dialogue.views", function() {
 
           assert.equal(location, 'conversation:show:conversation-1');
         });
-      });
-    });
-
-    describe("when '#new-state' is clicked", function() {
-      var i;
-
-      beforeEach(function() {
-        i = 0;
-        sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
-      });
-
-      it("should add a new state to the diagram", function() {
-        assert(noElExists('[data-uuid=new-state]'));
-        view.$('#new-state').click();
-        assert(oneElExists('[data-uuid=new-state]'));
       });
     });
 

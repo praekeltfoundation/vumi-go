@@ -144,16 +144,25 @@
     onPlumbConnect: function(e) {
       var sourceId = $(e.source).attr('data-uuid');
       var targetId = $(e.target).attr('data-uuid');
-      var connectionId = idOfConnection(sourceId, targetId);
 
       // Case 1:
+      // -------
+      // Either the source, target or both don't have uuids, so this isn't a
+      // connection we can manage. Trigger an event and exit early.
+      if ((typeof sourceId == 'undefined') || typeof targetId == 'undefined') {
+        this.trigger('error:unknown', e);
+        return;
+      }
+
+      // Case 2:
       // -------
       // The connection model and its view have been added, but we haven't
       // rendered the view (drawn the jsPlumb connection) yet. We don't
       // need to add the connection since it already exists.
+      var connectionId = idOfConnection(sourceId, targetId);
       if (this.has(connectionId)) { return; }
 
-      // Case 2:
+      // Case 3:
       // -------
       // The connection was created in the UI, so no model or view exists yet.
       // We need to create a new connection model and its view.
@@ -161,7 +170,7 @@
           target = this.diagram.endpoints.get(targetId),
           collection = this.determineCollection(source, target);
 
-      // Case 3:
+      // Case 4:
       // -------
       // This kind of connection is not supported
       if (collection === null) {
@@ -185,9 +194,19 @@
       // A new connection was created in the UI, but dropped before it reached
       // a target, we can ignore it.
       if (typeof targetId == 'undefined') { return; }
-      connectionId = idOfConnection(sourceId, targetId);
 
       // Case 2:
+      // -------
+      // The source doesn't have a uuid, so this isn't a connection we can
+      // manage. Trigger an event and exit early.
+      if (typeof sourceId == 'undefined') {
+        this.trigger('error:unknown', e);
+        return;
+      }
+
+      connectionId = idOfConnection(sourceId, targetId);
+
+      // Case 3:
       // -------
       // The connection model and its view have been removed from its
       // collection, so its connection view was destroyed (along with the
@@ -195,7 +214,7 @@
       // and view since they no longer exists.
       if (!this.has(connectionId)) { return; }
 
-      // Case 3:
+      // Case 4:
       // -------
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.
