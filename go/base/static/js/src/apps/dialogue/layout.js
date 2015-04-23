@@ -77,9 +77,11 @@
       return state;
     },
 
-    repaint: function() {
-      // TODO only repaint the relevant connections
-      jsPlumb.repaintEverything();
+    repaint: function(state) {
+      var endpoints = state.connectedEndpoints();
+      var i = endpoints.length;
+      while (i--) jsPlumb.repaint(endpoints[i].$el);
+      jsPlumb.repaint(state.diagram.entryPoint.$endpoint);
       this.trigger('repaint');
     },
 
@@ -133,7 +135,7 @@
         .get('layout')
         .set(this.coordsOf(state), {silent: true});
 
-      this.repaint();
+      this.repaint(state);
       this.resizeToFit(state);
     }
   });
