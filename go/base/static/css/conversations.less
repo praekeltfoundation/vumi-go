@@ -61,28 +61,47 @@
     ._jsPlumb_connector {
       z-index: 1;
       opacity: @secondary-opacity;
-      &:nth-of-type(2), &:nth-of-type(6) {
+
+      &:before {
+        content: "1";
+        position: absolute;
+        top: 5em;
+        left: 5em;
+        font-size: 5em;
+      }
+
+      // use five colours, including the original blue
+      
+      &:nth-of-type(2),
+      &:nth-of-type(7),
+      &:nth-of-type(12) {
         path {
-          stroke: yellow;
-          fill: yellow;
+          stroke: #4cae4c;
+          fill: #4cae4c;
         }
       }
-      &:nth-of-type(3), &:nth-of-type(7) {
+      &:nth-of-type(3),
+      &:nth-of-type(8),
+      &:nth-of-type(13) {
         path {
-          stroke: green;
-          fill: green;
+          stroke: #46b8da;
+          fill: #46b8da;
         }
       }
-      &:nth-of-type(4), &:nth-of-type(8) {
+      &:nth-of-type(4),
+      &:nth-of-type(9),
+      &:nth-of-type(14) {
         path {
-          stroke: orange;
-          fill: orange;
+          stroke: #eea236;
+          fill: #eea236;
         }
       }
-      &:nth-of-type(5), &:nth-of-type(9) {
+      &:nth-of-type(5),
+      &:nth-of-type(10),
+      &:nth-of-type(15) {
         path {
-          stroke: white;
-          fill: white;
+          stroke: #d9534f;
+          fill: #d9534f;
         }
       }
     }
