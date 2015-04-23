@@ -394,10 +394,9 @@ button {
 }
 .dialogue .info-add-state {
   z-index: 3;
-  position: absolute;
-  width: 380px;
-  margin-left: -190px;
-  left: 50%;
+  position: relative;
+  width: 30%;
+  margin: 0 auto;
 }
 .dialogue #diagram {
   position: relative;
