@@ -30,7 +30,7 @@ client:
       - 'go/base/static/vendor/lodash/js/lodash.underscore.js'
       - 'go/base/static/vendor/jquery/js/jquery.js'
       - 'go/base/static/vendor/jquery.cookie/js/jquery.cookie.js'
-      - 'go/base/static/vendor/jsPlumb/js/jquery.jsPlumb-1.5.2.js'
+      - 'go/base/static/vendor/jsplumb/js/jquery.jsPlumb-1.7.5.js'
       - 'go/base/static/vendor/jquery-ui/js/jquery-ui.js'
       - 'go/base/static/vendor/js-base64/js/base64.js'
       - 'go/base/static/vendor/node-uuid/js/uuid.js'
