@@ -56,38 +56,6 @@
       this.collection.appendToView(this);
       this.endpoints.render();
       return this;
-    },
-
-    connectedEndpoints: function() {
-      var results = [];
-
-      // using internal properties here for performance reasons, this method is
-      // sometimes used on each 'drag' event for diagrams with draggable states
-      var connections = this.diagram.connections._itemList;
-      var endpoints = this.endpoints._itemList;
-      var connectionsLen = connections.length;
-      var endpoint, conn, target, source;
-      var i, j;
-
-      i = endpoints.length;
-
-      while (i--) {
-        endpoint = endpoints[i].value;
-        j = connectionsLen;
-
-        while (j--) {
-          conn = connections[j].value;
-          source = conn.source;
-          target = conn.target;
-
-          if (target === endpoint || source === endpoint) {
-            results.push(source);
-            results.push(target);
-          }
-        }
-      }
-
-      return results;
     }
   });
 
