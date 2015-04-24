@@ -77,14 +77,6 @@
       return state;
     },
 
-    repaint: function(state) {
-      var endpoints = state.connectedEndpoints();
-      var i = endpoints.length;
-      while (i--) jsPlumb.repaint(endpoints[i].$el);
-      jsPlumb.repaint(state.diagram.entryPoint.$endpoint);
-      this.trigger('repaint');
-    },
-
     resizeToFit: function(state) {
       var height = this.$el.height();
       this.$el.height(Math.max(height, this.maxYOf(state)));
@@ -97,7 +89,7 @@
     },
 
     renderState: function(state) {
-      state.$el.draggable({
+      jsPlumb.draggable(state.$el, {
         drag: this.onDrag,
         handle: '.titlebar',
         containment: 'parent'
@@ -135,7 +127,6 @@
         .get('layout')
         .set(this.coordsOf(state), {silent: true});
 
-      this.repaint(state);
       this.resizeToFit(state);
     }
   });

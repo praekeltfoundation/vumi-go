@@ -1,4 +1,4 @@
-describe("go.routing (views)", function() {
+describe.only("go.routing (views)", function() {
   var routing = go.routing;
 
   var setUp = routing.testHelpers.setUp,
@@ -17,8 +17,7 @@ describe("go.routing (views)", function() {
       assertRequest = testHelpers.rpc.assertRequest;
 
   describe(".RoutingEndpointView", function() {
-    var RoutingEndpointModel = routing.models.RoutingEndpointModel,
-        RoutingEndpointView = routing.views.RoutingEndpointView;
+    var RoutingEndpointModel = routing.models.RoutingEndpointModel;
 
     var diagram,
         state,
@@ -227,8 +226,11 @@ describe("go.routing (views)", function() {
     });
   });
 
-  describe(".RoutingColumnView", function() {
+  describe.only(".RoutingColumnView", function() {
     var RoutingColumnView = routing.views.RoutingColumnView;
+
+    var diagram,
+        column;
 
     var ToyRoutingColumnView = RoutingColumnView.extend({
       // choose one of the state collections to test with
@@ -236,8 +238,11 @@ describe("go.routing (views)", function() {
       collectionName: 'channels'
     });
 
-    var diagram,
-        column;
+    function $endpointAt(i) {
+      return column.states
+        .at(i).endpoints
+        .at(0).$el
+    }
 
     beforeEach(function() {
       setUp();
@@ -249,6 +254,19 @@ describe("go.routing (views)", function() {
       tearDown();
     });
 
+    describe("when a state is dragged", function() {
+      it("should repaint", function() {
+        var repainted = false;
+        column.on('repaint', function() { repainted = true; });
+
+        // jquery-simulate doesn't seem to be working with jquery ui here,
+        // so we are invoking the callback directly
+        column.onDrag();
+
+        assert(repainted);
+      });
+    });
+
     describe(".render", function() {
       it("should render the states it contains", function() {
         assert(noElExists(column.$('.state')));
@@ -257,6 +275,60 @@ describe("go.routing (views)", function() {
         assert(oneElExists(column.$('[data-uuid="channel1"]')));
         assert(oneElExists(column.$('[data-uuid="channel2"]')));
         assert(oneElExists(column.$('[data-uuid="channel3"]')));
+      });
+    });
+
+    describe(".repaint", function() {
+      it("should tell jsPlumb to manage all endpoints in the column", function() {
+        diagram.model.set('channels', diagram.model.get('channels').first(3));
+
+        sinon.spy(jsPlumb, 'manage');
+        sinon.spy(jsPlumb, 'repaint');
+        column.repaint();
+
+        assert.equal($endpointAt(0).attr('id'), jsPlumb.manage.args[0][0]);
+        assert.equal($endpointAt(0).get(0), jsPlumb.manage.args[0][1]);
+
+        assert.equal($endpointAt(1).attr('id'), jsPlumb.manage.args[1][0]);
+        assert.equal($endpointAt(1).get(0), jsPlumb.manage.args[1][1]);
+
+        assert.equal($endpointAt(2).attr('id'), jsPlumb.manage.args[2][0]);
+        assert.equal($endpointAt(2).get(0), jsPlumb.manage.args[2][1]);
+
+        jsPlumb.manage.restore();
+        jsPlumb.repaint.restore();
+
+      });
+
+      it("should tell jsPlumb to manage all endpoints in the column", function() {
+        diagram.model.set('channels', diagram.model.get('channels').first(3));
+
+        sinon.spy(jsPlumb, 'repaint');
+        column.repaint();
+
+        assert($endpointAt(0).is(jsPlumb.repaint.args[0][0]));
+        assert($endpointAt(1).is(jsPlumb.repaint.args[1][0]));
+        assert($endpointAt(2).is(jsPlumb.repaint.args[2][0]));
+
+        assert.deepEqual(
+          _.pick(jsPlumb.repaint.args[0][1], 'left', 'top'),
+          $endpointAt(0).offset());
+
+        assert.deepEqual(
+          _.pick(jsPlumb.repaint.args[1][1], 'left', 'top'),
+          $endpointAt(1).offset());
+
+        assert.deepEqual(
+          _.pick(jsPlumb.repaint.args[2][1], 'left', 'top'),
+          $endpointAt(2).offset());
+
+        jsPlumb.repaint.restore();
+      });
+
+      it("should trigger a 'repaint' event", function(done) {
+        column
+          .on('repaint', function() { done(); })
+          .repaint();
       });
     });
   });
