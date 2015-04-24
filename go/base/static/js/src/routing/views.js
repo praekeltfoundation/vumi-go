@@ -171,21 +171,49 @@
       this.diagram = options.diagram;
       this.states = this.diagram.states.members.get(this.collectionName);
       this.setElement(this.diagram.$('#' + this.id));
+      this.onDrag = this.onDrag.bind(this);
     },
 
-    repaint: function() { jsPlumb.repaintEverything(); },
+    onDrag: function() {
+      this.repaint();
+    },
+
+    repaintEl: function($el) {
+      // jsPlumb 1.7.5 doesn't seem to play nice with jquery ui's .sortable(),
+      // so we need to give jsPlumb an offset for it to repaint correctly. When
+      // we specify an offset, jsPlumb sometimes gets unhappy: it seems to
+      // expect some internal state for an element to exist, but the state has
+      // been cleared by something else. Calling .manage() seems to ensure that
+      // the state does exist
+      jsPlumb.manage($el.attr('id'), $el.get(0));
+      jsPlumb.repaint($el, $el.offset());
+    },
+
+    repaint: function() {
+      _.chain(this.states.values())
+       .map(getEndpoints)
+       .flatten()
+       .map(getEl)
+       .each(this.repaintEl, this);
+
+      this.trigger('repaint');
+    },
 
     render: function() {
-      this.states.each(function(s) { s.render(); });
-
       // Allow the user to 'shuffle' the states in the column, repainting the
       // jsPlumb connections and endpoints on each update hook
       this.$el.sortable({
         cursor: 'move',
-        start: this.repaint,
-        sort: this.repaint,
-        stop: this.repaint
+        start: this.onDrag,
+        sort: this.onDrag,
+        stop: this.onDrag
       });
+
+      this.states.each(function(state) {
+        state.render();
+      });
+
+      this.repaint();
     }
   });
 
@@ -287,6 +315,17 @@
       this.diagram.render();
     }
   });
+
+
+  function getEndpoints(state) {
+    return state.endpoints.values();
+  }
+
+
+  function getEl(view) {
+    return view.$el;
+  }
+
 
   _(exports).extend({
     RoutingDiagramView: RoutingDiagramView,
