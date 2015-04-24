@@ -425,6 +425,10 @@ button {
   stroke: #d9534f;
   fill: #d9534f;
 }
+.dialogue #diagram ._jsPlumb_connector:nth-of-type(2n) path {
+  stroke-dasharray: 5;
+  stroke-width: 3;
+}
 .dialogue #diagram ._jsPlumb_endpoint {
   opacity: 0.75;
 }
