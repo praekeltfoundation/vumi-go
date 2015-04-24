@@ -80,6 +80,44 @@
     ._jsPlumb_connector {
       z-index: 1;
       opacity: @secondary-opacity;
+
+      // use five colours, including the original blue
+      
+      &:nth-of-type(5n+1) {
+        path {
+          stroke: #4cae4c;
+          &[pointer-events="all"] {
+            fill: #4cae4c;
+          }
+        }
+      }
+
+      &:nth-of-type(5n+2) {
+        path {
+          stroke: #46b8da;
+          &[pointer-events="all"] {
+            fill: #46b8da;
+          }
+        }
+      }
+
+      &:nth-of-type(5n+3) {
+        path {
+          stroke: #eea236;
+          &[pointer-events="all"] {
+            fill: #eea236;
+          }
+        }
+      }
+      
+      &:nth-of-type(5n+4) {
+        path {
+          stroke: #d9534f;
+          &[pointer-events="all"] {
+            fill: #d9534f;
+          }
+        }
+      }
     }
 
     ._jsPlumb_endpoint {

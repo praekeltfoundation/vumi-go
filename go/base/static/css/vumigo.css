@@ -409,6 +409,26 @@ button {
   z-index: 1;
   opacity: 0.75;
 }
+.dialogue #diagram ._jsPlumb_connector:nth-of-type(5n+1) path {
+  stroke: #4cae4c;
+  fill: #4cae4c;
+}
+.dialogue #diagram ._jsPlumb_connector:nth-of-type(5n+2) path {
+  stroke: #46b8da;
+  fill: #46b8da;
+}
+.dialogue #diagram ._jsPlumb_connector:nth-of-type(5n+3) path {
+  stroke: #eea236;
+  fill: #eea236;
+}
+.dialogue #diagram ._jsPlumb_connector:nth-of-type(5n+4) path {
+  stroke: #d9534f;
+  fill: #d9534f;
+}
+.dialogue #diagram ._jsPlumb_connector:nth-of-type(2n) path {
+  stroke-dasharray: 5;
+  stroke-width: 3;
+}
 .dialogue #diagram ._jsPlumb_endpoint {
   opacity: 0.75;
 }
@@ -727,6 +747,30 @@ button {
 .routing #diagram ._jsPlumb_connector {
   z-index: 1;
   opacity: 0.75;
+}
+.routing #diagram ._jsPlumb_connector:nth-of-type(5n+1) path {
+  stroke: #4cae4c;
+}
+.routing #diagram ._jsPlumb_connector:nth-of-type(5n+1) path[pointer-events="all"] {
+  fill: #4cae4c;
+}
+.routing #diagram ._jsPlumb_connector:nth-of-type(5n+2) path {
+  stroke: #46b8da;
+}
+.routing #diagram ._jsPlumb_connector:nth-of-type(5n+2) path[pointer-events="all"] {
+  fill: #46b8da;
+}
+.routing #diagram ._jsPlumb_connector:nth-of-type(5n+3) path {
+  stroke: #eea236;
+}
+.routing #diagram ._jsPlumb_connector:nth-of-type(5n+3) path[pointer-events="all"] {
+  fill: #eea236;
+}
+.routing #diagram ._jsPlumb_connector:nth-of-type(5n+4) path {
+  stroke: #d9534f;
+}
+.routing #diagram ._jsPlumb_connector:nth-of-type(5n+4) path[pointer-events="all"] {
+  fill: #d9534f;
 }
 .routing #diagram ._jsPlumb_endpoint {
   cursor: move;
