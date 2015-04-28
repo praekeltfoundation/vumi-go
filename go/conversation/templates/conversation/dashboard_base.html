@@ -5,10 +5,6 @@
 
 {% block content_title %}Dashboard{% endblock %}
 
-{% block content_actions_left %}
-    <a href="{% url 'wizard:create' %}" class="btn btn-primary">New conversation</a>
-{% endblock %}
-
 {% block content_actions_right %}
     <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right" role="search">
         <div class="form-group">
