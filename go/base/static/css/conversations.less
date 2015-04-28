@@ -24,6 +24,7 @@
 .dialogue {
   @color-normal: #428bca;
   @color-hover: #b41e31;
+  @color-unconnected: #d9534f;
   @secondary-opacity: 0.75;
 
   .actions {
@@ -84,8 +85,12 @@
     .endpoint {
       width: 15px;
       height: 15px;
-      background: @color-normal;
+      background: @color-unconnected;
       .border-radius(3px);
+    }
+
+    ._jsPlumb_connected {
+      background: @color-normal;
     }
 
     // need to also select by .endpoint in order to override the normal color
