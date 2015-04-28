@@ -567,5 +567,16 @@ describe("go.components.plumbing.endpoints", function() {
         assertAlignment(1/3, 2/3);
       });
     });
+
+    describe(".dragFilter", function() {
+      it("should return true if the endpoint is not connected", function() {
+        assert(diagram.endpoints.get('x1').isConnected());
+      });
+
+      it("should return false if the endpoint is connected", function() {
+        assert(!diagram.endpoints.get('x3').isConnected());
+        assert(!diagram.endpoints.get('y2').isConnected());
+      });
+    });
   });
 });

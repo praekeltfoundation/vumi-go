@@ -33,9 +33,11 @@
 
     // The params passed to jsPlumb when configuring the element as a
     // connection source/target
-    plumbSourceOptions: {
-      anchor: 'Continuous',
-      maxConnections: 1
+    plumbSourceOptions: function() {
+      return {
+        anchor: 'Continuous',
+        filter: this.dragFilter
+      };
     },
 
     plumbTargetOptions: {
@@ -46,6 +48,8 @@
     },
 
     initialize: function(options) {
+      this.dragFilter = this.dragFilter.bind(this);
+
       // the state view that this endpoint is part of
       this.state = options.state;
       this.$state = this.state.$el;
@@ -79,6 +83,10 @@
       if (this.isSource) { this.$el.addClass('endpoint-source'); }
       if (this.isTarget) { this.$el.addClass('endpoint-target');}
       this.collection.appendToView(this);
+    },
+
+    dragFilter: function() {
+      return !this.isConnected();
     }
   });
 
