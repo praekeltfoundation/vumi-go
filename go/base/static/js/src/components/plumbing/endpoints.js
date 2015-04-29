@@ -35,13 +35,13 @@
     // connection source/target
     plumbSourceOptions: function() {
       return {
-        anchor: 'Continuous',
+        anchor: ['Continuous', {faces:['top', 'bottom']}],
         filter: this.dragFilter
       };
     },
 
     plumbTargetOptions: {
-      anchor: 'Continuous',
+      anchor: ['Continuous', {faces:['top', 'bottom']}],
       dropOptions: {
         hoverClass: 'is-hovered-target'
       }
