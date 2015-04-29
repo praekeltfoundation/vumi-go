@@ -697,7 +697,7 @@ button {
   min-height: 100px;
   margin: 15px auto;
   padding-top: 10px;
-  z-index: 0;
+  z-index: 1;
   -webkit-user-select: none;
 }
 .routing #diagram .column-container .state .name {
