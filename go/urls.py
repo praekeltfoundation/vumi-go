@@ -34,7 +34,7 @@ urlpatterns = patterns(
     url(r'^conversations/',
         include('go.conversation.urls', namespace='conversations')),
     url(r'^routers/', include('go.router.urls', namespace='routers')),
-    url(r'^channels/', include('go.channel.urls', namespace='channels'))
+    url(r'^channels/', include('go.channel.urls', namespace='channels')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
     url(r'^account/', include('go.account.urls', namespace='account')),
     url(r'^accounts/', include('registration.backends.default.urls')),
