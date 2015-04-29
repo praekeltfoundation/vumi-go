@@ -71,8 +71,8 @@
   var RoutingStateView = StateView.extend({
     endpointType: RoutingEndpointView,
     endpointCollectionType: AligningEndpointCollection,
-    maxEndpoints: 3,
-    heightPerEndpoint: 30,
+    maxEndpoints: 2,
+    heightPerEndpoint: 45,
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
