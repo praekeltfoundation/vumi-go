@@ -708,7 +708,7 @@ button {
 }
 .routing #diagram .column-container .endpoint {
   background: #888;
-  padding: 3px;
+  padding: 5px;
 }
 .routing #diagram .column-container .endpoint.is-hovered-target {
   background: #b41e31;
