@@ -35,8 +35,8 @@
     // connection source/target
     plumbSourceOptions: function() {
       return {
-        anchor: ['Continuous', {faces:['top', 'bottom']}],
-        filter: this.dragFilter
+        filter: this.canMakeConnection,
+        anchor: ['Continuous', {faces:['top', 'bottom']}]
       };
     },
 
@@ -48,7 +48,7 @@
     },
 
     initialize: function(options) {
-      this.dragFilter = this.dragFilter.bind(this);
+      this.canMakeConnection = this.canMakeConnection.bind(this);
 
       // the state view that this endpoint is part of
       this.state = options.state;
@@ -85,8 +85,8 @@
       this.collection.appendToView(this);
     },
 
-    dragFilter: function() {
-      return !this.isConnected();
+    canMakeConnection: function() {
+      return !this.state.diagram.connections.findWhere({source: this});
     }
   });
 

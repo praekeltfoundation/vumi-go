@@ -568,14 +568,14 @@ describe("go.components.plumbing.endpoints", function() {
       });
     });
 
-    describe(".dragFilter", function() {
-      it("should return true if the endpoint is not connected", function() {
-        assert(diagram.endpoints.get('x1').dragFilter());
+    describe(".canMakeConnection", function() {
+      it("should return true if the endpoint is not yet a source", function() {
+        assert(diagram.endpoints.get('x1').canMakeConnection());
+        assert(diagram.endpoints.get('y2').canMakeConnection());
       });
 
-      it("should return false if the endpoint is connected", function() {
-        assert(!diagram.endpoints.get('x3').dragFilter());
-        assert(!diagram.endpoints.get('y2').dragFilter());
+      it("should return false if the endpoint is already a source", function() {
+        assert(!diagram.endpoints.get('x3').canMakeConnection());
       });
     });
   });
