@@ -569,7 +569,7 @@ describe("go.components.plumbing.endpoints", function() {
     });
 
     describe(".canMakeConnection", function() {
-      it("should return true if the endpoint not yet a source", function() {
+      it("should return true if the endpoint is not yet a source", function() {
         assert(diagram.endpoints.get('x1').canMakeConnection());
         assert(diagram.endpoints.get('y2').canMakeConnection());
       });
