@@ -1,4 +1,4 @@
-describe.only("go.routing (views)", function() {
+describe("go.routing (views)", function() {
   var routing = go.routing;
 
   var setUp = routing.testHelpers.setUp,
@@ -226,7 +226,7 @@ describe.only("go.routing (views)", function() {
     });
   });
 
-  describe.only(".RoutingColumnView", function() {
+  describe(".RoutingColumnView", function() {
     var RoutingColumnView = routing.views.RoutingColumnView;
 
     var diagram,
