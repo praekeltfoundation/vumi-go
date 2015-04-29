@@ -279,50 +279,19 @@ describe("go.routing (views)", function() {
     });
 
     describe(".repaint", function() {
-      it("should tell jsPlumb to manage all endpoints in the column", function() {
+      it("should repaint all endpoints in the column", function() {
+        var repaint = sinon.spy(plumbing.utils, 'repaintSortable');
         diagram.model.set('channels', diagram.model.get('channels').first(3));
 
-        sinon.spy(jsPlumb, 'manage');
-        sinon.spy(jsPlumb, 'repaint');
+        assert(!repaint.called);
+
         column.repaint();
 
-        assert.equal($endpointAt(0).attr('id'), jsPlumb.manage.args[0][0]);
-        assert.equal($endpointAt(0).get(0), jsPlumb.manage.args[0][1]);
+        assert(repaint.calledWith($endpointAt(0)));
+        assert(repaint.calledWith($endpointAt(1)));
+        assert(repaint.calledWith($endpointAt(2)));
 
-        assert.equal($endpointAt(1).attr('id'), jsPlumb.manage.args[1][0]);
-        assert.equal($endpointAt(1).get(0), jsPlumb.manage.args[1][1]);
-
-        assert.equal($endpointAt(2).attr('id'), jsPlumb.manage.args[2][0]);
-        assert.equal($endpointAt(2).get(0), jsPlumb.manage.args[2][1]);
-
-        jsPlumb.manage.restore();
-        jsPlumb.repaint.restore();
-
-      });
-
-      it("should tell jsPlumb to manage all endpoints in the column", function() {
-        diagram.model.set('channels', diagram.model.get('channels').first(3));
-
-        sinon.spy(jsPlumb, 'repaint');
-        column.repaint();
-
-        assert($endpointAt(0).is(jsPlumb.repaint.args[0][0]));
-        assert($endpointAt(1).is(jsPlumb.repaint.args[1][0]));
-        assert($endpointAt(2).is(jsPlumb.repaint.args[2][0]));
-
-        assert.deepEqual(
-          _.pick(jsPlumb.repaint.args[0][1], 'left', 'top'),
-          $endpointAt(0).offset());
-
-        assert.deepEqual(
-          _.pick(jsPlumb.repaint.args[1][1], 'left', 'top'),
-          $endpointAt(1).offset());
-
-        assert.deepEqual(
-          _.pick(jsPlumb.repaint.args[2][1], 'left', 'top'),
-          $endpointAt(2).offset());
-
-        jsPlumb.repaint.restore();
+        repaint.restore();
       });
 
       it("should trigger a 'repaint' event", function(done) {
