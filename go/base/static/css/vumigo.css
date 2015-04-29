@@ -657,8 +657,8 @@ button {
 .campaigns .actions .right {
   text-align: right;
 }
-.campaigns .actions .right a:first-child {
-  margin-right: 20px;
+.campaigns .actions .right .btn-reset {
+  margin-left: 20px;
 }
 .routing #diagram .column-container {
   -webkit-user-select: none;
