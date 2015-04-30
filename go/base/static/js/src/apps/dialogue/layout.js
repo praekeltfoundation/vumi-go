@@ -90,6 +90,7 @@
 
     renderState: function(state) {
       jsPlumb.draggable(state.$el, {
+        start: this.onDrag,
         drag: this.onDrag,
         stop: this.onDrag,
         handle: '.titlebar',
