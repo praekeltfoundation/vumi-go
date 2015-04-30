@@ -13,6 +13,7 @@
             </li>
             {% if request.user.is_authenticated %}
             <li><a href="{% url 'conversations:index' %}">Dashboard</a></li>
+            <li><a href="{% url 'routing' %}">Campaign Routing</a></li>
             <li><a href="{% url 'contacts:people' %}">Contacts</a></li>
             {% endif %}
         </ul>
