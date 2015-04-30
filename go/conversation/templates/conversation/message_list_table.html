@@ -6,7 +6,8 @@
         <tr>
             <th width="32">Type</th>
             <th>Response</th>
-            {% if message_direction == 'inbound' and conversation.has_channel_supporting_generic_sends  %}<th width="70">Actions</th>{% endif %}
+            {% if message_direction == 'inbound' and conversation.has_channel_supporting_generic_sends %}<th width="70">Actions</th>{% endif %}
+            {% if message_direction == 'outbound' %}<th width="70">Status</th>{% endif %}
         </tr>
     </thead>
     <tbody>
@@ -48,6 +49,11 @@
                         </div>
                     </div>
                 </div>
+            </td>
+            {% endif %}
+            {% if message_direction == 'outbound' %}
+            <td>
+              {{ message.event_status }}
             </td>
             {% endif %}
         </tr>

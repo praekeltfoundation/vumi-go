@@ -246,6 +246,21 @@ class MessageListView(ConversationTemplateView):
 
         batch_id = conversation.batch.key
 
+        def add_event_status(msg):
+            get_event_info = conversation.mdb.message_event_keys_with_statuses
+            types = [e[2] for e in get_event_info(msg["message_id"])]
+            if u"ack" in types:
+                msg.event_status = u"sent"
+            elif u"nack" in types:
+                msg.event_status = u"failed"
+            else:
+                msg.event_status = u"pending"
+            return msg
+
+        def get_sent_messages(start, stop):
+            return [add_event_status(m)
+                    for m in conversation.sent_messages_in_cache(start, stop)]
+
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(PagedMessageCache(
             conversation.count_inbound_messages(),
@@ -253,8 +268,7 @@ class MessageListView(ConversationTemplateView):
                 start, stop)), 20)
         outbound_message_paginator = Paginator(PagedMessageCache(
             conversation.count_outbound_messages(),
-            lambda start, stop: conversation.sent_messages_in_cache(
-                start, stop)), 20)
+            lambda start, stop: get_sent_messages(start, stop)), 20)
 
         tag_context = {
             'batch_id': batch_id,
