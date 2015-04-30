@@ -47,17 +47,32 @@ describe("go.components.plumbings.utils", function() {
 
   describe(".repaintDraggable", function() {
     var $el;
+    var dragManager;
 
     beforeEach(function() {
       $el = $('<div>').appendTo('body');
       sinon.stub(jsPlumb, 'updateOffset');
       sinon.stub(jsPlumb, 'repaint');
+
+      dragManager = jsPlumb.getDragManager()
+      sinon.stub(dragManager, 'elementRemoved');
     });
 
     afterEach(function() {
       jsPlumb.updateOffset.restore();
       jsPlumb.repaint.restore();
+      dragManager.elementRemoved.restore();
       $el.remove();
+    });
+
+    it("should tell jsPlumb to reset draggable state for the element", function() {
+      $el.attr('id', 'foo');
+      assert(!dragManager.elementRemoved.called);
+
+      utils.repaintDraggable($el);
+
+      assert(dragManager.elementRemoved.calledOnce);
+      assert(dragManager.elementRemoved.calledWith('foo'));
     });
 
     it("should tell jsPlumb to update the element's offset", function() {
