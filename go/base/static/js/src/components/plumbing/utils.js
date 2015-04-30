@@ -1,5 +1,7 @@
 (function(exports) {
   function repaintSortable($el) {
+    // This utility function should be used along with jquery ui's
+    // .sortable() for repainting an element's connections.
     // jsPlumb 1.7.5 doesn't seem to play nice with jquery ui's .sortable(),
     // so we need to give jsPlumb an offset for it to repaint correctly. When
     // we specify an offset, jsPlumb sometimes gets unhappy: it seems to
@@ -11,5 +13,27 @@
   }
 
 
+  function repaintDraggable($el) {
+    // This utility function should be used along with jquery ui's .draggable()
+    // for repainting an element's connections. jsPlumb 1.7.5's .draggable()
+    // doesn't seem to play nice when elements with jsPlumb endpoints and
+    // connections attached to them move (for example, because their parent
+    // element's dimensions changed). Its fair to expect a manual offset
+    // recalulation and repaint in these situtations, but .recalculateOffsets()
+    // (the method exposed by jsPlumb for this) doesn't appear to help. To
+    // solve this, we instead use jquery ui's .draggable() and repaint on drag
+    // events using .updateOffset() (an undocumented (internal?) method which
+    // seems to be used internally by jsPlumb.repaintEverything()) and
+    // .repaint().
+    jsPlumb.updateOffset({
+      elId: $el.attr('id'),
+      recalc: true
+    });
+
+    jsPlumb.repaint($el);
+  }
+
+
   exports.repaintSortable = repaintSortable;
+  exports.repaintDraggable = repaintDraggable;
 })(go.components.plumbing.utils = {});

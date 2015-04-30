@@ -38,10 +38,48 @@ describe("go.components.plumbings.utils", function() {
       utils.repaintSortable($el);
 
       assert(jsPlumb.repaint.calledOnce);
-      assert(jsPlumb.repaint.calledWithExactly($el, {
+      assert(jsPlumb.repaint.calledWith($el, {
         left: 21,
         top: 23
       }));
+    });
+  });
+
+  describe(".repaintDraggable", function() {
+    var $el;
+
+    beforeEach(function() {
+      $el = $('<div>').appendTo('body');
+      sinon.stub(jsPlumb, 'updateOffset');
+      sinon.stub(jsPlumb, 'repaint');
+    });
+
+    afterEach(function() {
+      jsPlumb.updateOffset.restore();
+      jsPlumb.repaint.restore();
+      $el.remove();
+    });
+
+    it("should tell jsPlumb to update the element's offset", function() {
+      $el.attr('id', 'foo');
+      assert(!jsPlumb.updateOffset.called);
+
+      utils.repaintDraggable($el);
+
+      assert(jsPlumb.updateOffset.calledOnce);
+      assert(jsPlumb.updateOffset.calledWith({
+        elId: 'foo',
+        recalc: true
+      }));
+    });
+
+    it("should tell jsPlumb to repaint the element", function() {
+      assert(!jsPlumb.repaint.called);
+
+      utils.repaintDraggable($el);
+
+      assert(jsPlumb.repaint.calledOnce);
+      assert(jsPlumb.repaint.calledWith($el));
     });
   });
 });
