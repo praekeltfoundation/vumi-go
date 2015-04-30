@@ -36,12 +36,12 @@
     plumbSourceOptions: function() {
       return {
         filter: this.canMakeConnection,
-        anchor: ['Continuous', {faces:['top', 'bottom']}]
+        anchor: 'Continuous',
       };
     },
 
     plumbTargetOptions: {
-      anchor: ['Continuous', {faces:['top', 'bottom']}],
+      anchor: 'Continuous',
       dropOptions: {
         hoverClass: 'is-hovered-target'
       }
