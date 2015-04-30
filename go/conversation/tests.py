@@ -846,21 +846,21 @@ class TestConversationViews(BaseConversationViewTestCase):
         r_out = self.client.get(
             self.get_view_url(conv, 'message_list'),
             {'direction': 'outbound'})
-        self.assertContains(r_out, "<td>pending</td>", html=True)
-        self.assertNotContains(r_out, "<td>sent</td>", html=True)
-        self.assertNotContains(r_out, "<td>failed</td>", html=True)
+        self.assertContains(r_out, "<td>pending", html=True)
+        self.assertNotContains(r_out, "<td>sent", html=True)
+        self.assertNotContains(r_out, "<td>failed", html=True)
 
     def test_message_list_outbound_status_failed(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msg = self.msg_helper.make_stored_outbound(conv, "hi")
-        self.msg_helper.make_stored_nack(conv, msg)
+        self.msg_helper.make_stored_nack(conv, msg, nack_reason="no spoons")
 
         r_out = self.client.get(
             self.get_view_url(conv, 'message_list'),
             {'direction': 'outbound'})
-        self.assertContains(r_out, "<td>failed</td>", html=True)
-        self.assertNotContains(r_out, "<td>pending</td>", html=True)
-        self.assertNotContains(r_out, "<td>sent</td>", html=True)
+        self.assertContains(r_out, "<td>failed: no spoons", html=True)
+        self.assertNotContains(r_out, "<td>pending", html=True)
+        self.assertNotContains(r_out, "<td>sent", html=True)
 
     def test_message_list_outbound_status_sent(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -870,9 +870,9 @@ class TestConversationViews(BaseConversationViewTestCase):
         r_out = self.client.get(
             self.get_view_url(conv, 'message_list'),
             {'direction': 'outbound'})
-        self.assertContains(r_out, "<td>sent</td>", html=True)
-        self.assertNotContains(r_out, "<td>pending</td>", html=True)
-        self.assertNotContains(r_out, "<td>failed</td>", html=True)
+        self.assertContains(r_out, "<td>sent", html=True)
+        self.assertNotContains(r_out, "<td>pending", html=True)
+        self.assertNotContains(r_out, "<td>failed", html=True)
 
     def test_message_list_with_bad_transport_type_inbound(self):
         # inbound messages could have an unsupported transport_type
