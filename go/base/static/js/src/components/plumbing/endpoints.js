@@ -87,6 +87,21 @@
 
     canMakeConnection: function() {
       return !this.state.diagram.connections.findWhere({source: this});
+    },
+
+    peers: function() {
+      var results = [];
+      var connections = this.state.diagram.connections.values();
+      var i = connections.length;
+      var conn;
+
+      while (i--) {
+        conn = connections[i];
+        if (conn.target === this) results.push(conn.source);
+        else if (conn.source === this) results.push(conn.target);
+      }
+
+      return results;
     }
   });
 
