@@ -280,11 +280,9 @@ describe("go.routing (views)", function() {
 
     describe(".repaint", function() {
       it("should repaint all endpoints in the column", function() {
-        var repaint = sinon.spy(plumbing.utils, 'repaintSortable');
         diagram.model.set('channels', diagram.model.get('channels').first(3));
 
-        assert(!repaint.called);
-
+        var repaint = sinon.spy(plumbing.utils, 'repaintSortable');
         column.repaint();
 
         assert(repaint.calledWith($endpointAt(0)));
