@@ -247,15 +247,16 @@ class MessageListView(ConversationTemplateView):
         batch_id = conversation.batch.key
 
         def add_event_status(msg):
-            msg.event_status = u"pending"
+            msg.event_status = u"Sending"
             get_event_info = conversation.mdb.message_event_keys_with_statuses
             for event_id, _, event_type in get_event_info(msg["message_id"]):
                 if event_type == u"ack":
-                    msg.event_status = u"sent"
+                    msg.event_status = u"Accepted"
                     break
                 if event_type == u"nack":
                     event = conversation.mdb.get_event(event_id)
-                    msg.event_status = u"failed: %s" % (event["nack_reason"],)
+                    msg.event_status = u"Rejected: %s" % (
+                        event["nack_reason"],)
                     break
             return msg
 
