@@ -90,7 +90,9 @@
 
     renderState: function(state) {
       jsPlumb.draggable(state.$el, {
+        start: this.onDrag,
         drag: this.onDrag,
+        stop: this.onDrag,
         handle: '.titlebar',
         containment: 'parent'
       });
@@ -127,6 +129,7 @@
         .get('layout')
         .set(this.coordsOf(state), {silent: true});
 
+      state.repaint();
       this.resizeToFit(state);
     }
   });
