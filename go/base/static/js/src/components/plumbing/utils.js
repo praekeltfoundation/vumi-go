@@ -19,15 +19,16 @@
     // doesn't seem to play nice when elements with jsPlumb endpoints and
     // connections attached to them move (for example, because their parent
     // element's dimensions changed). Its fair to expect a manual offset
-    // recalulation and repaint in these situtations, but .recalculateOffsets()
-    // (the method exposed by jsPlumb for this) doesn't appear to help. To
-    // solve this, we instead use jquery ui's .draggable() and repaint on drag
-    // events using .updateOffset() (an undocumented (internal?) method which
-    // seems to be used internally by jsPlumb.repaintEverything()) and
-    // .repaint(). jsPlumb appears to still manage draggables and calculate
-    // offsets even when jsPlumb.draggable() isn't used, so to avoid seeing
-    // weird artefacts from jsPlumb sometimes calculating offsets, we remove
-    // the element from the state jsPlumb keeps to manage draggables.
+    // recaclulation and repaint in these situtations, but
+    // .recalculateOffsets() (the method exposed by jsPlumb for this) doesn't
+    // appear to help. To solve this, we instead use jquery ui's .draggable()
+    // and repaint on drag events using .updateOffset() (an undocumented
+    // (internal?) method which seems to be used internally by
+    // jsPlumb.repaintEverything()) and .repaint(). jsPlumb appears to still
+    // manage draggables and calculate offsets even when jsPlumb.draggable()
+    // isn't used, so to avoid seeing weird artefacts from jsPlumb sometimes
+    // calculating offsets, we remove the element from the state jsPlumb keeps
+    // to manage draggables.
     var id = $el.attr('id');
     jsPlumb.getDragManager().elementRemoved(id);
 
