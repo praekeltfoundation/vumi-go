@@ -410,10 +410,6 @@
   }
 
 
-  function repaintEl(el) {
-  }
-
-
   _(exports).extend({
     EntryEndpointView: EntryEndpointView,
     ExitEndpointView: ExitEndpointView,
