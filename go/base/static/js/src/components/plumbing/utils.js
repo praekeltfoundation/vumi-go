@@ -19,7 +19,7 @@
     // doesn't seem to play nice when elements with jsPlumb endpoints and
     // connections attached to them move (for example, because their parent
     // element's dimensions changed). Its fair to expect a manual offset
-    // recaclulation and repaint in these situtations, but
+    // recalculation and repaint in these situtations, but
     // .recalculateOffsets() (the method exposed by jsPlumb for this) doesn't
     // appear to help. To solve this, we instead use jquery ui's .draggable()
     // and repaint on drag events using .updateOffset() (an undocumented
