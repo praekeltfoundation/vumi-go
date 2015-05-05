@@ -846,9 +846,9 @@ class TestConversationViews(BaseConversationViewTestCase):
         r_out = self.client.get(
             self.get_view_url(conv, 'message_list'),
             {'direction': 'outbound'})
-        self.assertContains(r_out, "<td>pending", html=True)
-        self.assertNotContains(r_out, "<td>sent", html=True)
-        self.assertNotContains(r_out, "<td>failed", html=True)
+        self.assertContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Accepted", html=True)
+        self.assertNotContains(r_out, "<td>Rejected", html=True)
 
     def test_message_list_outbound_status_failed(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -858,9 +858,9 @@ class TestConversationViews(BaseConversationViewTestCase):
         r_out = self.client.get(
             self.get_view_url(conv, 'message_list'),
             {'direction': 'outbound'})
-        self.assertContains(r_out, "<td>failed: no spoons", html=True)
-        self.assertNotContains(r_out, "<td>pending", html=True)
-        self.assertNotContains(r_out, "<td>sent", html=True)
+        self.assertContains(r_out, "<td>Rejected: no spoons", html=True)
+        self.assertNotContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Accepted", html=True)
 
     def test_message_list_outbound_status_sent(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -870,9 +870,9 @@ class TestConversationViews(BaseConversationViewTestCase):
         r_out = self.client.get(
             self.get_view_url(conv, 'message_list'),
             {'direction': 'outbound'})
-        self.assertContains(r_out, "<td>sent", html=True)
-        self.assertNotContains(r_out, "<td>pending", html=True)
-        self.assertNotContains(r_out, "<td>failed", html=True)
+        self.assertContains(r_out, "<td>Accepted", html=True)
+        self.assertNotContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Rejected", html=True)
 
     def test_message_list_with_bad_transport_type_inbound(self):
         # inbound messages could have an unsupported transport_type
