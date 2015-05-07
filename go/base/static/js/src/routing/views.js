@@ -296,6 +296,12 @@
   });
 
   var RoutingView = Backbone.View.extend({
+    bindings: {
+      'success save': function() {
+        this.model.persistOrdinals();
+      }
+    },
+
     initialize: function(options) {
       this.diagram = new RoutingDiagramView({
         el: '#diagram',
@@ -309,10 +315,6 @@
         useNotifier: true
       });
 
-      this.save.on('success', function() {
-        this.model.persistOrdinals();
-      }, this);
-
       this.reset = new ResetActionView({
         el: this.$('#reset'),
         model: this.model,
@@ -320,6 +322,7 @@
       });
 
       go.routing.style.initialize();
+      go.utils.bindEvents(this.bindings, this);
     },
 
     remove: function() {
