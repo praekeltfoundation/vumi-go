@@ -154,6 +154,7 @@
       this.get('channels').persistOrdinals();
       this.get('routers').persistOrdinals();
       this.get('conversations').persistOrdinals();
+      this.trigger('persist:ordinals');
     }
   });
 

@@ -228,6 +228,16 @@ describe("go.routing (models)", function() {
           go.local.get(localOrdinalsKey(model.id, 'conversations')),
           ['conversation-a', 'conversation-c', 'conversation-b']);
       });
+
+      it("should trigger a 'persist:ordinals' event", function() {
+        var model = new RoutingModel(modelData());
+        var triggered = false;
+        model.on('persist:ordinals', function() { triggered = true; });
+
+        assert(!triggered);
+        model.persistOrdinals();
+        assert(triggered);
+      });
     });
   });
 

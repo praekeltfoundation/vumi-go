@@ -99,6 +99,7 @@
     jsPlumb.detachEveryConnection();
     jsPlumb.deleteEveryEndpoint();
     $('#routing').remove();
+    localStorage.clear();
   };
 
   _.extend(exports, {

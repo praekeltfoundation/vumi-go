@@ -259,11 +259,28 @@ describe("go.routing (views)", function() {
         var repainted = false;
         column.on('repaint', function() { repainted = true; });
 
+        assert(!repainted);
+
         // jquery-simulate doesn't seem to be working with jquery ui here,
         // so we are invoking the callback directly
         column.onDrag();
 
         assert(repainted);
+      });
+    });
+
+    describe("when a state is dropped", function() {
+      it("should update the ordinals", function() {
+        var updated = false;
+        column.on('update:ordinals', function() { updated = true; });
+
+        assert(!updated);
+
+        // jquery-simulate doesn't seem to be working with jquery ui here,
+        // so we are invoking the callback directly
+        column.onStop();
+
+        assert(updated);
       });
     });
 
@@ -296,6 +313,43 @@ describe("go.routing (views)", function() {
         column
           .on('repaint', function() { done(); })
           .repaint();
+      });
+    });
+
+    describe(".updateOrdinals", function() {
+      it("should update the models' ordinals using the DOM ordering", function() {
+        var models = column.states.models;
+
+        models.reset([
+          models.get('channel1'),
+          models.get('channel2'),
+          models.get('channel3')]);
+
+        column.render();
+
+        column.$('[data-uuid="channel1"]')
+          .detach()
+          .insertAfter(column.$('[data-uuid="channel3"]'));
+
+
+        models.get('channel1').set('ordinal', 1);
+        models.get('channel2').set('ordinal', 0);
+        models.get('channel3').set('ordinal', 2);
+
+        column.updateOrdinals();
+
+        assert.strictEqual(models.get('channel1').get('ordinal'), 2);
+        assert.strictEqual(models.get('channel2').get('ordinal'), 0);
+        assert.strictEqual(models.get('channel3').get('ordinal'), 1);
+      });
+
+      it("should trigger an 'update:ordinals' event", function() {
+        var triggered = false;
+        column.on('update:ordinals', function() { triggered = true; });
+
+        assert(!triggered);
+        column.updateOrdinals();
+        assert(triggered);
       });
     });
   });
@@ -425,6 +479,19 @@ describe("go.routing (views)", function() {
 
         view.$('#save').click();
         server.respond();
+      });
+
+      it("should persist the ordering of the routing table components", function() {
+        server.respondWith(response());
+
+        var triggered = false;
+        view.diagram.model.on('persist:ordinals', function() { triggered = true; });
+
+        view.$('#save').click();
+
+        assert(!triggered);
+        server.respond();
+        assert(triggered);
       });
 
       it("should notify the user if the save was successful", function() {

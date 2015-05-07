@@ -150,6 +150,12 @@
   });
 
   var RoutingStateCollection = StateViewCollection.extend({
+    ordered: true,
+
+    comparator: function(state) {
+      return state.model.get('ordinal');
+    },
+
     initialize: function(options) {
       this.$column = this.view.$(options.columnEl);
     },
@@ -172,10 +178,16 @@
       this.states = this.diagram.states.members.get(this.collectionName);
       this.setElement(this.diagram.$('#' + this.id));
       this.onDrag = this.onDrag.bind(this);
+      this.onStop = this.onStop.bind(this);
     },
 
     onDrag: function() {
       this.repaint();
+    },
+
+    onStop: function() {
+      this.repaint();
+      this.updateOrdinals();
     },
 
     repaint: function() {
@@ -188,6 +200,15 @@
       this.trigger('repaint');
     },
 
+    updateOrdinals: function() {
+      this.$('.state')
+        .map(getElUuid)
+        .get()
+        .forEach(this._setOrdinal, this);
+
+      this.trigger('update:ordinals');
+    },
+
     render: function() {
       // Allow the user to 'shuffle' the states in the column, repainting the
       // jsPlumb connections and endpoints on each update hook
@@ -195,7 +216,7 @@
         cursor: 'move',
         start: this.onDrag,
         sort: this.onDrag,
-        stop: this.onDrag
+        stop: this.onStop
       });
 
       this.states.each(function(state) {
@@ -203,6 +224,10 @@
       });
 
       this.repaint();
+    },
+
+    _setOrdinal: function(id, i) {
+      return this.states.get(id).model.set('ordinal', i);
     }
   });
 
@@ -284,6 +309,10 @@
         useNotifier: true
       });
 
+      this.save.on('success', function() {
+        this.model.persistOrdinals();
+      }, this);
+
       this.reset = new ResetActionView({
         el: this.$('#reset'),
         model: this.model,
@@ -313,6 +342,11 @@
 
   function getEl(view) {
     return view.$el;
+  }
+
+
+  function getElUuid($el) {
+    return $(this).attr('data-uuid');
   }
 
 
