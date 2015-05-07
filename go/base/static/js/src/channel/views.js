@@ -12,10 +12,6 @@
     data: function() { return {csrfmiddlewaretoken: $.cookie('csrftoken')}; },
     useNotifier: true,
 
-    initialize: function(options) {
-      this.on('success', function() { location.reload(); });
-    },
-
     invoke: function() {
       var invoke = ChannelActionView.__super__.invoke.bind(this);
 
