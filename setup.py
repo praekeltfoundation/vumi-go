@@ -1,4 +1,11 @@
+import platform
 from setuptools import setup, find_packages
+
+
+# We need `psycopg2cffi` for pypy, but `psycopg2` for cpython.
+psycopg2 = 'psycopg2==2.4'
+if platform.python_implementation() == "PyPy":
+    psycopg2 = 'psycopg2cffi'
 
 
 setup(
@@ -19,7 +26,8 @@ setup(
         'Django==1.5.8',
         'gunicorn==0.15.0',
         'South==0.8.2',
-        'psycopg2cffi',
+        # We choose psycopg2 based on Python implementation above.
+        psycopg2,
         'celery==3.0.23',
         'django-celery==3.0.23',
         # https://github.com/pmclanahan/django-celery-email/pull/14
