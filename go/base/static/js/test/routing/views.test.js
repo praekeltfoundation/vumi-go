@@ -331,7 +331,6 @@ describe("go.routing (views)", function() {
           .detach()
           .insertAfter(column.$('[data-uuid="channel3"]'));
 
-
         models.get('channel1').set('ordinal', 1);
         models.get('channel2').set('ordinal', 0);
         models.get('channel3').set('ordinal', 2);
