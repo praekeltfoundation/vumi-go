@@ -14,7 +14,7 @@
     "jquery-ui": "~1.10.3",
     "node-uuid": "~1.4.1",
     "js-base64": "~2.1.2",
-    "jsPlumb": "git@github.com:praekelt/jsPlumb.git#~1.5.2",
+    "jsplumb": "~1.7.5",
     "lodash": "~2.0.0",
     "backbone-relational": "0.8.6",
     "bootstrap": "3.0.0",
@@ -45,6 +45,11 @@
     "backbone.babysitter": {
       "js": "lib/*.js"
     },
+    "jsplumb": {
+      "js": [
+        "dist/js/*.js"
+      ]
+    },
     "*": {
       "js": [
         "*.js",
@@ -67,7 +72,6 @@
     }
   },
   "resolutions": {
-    "jquery": "1.9.1",
-    "underscore": ">=1.5.0"
+    "jquery": "1.9.1"
   }
 }

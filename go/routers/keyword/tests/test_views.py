@@ -30,7 +30,7 @@ class KeywordViewTests(GoDjangoTestCase):
         self.assertContains(response, rtr_helper.get_view_url('start'))
         self.assertContains(
             response,
-            '<button class="btn btn-danger action" data-action="stop" ' +
+            '<button class="btn action" data-action="stop" ' +
             ' data-url="%s" disabled>Deactivate</button>'
             % rtr_helper.get_view_url('stop'), html=True)
 
@@ -42,7 +42,7 @@ class KeywordViewTests(GoDjangoTestCase):
         self.assertEqual(router.name, u"myrouter")
         self.assertContains(
             response,
-            '<button class="btn btn-primary action" data-action="activate" ' +
+            '<button class="btn action" data-action="activate" ' +
             'data-url="%s" disabled>Activate</button>'
             % rtr_helper.get_view_url('start'), html=True)
         self.assertContains(response, rtr_helper.get_view_url('stop'))

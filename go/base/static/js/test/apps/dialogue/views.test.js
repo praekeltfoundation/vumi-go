@@ -24,7 +24,7 @@ describe("go.apps.dialogue.views", function() {
 
       view = new DialogueView({
         el: $('.dialogue'),
-        model: new DialogueModel(modelData),
+        model: new DialogueModel(modelData()),
         sessionId: '123'
       });
 
@@ -38,7 +38,7 @@ describe("go.apps.dialogue.views", function() {
       server.restore();
     });
 
-    describe("when the '#save' is clicked", function() {
+    describe("when '#save' is clicked", function() {
       it("should issue a save api call with the dialogue changes",
       function(done) {
         server.respondWith(function(req) {
@@ -53,7 +53,7 @@ describe("go.apps.dialogue.views", function() {
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint3');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), modelData());
 
         view.$('#save').click();
         server.respond();
@@ -69,7 +69,9 @@ describe("go.apps.dialogue.views", function() {
           assert.include(view.save.notifier.$el.text(), "Save failed.");
         });
       });
+    });
 
+    describe("when '#save-and-exit' is clicked", function() {
       describe("if the save action was successful", function() {
         var location;
 
@@ -84,36 +86,21 @@ describe("go.apps.dialogue.views", function() {
         it("should notify the user", function() {
           server.respondWith(response());
 
-          view.$('#save').click();
+          view.$('#save-and-exit').click();
           server.respond();
 
-          assert.include(view.save.notifier.$el.text(), "Save successful.");
+          assert.include(view.saveAndExit.notifier.$el.text(), "Save successful.");
         });
 
         it("should redirect the user to the conversation show page",
         function() {
           server.respondWith('{}');
 
-          view.$('#save').click();
+          view.$('#save-and-exit').click();
           server.respond();
 
           assert.equal(location, 'conversation:show:conversation-1');
         });
-      });
-    });
-
-    describe("when '#new-state' is clicked", function() {
-      var i;
-
-      beforeEach(function() {
-        i = 0;
-        sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
-      });
-
-      it("should add a new state to the diagram", function() {
-        assert(noElExists('[data-uuid=new-state]'));
-        view.$('#new-state').click();
-        assert(oneElExists('[data-uuid=new-state]'));
       });
     });
 

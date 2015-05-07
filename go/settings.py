@@ -145,8 +145,7 @@ TEMPLATE_DIRS = (
     abspath("conversation", "templates"),
     abspath("router", "templates"),
     abspath("channel", "templates"),
-    abspath("routing", "templates"),
-    abspath("wizard", "templates"),
+    abspath("routing", "templates")
 )
 
 INSTALLED_APPS = (
@@ -173,7 +172,6 @@ INSTALLED_APPS = (
     'go.conversation',
     'go.router',
     'go.channel',
-    'go.wizard',
     'go.contacts',
     'go.account',
     'go.billing',

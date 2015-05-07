@@ -34,6 +34,10 @@
     endpointGroupType: DiagramEndpointGroup,
 
     initialize: function() {
+      // Set the view as the default container so jsPlumb connects endpoint
+      // elements properly.
+      jsPlumb.setContainer(this.$el);
+
       // Lookup/manager of all the states in the diagram
       this.states = new this.stateGroupType({
         view: this,
@@ -52,13 +56,6 @@
         schemaDefaults: {type: this.connectionType},
         collectionType: this.connectionCollectionType
       });
-
-      // Set the view as the default container so jsPlumb connects endpoint
-      // elements properly.
-      //
-      // https://github.com/sporritt/jsPlumb/wiki/setup
-      // #overriding-the-default-behaviour
-      jsPlumb.Defaults.Container = this.$el;
     },
 
     render: function() {

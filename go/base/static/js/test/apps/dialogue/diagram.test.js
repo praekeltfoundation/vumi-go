@@ -6,8 +6,7 @@ describe("go.apps.dialogue.diagram", function() {
   var plumbing = go.components.plumbing,
       noConnections = plumbing.testHelpers.noConnections;
 
-  var dialogue = go.apps.dialogue,
-      states = go.apps.dialogue.states;
+  var dialogue = go.apps.dialogue;
 
   var setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,
@@ -61,9 +60,14 @@ describe("go.apps.dialogue.diagram", function() {
         diagram.render();
 
         assert.deepEqual(
-          jsPlumb.getConnections(),
-          [e1_e3.plumbConnection]
-        );
+          jsPlumb.getConnections().sort(),
+          [e1_e3.plumbConnection, diagram.entryPoint.plumbConnection]);
+      });
+
+      it("should render its entry point", function() {
+        assert(noElExists(diagram.$('.entry-point')));
+        diagram.render();
+        assert(oneElExists(diagram.$('.entry-point')));
       });
     });
   });

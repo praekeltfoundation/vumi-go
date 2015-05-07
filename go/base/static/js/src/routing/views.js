@@ -71,8 +71,8 @@
   var RoutingStateView = StateView.extend({
     endpointType: RoutingEndpointView,
     endpointCollectionType: AligningEndpointCollection,
-    maxEndpoints: 3,
-    heightPerEndpoint: 30,
+    maxEndpoints: 2,
+    heightPerEndpoint: 45,
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
@@ -171,21 +171,38 @@
       this.diagram = options.diagram;
       this.states = this.diagram.states.members.get(this.collectionName);
       this.setElement(this.diagram.$('#' + this.id));
+      this.onDrag = this.onDrag.bind(this);
     },
 
-    repaint: function() { jsPlumb.repaintEverything(); },
+    onDrag: function() {
+      this.repaint();
+    },
+
+    repaint: function() {
+      _.chain(this.states.values())
+       .map(getEndpoints)
+       .flatten()
+       .map(getEl)
+       .each(plumbing.utils.repaintSortable);
+
+      this.trigger('repaint');
+    },
 
     render: function() {
-      this.states.each(function(s) { s.render(); });
-
       // Allow the user to 'shuffle' the states in the column, repainting the
       // jsPlumb connections and endpoints on each update hook
       this.$el.sortable({
         cursor: 'move',
-        start: this.repaint,
-        sort: this.repaint,
-        stop: this.repaint
+        start: this.onDrag,
+        sort: this.onDrag,
+        stop: this.onDrag
       });
+
+      this.states.each(function(state) {
+        state.render();
+      });
+
+      this.repaint();
     }
   });
 
@@ -287,6 +304,17 @@
       this.diagram.render();
     }
   });
+
+
+  function getEndpoints(state) {
+    return state.endpoints.values();
+  }
+
+
+  function getEl(view) {
+    return view.$el;
+  }
+
 
   _(exports).extend({
     RoutingDiagramView: RoutingDiagramView,

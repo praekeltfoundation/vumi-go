@@ -34,8 +34,28 @@
     setValue: function(v) { return this.set('value', go.utils.slugify(v)); }
   });
 
+  var DialogueStateLayoutModel = Model.extend({
+    coords: function() {
+      return {
+        x: this.get('x'),
+        y: this.get('y')
+      };
+    },
+
+    defaults: function() {
+      return {
+        x: 0,
+        y: 0
+      };
+    }
+  });
+
   var DialogueStateModel = StateModel.extend({
-    relations: [],
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'layout',
+      relatedModel: DialogueStateLayoutModel
+    }],
 
     subModelTypes: {
       dummy: 'go.apps.dialogue.models.DummyStateModel',
@@ -65,7 +85,8 @@
 
   var DialogueStateModelCollection = Backbone.Collection.extend({
     model: DialogueStateModel,
-    comparator: function(state) { return state.get('ordinal'); }
+    ordered: true,
+    comparator: 'ordinal'
   });
 
   var DummyStateModel = DialogueStateModel.extend({
@@ -315,6 +336,8 @@
     EndStateModel: EndStateModel,
     GroupStateModel: GroupStateModel,
     SendStateModel: SendStateModel,
-    HttpJsonStateModel: HttpJsonStateModel
+    HttpJsonStateModel: HttpJsonStateModel,
+
+    DialogueStateModelCollection: DialogueStateModelCollection 
   });
 })(go.apps.dialogue.models = {});
