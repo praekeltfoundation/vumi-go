@@ -241,7 +241,7 @@ describe("go.routing (views)", function() {
     function $endpointAt(i) {
       return column.states
         .at(i).endpoints
-        .at(0).$el
+        .at(0).$el;
     }
 
     beforeEach(function() {
