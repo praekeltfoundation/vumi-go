@@ -1,27 +1,42 @@
 .registration {
   color: #c1c1c1;
-
-  min-width: 0;
-  width: 720px;
-
+  max-width: 50em;
   text-align: center;
-  margin: 0 auto;
-
+  
   .logo-large {
-    margin: 1em 0 2em 0;
+    margin: 1em auto 2em auto;
   }
 
+  label {
+    display: block;
+    font-weight: normal;
+  }
+
+}
+
+.registration-content {
+  text-align: left;
+  margin: 0 auto 5em auto;
+  max-width: 20em
+}
+
+.registration-sign-in,
+.registration-register {
+  margin-bottom: 4em;
+  width: 100%;
+}
+
+@media screen and (min-width: 70em) {
   .registration-content {
-    display: inline-block;
-    text-align: left;
-    margin: 0 auto;
-    min-width: 420px;
+    max-width: 60em;
   }
-
-  &.login {
-    .registration-content {
-      min-width: 0;
-      width: 280px;
-    }
+  .registration-sign-in {
+    float: left;
+    clear: left;
+    width: 45%;
+  }
+  .registration-register {
+    float: right;
+    width: 45%;
   }
 }

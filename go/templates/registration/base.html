@@ -3,12 +3,17 @@
 {% block container_extraclass %}registration{% endblock %}
 
 {% block content %}
-<div class="row">
-    <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo-large">
-</div>
+<a href="http://vumi.org"><img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo-large"></a>
 
-<div class="registration-content row">
-    {% block registration_content %}
-    {% endblock %}
+<div class="registration-content clearfix">
+	<div class="registration-sign-in">
+	    {% block registration_content %}
+	    {% endblock %}
+	</div>
+
+	<div class="registration-register">
+	    {% block registration_form %}
+	    {% endblock %}
+	</div>
 </div>
 {% endblock %}

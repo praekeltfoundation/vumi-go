@@ -16,8 +16,6 @@ a:link, button {
 }
 
 .main-container {
-  min-width: 650px;
-  max-width: none;
   padding: 5px 25px;
 }
 
@@ -25,6 +23,7 @@ a:link, button {
   color: #aaa;
   margin: 1em;
   text-align: center;
+  clear: both;
 }
 
 .main-nav {
@@ -383,6 +382,11 @@ a:link, button {
     border-bottom: 1px dotted #ccc;
     padding-bottom: 10px;
   }
+}
+
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 @import "registration.less";

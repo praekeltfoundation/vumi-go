@@ -14,14 +14,13 @@ button {
   pointer-events: auto;
 }
 .main-container {
-  min-width: 650px;
-  max-width: none;
   padding: 5px 25px;
 }
 .footer {
   color: #aaa;
   margin: 1em;
   text-align: center;
+  clear: both;
 }
 .main-nav {
   margin: 0;
@@ -349,25 +348,45 @@ button {
   border-bottom: 1px dotted #ccc;
   padding-bottom: 10px;
 }
+img {
+  max-width: 100%;
+  height: auto;
+}
 .registration {
   color: #c1c1c1;
-  min-width: 0;
-  width: 720px;
+  max-width: 50em;
   text-align: center;
-  margin: 0 auto;
 }
 .registration .logo-large {
-  margin: 1em 0 2em 0;
+  margin: 1em auto 2em auto;
 }
-.registration .registration-content {
-  display: inline-block;
+.registration label {
+  display: block;
+  font-weight: normal;
+}
+.registration-content {
   text-align: left;
-  margin: 0 auto;
-  min-width: 420px;
+  margin: 0 auto 5em auto;
+  max-width: 20em;
 }
-.registration.login .registration-content {
-  min-width: 0;
-  width: 280px;
+.registration-sign-in,
+.registration-register {
+  margin-bottom: 4em;
+  width: 100%;
+}
+@media screen and (min-width: 70em) {
+  .registration-content {
+    max-width: 60em;
+  }
+  .registration-sign-in {
+    float: left;
+    clear: left;
+    width: 45%;
+  }
+  .registration-register {
+    float: right;
+    width: 45%;
+  }
 }
 .confirm .details table th:first-child {
   width: 100px;
