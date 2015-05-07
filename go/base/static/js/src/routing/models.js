@@ -5,13 +5,13 @@
 // We use the state machine models as a base to make use of any
 // custom/overriden functionality the models provide over Backbone.Model,
 // seeing as the models for routing are of a state machine nature.
-var stateMachine = go.components.stateMachine,
-    EndpointModel = stateMachine.EndpointModel,
-    ConnectionModel = stateMachine.ConnectionModel,
-    StateModel = stateMachine.StateModel,
-    StateMachineModel = stateMachine.StateMachineModel;
-
 (function(exports) {
+  var stateMachine = go.components.stateMachine,
+      EndpointModel = stateMachine.EndpointModel,
+      ConnectionModel = stateMachine.ConnectionModel,
+      StateModel = stateMachine.StateModel,
+      StateMachineModel = stateMachine.StateMachineModel;
+
   var RoutingEndpointModel = EndpointModel.extend({
   });
 

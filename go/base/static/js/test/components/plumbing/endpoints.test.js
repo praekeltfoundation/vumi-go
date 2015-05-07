@@ -267,7 +267,8 @@ describe("go.components.plumbing.endpoints", function() {
 
 
   describe(".PositionableEndpointView", function() {
-    var PositionableEndpointView = plumbing.endpoints.PositionableEndpointView;
+    var EndpointModel = stateMachine.EndpointModel,
+        PositionableEndpointView = plumbing.endpoints.PositionableEndpointView;
 
     var ToyEndpointView = PositionableEndpointView.extend({
       reposition: function(p) { this.p = p; },
@@ -407,7 +408,8 @@ describe("go.components.plumbing.endpoints", function() {
   });
 
   describe(".FollowingEndpointView", function() {
-    var FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
+    var EndpointModel = stateMachine.EndpointModel,
+        FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
     var state,
         endpoint,
