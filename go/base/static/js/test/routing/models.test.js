@@ -8,6 +8,7 @@ describe("go.routing (models)", function() {
 
   afterEach(function() {
     go.testHelpers.unregisterModels();
+    localStorage.clear();
   });
 
   describe(".ChannelModel", function() {
@@ -29,8 +30,67 @@ describe("go.routing (models)", function() {
 
   });
 
+  describe(".RoutingStateCollection", function() {
+    var localOrdinalsKey = routing.models.localOrdinalsKey,
+        RoutingStateModel = routing.models.RoutingStateModel,
+        RoutingStateCollection = routing.models.RoutingStateCollection;
+
+    var ToyRoutingStateCollection = RoutingStateCollection.extend({
+      type: 'jedis'
+    });
+
+    describe("when a model is added", function() {
+      it("should set the model's ordinal using the cached ordinals", function() {
+        go.local.set(localOrdinalsKey('campaign1', 'jedis'), ['c', 'a', 'b']);
+        var models = new ToyRoutingStateCollection([], {routingId: 'campaign1'});
+
+        models.add(new RoutingStateModel({uuid: 'a'}));
+        assert.strictEqual(models.get('a').get('ordinal'), 1);
+
+        models.add(new RoutingStateModel({uuid: 'b'}));
+        assert.strictEqual(models.get('b').get('ordinal'), 2);
+
+        models.add(new RoutingStateModel({uuid: 'c'}));
+        assert.strictEqual(models.get('c').get('ordinal'), 0);
+      });
+
+      it("should set the model's ordinal to -1 if it is not cached", function() {
+        go.local.set(localOrdinalsKey('campaign1', 'jedis'), []);
+        var models = new ToyRoutingStateCollection([], {routingId: 'campaign1'});
+        models.add(new RoutingStateModel({uuid: 'a'}));
+        assert.strictEqual(models.get('a').get('ordinal'), -1);
+      });
+    });
+
+    describe(".persistOrdinals", function() {
+      it("should update local storage with the new ordinals", function() {
+        go.local.set(localOrdinalsKey('campaign1', 'jedis'), ['c', 'a', 'b']);
+        var models = new ToyRoutingStateCollection([], {routingId: 'campaign1'});
+
+        models.add(new RoutingStateModel({uuid: 'a'}));
+        models.add(new RoutingStateModel({uuid: 'b'}));
+        models.add(new RoutingStateModel({uuid: 'c'}));
+
+        models.get('a').set('ordinal', 0);
+        models.get('b').set('ordinal', 2);
+        models.get('c').set('ordinal', 1);
+
+        assert.deepEqual(
+          go.local.get(localOrdinalsKey('campaign1', 'jedis')),
+          ['c', 'a', 'b']);
+
+        models.persistOrdinals();
+
+        assert.deepEqual(
+          go.local.get(localOrdinalsKey('campaign1', 'jedis')),
+          ['a', 'c', 'b']);
+      });
+    });
+  });
+
   describe(".RoutingModel", function() {
-    var RoutingModel = routing.models.RoutingModel;
+    var RoutingModel = routing.models.RoutingModel,
+        localOrdinalsKey = routing.models.localOrdinalsKey;
 
     var server;
 
@@ -111,6 +171,64 @@ describe("go.routing (models)", function() {
       });
     });
 
+    describe(".persistOrdinals", function() {
+      it("should update local storage with the new ordinals", function() {
+        var model = new RoutingModel(modelData());
+
+        model.get('channels').reset([
+          {uuid: 'channel-a'},
+          {uuid: 'channel-b'},
+          {uuid: 'channel-c'}]);
+
+        model.get('routers').reset([
+          {uuid: 'router-a'},
+          {uuid: 'router-b'},
+          {uuid: 'router-c'}]);
+
+        model.get('conversations').reset([
+          {uuid: 'conversation-a'},
+          {uuid: 'conversation-b'},
+          {uuid: 'conversation-c'}]);
+
+        model.get('channels').get('channel-a').set('ordinal', 1);
+        model.get('channels').get('channel-b').set('ordinal', 0);
+        model.get('channels').get('channel-c').set('ordinal', 2);
+
+        model.get('routers').get('router-a').set('ordinal', 2);
+        model.get('routers').get('router-b').set('ordinal', 0);
+        model.get('routers').get('router-c').set('ordinal', 1);
+
+        model.get('conversations').get('conversation-a').set('ordinal', 0);
+        model.get('conversations').get('conversation-b').set('ordinal', 2);
+        model.get('conversations').get('conversation-c').set('ordinal', 1);
+
+        assert.notDeepEqual(
+          go.local.get(localOrdinalsKey(model.id, 'channels')),
+          ['channel-b', 'channel-a', 'channel-c']);
+
+        assert.notDeepEqual(
+          go.local.get(localOrdinalsKey(model.id, 'routers')),
+          ['router-b', 'router-c', 'router-a']);
+
+        assert.notDeepEqual(
+          go.local.get(localOrdinalsKey(model.id, 'conversations')),
+          ['conversation-a', 'conversation-c', 'conversation-b']);
+
+        model.persistOrdinals();
+
+        assert.deepEqual(
+          go.local.get(localOrdinalsKey(model.id, 'channels')),
+          ['channel-b', 'channel-a', 'channel-c']);
+
+        assert.deepEqual(
+          go.local.get(localOrdinalsKey(model.id, 'routers')),
+          ['router-b', 'router-c', 'router-a']);
+
+        assert.deepEqual(
+          go.local.get(localOrdinalsKey(model.id, 'conversations')),
+          ['conversation-a', 'conversation-c', 'conversation-b']);
+      });
+    });
   });
 
   describe(".RouterModel", function() {
@@ -145,6 +263,15 @@ describe("go.routing (models)", function() {
         assert.equal(model.viewURL(), '/conversations/conversation1/edit/');
       });
     });
+  });
 
+  describe(".localOrdinalsKey", function() {
+    var localOrdinalsKey = routing.models.localOrdinalsKey;
+
+    it("should return the corresponding local storage key", function() {
+      assert.equal(
+        localOrdinalsKey('campaign1', 'channels'),
+        'campaign1:channels:ordinals');
+    });
   });
 });
