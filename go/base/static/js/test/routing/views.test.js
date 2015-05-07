@@ -390,7 +390,7 @@ describe("go.routing (views)", function() {
 
       view = new RoutingView({
         el: '#routing',
-        model: new RoutingModel(modelData),
+        model: new RoutingModel(modelData()),
         sessionId: '123'
       });
 
@@ -421,7 +421,7 @@ describe("go.routing (views)", function() {
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint4');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), modelData());
 
         view.$('#save').click();
         server.respond();
@@ -448,15 +448,16 @@ describe("go.routing (views)", function() {
 
     describe("when the reset button is clicked", function() {
       it("should reset the routing table changes", function(done) {
-        assert.deepEqual(view.model.toJSON(), modelData);
+        view.model.clear().set(modelData());
+        var expected = view.model.toJSON();
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint4');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), expected);
 
         view.$('#reset').click();
         view.reset.once('success', function() {
-          assert.deepEqual(view.model.toJSON(), modelData);
+          assert.deepEqual(view.model.toJSON(), expected);
           done();
         });
       });
