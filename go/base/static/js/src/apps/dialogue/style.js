@@ -26,7 +26,7 @@
 
     plumbDefaults.Connector = [
       'Flowchart', {
-       cornerRadius: 10
+       cornerRadius: 200
     }];
 
     plumbDefaults.ConnectionOverlays = [[
