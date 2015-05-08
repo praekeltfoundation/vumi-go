@@ -44,6 +44,7 @@ client:
     go:
       - 'go/base/static/js/src/go.js'
       - 'go/base/static/js/src/utils.js'
+      - 'go/base/static/js/src/local.js'
       - 'go/base/static/js/src/errors.js'
       - 'go/base/static/js/src/components/components.js'
       - 'go/base/static/js/src/components/structures.js'
@@ -131,6 +132,7 @@ tests:
       - 'go/base/static/js/test/testHelpers/rpc.js'
       - 'go/base/static/js/test/errors.test.js'
       - 'go/base/static/js/test/utils.test.js'
+      - 'go/base/static/js/test/local.test.js'
       - 'go/base/static/js/test/components/rpc.test.js'
       - 'go/base/static/js/test/components/models.test.js'
       - 'go/base/static/js/test/components/structures.test.js'
