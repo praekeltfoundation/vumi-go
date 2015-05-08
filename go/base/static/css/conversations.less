@@ -26,6 +26,7 @@
   @color-hover: #b41e31;
   @color-unconnected: #d9534f;
   @secondary-opacity: 0.75;
+  @color-highlighted: #5cb85c;
 
   .actions {
     .sidebar {
@@ -257,6 +258,18 @@
         .channel-type {
           font-weight: bold;
         }
+      }
+    }
+
+    .highlighted {
+      &.endpoint {
+        background-color: @color-highlighted;
+      }
+      path, circle {
+        stroke: @color-highlighted;
+      }
+      circle, [pointer-events="all"] {
+        fill: @color-highlighted;
       }
     }
   }

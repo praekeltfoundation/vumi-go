@@ -575,6 +575,17 @@ button {
 .dialogue #diagram .send.state .preview.mode .channel-type {
   font-weight: bold;
 }
+.dialogue #diagram .highlighted.endpoint {
+  background-color: #5cb85c;
+}
+.dialogue #diagram .highlighted path,
+.dialogue #diagram .highlighted circle {
+  stroke: #5cb85c;
+}
+.dialogue #diagram .highlighted circle,
+.dialogue #diagram .highlighted [pointer-events="all"] {
+  fill: #5cb85c;
+}
 .conversation.groups .group-table th:first-child,
 .conversation.groups .group-table td:first-child {
   width: 20px;
