@@ -66,7 +66,6 @@ describe("go.apps.dialogue.layout", function() {
       });
 
       it("should not create a new state if the mouse is on a state", function() {
-
         assert.deepEqual(
           states.models.pluck('uuid'),
           ['state1', 'state2', 'state3', 'state4', 'state5']);
