@@ -254,6 +254,7 @@
     },
 
     events: {
+      'dblclick': 'onDblClick',
       'click .titlebar .remove': 'onRemove'
     },
 
@@ -275,6 +276,12 @@
     onRemove: function(e) {
       e.preventDefault();
       this.collection.remove(this);
+    },
+
+    onDblClick: function(e) {
+      // prevent the layout's dblclick handler from causing a new state to be
+      // created when a state is dblclicked
+      e.stopPropagation();
     },
 
     // 'Resets' a state to a new type by removing the current state, and
