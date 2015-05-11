@@ -436,6 +436,7 @@ button {
 }
 .dialogue #diagram ._jsPlumb_connected {
   background: #428bca;
+  color: red;
 }
 .dialogue #diagram .endpoint.is-hovered-target {
   background: #b41e31;
@@ -707,8 +708,11 @@ button {
   cursor: move;
 }
 .routing #diagram .column-container .endpoint {
-  background: #888;
+  background: #d9534f;
   padding: 5px;
+}
+.routing #diagram .column-container ._jsPlumb_connected {
+  background: #428bca;
 }
 .routing #diagram .column-container .endpoint.is-hovered-target {
   background: #b41e31;

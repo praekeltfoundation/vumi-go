@@ -1,6 +1,8 @@
 .routing {
+  @color-normal: #428bca;
   @color-hover: #b41e31;
   @secondary-opacity: 0.75;
+  @color-unconnected: #d9534f;
 
   #diagram {
     .column-container {
@@ -52,8 +54,12 @@
       }
 
       .endpoint {
-        background: #888;
+        background: @color-unconnected;
         padding: 5px;
+      }
+
+      ._jsPlumb_connected {
+        background: @color-normal;
       }
 
       // need to also select by .endpoint in order to override the normal color
