@@ -22,7 +22,7 @@ class BulkSendAction(ConversationAction):
         return self.send_command(
             'bulk_send', batch_id=self._conv.batch.key,
             msg_options={}, content=action_data['message'],
-            delivery_class=self._conv.delivery_class,
+            delivery_class=action_data['delivery_class'],
             dedupe=action_data['dedupe'])
 
 
