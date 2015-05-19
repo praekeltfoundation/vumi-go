@@ -53,6 +53,8 @@ class TestBulkMessageViews(GoDjangoTestCase):
         self.assertContains(response, 'name="message"')
         self.assertContains(response, '<h1>Write and send bulk message</h1>')
         self.assertContains(response, 'name="delivery_class"')
+        self.assertContains(response,
+                            '<option value="sms" selected="selected">SMS<')
         self.assertContains(response, 'name="dedupe"')
         self.assertContains(response, '>Send message</button>')
 
