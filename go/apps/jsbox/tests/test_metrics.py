@@ -2,7 +2,8 @@
 
 import mock
 
-from vumi.application.sandbox import SandboxCommand
+from vxsandbox.resources import SandboxCommand
+
 from vumi.tests.helpers import VumiTestCase
 
 from go.apps.jsbox.metrics import (

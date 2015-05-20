@@ -8,6 +8,7 @@ from django.utils.html import format_html
 from django.contrib import admin
 from django.contrib import messages
 
+from go.base.utils import vumi_api_for_user
 from go.billing.models import (
     TagPool, Account, MessageCost, Transaction, Statement, LineItem,
     LowCreditNotification, TransactionArchive)
@@ -22,12 +23,13 @@ class TagPoolAdmin(admin.ModelAdmin):
 
 
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('account_number', 'user', 'description',
-                    'credit_balance', 'last_topup_balance')
+    list_display = (
+        'account_number', 'user', 'description', 'credit_balance',
+        'last_topup_balance', 'is_developer')
 
     search_fields = ('account_number', 'user__email', 'description')
     readonly_fields = ('credit_balance',)
-    actions = ['load_credits']
+    actions = ['load_credits', 'set_developer_flag', 'unset_developer_flag']
 
     def load_credits(self, request, queryset):
         selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
@@ -35,6 +37,29 @@ class AccountAdmin(admin.ModelAdmin):
         redirect_url = "credits/load/"
         return HttpResponseRedirect(redirect_url)
     load_credits.short_description = "Load credits for selected accounts"
+
+    def is_developer(self, obj):
+        vumi_api = vumi_api_for_user(obj.user)
+        account = vumi_api.get_user_account()
+        return account.is_developer
+
+    def _set_developer_flag(self, user, value):
+        vumi_api = vumi_api_for_user(user)
+        account = vumi_api.get_user_account()
+        account.is_developer = value
+        account.save()
+
+    def set_developer_flag(self, request, queryset):
+        for obj in queryset:
+            self._set_developer_flag(obj.user, True)
+    set_developer_flag.short_description = (
+        "Set the developer flag for selected accounts")
+
+    def unset_developer_flag(self, request, queryset):
+        for obj in queryset:
+            self._set_developer_flag(obj.user, False)
+    unset_developer_flag.short_description = (
+        "Unset the developer flag for selected accounts")
 
     def get_urls(self):
         urls = super(AccountAdmin, self).get_urls()
@@ -89,8 +114,9 @@ class AccountAdmin(admin.ModelAdmin):
 class MessageCostAdmin(admin.ModelAdmin):
     list_display = ('id', 'account', 'tag_pool', 'message_direction',
                     'message_cost', 'storage_cost', 'session_cost',
-                    'markup_percent', 'message_credit_cost',
-                    'storage_credit_cost', 'session_credit_cost')
+                    'session_unit_cost', 'session_unit_time', 'markup_percent',
+                    'message_credit_cost', 'storage_credit_cost',
+                    'session_credit_cost', 'session_length_credit_cost')
 
     search_fields = (
         'tag_pool__name', 'tag_pool__description', 'account__account_number',
@@ -100,23 +126,21 @@ class MessageCostAdmin(admin.ModelAdmin):
 
 
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'account_number', 'transaction_type', 'tag_pool_name',
-                    'tag_name', 'message_id', 'message_direction',
+    list_display = ('id', 'created', 'account_number', 'transaction_type',
+                    'tag_pool_name', 'tag_name', 'message_direction',
                     'session_created', 'message_cost', 'storage_cost',
-                    'session_cost', 'message_credits', 'storage_credits',
-                    'session_credits', 'markup_percent', 'credit_factor',
-                    'credit_amount', 'status', 'provider', 'created',
-                    'last_modified')
+                    'session_cost', 'session_length_cost',
+                    'session_unit_cost', 'session_unit_time',
+                    'markup_percent', 'provider', 'credit_amount',
+                    'message_credits', 'storage_credits',
+                    'session_credits', 'session_length_credits',
+                    'credit_factor', 'status', 'message_id', 'last_modified')
 
-    search_fields = ('account__account_number', 'tag_pool_name', 'tag_name')
+    readonly_fields = list_display
+
+    search_fields = ('account_number', 'tag_pool_name', 'tag_name',
+                     'transaction_type')
     list_filter = ('message_direction', 'status', 'created', 'last_modified')
-    readonly_fields = ('account_number', 'transaction_type', 'tag_pool_name',
-                       'tag_name', 'message_id', 'message_direction',
-                       'session_created', 'message_cost', 'storage_cost',
-                       'session_cost', 'message_credits', 'storage_credits',
-                       'session_credits', 'markup_percent', 'credit_factor',
-                       'credit_amount', 'status', 'provider', 'created',
-                       'last_modified')
 
     def has_add_permission(self, request):
         return False

@@ -60,7 +60,9 @@ describe("app", function() {
                         "What is your favourite colour?",
                         "1. Red",
                         "2. Blue",
-                        "3. Green"
+                        "3. Green",
+                        "4. Black",
+                        "5. Yellow"
                     ].join('\n'))
                     .run();
             });
@@ -316,6 +318,115 @@ describe("app", function() {
                             e.message,
                             "No endpoint found for channel type '???'");
                     });
+            });
+        });
+
+        describe("when the user enters a send state which is a httpjson type", function() {
+            beforeEach(function() {
+                return tester
+                    .setup.user.addr('+27123')
+                    .setup.user.state('choice-1')
+                    .setup(function(api) {
+                        api.contacts.add({
+                           msisdn: '+27123'
+                        });
+                    });
+            });
+
+            function http_get_fixture(api, url) {
+                var fixture = api.http.fixtures.create({
+                    request: {
+                        method: "GET",
+                        url: url,
+                    }
+                });
+                api.http.fixtures.add(fixture);
+                return fixture;
+            }
+
+            function http_post_fixture(api, url, opts) {
+                var contact = _.clone(opts.contact, true);
+                contact.extra = opts.extra;
+                var fixture = api.http.fixtures.create({
+                    request: {
+                        method: "POST",
+                        url: url,
+                        data: JSON.stringify({
+                            user: {
+                                answers: opts.answers,
+                            },
+                            contact: contact,
+                            conversation_key: poll.conversation_key
+                        })
+                    }
+                });
+                api.http.fixtures.add(fixture);
+                return fixture;
+            }
+
+            describe("when the method is GET", function() {
+                it("should successfully fetch the data from the url", function() {
+                    var fixture;
+                    return tester
+                        .setup(function(api) {
+                            fixture = http_get_fixture(api, "www.foo.bar");
+                        })
+                        .input('4')
+                        .check(function(api) {
+                            assert.equal(fixture.uses, 1);
+                        })
+                        .check.user.state('end-1')
+                        .run();
+                });
+            });
+
+            describe("when the method is POST", function() {
+                it("should successfully send the data to the url", function() {
+                    var fixture;
+                    return tester
+                        .setup(function(api) {
+                            fixture = http_post_fixture(api, "www.foo.bar", {
+                                contact: api.contacts.store[0],
+                                answers: {
+                                    'message-1': 'value-5',
+                                },
+                                extra: {
+                                    'message-1': 'value-5',
+                                    'message-1-1': 'value-5',
+                                },
+                            });
+                        })
+                        .input('5')
+                        .check(function(api) {
+                            assert.equal(fixture.uses, 1);
+                        })
+                        .check.user.state('end-1')
+                        .run();
+                });
+
+                it("should not post answers for deleted states", function() {
+                    var fixture;
+                    return tester
+                        .setup.user.answer('deleted-state-1', 'oops')
+                        .setup(function(api) {
+                            fixture = http_post_fixture(api, "www.foo.bar", {
+                                contact: api.contacts.store[0],
+                                answers: {
+                                    'message-1': 'value-5',
+                                },
+                                extra: {
+                                    'message-1': 'value-5',
+                                    'message-1-1': 'value-5',
+                                },
+                            });
+                        })
+                        .input('5')
+                        .check(function(api) {
+                            assert.equal(fixture.uses, 1);
+                        })
+                        .check.user.state('end-1')
+                        .run();
+                });
             });
         });
     });

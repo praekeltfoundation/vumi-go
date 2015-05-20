@@ -17,8 +17,7 @@ describe("go.routing (views)", function() {
       assertRequest = testHelpers.rpc.assertRequest;
 
   describe(".RoutingEndpointView", function() {
-    var RoutingEndpointModel = routing.models.RoutingEndpointModel,
-        RoutingEndpointView = routing.views.RoutingEndpointView;
+    var RoutingEndpointModel = routing.models.RoutingEndpointModel;
 
     var diagram,
         state,
@@ -107,8 +106,8 @@ describe("go.routing (views)", function() {
   });
 
   describe(".RoutingStateView", function() {
-    var ChannelModel = routing.models.ChannelModel,
-        RoutingStateView = routing.views.RoutingStateView;
+    var RouterStateView = routing.views.RouterStateView,
+        RouterModel = routing.models.RouterModel;
 
     var diagram,
         state,
@@ -118,53 +117,111 @@ describe("go.routing (views)", function() {
       setUp();
       diagram = newRoutingDiagram();
 
-      var model = new ChannelModel({
-        uuid: 'channel4',
-        tag: ['invisible_sms', '*181#'],
-        name: '*181#',
-        description: 'Invisible Sms: *181#',
-        endpoints: [
-          {uuid: 'endpoint80', name: 'default'},
-          {uuid: 'endpoint81', name: 'secondary'}]
+      var model = new RouterModel({
+        uuid: 'router3',
+        type: 'keyword',
+        name: 'keyword-router',
+        description: 'Keyword',
+        channel_endpoints: [{uuid: 'endpoint12', name: 'default'}],
+        conversation_endpoints: [
+          {uuid: 'endpoint13', name: 'default'},
+          {uuid: 'endpoint14', name: 'default'},
+          {uuid: 'endpoint15', name: 'default'},
+          {uuid: 'endpoint16', name: 'default'}
+        ]
       });
 
-      state = diagram.states.add('channels', new RoutingStateView({
+      state = diagram.states.add('routers', new RouterStateView({
         model: model,
         diagram: diagram,
-        collection: diagram.states.members.get('channels')
+        collection: diagram.states.members.get('routers')
       }), {render: false, silent: true});
+
     });
 
     afterEach(function() {
       tearDown();
     });
 
+    describe(".endpointsForSide", function() {
+      it("should return the endpoints for a side", function() {
+        assert.deepEqual(
+          state.endpointsForSide('left'),
+          [state.endpoints.get('endpoint12')]
+        );
+        assert.deepEqual(state.endpointsForSide('right'), [
+          state.endpoints.get('endpoint13'),
+          state.endpoints.get('endpoint14'),
+          state.endpoints.get('endpoint15'),
+          state.endpoints.get('endpoint16')
+        ]);
+      });
+    });
+
+    describe(".findMaxEndpoints", function() {
+      it("should return the max of two endpoint arrays", function() {
+        assert.equal(state.findMaxEndpoints(), 4);
+      });
+    });
+
+    describe(".tooManyEndpoints", function() {
+      it("should check if there are too many endpoints", function() {
+        assert(state.tooManyEndpoints());
+      });
+    });
+
+    describe(".stretchedHeight", function() {
+      it("should calculate the new height", function() {
+        state.heightPerEndpoint = 15;
+        assert.equal(state.stretchedHeight(), 4 * 15);
+      });
+    });
+
     describe(".render", function() {
       beforeEach(function() {
-        $column = $('#diagram #channels');
+        $column = $('#diagram #routers');
       });
 
       it("should append the state to its column", function() {
-        assert(noElExists($column.find('[data-uuid="channel4"]')));
+        assert(noElExists($column.find('[data-uuid="router3"]')));
         state.render();
-        assert(oneElExists($column.find('[data-uuid="channel4"]')));
+        assert(oneElExists($column.find('[data-uuid="router3"]')));
+      });
+
+      it("should not set a new height for few endpoints", function(){
+        state.maxEndpoints = 5;
+        state.$el.height(10);
+        state.render();
+        assert.equal(state.$el.height(), 10);
+      });
+
+      it("should set a new heightfor many endpoints", function(){
+        state.maxEndpoints = 3;
+        state.heightPerEndpoint = 15;
+        state.model.get('conversation_endpoints');
+        state.$el.height(10);
+        state.render();
+        assert.equal(state.$el.height(), 4 * 15);
       });
 
       it("should render its endpoints", function() {
-        assert(noElExists($column.find('[data-uuid="channel4"] .endpoint')));
+        assert(noElExists($column.find('[data-uuid="router3"] .endpoint')));
         state.render();
-        assert(oneElExists('[data-uuid="channel4"] [data-uuid="endpoint80"]'));
-        assert(oneElExists('[data-uuid="channel4"] [data-uuid="endpoint81"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint12"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint13"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint14"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint15"]'));
+        assert(oneElExists('[data-uuid="router3"] [data-uuid="endpoint16"]'));
       });
 
-      it("should display the state's name", function() {
-        assert(noElExists('[data-uuid="channel4"] .name'));
+      it("should display the state's name as a link", function() {
+        assert(noElExists('[data-uuid="router3"] a.name'));
         state.render();
 
-        assert(oneElExists('[data-uuid="channel4"] .name'));
+        assert(oneElExists('[data-uuid="router3"] a.name'));
         assert.equal(
-          $('[data-uuid="channel4"] .name').text(),
-          '*181#');
+          $('[data-uuid="router3"] a.name').text(),
+          'keyword-router');
       });
     });
   });
@@ -172,14 +229,20 @@ describe("go.routing (views)", function() {
   describe(".RoutingColumnView", function() {
     var RoutingColumnView = routing.views.RoutingColumnView;
 
+    var diagram,
+        column;
+
     var ToyRoutingColumnView = RoutingColumnView.extend({
       // choose one of the state collections to test with
       id: 'channels',
       collectionName: 'channels'
     });
 
-    var diagram,
-        column;
+    function $endpointAt(i) {
+      return column.states
+        .at(i).endpoints
+        .at(0).$el;
+    }
 
     beforeEach(function() {
       setUp();
@@ -191,6 +254,36 @@ describe("go.routing (views)", function() {
       tearDown();
     });
 
+    describe("when a state is dragged", function() {
+      it("should repaint", function() {
+        var repainted = false;
+        column.on('repaint', function() { repainted = true; });
+
+        assert(!repainted);
+
+        // jquery-simulate doesn't seem to be working with jquery ui here,
+        // so we are invoking the callback directly
+        column.onDrag();
+
+        assert(repainted);
+      });
+    });
+
+    describe("when a state is dropped", function() {
+      it("should update the ordinals", function() {
+        var updated = false;
+        column.on('update:ordinals', function() { updated = true; });
+
+        assert(!updated);
+
+        // jquery-simulate doesn't seem to be working with jquery ui here,
+        // so we are invoking the callback directly
+        column.onStop();
+
+        assert(updated);
+      });
+    });
+
     describe(".render", function() {
       it("should render the states it contains", function() {
         assert(noElExists(column.$('.state')));
@@ -199,6 +292,63 @@ describe("go.routing (views)", function() {
         assert(oneElExists(column.$('[data-uuid="channel1"]')));
         assert(oneElExists(column.$('[data-uuid="channel2"]')));
         assert(oneElExists(column.$('[data-uuid="channel3"]')));
+      });
+    });
+
+    describe(".repaint", function() {
+      it("should repaint all endpoints in the column", function() {
+        diagram.model.set('channels', diagram.model.get('channels').first(3));
+
+        var repaint = sinon.spy(plumbing.utils, 'repaintSortable');
+        column.repaint();
+
+        assert(repaint.calledWith($endpointAt(0)));
+        assert(repaint.calledWith($endpointAt(1)));
+        assert(repaint.calledWith($endpointAt(2)));
+
+        repaint.restore();
+      });
+
+      it("should trigger a 'repaint' event", function(done) {
+        column
+          .on('repaint', function() { done(); })
+          .repaint();
+      });
+    });
+
+    describe(".updateOrdinals", function() {
+      it("should update the models' ordinals using the DOM ordering", function() {
+        var models = column.states.models;
+
+        models.reset([
+          models.get('channel1'),
+          models.get('channel2'),
+          models.get('channel3')]);
+
+        column.render();
+
+        column.$('[data-uuid="channel1"]')
+          .detach()
+          .insertAfter(column.$('[data-uuid="channel3"]'));
+
+        models.get('channel1').set('ordinal', 1);
+        models.get('channel2').set('ordinal', 0);
+        models.get('channel3').set('ordinal', 2);
+
+        column.updateOrdinals();
+
+        assert.strictEqual(models.get('channel1').get('ordinal'), 2);
+        assert.strictEqual(models.get('channel2').get('ordinal'), 0);
+        assert.strictEqual(models.get('channel3').get('ordinal'), 1);
+      });
+
+      it("should trigger an 'update:ordinals' event", function() {
+        var triggered = false;
+        column.on('update:ordinals', function() { triggered = true; });
+
+        assert(!triggered);
+        column.updateOrdinals();
+        assert(triggered);
       });
     });
   });
@@ -293,7 +443,7 @@ describe("go.routing (views)", function() {
 
       view = new RoutingView({
         el: '#routing',
-        model: new RoutingModel(modelData),
+        model: new RoutingModel(modelData()),
         sessionId: '123'
       });
 
@@ -324,10 +474,23 @@ describe("go.routing (views)", function() {
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint4');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), modelData());
 
         view.$('#save').click();
         server.respond();
+      });
+
+      it("should persist the ordering of the routing table components", function() {
+        server.respondWith(response());
+
+        var triggered = false;
+        view.diagram.model.on('persist:ordinals', function() { triggered = true; });
+
+        view.$('#save').click();
+
+        assert(!triggered);
+        server.respond();
+        assert(triggered);
       });
 
       it("should notify the user if the save was successful", function() {
@@ -336,7 +499,7 @@ describe("go.routing (views)", function() {
         view.$('#save').click();
         server.respond();
 
-        assert.include(view.save.notifier.$el.text(), "Save successful!");
+        assert.include(view.save.notifier.$el.text(), "Save successful.");
       });
 
       it("should notify the user if an error occured", function() {
@@ -345,21 +508,22 @@ describe("go.routing (views)", function() {
         view.$('#save').click();
         server.respond();
 
-        assert.include(view.save.notifier.$el.text(), "Save failed :/");
+        assert.include(view.save.notifier.$el.text(), "Save failed.");
       });
     });
 
     describe("when the reset button is clicked", function() {
       it("should reset the routing table changes", function(done) {
-        assert.deepEqual(view.model.toJSON(), modelData);
+        view.model.clear().set(modelData());
+        var expected = view.model.toJSON();
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint4');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), expected);
 
         view.$('#reset').click();
         view.reset.once('success', function() {
-          assert.deepEqual(view.model.toJSON(), modelData);
+          assert.deepEqual(view.model.toJSON(), expected);
           done();
         });
       });
@@ -367,7 +531,7 @@ describe("go.routing (views)", function() {
       it("should notify the user", function() {
         view.$('#reset').click();
         view.reset.once('success', function() {
-          assert.include(view.reset.notifier.$el.text(), "Reset successful!");
+          assert.include(view.reset.notifier.$el.text(), "Reset successful.");
         });
       });
     });

@@ -8,11 +8,18 @@ from twisted.internet import defer
 from twisted.internet.threads import deferToThread
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
+from txpostgres.reconnection import ConnectionDead
+# Import psycopg2 via txpostgres because they handle multiple implementations.
+from txpostgres.txpostgres import psycopg2
 
 from go.billing import settings as app_settings
 from go.billing.models import MessageCost
-from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
+from go.billing.utils import (
+    JSONEncoder, JSONDecoder, BillingError, DictRowConnectionPool)
 from go.billing.tasks import create_low_credit_notification
+from go.vumitools.billing_worker import BillingDispatcher
+
+MESSAGE_DIRECTION_OUTBOUND = BillingDispatcher.MESSAGE_DIRECTION_OUTBOUND
 
 
 def spawn_celery_task_via_thread(t, *args, **kw):
@@ -88,6 +95,15 @@ class TransactionResource(BaseResource):
 
     isLeaf = True
 
+    FIELDS = (
+        'account_number', 'message_id', 'tag_pool_name',
+        'tag_name', 'provider', 'message_direction',
+        'session_created', 'session_length',
+        'transaction_type')
+
+    NULLABLE_FIELDS = ('provider', 'session_length')
+    NON_NULLABLE_FIELDS = tuple(set(FIELDS) - set(NULLABLE_FIELDS))
+
     def __init__(self, connection_pool):
         BaseResource.__init__(self, connection_pool)
         self._notification_mapping = self._create_notification_mapping()
@@ -118,44 +134,41 @@ class TransactionResource(BaseResource):
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
-        data = self._parse_json(request)
-        if data:
-            account_number = data.get('account_number', None)
-            message_id = data.get('message_id', None)
-            tag_pool_name = data.get('tag_pool_name', None)
-            tag_name = data.get('tag_name', None)
-            provider = data.get('provider', None)
-            message_direction = data.get('message_direction', None)
-            session_created = data.get('session_created', None)
-            transaction_type = data.get('transaction_type', None)
+        data = self._parse_post(request)
 
-            if all((account_number, message_id, tag_pool_name, tag_name,
-                    message_direction, session_created is not None)):
-                d = self.create_transaction(
-                    account_number, message_id, tag_pool_name, tag_name,
-                    provider, message_direction,
-                    session_created, transaction_type)
-
-                d.addCallbacks(self._render_to_json, self._handle_error,
-                               callbackArgs=[request], errbackArgs=[request])
-            else:
-                self._handle_bad_request(request)
-        else:
+        if data is None:
             self._handle_bad_request(request)
+        else:
+            d = self.create_transaction(*pluck(data, self.FIELDS))
+
+            d.addCallbacks(self._render_to_json, self._handle_error,
+                           callbackArgs=[request], errbackArgs=[request])
+
         return NOT_DONE_YET
+
+    def _parse_post(self, request):
+        data = self._parse_json(request) or {}
+        data = dict((k, data.get(k)) for k in self.FIELDS)
+
+        if any(data[k] is None for k in self.NON_NULLABLE_FIELDS):
+            return None
+
+        return data
 
     @defer.inlineCallbacks
     def get_cost(self, account_number, tag_pool_name, provider,
-                 message_direction, session_created):
+                 message_direction, session_created, session_length):
         """Return the message cost"""
         query = """
             SELECT t.account_number, t.tag_pool_name,
                    t.provider, t.message_direction,
                    t.message_cost, t.storage_cost, t.session_cost,
+                   t.session_unit_time, t.session_unit_cost,
                    t.markup_percent
             FROM (SELECT a.account_number, t.name AS tag_pool_name,
                          c.provider, c.message_direction,
                          c.message_cost, c.storage_cost, c.session_cost,
+                         c.session_unit_time, c.session_unit_cost,
                          c.markup_percent
                   FROM billing_messagecost c
                   LEFT OUTER JOIN billing_tagpool t ON (c.tag_pool_id = t.id)
@@ -188,10 +201,13 @@ class TransactionResource(BaseResource):
         if len(result) > 0:
             message_cost = result[0]
             message_cost['credit_amount'] = MessageCost.calculate_credit_cost(
-                message_cost['message_cost'],
-                message_cost['storage_cost'],
-                message_cost['markup_percent'],
-                message_cost['session_cost'],
+                message_cost=message_cost['message_cost'],
+                storage_cost=message_cost['storage_cost'],
+                session_cost=message_cost['session_cost'],
+                session_unit_length=message_cost['session_unit_time'],
+                session_unit_cost=message_cost['session_unit_cost'],
+                session_length=session_length,
+                markup_percent=message_cost['markup_percent'],
                 session_created=session_created)
 
             defer.returnValue(message_cost)
@@ -202,11 +218,13 @@ class TransactionResource(BaseResource):
     def create_transaction_interaction(self, cursor, account_number,
                                        message_id, tag_pool_name, tag_name,
                                        provider, message_direction,
-                                       session_created, transaction_type):
+                                       session_created, session_length,
+                                       transaction_type):
         """Create a new transaction for the given ``account_number``"""
         # Get the message cost
         result = yield self.get_cost(account_number, tag_pool_name, provider,
-                                     message_direction, session_created)
+                                     message_direction, session_created,
+                                     session_length)
         if result is None:
             raise BillingError(
                 "Unable to determine %s message cost for account %s"
@@ -216,8 +234,13 @@ class TransactionResource(BaseResource):
         message_cost = result.get('message_cost', 0)
         session_cost = result.get('session_cost', 0)
         storage_cost = result.get('storage_cost', 0)
+        session_unit_cost = result.get('session_unit_cost', 0)
+        session_unit_time = result.get('session_unit_time', 0)
         markup_percent = result.get('markup_percent', 0)
         credit_amount = result.get('credit_amount', 0)
+
+        session_len_cost = MessageCost.calculate_session_length_cost(
+            session_unit_cost, session_unit_time, session_length)
 
         message_credits = MessageCost.calculate_message_credit_cost(
             message_cost, markup_percent)
@@ -228,75 +251,9 @@ class TransactionResource(BaseResource):
         session_credits = MessageCost.calculate_session_credit_cost(
             session_cost, markup_percent)
 
-        # Create a new transaction
-        query = """
-            INSERT INTO billing_transaction
-                (account_number, message_id, transaction_type,
-                 tag_pool_name, tag_name,
-                 provider, message_direction,
-                 message_cost, storage_cost,
-                 session_created, session_cost, markup_percent,
-                 message_credits, storage_credits, session_credits,
-                 credit_factor, credit_amount, status, created, last_modified)
-            VALUES
-                (%(account_number)s, %(message_id)s, %(transaction_type)s,
-                 %(tag_pool_name)s, %(tag_name)s,
-                 %(provider)s, %(message_direction)s,
-                 %(message_cost)s, %(storage_cost)s,
-                 %(session_created)s, %(session_cost)s, %(markup_percent)s,
-                 %(message_credits)s, %(storage_credits)s, %(session_credits)s,
-                 %(credit_factor)s, %(credit_amount)s,
-                 'Completed', now(),
-                 now())
-            RETURNING id, account_number, message_id, transaction_type,
-                      tag_pool_name, tag_name,
-                      provider, message_direction,
-                      message_cost, storage_cost, session_cost,
-                      session_created, markup_percent,
-                      message_credits, storage_credits, session_credits,
-                      credit_factor, credit_amount, status,
-                      created, last_modified
-        """
+        session_len_credits = MessageCost.calculate_session_length_credit_cost(
+            session_len_cost, markup_percent)
 
-        params = {
-            'account_number': account_number,
-            'message_id': message_id,
-            'transaction_type': transaction_type,
-            'tag_pool_name': tag_pool_name,
-            'tag_name': tag_name,
-            'provider': provider,
-            'message_direction': message_direction,
-            'message_cost': message_cost,
-            'storage_cost': storage_cost,
-            'session_created': session_created,
-            'session_cost': session_cost,
-            'markup_percent': markup_percent,
-            'message_credits': message_credits,
-            'storage_credits': storage_credits,
-            'session_credits': session_credits,
-            'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
-            'credit_amount': -credit_amount
-        }
-
-        cursor = yield cursor.execute(query, params)
-        transaction = yield cursor.fetchone()
-
-        # Update the account's credit balance
-        query = """
-            UPDATE billing_account
-            SET credit_balance = credit_balance - %(credit_amount)s
-            WHERE account_number = %(account_number)s
-        """
-
-        params = {
-            'credit_amount': credit_amount,
-            'account_number': account_number
-        }
-
-        cursor = yield cursor.execute(query, params)
-
-        # Check the account's credit balance and raise an
-        # alert if it has gone below the credit balance threshold
         query = """SELECT credit_balance, last_topup_balance
                    FROM billing_account
                    WHERE account_number = %(account_number)s"""
@@ -311,14 +268,129 @@ class TransactionResource(BaseResource):
                 " credit balance. Message was %s to/from tag pool %s." % (
                     account_number, message_direction, tag_pool_name))
 
-        credit_balance = result.get('credit_balance')
         last_topup_balance = result.get('last_topup_balance')
+        credit_balance = result.get('credit_balance')
+
+        # If the message is outbound and limit is reached, don't charge
+        if (app_settings.ENABLE_LOW_CREDIT_CUTOFF and last_topup_balance and
+                message_direction == MESSAGE_DIRECTION_OUTBOUND):
+            if (self._ceil_percent(credit_balance, last_topup_balance) <
+                    self._notification_mapping[0]):
+                defer.returnValue({
+                    'credit_cutoff_reached': True,
+                    'transaction': None,
+                })
+
+        # Create a new transaction
+        query = """
+            INSERT INTO billing_transaction
+                (account_number, message_id, transaction_type,
+                 tag_pool_name, tag_name,
+                 provider, message_direction,
+                 message_cost, storage_cost, session_cost,
+                 session_unit_cost, session_length_cost,
+                 session_created, markup_percent,
+                 message_credits, storage_credits, session_credits,
+                 session_length_credits,
+                 credit_factor, credit_amount,
+                 session_unit_time, session_length,
+                 status, created, last_modified)
+            VALUES
+                (%(account_number)s, %(message_id)s, %(transaction_type)s,
+                 %(tag_pool_name)s, %(tag_name)s,
+                 %(provider)s, %(message_direction)s,
+                 %(message_cost)s, %(storage_cost)s, %(session_cost)s,
+                 %(session_unit_cost)s, %(session_length_cost)s,
+                 %(session_created)s, %(markup_percent)s,
+                 %(message_credits)s, %(storage_credits)s, %(session_credits)s,
+                 %(session_length_credits)s,
+                 %(credit_factor)s, %(credit_amount)s,
+                 %(session_unit_time)s, %(session_length)s,
+                 'Completed', now(), now())
+            RETURNING id, account_number, message_id, transaction_type,
+                      tag_pool_name, tag_name,
+                      provider, message_direction,
+                      message_cost, storage_cost, session_cost,
+                      session_unit_cost, session_length_cost,
+                      session_created, markup_percent,
+                      message_credits, storage_credits, session_credits,
+                      session_length_credits,
+                      credit_factor, credit_amount,
+                      session_unit_time, session_length,
+                      status, created, last_modified
+        """
+
+        params = {
+            'account_number': account_number,
+            'message_id': message_id,
+            'transaction_type': transaction_type,
+            'tag_pool_name': tag_pool_name,
+            'tag_name': tag_name,
+            'provider': provider,
+            'message_direction': message_direction,
+            'message_cost': message_cost,
+            'storage_cost': storage_cost,
+            'session_created': session_created,
+            'session_cost': session_cost,
+            'session_unit_cost': session_unit_cost,
+            'session_length_cost': session_len_cost,
+            'markup_percent': markup_percent,
+            'message_credits': message_credits,
+            'storage_credits': storage_credits,
+            'session_credits': session_credits,
+            'session_length_credits': session_len_credits,
+            'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
+            'credit_amount': -credit_amount,
+            'session_unit_time': session_unit_time,
+            'session_length': session_length,
+        }
+
+        cursor = yield cursor.execute(query, params)
+        transaction = yield cursor.fetchone()
+
+        # Update the account's credit balance
+        query = """
+            UPDATE billing_account
+            SET credit_balance = credit_balance - %(credit_amount)s
+            WHERE account_number = %(account_number)s
+            RETURNING credit_balance
+        """
+
+        params = {
+            'credit_amount': credit_amount,
+            'account_number': account_number
+        }
+
+        cursor = yield cursor.execute(query, params)
+        result = cursor.fetchone()
+
+        # Check the account's credit balance and raise an
+        # alert if it has gone below the credit balance threshold
+        if result is None:
+            raise BillingError(
+                "Unable to find billing account %s while checking"
+                " credit balance. Message was %s to/from tag pool %s." % (
+                    account_number, message_direction, tag_pool_name))
+
+        credit_balance = result.get('credit_balance')
+
         if app_settings.ENABLE_LOW_CREDIT_NOTIFICATION:
             yield self.check_and_notify_low_credit_threshold(
                 credit_balance, credit_amount, last_topup_balance,
                 account_number)
 
-        defer.returnValue(transaction)
+        if app_settings.ENABLE_LOW_CREDIT_CUTOFF and last_topup_balance:
+            if (self._ceil_percent(credit_balance, last_topup_balance) <
+                    self._notification_mapping[0]):
+                defer.returnValue({
+                    'transaction': transaction,
+                    'credit_cutoff_reached': True,
+                })
+
+        defer.returnValue({
+            'transaction': transaction,
+            'credit_cutoff_reached': False,
+        })
 
     def check_and_notify_low_credit_threshold(
             self, credit_balance, credit_amount, last_topup_balance,
@@ -336,9 +408,10 @@ class TransactionResource(BaseResource):
         level = self.check_all_low_credit_thresholds(
             credit_balance, credit_amount, last_topup_balance)
         if level is not None:
+            cutoff_notification = level * 100 == self._notification_mapping[0]
             return spawn_celery_task_via_thread(
                 create_low_credit_notification, account_number,
-                level, credit_balance)
+                level, credit_balance, cutoff_notification)
 
     def _get_notification_level(self, percentage):
         """
@@ -359,6 +432,9 @@ class TransactionResource(BaseResource):
         if percentage > self._notification_mapping[-1]:
             return None
         return self._notification_mapping[percentage - minimum]
+
+    def _ceil_percent(self, num, den):
+        return int(math.ceil(num * 100 / den))
 
     def check_all_low_credit_thresholds(
             self, credit_balance, credit_amount, last_topup_balance):
@@ -381,7 +457,7 @@ class TransactionResource(BaseResource):
             return None
 
         def ceil_percent(n):
-            return int(math.ceil(n * 100 / last_topup_balance))
+            return self._ceil_percent(n, last_topup_balance)
 
         current_percentage = ceil_percent(credit_balance)
         current_notification_level = self._get_notification_level(
@@ -396,14 +472,33 @@ class TransactionResource(BaseResource):
     @defer.inlineCallbacks
     def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, provider, message_direction,
-                           session_created, transaction_type):
+                           session_created, session_length, transaction_type):
         """Create a new transaction for the given ``account_number``"""
         result = yield self._connection_pool.runInteraction(
             self.create_transaction_interaction, account_number, message_id,
             tag_pool_name, tag_name, provider, message_direction,
-            session_created, transaction_type)
+            session_created, session_length, transaction_type)
 
         defer.returnValue(result)
+
+
+class HealthResource(Resource):
+    isLeaf = True
+
+    def __init__(self, health_check_func):
+        Resource.__init__(self)
+        self._health_check_func = health_check_func
+
+    def render_GET(self, request):
+        self._render_health_check(request)
+        return NOT_DONE_YET
+
+    @defer.inlineCallbacks
+    def _render_health_check(self, request):
+        code, content = yield self._health_check_func()
+        request.setResponseCode(code)
+        request.write(content + "\n")
+        request.finish()
 
 
 class Root(BaseResource):
@@ -412,6 +507,7 @@ class Root(BaseResource):
     def __init__(self, connection_pool):
         BaseResource.__init__(self, connection_pool)
         self.putChild('transactions', TransactionResource(connection_pool))
+        self.putChild('health', HealthResource(self.health_check))
 
     def getChild(self, name, request):
         if name == '':
@@ -421,3 +517,29 @@ class Root(BaseResource):
     def render_GET(self, request):
         request.setResponseCode(200)  # OK
         return ''
+
+    @defer.inlineCallbacks
+    def health_check(self):
+        """
+        We want our health check to be comprehensive, so we implement it here.
+        """
+        try:
+            yield self._connection_pool.runQuery("SELECT 1")
+        except (ConnectionDead, psycopg2.InterfaceError):
+            defer.returnValue((503, "Database connection unavailable"))
+        # Everything's happy.
+        defer.returnValue((200, "OK"))
+
+
+def billing_api_resource():
+    """
+    Create and return a go.billing.api.Root resource for use with twistd.
+    """
+    connection_string = app_settings.get_connection_string()
+    connection_pool = DictRowConnectionPool(
+        None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
+    resource = Root(connection_pool)
+    # Tests need to know when we're connected, so stash the deferred on the
+    # resource for them to look at.
+    resource._connection_pool_started = connection_pool.start()
+    return resource

@@ -44,5 +44,66 @@ describe("go.apps.dialogue.states.end", function() {
           'So Long, and Thanks for All the Fish');
       });
     });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '31 characters used.');
+
+        state.model.set('text', 'Some text for testing char count');
+        state.render();
+        assert.equal(state.$('.char-count').text().trim(), '32 characters used.');
+      });
+    });
+  });
+
+  describe(".EndStatePreviewView", function() {
+    var state;
+
+    beforeEach(function() {
+      state = diagram.states.get('state3');
+      state.preview();
+    });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '31 characters used.');
+
+        state.model.set('text', 'Some text for testing char count');
+        state.render();
+        assert.equal(state.$('.char-count').text().trim(), '32 characters used.');
+      });
+    });
+  });
+
+  describe(".EndStateView", function() {
+    var state;
+
+    beforeEach(function() {
+      state = diagram.states.get('state3');
+      state.maxChars = 100;
+    });
+
+    describe(".calcChars", function(){
+      it("should calculate the number of characters used", function(){
+        assert.equal(state.calcChars(), 31);
+      });
+    });
+
+    describe(".charsLeft", function(){
+      it("should calculate the number of characters left", function(){
+        assert.equal(state.charsLeft(), 69);
+      });
+    });
+
+    describe(".tooManyChars", function(){
+      it("should not add a class when maxChars exceeds calcChars", function(){
+        assert.equal(state.tooManyChars(),'');
+      });
+
+      it("should add a class when calcChars exceeds maxChars", function(){
+        state.maxChars = 5;
+        assert.equal(state.tooManyChars(), 'text-danger');
+      });
+    });
   });
 });

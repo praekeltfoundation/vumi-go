@@ -2,8 +2,8 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.tests.test_sandbox import (
-    ResourceTestCaseBase, DummyAppWorker)
+from vxsandbox.tests.utils import DummyAppWorker
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
 
 from go.apps.jsbox.opt_out import OptOutResource
 from go.vumitools.opt_out import OptOutStore

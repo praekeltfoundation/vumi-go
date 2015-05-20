@@ -236,6 +236,22 @@ class TestNoStreamingHTTPWorkerBase(VumiTestCase):
         self.push_calls.put(request)
         return NOT_DONE_YET
 
+    def post_metrics(self, metric_data):
+        url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
+        return http_request_full(
+            url, json.dumps(metric_data), self.auth_headers, method='PUT')
+
+    def assert_response_ok(self, response, reason):
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(
+            response.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
+        data = json.loads(response.delivered_body)
+        self.assertEqual(data, {
+            "success": True,
+            "reason": reason,
+        })
+
     def assert_bad_request(self, response, reason):
         self.assertEqual(response.code, http.BAD_REQUEST)
         self.assertEqual(
@@ -246,6 +262,15 @@ class TestNoStreamingHTTPWorkerBase(VumiTestCase):
             "success": False,
             "reason": reason,
         })
+
+    def assert_metrics_published(self, metrics, prefix=None):
+        if prefix is None:
+            prefix = "go.campaigns.test-0-user.stores.metric_store"
+
+        self.assertEqual(
+            self.app_helper.get_published_metrics_with_aggs(self.app),
+            [("%s.%s" % (prefix, name), value, agg)
+             for name, value, agg in metrics])
 
 
 class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
@@ -687,27 +712,45 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
     @inlineCallbacks
     def test_metric_publishing(self):
         yield self.start_app_worker()
+        response = yield self.post_metrics([
+            ("vumi.test.v1", 1234, 'sum'),
+            ("vumi.test.v2", 3456, 'avg'),
+        ])
+        self.assert_response_ok(response, "Metrics published")
+        self.assert_metrics_published([
+            ("vumi.test.v1", 1234, 'sum'),
+            ("vumi.test.v2", 3456, 'avg'),
+        ])
 
-        metric_data = [
-            ("vumi.test.v1", 1234, 'SUM'),
-            ("vumi.test.v2", 3456, 'AVG'),
-        ]
+    @inlineCallbacks
+    def test_metric_publishing_upper_case_aggregates(self):
+        yield self.start_app_worker()
+        response = yield self.post_metrics([
+            ("vumi.test.v1", 1234, 'LAST'),
+        ])
+        self.assert_response_ok(response, "Metrics published")
+        self.assert_metrics_published([
+            ("vumi.test.v1", 1234, 'last'),
+        ])
 
-        url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
-        response = yield http_request_full(
-            url, json.dumps(metric_data), self.auth_headers, method='PUT')
+    @inlineCallbacks
+    def test_metric_publishing_invalid_aggregate_type(self):
+        yield self.start_app_worker()
+        response = yield self.post_metrics([
+            ("vumi.test.v1", 1234, None),
+        ])
+        self.assert_bad_request(response, "None is not a valid aggregate.")
+        self.assert_metrics_published([])
 
-        self.assertEqual(response.code, http.OK)
-        self.assertEqual(
-            response.headers.getRawHeaders('content-type'),
-            ['application/json; charset=utf-8'])
-
-        prefix = "go.campaigns.test-0-user.stores.metric_store"
-
-        self.assertEqual(
-            self.app_helper.get_published_metrics(self.app),
-            [("%s.vumi.test.v1" % prefix, 1234),
-             ("%s.vumi.test.v2" % prefix, 3456)])
+    @inlineCallbacks
+    def test_metrics_publishing_unknown_aggregate_name(self):
+        yield self.start_app_worker()
+        response = yield self.post_metrics([
+            ("vumi.test.v1", 1234, "unknown"),
+        ])
+        self.assert_bad_request(
+            response, "'unknown' is not a valid aggregate.")
+        self.assert_metrics_published([])
 
     @inlineCallbacks
     def test_health_response(self):

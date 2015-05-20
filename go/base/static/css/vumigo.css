@@ -392,15 +392,27 @@ button {
 .dialogue .actions .form-group select.form-control {
   width: auto;
 }
+.dialogue .info-add-state {
+  z-index: 3;
+  position: relative;
+  width: 30%;
+  margin: 0 auto;
+}
+.dialogue #diagram {
+  position: relative;
+  min-height: 800px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
   opacity: 0.75;
 }
 .dialogue #diagram ._jsPlumb_endpoint {
-  z-index: 5;
   opacity: 0.75;
 }
-.dialogue #diagram ._jsPlumb_endpoint svg circle:hover {
+.dialogue #diagram ._jsPlumb_endpoint {
   cursor: move;
 }
 .dialogue #diagram ._jsPlumb_dragging {
@@ -411,44 +423,49 @@ button {
   z-index: 3;
   opacity: 0.75;
 }
-.dialogue #diagram .grid {
-  text-align: center;
-  margin: 0 auto;
-}
-.dialogue #diagram .grid .placeholder {
-  background: #2f3436;
-  width: 8px;
-  height: 200px;
-  float: left;
-  -webkit-border-radius: 10px;
+.dialogue #diagram .endpoint {
+  width: 15px;
+  height: 15px;
+  background: #d9534f;
+  -webkit-border-radius: 3px;
   -webkit-background-clip: padding-box;
-  -moz-border-radius: 10px;
+  -moz-border-radius: 3px;
   -moz-background-clip: padding;
-  border-radius: 10px;
+  border-radius: 3px;
   background-clip: padding-box;
 }
-.dialogue #diagram .grid .row {
-  margin: 0;
+.dialogue #diagram ._jsPlumb_connected {
+  background: #428bca;
 }
-.dialogue #diagram .grid .item {
-  margin: 40px 40px;
-  float: left;
-  z-index: 2;
+.dialogue #diagram .endpoint.is-hovered-target {
+  background: #b41e31;
+  opacity: 0.75;
 }
-.dialogue #diagram .add {
-  width: 85px;
-  line-height: normal;
-  font-family: serif;
-  font-size: 55px;
+.dialogue #diagram .endpoint-source:hover {
+  cursor: move;
+  background: #b41e31;
+  opacity: 0.75;
+}
+.dialogue #diagram .entry-point {
+  left: 10px;
+  top: 15px;
+  position: absolute;
+  min-height: 0;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
+.dialogue #diagram .endpoint-entry {
+  margin: 0 auto;
+  margin-bottom: -15px;
+}
 .dialogue #diagram .state {
+  z-index: 2;
+  width: 280px;
   float: left;
   font-size: 12px;
   text-align: left;
-  position: relative;
+  position: absolute;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -532,21 +549,6 @@ button {
   font-size: 10px;
   font-weight: bold;
 }
-.dialogue #diagram .endpoint {
-  z-index: 4;
-  background: #428bca;
-  width: 15px;
-  height: 15px;
-  -webkit-border-radius: 15px;
-  -webkit-background-clip: padding-box;
-  -moz-border-radius: 15px;
-  -moz-background-clip: padding;
-  border-radius: 15px;
-  background-clip: padding-box;
-}
-.dialogue #diagram .endpoint:hover {
-  cursor: pointer;
-}
 .dialogue #diagram .search_enabled input {
   margin: 0;
   margin-left: 3px;
@@ -566,6 +568,9 @@ button {
 }
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
+}
+.dialogue #diagram .choice.state .preview.mode .choices .choice {
+  padding: 4px 0;
 }
 .dialogue #diagram .send.state .preview.mode .channel-type {
   font-weight: bold;
@@ -652,8 +657,8 @@ button {
 .campaigns .actions .right {
   text-align: right;
 }
-.campaigns .actions .right a:first-child {
-  margin-right: 20px;
+.campaigns .actions .right .btn-reset {
+  margin-left: 20px;
 }
 .routing #diagram .column-container {
   -webkit-user-select: none;
@@ -692,7 +697,7 @@ button {
   min-height: 100px;
   margin: 15px auto;
   padding-top: 10px;
-  z-index: 0;
+  z-index: 2;
   -webkit-user-select: none;
 }
 .routing #diagram .column-container .state .name {
@@ -702,29 +707,36 @@ button {
   cursor: move;
 }
 .routing #diagram .column-container .endpoint {
-  background: #888;
-  padding: 3px;
+  background: #d9534f;
+  padding: 5px;
 }
-.routing #diagram .column-container .endpoint:hover {
-  cursor: pointer;
+.routing #diagram .column-container ._jsPlumb_connected {
+  background: #428bca;
+}
+.routing #diagram .column-container .endpoint.is-hovered-target {
+  background: #b41e31;
+  opacity: 0.75;
+}
+.routing #diagram .column-container .endpoint-source:hover {
+  cursor: move;
+  background: #b41e31;
+  opacity: 0.75;
 }
 .routing #diagram ._jsPlumb_endpoint,
 .routing #diagram ._jsPlumb_connector {
   z-index: 200;
 }
-.routing #diagram ._jsPlumb_endpoint svg circle:hover {
+.routing #diagram ._jsPlumb_endpoint {
   cursor: move;
 }
 .routing #diagram ._jsPlumb_connector {
   z-index: 1;
-  opacity: 0.85;
+  opacity: 0.75;
 }
 .routing #diagram ._jsPlumb_endpoint {
-  z-index: 5;
-  opacity: 0.85;
-}
-.routing #diagram ._jsPlumb_endpoint svg circle:hover {
   cursor: move;
+  z-index: 5;
+  opacity: 0.75;
 }
 .routing #diagram ._jsPlumb_dragging {
   opacity: 0.5;
@@ -732,8 +744,15 @@ button {
 .routing #diagram ._jsPlumb_hover {
   opacity: 0.75;
 }
+.multiField {
+  padding: 1em 0;
+  border-top: solid 1px grey;
+}
 .contacts .smart-group-search form {
   display: inline;
+}
+.contacts .smart-group-search .form-control {
+  width: 20em;
 }
 .contacts .details hr {
   border: 1px solid #d9d8d3;
@@ -790,7 +809,6 @@ button {
   margin-bottom: 0;
 }
 .table-form-view td {
-  color: #2f3436;
   vertical-align: middle !important;
 }
 .table-form-view td:first-child,
@@ -846,3 +864,4 @@ table tbody.loading td {
   padding: 6px;
   font-size: 16px;
 }
+/*# sourceMappingURL=vumigo.css.map */

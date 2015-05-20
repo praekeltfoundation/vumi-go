@@ -47,6 +47,7 @@ class Conversation(Model):
     groups = ManyToMany(ContactGroup)
     batch = ForeignKey(Batch)
 
+    # TODO: conversation.delivery_class is deprecated and should be removed
     delivery_class = Unicode(null=True)
 
     def active(self):
@@ -107,14 +108,6 @@ class Conversation(Model):
 
     def __unicode__(self):
         return self.name
-
-    def get_contacts_addresses(self, contacts):
-        """
-        Get the contacts assigned to this group with an address attribute
-        that is appropriate for this conversation's delivery_class
-        """
-        addrs = [contact.addr_for(self.delivery_class) for contact in contacts]
-        return [addr for addr in addrs if addr]
 
     def get_connector(self):
         return GoConnector.for_conversation(self.conversation_type, self.key)

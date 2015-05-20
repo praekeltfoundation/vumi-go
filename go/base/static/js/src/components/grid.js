@@ -1,123 +1,66 @@
-// go.components.grid
-// ==================
-// Components for self-maintaining grids of items.
-
 (function(exports) {
-  var Lookup = go.components.structures.Lookup;
+  var Extendable = go.components.structures.Extendable;
 
-  var GridItems = Lookup.extend({
-    ordered: true,
-    comparator: function($el) { return $el.data('grid:index'); },
 
-    arrangeable: true,
-    arranger: function($el, i) { $el.data('grid:index', i); }
-  });
-
-  // A self-maintaining grid of items.
-  //
-  // Options:
-  //   - items: A collection of views to be maintained in the grid
-  var GridView = Backbone.View.extend({
-    className: 'container',
-    rowClassName: 'row',
-
-    sortableOptions: {},
-
-    initialize: function(options) {
-      this.items = new GridItems();
-
-      if (options.rowClassName) { this.rowClassName = options.rowClassName; }
-      if (options.sortable) { this.sortableOptions = options.sortable; }
+  var Grid = Extendable.extend({
+    constructor: function(options) {
+      this.numCols = options.numCols;
+      this.reset();
     },
 
-    $rows: function() { return this.$('.' + this.rowClassName); },
-
-    _ensureEl: function(viewOrEl) {
-      return viewOrEl instanceof Backbone.View
-        ? viewOrEl.$el
-        : $(viewOrEl);
+    reset: function() {
+      this.cell = {
+        x: 0,
+        y: 0,
+        colIdx: 0,
+        rowHeight: 0
+      };
     },
 
-    add: function(key, item, options) {
-      options = options || {};
-      item = this._ensureEl(item);
+    add: function(dims) {
+      var cell = this.cell;
+      this.cell = this._next(dims);
 
-      item.data({
-        'grid:key': key,
-        'grid:index': options.index || this.items.size()
-      });
-
-      this.items.add(key, item, options);
-      return this;
+      return {
+        x: cell.x,
+        y: cell.y
+      };
     },
 
-    remove: function(key, options) {
-      return this.items.remove(key, options);
+    next: function(dims) {
+      var cell = this._next(dims);
+
+      return {
+        x: cell.x,
+        y: cell.y
+      };
     },
 
-    clear: function() {
-      this.items = new GridItems();
-      return this;
+    _next: function(dims) {
+      return this.cell.colIdx + 1 < this.numCols
+        ? this._nextCol(dims)
+        : this._nextRow(dims);
     },
 
-    _reorder: function() {
-      var newOrder = this.$rows()
-        .children()
-        .map(function() { return $(this).data('grid:key'); })
-        .get();
-
-      this.items.rearrange(newOrder);
-      this.trigger('reorder', this.items.keys());
-      return this;
+    _nextCol: function(dims) {
+      return {
+        x: this.cell.x + dims.width,
+        y: this.cell.y,
+        colIdx: this.cell.colIdx + 1,
+        rowHeight: Math.max(dims.height, this.cell.rowHeight)
+      };
     },
 
-    _sortableOptions: function() {
-      var opts = _(this).result('sortableOptions');
-
-      return _({}).extend(opts, {
-        connectWith: '.' + this.rowClassName,
-        stop: function(e, ui) {
-          this._reorder();
-          this.render();
-          if (opts.stop) { opts.stop(e, ui); }
-        }.bind(this)
-      });
-    },
-
-    _newRow: function() {
-      this._$lastRow = $('<div>').addClass(this.rowClassName);
-      this._remainingWidth = this.$el.outerWidth();
-      this.$el.append(this._$lastRow);
-      return this;
-    },
-
-    _append: function(item) {
-      // Append the item first so it has a width we can use, then detach it
-      this.$el.append(item);
-      var itemWidth = item.outerWidth(true);
-      item.detach();
-
-      if (this._remainingWidth < itemWidth) { this._newRow(); }
-      this._remainingWidth -= itemWidth;
-
-      this._$lastRow.append(item);
-      return this;
-    },
-
-    render: function() {
-      var $oldRows = this.$rows();
-
-      this._newRow();
-      this.items.each(this._append, this);
-
-      $oldRows.remove();
-      this.$rows().sortable(this._sortableOptions());
-      return this;
+    _nextRow: function(dims) {
+      return {
+        x: 0,
+        y: this.cell.y + this.cell.rowHeight,
+        colIdx: 0,
+        rowHeight: dims.height
+      };
     }
   });
 
-  _.extend(exports, {
-    GridItems: GridItems,
-    GridView: GridView
-  });
+
+  exports.Grid = Grid;
 })(go.components.grid = {});

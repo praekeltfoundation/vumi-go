@@ -13,12 +13,14 @@ from django.template.loader import render_to_string
 from djcelery_email.tasks import send_email
 
 from go.base.s3utils import Bucket
+from go.base.utils import vumi_api
 from go.billing import settings
+from go.billing.django_utils import load_account_credits
 from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
     LowCreditNotification)
 from go.billing.django_utils import TransactionSerializer
-from go.base.utils import vumi_api, format_currency
+from go.base.utils import format_currency
 
 
 def month_range(months_ago=1, today=None):
@@ -105,6 +107,30 @@ def get_session_transactions(transactions):
     return transactions
 
 
+def get_session_length_transactions(transactions):
+    transactions = transactions.filter(
+        transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
+    transactions = transactions.exclude(session_length=0)
+    transactions = transactions.exclude(session_length=None)
+    transactions = transactions.exclude(session_length_cost=0)
+
+    transactions = transactions.values(
+        'tag_pool_name',
+        'tag_name',
+        'provider',
+        'session_unit_time',
+        'session_unit_cost',
+        'markup_percent')
+
+    transactions = transactions.annotate(
+        count=Count('id'),
+        total_session_length_cost=Sum('session_length_cost'),
+        total_session_length_credits=Sum('session_length_credits'))
+
+    return transactions
+
+
 def get_tagpool_name(transaction, tagpools):
     if transaction['tag_pool_name'] not in tagpools.pools():
         return transaction['tag_pool_name']
@@ -140,8 +166,20 @@ def get_session_cost(transaction):
     return cost if cost is not None else 0
 
 
+def get_session_length_cost(transaction):
+    cost = transaction['total_session_length_cost']
+    return cost if cost is not None else 0
+
+
 def get_count(transaction):
     return transaction['count']
+
+
+def get_session_length_count(transaction):
+    length_cost = get_session_length_cost(transaction)
+    unit_cost = get_session_length_unit_cost(transaction)
+    # no 0 unit costs will appear, these are filtered out
+    return length_cost / unit_cost
 
 
 def get_message_unit_cost(transaction):
@@ -162,6 +200,10 @@ def get_session_unit_cost(transaction):
     return get_session_cost(transaction) / count
 
 
+def get_session_length_unit_cost(transaction):
+    return transaction['session_unit_cost']
+
+
 def get_message_credits(transaction):
     return transaction['total_message_credits']
 
@@ -172,6 +214,10 @@ def get_storage_credits(transaction):
 
 def get_session_credits(transaction):
     return transaction['total_session_credits']
+
+
+def get_session_length_credits(transaction):
+    return transaction['total_session_length_credits']
 
 
 def get_channel_type(transaction, tagpools):
@@ -202,11 +248,23 @@ def get_message_description(transaction):
 
 def get_session_description(transaction):
     provider_name = get_provider_name(transaction)
+    description = 'Sessions (billed per session)'
 
     if provider_name is None:
-        return 'Sessions (billed per session)'
+        return description
     else:
-        return 'Sessions (billed per session) - %s' % (provider_name,)
+        return '%s - %s' % (description, provider_name)
+
+
+def get_session_length_description(transaction):
+    provider_name = get_provider_name(transaction)
+    unit_time = transaction['session_unit_time']
+    description = 'Session intervals (billed per %ds)' % (unit_time,)
+
+    if provider_name is None:
+        return description
+    else:
+        return '%s - %s' % (description, provider_name)
 
 
 def make_message_item(statement, transaction, tagpools):
@@ -246,6 +304,19 @@ def make_session_item(statement, transaction, tagpools):
         description=get_session_description(transaction))
 
 
+def make_session_length_item(statement, transaction, tagpools):
+    return LineItem(
+        statement=statement,
+        units=get_session_length_count(transaction),
+        cost=get_session_length_cost(transaction),
+        credits=get_session_length_credits(transaction),
+        channel=get_channel_name(transaction, tagpools),
+        billed_by=get_tagpool_name(transaction, tagpools),
+        unit_cost=get_session_length_unit_cost(transaction),
+        channel_type=get_channel_type(transaction, tagpools),
+        description=get_session_length_description(transaction))
+
+
 def make_message_items(statement, transactions, tagpools):
     return [
         make_message_item(statement, transaction, tagpools)
@@ -264,6 +335,12 @@ def make_session_items(statement, transactions, tagpools):
         for transaction in get_session_transactions(transactions)]
 
 
+def make_session_length_items(statement, transactions, tagpools):
+    return [
+        make_session_length_item(statement, transaction, tagpools)
+        for transaction in get_session_length_transactions(transactions)]
+
+
 def make_account_fee_item(statement):
     return LineItem(
         units=1,
@@ -279,6 +356,7 @@ def generate_statement_items(statement, transactions, tagpools):
     items = []
     items.extend(make_message_items(statement, transactions, tagpools))
     items.extend(make_session_items(statement, transactions, tagpools))
+    items.extend(make_session_length_items(statement, transactions, tagpools))
     items.extend(make_storage_items(statement, transactions, tagpools))
     statement.lineitem_set.bulk_create(items)
     return items
@@ -358,22 +436,19 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
     transaction_query = Transaction.objects.filter(
         account_number=account.account_number,
         created__gte=from_date,
-        created__lt=(to_date + relativedelta(days=1)))
+        created__lt=(to_date + relativedelta(days=1)),
+    ).order_by("id")  # We order by id because chunking needs it.
 
-    def generate_chunks(item_iter, items_per_chunk=1000, sep="\n"):
-        data = []
-        for i, item in enumerate(item_iter):
-            data.append(item)
-            if i % items_per_chunk == 0:
-                yield sep.join(serializer.to_json(data))
-                yield sep
-                data = []
-        if data:
+    def generate_chunks(queryset, items_per_chunk=1000, sep="\n"):
+        # NOTE: This chunking method only works if the queryset has a well
+        #       defined order.
+        for i in xrange(0, queryset.count(), items_per_chunk):
+            data = list(queryset[i:i + items_per_chunk].iterator())
             yield sep.join(serializer.to_json(data))
             yield sep
 
     bucket = Bucket('billing.archive')
-    chunks = generate_chunks(transaction_query.iterator())
+    chunks = generate_chunks(transaction_query)
 
     archive = TransactionArchive(
         account=account, filename=filename,
@@ -442,10 +517,16 @@ def low_credit_notification_confirm_sent(res, notification_id):
         return None
 
 
-@task()
-def create_low_credit_notification(account_number, threshold, balance):
+@task(ignore_result=True)
+def create_low_credit_notification(
+        account_number, threshold, balance, cutoff_notification):
     """
     Sends a low credit notification. Returns (model instance id, email_task).
+
+    The result of this task is ignored because nothing checks it and
+    success is ensured by ending the task with a call to
+    :func:`low_credit_notification_confirm_sent` which records whether or not
+    the notification was successfully sent.
     """
     account = Account.objects.get(account_number=account_number)
     notification = LowCreditNotification(
@@ -459,8 +540,13 @@ def create_low_credit_notification(account_number, threshold, balance):
     email_from = settings.LOW_CREDIT_NOTIFICATION_EMAIL
     email_to = account.user.email
     formatted_balance = format_currency(balance)
+    if cutoff_notification:
+        template = 'billing/credit_cutoff_notification_email.txt'
+    else:
+        template = 'billing/low_credit_notification_email.txt'
+
     message = render_to_string(
-        'billing/low_credit_notification_email.txt',
+        template,
         {
             'user': account.user,
             'account': account,
@@ -475,3 +561,26 @@ def create_low_credit_notification(account_number, threshold, balance):
         low_credit_notification_confirm_sent.s(notification.pk)).apply_async()
 
     return notification.pk, res
+
+
+def set_account_balance(account_number, balance):
+    """
+    Credits the given account so that the resulting balance is ``balance``.
+    """
+    account = Account.objects.get(account_number=account_number)
+    credit_amount = Decimal(str(balance)) - account.credit_balance
+    credit_amount = max(Decimal('0.0'), credit_amount)
+    load_account_credits(account, credit_amount)
+
+
+@task()
+def set_developer_account_balances(balance):
+    """
+    Credits all accounts with developer flags enough credits for the resulting
+    balance to be ``balance``.
+    """
+    account_store = vumi_api().account_store
+    for key in account_store.users.all_keys():
+        account = account_store.users.load(key)
+        if account and account.is_developer:
+            set_account_balance(key, balance)

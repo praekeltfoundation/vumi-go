@@ -101,13 +101,13 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             'transport_type': message['transport_type'],
             'participant': participant.dump(),
         })
-        yield super(SurveyApplication, self).end_session(participant, poll,
-            message)
+        yield super(SurveyApplication, self).end_session(
+            participant, poll, message)
 
     @inlineCallbacks
-    def process_command_send_survey(self, user_account_key, conversation_key,
-                                    batch_id, msg_options, delivery_class,
-                                    **extra_params):
+    def process_command_send_survey(self, cmd_id, user_account_key,
+                                    conversation_key, batch_id, msg_options,
+                                    delivery_class, **extra_params):
 
         conv = yield self.get_conversation(user_account_key, conversation_key)
 

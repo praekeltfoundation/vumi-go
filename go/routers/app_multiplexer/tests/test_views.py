@@ -30,7 +30,11 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         router = response.context[0].get('router')
         self.assertEqual(router.name, u"myrouter")
         self.assertContains(response, rtr_helper.get_view_url('start'))
-        self.assertNotContains(response, rtr_helper.get_view_url('stop'))
+        self.assertContains(
+            response,
+            '<button class="btn action" data-action="stop" ' +
+            ' data-url="%s" disabled>Deactivate</button>'
+            % rtr_helper.get_view_url('stop'), html=True)
 
     def test_show_running(self):
         rtr_helper = self.router_helper.create_router_helper(
@@ -38,7 +42,11 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         response = self.client.get(rtr_helper.get_view_url('show'))
         router = response.context[0].get('router')
         self.assertEqual(router.name, u"myrouter")
-        self.assertNotContains(response, rtr_helper.get_view_url('start'))
+        self.assertContains(
+            response,
+            '<button class="btn action" data-action="activate" ' +
+            'data-url="%s" disabled>Activate</button>'
+            % rtr_helper.get_view_url('start'), html=True)
         self.assertContains(response, rtr_helper.get_view_url('stop'))
 
     def test_start(self):
@@ -52,6 +60,7 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         self.assertEqual(
             start_cmd, VumiApiCommand.command(
                 '%s_router' % (router.router_type,), 'start',
+                command_id=start_cmd["command_id"],
                 user_account_key=router.user_account.key,
                 router_key=router.key))
 
@@ -62,10 +71,11 @@ class ApplicationMultiplexerViewTests(GoDjangoTestCase):
         self.assertRedirects(response, rtr_helper.get_view_url('show'))
         router = rtr_helper.get_router()
         self.assertTrue(router.stopping())
-        [start_cmd] = self.router_helper.get_api_commands_sent()
+        [stop_cmd] = self.router_helper.get_api_commands_sent()
         self.assertEqual(
-            start_cmd, VumiApiCommand.command(
+            stop_cmd, VumiApiCommand.command(
                 '%s_router' % (router.router_type,), 'stop',
+                command_id=stop_cmd["command_id"],
                 user_account_key=router.user_account.key,
                 router_key=router.key))
 

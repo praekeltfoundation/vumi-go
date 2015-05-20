@@ -12,7 +12,8 @@ setup(
     author_email='dev@praekeltfoundation.org',
     packages=find_packages(),
     install_requires=[
-        'vumi>=0.5.10',
+        'vumi>=0.5.16',
+        'vxsandbox>=0.5.0',
         'vxpolls',
         'vumi-wikipedia',
         'Django==1.5.8',
@@ -21,12 +22,13 @@ setup(
         'psycopg2==2.4',
         'celery==3.0.23',
         'django-celery==3.0.23',
-        'django-celery-email',
+        # https://github.com/pmclanahan/django-celery-email/pull/14
+        'django-celery-email==1.0.4',
         'Markdown==2.1.1',
         'django-registration==1.0',
         'lesscpy==0.9h',
         'xlrd==0.8.0',
-        'requests',
+        'requests>=1.0',
         'mock==1.0.1',
         'raven>=2.0,<3.0',
         'django-debug-toolbar==0.9.4',
@@ -34,12 +36,12 @@ setup(
         'librabbitmq==1.5.1',
         'hiredis==0.1.4',
         'django-pipeline==1.3.6',
-        'txpostgres==1.1.0',
+        'txpostgres>=1.2.0',
         'django-crispy-forms==1.4.0',
         'django-loginas==0.1.3',
         'boto',
         'moto',
-        # 'https://github.com/sehmaschine/django-grappelli/issues/407
+        # https://github.com/sehmaschine/django-grappelli/issues/407
         'django-grappelli==2.4.8',
     ],
     classifiers=[

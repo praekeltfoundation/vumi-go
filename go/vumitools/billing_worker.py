@@ -9,11 +9,15 @@ from twisted.internet import reactor
 from vumi import log
 from vumi.dispatchers.endpoint_dispatchers import Dispatcher
 from vumi.config import ConfigText, ConfigFloat, ConfigBool
+from vumi.message import TransportUserMessage
 from vumi.utils import http_request_full
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 
 from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
+
+SESSION_CLOSE = TransportUserMessage.SESSION_CLOSE
+SESSION_NEW = TransportUserMessage.SESSION_NEW
 
 
 class BillingApi(object):
@@ -64,7 +68,7 @@ class BillingApi(object):
 
     def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, provider, message_direction,
-                           session_created, transaction_type):
+                           session_created, transaction_type, session_length):
         """Create a new transaction for the given ``account_number``"""
         data = {
             'account_number': account_number,
@@ -75,6 +79,7 @@ class BillingApi(object):
             'message_direction': message_direction,
             'session_created': session_created,
             'transaction_type': transaction_type,
+            'session_length': session_length,
         }
         return self._call_api("/transactions", data=data, method='POST')
 
@@ -90,6 +95,13 @@ class BillingDispatcherConfig(Dispatcher.CONFIG_CLASS, GoWorkerConfigMixin):
     disable_billing = ConfigBool(
         "Disable calling the billing API and just pass through all messages.",
         static=True, default=False)
+    session_metadata_field = ConfigText(
+        "Name of the session metadata field to look for in each message to "
+        "calculate session length",
+        static=True, default='session_metadata')
+    credit_limit_message = ConfigText(
+        "The message to send when terminating session based transports.",
+        static=True, default='Vumi Go account has run out of credits.')
 
     def post_validate(self):
         if len(self.receive_inbound_connectors) != 1:
@@ -127,6 +139,8 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         self.api_url = config.api_url
         self.billing_api = BillingApi(self.api_url, config.retry_delay)
         self.disable_billing = config.disable_billing
+        self.session_metadata_field = config.session_metadata_field
+        self.credit_limit_message = config.credit_limit_message
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -144,20 +158,49 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
             raise BillingError(
                 "No tag found for message %s" % (msg.get('message_id'),))
 
+    @classmethod
+    def determine_session_length(cls, session_metadata_field, msg):
+        """
+        Determines the length of the session from metadata attached to the
+        message. The billing dispatcher looks for the following on the message
+        payload to calculate this:
+
+          - ``helper_metadata.<session_metadata_field>.session_start``
+          - ``helper_metadata.<session_metadata_field>.session_end``
+
+        If either of these fields are not present, the message is assumed to not
+        contain enough information to calculate the session length and ``None``
+        is returned
+        """
+        metadata = msg['helper_metadata'].get(session_metadata_field, {})
+
+        if 'session_start' not in metadata:
+            return None
+
+        if 'session_end' not in metadata:
+            return None
+
+        return metadata['session_end'] - metadata['session_start']
+
+    def _determine_session_length(self, msg):
+        return self.determine_session_length(self.session_metadata_field, msg)
+
     @inlineCallbacks
     def create_transaction_for_inbound(self, msg):
         """Create a transaction for the given inbound message"""
         self.validate_metadata(msg)
         msg_mdh = self.get_metadata_helper(msg)
         session_created = msg['session_event'] == 'new'
-        yield self.billing_api.create_transaction(
+        transaction = yield self.billing_api.create_transaction(
             account_number=msg_mdh.get_account_key(),
             message_id=msg['message_id'],
             tag_pool_name=msg_mdh.tag[0], tag_name=msg_mdh.tag[1],
             provider=msg.get('provider'),
             message_direction=self.MESSAGE_DIRECTION_INBOUND,
             session_created=session_created,
-            transaction_type=self.TRANSACTION_TYPE_MESSAGE)
+            transaction_type=self.TRANSACTION_TYPE_MESSAGE,
+            session_length=self._determine_session_length(msg))
+        returnValue(transaction)
 
     @inlineCallbacks
     def create_transaction_for_outbound(self, msg):
@@ -165,14 +208,16 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
         self.validate_metadata(msg)
         msg_mdh = self.get_metadata_helper(msg)
         session_created = msg['session_event'] == 'new'
-        yield self.billing_api.create_transaction(
+        transaction = yield self.billing_api.create_transaction(
             account_number=msg_mdh.get_account_key(),
             message_id=msg['message_id'],
             tag_pool_name=msg_mdh.tag[0], tag_name=msg_mdh.tag[1],
             provider=msg.get('provider'),
             message_direction=self.MESSAGE_DIRECTION_OUTBOUND,
             session_created=session_created,
-            transaction_type=self.TRANSACTION_TYPE_MESSAGE)
+            transaction_type=self.TRANSACTION_TYPE_MESSAGE,
+            session_length=self._determine_session_length(msg))
+        returnValue(transaction)
 
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
@@ -188,8 +233,10 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 log.info(
                     "Not billing for inbound message: %r" % msg.to_json())
             else:
-                yield self.create_transaction_for_inbound(msg)
-                msg_mdh.set_paid()
+                result = yield self.create_transaction_for_inbound(msg)
+                if result.get('transaction'):
+                    msg_mdh.set_paid()
+
         except BillingError:
             log.warning(
                 "BillingError for inbound message, sending without billing:"
@@ -216,8 +263,11 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 log.info(
                     "Not billing for outbound message: %r" % msg.to_json())
             else:
-                yield self.create_transaction_for_outbound(msg)
-                msg_mdh.set_paid()
+                result = yield self.create_transaction_for_outbound(msg)
+                if result.get('transaction'):
+                    msg_mdh.set_paid()
+                if result.get('credit_cutoff_reached', False):
+                    msg = self._handle_credit_cutoff(msg)
         except BillingError:
             log.warning(
                 "BillingError for outbound message, sending without billing:"
@@ -228,7 +278,18 @@ class BillingDispatcher(Dispatcher, GoWorkerMixin):
                 "Error processing outbound message, sending without billing:"
                 " %r" % (msg,))
             log.err()
-        yield self.publish_outbound(msg, self.receive_inbound_connector, None)
+        if msg is not None:
+            yield self.publish_outbound(
+                msg, self.receive_inbound_connector, None)
+
+    def _handle_credit_cutoff(self, msg):
+        session_event = msg.get('session_event')
+        if session_event is not None and session_event != SESSION_NEW:
+            msg['session_event'] = SESSION_CLOSE
+            msg['content'] = self.credit_limit_message
+            return msg
+        else:
+            return None
 
     @inlineCallbacks
     def process_event(self, config, event, connector_name):

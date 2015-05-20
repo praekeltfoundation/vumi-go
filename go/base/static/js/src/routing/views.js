@@ -71,10 +71,31 @@
   var RoutingStateView = StateView.extend({
     endpointType: RoutingEndpointView,
     endpointCollectionType: AligningEndpointCollection,
+    maxEndpoints: 2,
+    heightPerEndpoint: 45,
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
-      this.$name = $('<span></span>').attr('class', 'name');
+      this.$name = $('<a class="name" href=""></a>');
+    },
+
+    endpointsForSide: function(side){
+      return this.endpoints.where({side: side});
+    },
+
+    findMaxEndpoints: function(){
+      return Math.max(
+        this.endpointsForSide('left').length,
+        this.endpointsForSide('right').length
+      );
+    },
+
+    tooManyEndpoints: function() {
+      return this.findMaxEndpoints() > this.maxEndpoints;
+    },
+
+    stretchedHeight: function() {
+      return this.findMaxEndpoints() * this.heightPerEndpoint;
     },
 
     render: function() {
@@ -83,8 +104,14 @@
       this.$el
         .css('position', 'relative')
         .append(this.$name);
+      
+      if(this.tooManyEndpoints()) {
+        this.$el.height(this.stretchedHeight());
+      }
 
       this.$name.text(this.model.get('name'));
+      this.$name.attr('href', this.model.viewURL());
+
       this.endpoints.render();
 
       return this;
@@ -123,6 +150,12 @@
   });
 
   var RoutingStateCollection = StateViewCollection.extend({
+    ordered: true,
+
+    comparator: function(state) {
+      return state.model.get('ordinal');
+    },
+
     initialize: function(options) {
       this.$column = this.view.$(options.columnEl);
     },
@@ -144,20 +177,57 @@
       this.diagram = options.diagram;
       this.states = this.diagram.states.members.get(this.collectionName);
       this.setElement(this.diagram.$('#' + this.id));
+      this.onDrag = this.onDrag.bind(this);
+      this.onStop = this.onStop.bind(this);
     },
 
-    repaint: function() { jsPlumb.repaintEverything(); },
+    onDrag: function() {
+      this.repaint();
+    },
+
+    onStop: function() {
+      this.repaint();
+      this.updateOrdinals();
+    },
+
+    repaint: function() {
+      _.chain(this.states.values())
+       .map(getEndpoints)
+       .flatten()
+       .map(getEl)
+       .each(plumbing.utils.repaintSortable);
+
+      this.trigger('repaint');
+    },
+
+    updateOrdinals: function() {
+      this.$('.state')
+        .map(getElUuid)
+        .get()
+        .forEach(this._setOrdinal, this);
+
+      this.trigger('update:ordinals');
+    },
 
     render: function() {
-      this.states.each(function(s) { s.render(); });
-
       // Allow the user to 'shuffle' the states in the column, repainting the
       // jsPlumb connections and endpoints on each update hook
       this.$el.sortable({
-        start: this.repaint,
-        sort: this.repaint,
-        stop: this.repaint
+        cursor: 'move',
+        start: this.onDrag,
+        sort: this.onDrag,
+        stop: this.onStop
       });
+
+      this.states.each(function(state) {
+        state.render();
+      });
+
+      this.repaint();
+    },
+
+    _setOrdinal: function(id, i) {
+      return this.states.get(id).model.set('ordinal', i);
     }
   });
 
@@ -226,6 +296,12 @@
   });
 
   var RoutingView = Backbone.View.extend({
+    bindings: {
+      'success save': function() {
+        this.model.persistOrdinals();
+      }
+    },
+
     initialize: function(options) {
       this.diagram = new RoutingDiagramView({
         el: '#diagram',
@@ -246,6 +322,7 @@
       });
 
       go.routing.style.initialize();
+      go.utils.bindEvents(this.bindings, this);
     },
 
     remove: function() {
@@ -259,6 +336,22 @@
       this.diagram.render();
     }
   });
+
+
+  function getEndpoints(state) {
+    return state.endpoints.values();
+  }
+
+
+  function getEl(view) {
+    return view.$el;
+  }
+
+
+  function getElUuid($el) {
+    return $(this).attr('data-uuid');
+  }
+
 
   _(exports).extend({
     RoutingDiagramView: RoutingDiagramView,

@@ -33,10 +33,13 @@ def delete_group(account_key, group_key):
     # We do this one at a time because we're already saving them one at a time
     # and the boilerplate for fetching batches without having them all sit in
     # memory is ugly.
-    for contact_key in group.backlinks.contacts():
-        contact = contact_store.get_contact_by_key(contact_key)
-        contact.groups.remove(group)
-        contact.save()
+    contacts_page = group.backlinks.contact_keys()
+    while contacts_page is not None:
+        for contact_key in contacts_page:
+            contact = contact_store.get_contact_by_key(contact_key)
+            contact.groups.remove(group)
+            contact.save()
+        contacts_page = contacts_page.next_page()
     group.delete()
 
 
@@ -45,11 +48,17 @@ def delete_group_contacts(account_key, group_key):
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
-    contacts = contact_store.get_contacts_for_group(group)
+    contacts_page = contact_store.get_contact_keys_for_group(group)
+    # FIXME: We pull all keys into memory to avoid modifying search results if
+    #        we're deleting contacts that are part of a smart group.
+    contact_keys = []
+    while contacts_page is not None:
+        contact_keys.extend(contacts_page)
+        contacts_page = contacts_page.next_page()
     # We do this one at a time because we're already saving them one at a time
     # and the boilerplate for fetching batches without having them all sit in
     # memory is ugly.
-    for contact_key in contacts:
+    for contact_key in contact_keys:
         contact_store.get_contact_by_key(contact_key).delete()
 
 
@@ -114,10 +123,13 @@ def contacts_to_csv(contacts, include_extra=True):
 
 
 def get_group_contacts(contact_store, *groups):
+    # TODO: FIXME: Kill this thing. It keeps all contact objects in memory.
     contact_keys = []
     for group in groups:
-        contact_keys.extend(contact_store.get_contacts_for_group(group))
-
+        contacts_page = contact_store.get_contact_keys_for_group(group)
+        while contacts_page is not None:
+            contact_keys.extend(contacts_page)
+            contacts_page = contacts_page.next_page()
     return contacts_by_key(contact_store, *contact_keys)
 
 
@@ -137,6 +149,16 @@ def export_contacts(account_key, contact_keys, include_extra=True):
 
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
+    all_key_count = len(contact_keys)
+
+    message_content_template = 'Please find the CSV data for %s contact(s)'
+
+    if all_key_count > settings.CONTACT_EXPORT_TASK_LIMIT:
+        contact_keys = contact_keys[:settings.CONTACT_EXPORT_TASK_LIMIT]
+        message_content_template = '\n'.join([
+            'NOTE: There are too many contacts to export.',
+            'Please find the CSV data for %%s (out of %s) contacts.' % (
+                all_key_count,)])
 
     contacts = contacts_by_key(contact_store, *contact_keys)
     data = contacts_to_csv(contacts, include_extra)
@@ -147,8 +169,7 @@ def export_contacts(account_key, contact_keys, include_extra=True):
     user_profile = UserProfile.objects.get(user_account=account_key)
 
     email = EmailMessage(
-        'Contacts export',
-        'Please find the CSV data for %s contact(s)' % len(contacts),
+        'Contacts export', message_content_template % len(contacts),
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
 
     email.attach('contacts-export.zip', file, 'application/zip')

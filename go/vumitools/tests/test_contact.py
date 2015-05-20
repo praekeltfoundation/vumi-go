@@ -170,8 +170,10 @@ class TestContactStore(VumiTestCase):
         group1 = yield self.store.get_group(group1.key)
         group2 = yield self.store.get_group(group2.key)
 
-        self.assertEqual([contact.key], (yield group1.backlinks.contacts()))
-        self.assertEqual([contact.key], (yield group2.backlinks.contacts()))
+        contact_keys_page_g1 = yield group1.backlinks.contact_keys()
+        contact_keys_page_g2 = yield group2.backlinks.contact_keys()
+        self.assertEqual([contact.key], list(contact_keys_page_g1))
+        self.assertEqual([contact.key], list(contact_keys_page_g2))
 
     @inlineCallbacks
     def test_check_for_opted_out_contact(self):

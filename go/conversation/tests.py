@@ -336,6 +336,21 @@ class TestNewConversationView(BaseConversationViewTestCase):
             'description': 'a new conversation'
         })
 
+    def test_post_new_conversation_starting(self):
+        self.user_helper.add_app_permission(u'gotest.dummy')
+
+        conv_data = {
+            'name': 'new conv',
+            'conversation_type': 'dummy',
+        }
+
+        response = self.client.post(
+            reverse('conversations:new_conversation'),
+            conv_data)
+
+        [conv] = self.user_helper.user_api.active_conversations()
+        self.assertTrue(conv.starting())
+
 
 class TestConversationViews(BaseConversationViewTestCase):
     def setUp(self):
@@ -408,7 +423,24 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(response, 'field value 1')
         self.assertContains(response, 'field value 2')
 
-    def test_edit_conversation_details(self):
+    def test_edit_conversation_details_get(self):
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'test-name', description=u'test-desc')
+
+        response = self.client.get(
+            reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': 'edit_detail/',
+            }))
+
+        print response
+        self.assertContains(response, "Edit test-name details")
+        self.assertContains(response, "Save")
+        self.assertContains(response, "Conversation name")
+        self.assertContains(response, 'value="test-name"')
+        self.assertContains(response, "Conversation description")
+        self.assertContains(response, 'value="test-desc"')
+
+    def test_edit_conversation_details_submit(self):
         conv = self.user_helper.create_conversation(
             u'dummy', name=u'test', description=u'test')
 
@@ -425,6 +457,24 @@ class TestConversationViews(BaseConversationViewTestCase):
         reloaded_conv = self.user_helper.get_conversation(conv.key)
         self.assertEqual(reloaded_conv.name, 'foo')
         self.assertEqual(reloaded_conv.description, 'bar')
+
+    def test_edit_conversation_details_submit_invalid_form(self):
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'test-name', description=u'test-desc')
+
+        response = self.client.post(
+            reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': 'edit_detail/',
+            }), {
+                'name': '',
+                'description': 'bar',
+            })
+
+        self.assertContains(response, "This field is required.")
+
+        reloaded_conv = self.user_helper.get_conversation(conv.key)
+        self.assertEqual(reloaded_conv.name, 'test-name')
+        self.assertEqual(reloaded_conv.description, 'test-desc')
 
     def test_conversation_contact_group_listing(self):
         conv = self.user_helper.create_conversation(
@@ -528,6 +578,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         [start_cmd] = self.get_api_commands_sent()
         self.assertEqual(start_cmd, VumiApiCommand.command(
             '%s_application' % (conv.conversation_type,), 'start',
+            command_id=start_cmd["command_id"],
             user_account_key=conv.user_account.key, conversation_key=conv.key))
 
     def test_stop(self):
@@ -718,10 +769,9 @@ class TestConversationViews(BaseConversationViewTestCase):
 
     def test_message_list_inbound_uniques_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
+        self.msg_helper.add_inbound_to_conv(conv, 10)
         response = self.client.get(self.get_view_url(conv, 'message_list'))
-        # TODO fix once we support uniques properly again
-        self.assertContains(response, 'Messages from 0 unique people')
+        self.assertContains(response, 'Messages from 10 unique people')
 
     def test_message_list_inbound_download_links_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -738,13 +788,12 @@ class TestConversationViews(BaseConversationViewTestCase):
     def test_message_list_outbound_uniques_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
-        replies = self.msg_helper.add_replies_to_conv(conv, msgs)
+        self.msg_helper.add_replies_to_conv(conv, msgs)
         response = self.client.get(
             self.get_view_url(conv, 'message_list'), {
                 'direction': 'outbound'
             })
-        # TODO fix once we support uniques properly again
-        self.assertContains(response, 'Messages to 0 unique people')
+        self.assertContains(response, 'Messages to 10 unique people')
 
     def test_message_list_outbound_download_links_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -789,6 +838,41 @@ class TestConversationViews(BaseConversationViewTestCase):
         assert_messages(1)
         make_stored_msgs({'sensitive': False})
         assert_messages(2)
+
+    def test_message_list_outbound_status_pending(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        self.msg_helper.make_stored_outbound(conv, "hi")
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+        self.assertContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Accepted", html=True)
+        self.assertNotContains(r_out, "<td>Rejected", html=True)
+
+    def test_message_list_outbound_status_failed(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msg = self.msg_helper.make_stored_outbound(conv, "hi")
+        self.msg_helper.make_stored_nack(conv, msg, nack_reason="no spoons")
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+        self.assertContains(r_out, "<td>Rejected: no spoons", html=True)
+        self.assertNotContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Accepted", html=True)
+
+    def test_message_list_outbound_status_sent(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msg = self.msg_helper.make_stored_outbound(conv, "hi")
+        self.msg_helper.make_stored_ack(conv, msg)
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+        self.assertContains(r_out, "<td>Accepted", html=True)
+        self.assertNotContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Rejected", html=True)
 
     def test_message_list_with_bad_transport_type_inbound(self):
         # inbound messages could have an unsupported transport_type

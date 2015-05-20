@@ -229,7 +229,8 @@ class ConversationWrapper(object):
         messages = []
         for key in keys:
             msg = yield get_msg(key)
-            messages.append(msg)
+            if msg is not None:
+                messages.append(msg)
 
         returnValue(self.filter_and_scrub_messages(
             messages, include_sensitive=include_sensitive, scrubber=scrubber))
@@ -404,27 +405,35 @@ class ConversationWrapper(object):
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
-    def _filter_opted_out_contacts(self, contacts, delivery_class):
+    def get_opted_in_contact_address(self, contact, delivery_class):
         # TODO: Less hacky address type handling.
-        address_type = 'gtalk' if delivery_class == 'gtalk' else 'msisdn'
-        contacts = yield contacts
+        addr_type = 'gtalk' if delivery_class == 'gtalk' else 'msisdn'
         opt_out_store = OptOutStore(
             self.api.manager, self.user_api.user_account_key)
 
+        contact_addr = contact.addr_for(delivery_class)
+        if contact_addr:
+            opt_out = yield opt_out_store.get_opt_out(addr_type, contact_addr)
+            if opt_out:
+                # If the address is opted out, replace it with None.
+                contact_addr = None
+        returnValue(contact_addr)
+
+    @Manager.calls_manager
+    def _filter_opted_out_contacts(self, contacts, delivery_class):
         filtered_contacts = []
+        contacts = yield contacts
         for contact in contacts:
-            contact_addr = contact.addr_for(delivery_class)
+            contact_addr = yield self.get_opted_in_contact_address(
+                contact, delivery_class)
             if contact_addr:
-                opt_out = yield opt_out_store.get_opt_out(
-                    address_type, contact_addr)
-                if not opt_out:
-                    filtered_contacts.append(contact)
+                filtered_contacts.append(contact)
         returnValue(filtered_contacts)
 
     @Manager.calls_manager
     def get_opted_in_contact_bunches(self, delivery_class):
         """
-        Get a generator that produces batches the contacts with
+        Get a generator that produces batches of contacts with
         an address attribute that is appropriate for the conversation's
         delivery_class and that are opted in.
         """

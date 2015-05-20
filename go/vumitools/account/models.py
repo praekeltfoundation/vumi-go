@@ -65,6 +65,7 @@ class UserAccount(Model):
     # don't need to bump the model version when adding a new flag property.
     can_manage_optouts = flag_property(u'can_manage_optouts')
     disable_optouts = flag_property(u'disable_optouts')
+    is_developer = flag_property(u'is_developer')
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):

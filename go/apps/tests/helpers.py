@@ -95,10 +95,12 @@ class ApplicationHelper(object):
 class AppWorkerHelper(object):
     implements(IHelper)
 
-    def __init__(self, worker_class, **msg_helper_args):
+    def __init__(self, worker_class, vumi_helper=None, **msg_helper_args):
         self._worker_class = worker_class
 
-        self.vumi_helper = VumiApiHelper()
+        if vumi_helper is None:
+            vumi_helper = VumiApiHelper()
+        self.vumi_helper = vumi_helper
         self._app_helper = ApplicationHelper(
             self._conversation_type(), self.vumi_helper)
         self.msg_helper = GoMessageHelper(**msg_helper_args)
@@ -130,15 +132,16 @@ class AppWorkerHelper(object):
         return self.vumi_helper.cleanup()
 
     @inlineCallbacks
-    def get_app_worker(self, config=None, start=True):
+    def get_app_worker(self, config=None, start=True, extra_worker=False):
         # Note: We assume that this is called exactly once per test.
         config = self.vumi_helper.mk_config(config or {})
         config.setdefault('worker_name', self._worker_name())
         config.setdefault('transport_name', self.msg_helper.transport_name)
         worker = yield self.get_worker(self._worker_class, config, start)
         # Set up our other bits of helper.
-        self.vumi_helper.set_vumi_api(worker.vumi_api)
-        self.msg_helper.mdb = worker.vumi_api.mdb
+        if not extra_worker:
+            self.vumi_helper.set_vumi_api(worker.vumi_api)
+            self.msg_helper.mdb = worker.vumi_api.mdb
         returnValue(worker)
 
     @inlineCallbacks
@@ -179,6 +182,15 @@ class AppWorkerHelper(object):
             for name, _aggs, data in metric_msg:
                 for _time, value in data:
                     metrics.append((name, value))
+        return metrics
+
+    def get_published_metrics_with_aggs(self, worker):
+        metrics = []
+        for metric_msg in self.worker_helper.get_dispatched_metrics():
+            for name, aggs, data in metric_msg:
+                for _time, value in data:
+                    for agg in aggs:
+                        metrics.append((name, value, agg))
         return metrics
 
     def get_dispatched_app_events(self):

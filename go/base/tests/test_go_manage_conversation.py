@@ -5,7 +5,7 @@ from datetime import datetime
 
 from django.core.management.base import CommandError
 
-from vumi.message import VUMI_DATE_FORMAT
+from vumi.message import parse_vumi_date
 
 from go.base.management.commands import go_manage_conversation
 from go.base.tests.helpers import GoAccountCommandTestCase
@@ -115,8 +115,7 @@ class TestGoManageConversation(GoAccountCommandTestCase):
         conversations = self.user_helper.user_api.active_conversations()
         conv = max(conversations, key=lambda c: c.created_at)
         data = conv.get_data()
-        created_at = datetime.strptime(data.pop('created_at'),
-                                       VUMI_DATE_FORMAT)
+        created_at = parse_vumi_date(data.pop('created_at'))
         status = data.pop('status')
         batch = data.pop('batch')
         key = data.pop('key')

@@ -3,6 +3,7 @@
 
 """Convenience API, mostly for working with various datastores."""
 
+from uuid import uuid4
 from collections import defaultdict
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -325,6 +326,16 @@ class VumiUserApi(object):
             if conv_conn in routing_connectors:
                 routing_connectors.remove(conv_conn)
 
+        # And lasting with active routers
+        routers = yield self.active_routers()
+        for router in routers:
+            router_inbound_conn = router.get_inbound_connector()
+            if router_inbound_conn in routing_connectors:
+                routing_connectors.remove(router_inbound_conn)
+            router_outbound_conn = router.get_outbound_connector()
+            if router_outbound_conn in routing_connectors:
+                routing_connectors.remove(router_outbound_conn)
+
         if routing_connectors:
             raise VumiError(
                 "Routing table contains illegal connector names: %s" % (
@@ -641,16 +652,33 @@ class ApiEventPublisher(Publisher):
 
 
 class VumiApiCommand(Message):
+    @staticmethod
+    def generate_id():
+        """
+        Generate a unique command id.
+
+        There are places where we want an identifier before we can build a
+        complete command. This lets us do that in a consistent manner.
+        """
+        return uuid4().get_hex()
+
+    def process_fields(self, fields):
+        fields.setdefault('command_id', self.generate_id())
+        return fields
+
     @classmethod
     def command(cls, worker_name, command_name, *args, **kwargs):
-        return cls(**{
+        params = {
             'worker_name': worker_name,
             'command': command_name,
             'args': list(args),  # turn to list to make sure input & output
                                  # stay the same when encoded & decoded as
                                  # JSON.
             'kwargs': kwargs,
-        })
+        }
+        if "command_id" in kwargs:
+            params["command_id"] = kwargs.pop("command_id")
+        return cls(**params)
 
     @classmethod
     def conversation_command(cls, worker_name, command_name, user_account_key,

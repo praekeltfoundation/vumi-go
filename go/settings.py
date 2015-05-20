@@ -138,8 +138,7 @@ TEMPLATE_DIRS = (
     abspath("conversation", "templates"),
     abspath("router", "templates"),
     abspath("channel", "templates"),
-    abspath("routing", "templates"),
-    abspath("wizard", "templates"),
+    abspath("routing", "templates")
 )
 
 INSTALLED_APPS = (
@@ -166,7 +165,6 @@ INSTALLED_APPS = (
     'go.conversation',
     'go.router',
     'go.channel',
-    'go.wizard',
     'go.contacts',
     'go.account',
     'go.billing',
@@ -308,6 +306,10 @@ CELERYBEAT_SCHEDULE = {
     #     'schedule': crontab(day_of_month=1),
     # },
 }
+
+
+# Exporting hundreds of thousands of contacts makes celery use all the memory.
+CONTACT_EXPORT_TASK_LIMIT = 100000
 
 try:
     from production_settings import *

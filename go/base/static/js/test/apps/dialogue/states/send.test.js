@@ -12,7 +12,7 @@ describe("go.apps.dialogue.states.send", function() {
     setUp();
 
     diagram = newDialogueDiagram();
-    
+
     diagram.model.set({
       channel_types: [{
         name: 'sms',

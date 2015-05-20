@@ -6,8 +6,12 @@ import time
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vumi.config import (
+    ConfigBool, ConfigDict, ConfigFloat, ConfigInt, ConfigList, ConfigRiak,
+    ConfigText)
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
-from vumi.middleware.message_storing import StoringMiddleware
+from vumi.middleware.message_storing import (
+    StoringMiddleware, StoringMiddlewareConfig)
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.utils import normalize_msisdn
 from vumi.blinkenlights.metrics import (
@@ -20,36 +24,83 @@ from go.vumitools.model_object_cache import ModelObjectCache
 from go.vumitools.utils import MessageMetadataHelper
 
 
+class NormalizeMsisdnMiddlewareConfig(TransportMiddleware.CONFIG_CLASS):
+    """
+    NormalizeMsisdnMiddleware configuration options.
+    """
+
+    country_code = ConfigText(
+        "Country code prefix to normalize.",
+        required=True, static=True)
+
+    strip_plus = ConfigBool(
+        "Whether to strip leading + signs.",
+        default=False, static=True)
+
+
 class NormalizeMsisdnMiddleware(TransportMiddleware):
 
+    CONFIG_CLASS = NormalizeMsisdnMiddlewareConfig
+
     def setup_middleware(self):
-        self.country_code = self.config['country_code']
-        self.strip_plus = self.config.get('strip_plus', False)
+        self.country_code = self.config.country_code
+        self.strip_plus = self.config.strip_plus
+
+    def _normalize_msisdn(self, addr, country_code, strip_plus):
+        if addr is None:
+            return addr
+        addr = normalize_msisdn(addr, country_code=country_code)
+        if strip_plus:
+            addr = addr.lstrip('+')
+        return addr
 
     def handle_inbound(self, message, endpoint):
-        from_addr = normalize_msisdn(message.get('from_addr'),
-                                     country_code=self.country_code)
-        message['from_addr'] = from_addr
+        message['from_addr'] = self._normalize_msisdn(
+            message.get('from_addr'), country_code=self.country_code,
+            strip_plus=False)
         return message
 
     def handle_outbound(self, message, endpoint):
-        to_addr = normalize_msisdn(message.get('to_addr'),
-                                   country_code=self.country_code)
-        if self.strip_plus:
-            to_addr = to_addr.lstrip('+')
-        message['to_addr'] = to_addr
+        message['to_addr'] = self._normalize_msisdn(
+            message.get('to_addr'), country_code=self.country_code,
+            strip_plus=self.strip_plus)
         return message
+
+
+class OptOutMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
+    """
+    OptOutMiddleware configuration options.
+    """
+
+    redis_manager = ConfigDict(
+        "Redis configuration parameters", default={}, static=True)
+
+    riak_manager = ConfigRiak(
+        "Riak configuration parameters. Must contain at least a bucket_prefix"
+        " key", required=True, static=True)
+
+    optout_keywords = ConfigList(
+        "List of opt out keywords",
+        default=(), static=True)
+
+    case_sensitive = ConfigBool(
+        "Whether opt out keywords are case sensitive.",
+        default=False, static=True)
 
 
 class OptOutMiddleware(BaseMiddleware):
 
+    CONFIG_CLASS = OptOutMiddlewareConfig
+
     @inlineCallbacks
     def setup_middleware(self):
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
-
-        self.case_sensitive = self.config.get('case_sensitive', False)
-        keywords = self.config.get('optout_keywords', [])
-        self.optout_keywords = set([self.casing(word) for word in keywords])
+        self.vumi_api = yield VumiApi.from_config_async({
+            "riak_manager": self.config.riak_manager,
+            "redis_manager": self.config.redis_manager,
+        })
+        self.case_sensitive = self.config.case_sensitive
+        self.optout_keywords = set(
+            self.casing(word) for word in self.config.optout_keywords)
 
     def casing(self, word):
         if not self.case_sensitive:
@@ -85,6 +136,97 @@ class TimeMetric(Metric):
     A time-based metric that fires both sums and averages.
     """
     DEFAULT_AGGREGATORS = [AVG, SUM]
+
+
+class MetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
+
+    manager_name = ConfigText(
+        "The name of the metrics publisher, this is used for the"
+        " MetricManager publisher and all metric names will be prefixed"
+        " with it.",
+        required=True, static=True)
+
+    redis_manager = ConfigDict(
+        "Redis configuration parameters", default={}, static=True)
+
+    count_suffix = ConfigText(
+        "Defaults to 'count'. This is the suffix appended to all counters. If"
+        " a message is received on connector 'foo', counters are published on"
+        " '<manager_name>.foo.inbound.<count_suffix>'",
+        default='count', static=True)
+
+    response_time_suffix = ConfigText(
+        "Defaults to 'response_time'. This is the suffix appended to all"
+        " average response time metrics. If a message is received its"
+        " `message_id` is stored and when a reply for the given `message_id`"
+        " is sent out, the timestamps are compared and a averaged metric is"
+        " published.",
+        default='response_time', static=True)
+
+    session_time_suffix = ConfigText(
+        "Defaults to 'session_time'. This is the suffix appended to all"
+        " session timer metrics. When a session starts the current time is"
+        " stored under the `from_addr` and when the session ends, the"
+        " duration of the session is published.",
+        default='session_time', static=True)
+
+    session_billing_unit = ConfigFloat(
+        "Defaults to ``null``. Some networks charge for sessions per unit of"
+        " time or part there of. This means it might be useful, for example,"
+        " to record the session duration rounded to the nearest 20 seconds."
+        " Setting `session_billing_unit` to a number fires an additional"
+        " metric whenever the session duration metric is fired. The new"
+        " metric records the duration rounded up to the next"
+        " `session_billing_unit`.",
+        required=False, static=True)
+
+    provider_metrics = ConfigBool(
+        "Defaults to ``false``. Set to ``true`` to fire per-operator metrics.",
+        default=False, static=True)
+
+    tagpools = ConfigDict(
+        """
+        A dictionary defining which tag pools and tags should be tracked.
+        E.g.::
+
+            tagpools:
+                pool1:
+                    track_pool: true
+                    track_all_tags: true
+                pool2:
+                    track_tags: ["tagA"]
+
+        This tracks `pool1` but not `pool2` and tracks all tags from `pool`
+        and the tag `tagB` (from `pool2`). If this configuration
+        option is missing or empty, no tag or tag pool metrics are produced.
+        """,
+        required=False, static=True)
+
+    max_session_time = ConfigInt(
+        "How long to keep the session time timestamp for. Any session"
+        " duration longer than this is not recorded. Defaults to 600 seconds.",
+        default=600, static=True)
+
+    op_mode = ConfigText(
+        """
+        What mode to operate in, options are `passive` or `active`.
+        Defaults to passive.
+        *passive*:  assumes the middleware connector names are to be used as
+                    the names for metrics publishing.
+        *active*:   assumes that the individual messages are to be inspected
+                    for their `transport_name` values.
+
+        NOTE:   This does not apply for events or failures, the connectors
+                names are always used for those since those message types are
+                not guaranteed to have a `transport_name` value.
+        """,
+        default="passive", static=True)
+
+    metric_connectors = ConfigList(
+        "List of connector names to fire metrics for. Useful for when"
+        " wrapping dispatchers with many connectors, only a subset of which"
+        " should generate metrics. Defaults to all connectors.",
+        required=False, static=True)
 
 
 class MetricsMiddleware(BaseMiddleware):
@@ -186,33 +328,30 @@ class MetricsMiddleware(BaseMiddleware):
         generate metrics. Defaults to all connectors.
     """
 
+    CONFIG_CLASS = MetricsMiddlewareConfig
+
     KNOWN_MODES = frozenset(['active', 'passive'])
     TAG_STRIP_RE = re.compile(r"(^[^a-zA-Z0-9_-]+)|([^a-zA-Z0-9_-]+$)")
     TAG_DOT_RE = re.compile(r"[^a-zA-Z0-9_-]+")
 
     def validate_config(self):
-        self.manager_name = self.config['manager_name']
-        self.count_suffix = self.config.get('count_suffix', 'count')
-        self.response_time_suffix = self.config.get(
-            'response_time_suffix', 'response_time')
-        self.session_time_suffix = self.config.get(
-            'session_time_suffix', 'session_time')
-        self.session_billing_unit = self.config.get(
-            'session_billing_unit')
-        if self.session_billing_unit is not None:
-            self.session_billing_unit = float(self.session_billing_unit)
-        self.provider_metrics = bool(self.config.get(
-            'provider_metrics', False))
-        self.tagpools = dict(self.config.get('tagpools', {}))
+        self.manager_name = self.config.manager_name
+        self.count_suffix = self.config.count_suffix
+        self.response_time_suffix = self.config.response_time_suffix
+        self.session_time_suffix = self.config.session_time_suffix
+        self.session_billing_unit = self.config.session_billing_unit
+        self.provider_metrics = self.config.provider_metrics
+        self.tagpools = self.config.tagpools or {}
         for pool, cfg in self.tagpools.iteritems():
             cfg['tags'] = set(cfg.get('tags', []))
-        self.max_session_time = int(self.config.get('max_session_time', 600))
-        self.op_mode = self.config.get('op_mode', 'passive')
+        self.max_session_time = self.config.max_session_time
+        self.op_mode = self.config.op_mode
         if self.op_mode not in self.KNOWN_MODES:
             raise ConfigError('Unknown op_mode: %s' % (
                 self.op_mode,))
-        self.metric_connectors_specified = ('metric_connectors' in self.config)
-        self.metric_connectors = set(self.config.get('metric_connectors', []))
+        self.metric_connectors_specified = (
+            self.config.metric_connectors is not None)
+        self.metric_connectors = set(self.config.metric_connectors or [])
 
     @inlineCallbacks
     def setup_middleware(self):
@@ -222,7 +361,7 @@ class MetricsMiddleware(BaseMiddleware):
         # We don't use a VumiApi here because we don't have a Riak config for
         # it.
         self.redis = yield TxRedisManager.from_config(
-            self.config['redis_manager'])
+            self.config.redis_manager)
         self.metric_manager = MetricManager(
             self.manager_name + '.', publisher=self.metric_publisher)
         self.metric_manager.start_polling()
@@ -461,16 +600,32 @@ class MetricsMiddleware(BaseMiddleware):
         return failure
 
 
+class GoStoringMiddlewareConfig(StoringMiddlewareConfig):
+    """
+    GoStoringMiddleware configuration options.
+    """
+
+    conversation_cache_ttl = ConfigInt(
+        "Time in seconds to cache conversations for.",
+        default=5, static=True)
+
+
 class GoStoringMiddleware(StoringMiddleware):
+
+    CONFIG_CLASS = GoStoringMiddlewareConfig
+
     @inlineCallbacks
     def setup_middleware(self):
         yield super(GoStoringMiddleware, self).setup_middleware()
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield VumiApi.from_config_async({
+            "riak_manager": self.config.riak_manager,
+            "redis_manager": self.config.redis_manager,
+        })
         # We don't have access to our worker's conversation cache (if any), so
         # we use our own here to avoid duplicate lookups between messages for
         # the same conversation.
         self._conversation_cache = ModelObjectCache(
-            reactor, self.config.get("conversation_cache_ttl", 5))
+            reactor, self.config.conversation_cache_ttl)
 
     @inlineCallbacks
     def teardown_middleware(self):

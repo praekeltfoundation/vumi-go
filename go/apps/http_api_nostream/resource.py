@@ -8,9 +8,8 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 
 from vumi import errors
-from vumi.blinkenlights import metrics
+from vumi.blinkenlights.metrics import Aggregator
 from vumi.message import TransportUserMessage
-from vumi.errors import InvalidMessage
 from vumi.config import ConfigContext
 from vumi import log
 
@@ -108,6 +107,10 @@ class MsgOptions(object):
 
 class MsgCheckHelpers(object):
     @staticmethod
+    def is_unicode(value):
+        return isinstance(value, unicode)
+
+    @staticmethod
     def is_unicode_or_none(value):
         return (value is None) or (isinstance(value, unicode))
 
@@ -137,7 +140,7 @@ class SendToOptions(MsgOptions):
 
     WHITELIST = {
         'content': MsgCheckHelpers.is_unicode_or_none,
-        'to_addr': MsgCheckHelpers.is_unicode_or_none,
+        'to_addr': MsgCheckHelpers.is_unicode,
     }
 
     VALIDATION = (
@@ -285,9 +288,13 @@ class MetricResource(BaseResource):
         return NOT_DONE_YET
 
     def find_aggregate(self, name):
-        agg_class = getattr(metrics, name, None)
-        if agg_class is None:
-            raise InvalidAggregate('%s is not a valid aggregate.' % (name,))
+        if not isinstance(name, basestring):
+            raise InvalidAggregate('%r is not a valid aggregate.' % (name,))
+        agg_name = str(name).lower()
+        try:
+            agg_class = Aggregator.from_name(agg_name)
+        except KeyError:
+            raise InvalidAggregate("'%s' is not a valid aggregate." % (name,))
         return agg_class
 
     def parse_metrics(self, data):
@@ -305,8 +312,8 @@ class MetricResource(BaseResource):
 
         try:
             metrics = self.parse_metrics(data)
-        except (ValueError, InvalidAggregate, InvalidMessage):
-            self.client_error_response(request, 'Invalid Message')
+        except InvalidAggregate as err:
+            self.client_error_response(request, str(err))
             return
 
         conversation = yield self.get_conversation(user_account)

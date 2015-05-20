@@ -67,7 +67,7 @@ def mk_transaction(account, tag_pool_name='pool1',
                    message_direction=MessageCost.DIRECTION_INBOUND,
                    message_cost=100, storage_cost=50, session_cost=10,
                    session_unit_cost=10, session_unit_time=20,
-                   session_length_credits=10,
+                   session_length_cost=10, session_length=20,
                    markup_percent=10.0, credit_factor=0.25, credit_amount=28,
                    provider=None, status=Transaction.STATUS_COMPLETED,
                    created=None, **kwargs):
@@ -83,6 +83,7 @@ def mk_transaction(account, tag_pool_name='pool1',
         session_cost=maybe_decimal(session_cost),
         session_unit_cost=maybe_decimal(session_unit_cost),
         session_unit_time=maybe_decimal(session_unit_time),
+        session_length_cost=maybe_decimal(session_length_cost),
         markup_percent=maybe_decimal(markup_percent),
         credit_factor=maybe_decimal(credit_factor),
         credit_amount=credit_amount,
@@ -90,7 +91,8 @@ def mk_transaction(account, tag_pool_name='pool1',
         storage_credits=get_storage_credits(storage_cost, markup_percent),
         session_credits=get_session_credits(session_cost, markup_percent),
         session_length_credits=get_session_length_credits(
-            session_length_credits, markup_percent),
+            session_length_cost, markup_percent),
+        session_length=maybe_decimal(session_length),
         status=status, **kwargs)
 
     transaction.save()
@@ -129,6 +131,13 @@ def mk_statement(account,
         LineItem(statement=statement, **item) for item in items))
 
     return statement
+
+
+def get_session_length_cost(unit_cost, unit_length, length):
+    return MessageCost.calculate_session_length_cost(
+        maybe_decimal(unit_cost),
+        maybe_decimal(unit_length),
+        maybe_decimal(length))
 
 
 def get_message_credits(cost, markup):

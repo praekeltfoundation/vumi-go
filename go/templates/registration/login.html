@@ -3,7 +3,7 @@
 {% block container_extraclass %}registration login{% endblock %}
 
 {% block registration_content %}
-<form action="" method="post">
+<form action="" method="post" id="login">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
 

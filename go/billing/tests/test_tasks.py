@@ -20,7 +20,8 @@ from go.billing import tasks
 from go.billing.django_utils import TransactionSerializer
 from go.billing.tests.helpers import (
     this_month, mk_transaction, get_line_items,
-    get_message_credits, get_session_credits, get_storage_credits)
+    get_message_credits, get_session_credits, get_storage_credits,
+    get_session_length_credits)
 
 
 def gunzip(data):
@@ -135,7 +136,8 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
 
-        [item] = get_line_items(statement).filter(billed_by='unknown-tagpool')
+        items = get_line_items(statement).filter(billed_by='unknown-tagpool')
+        item = items.latest('id')
         self.assertEqual(item.channel, 'unknown-tag')
         self.assertEqual(item.channel_type, None)
 
@@ -425,6 +427,224 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         self.assertEqual(item2.credits, get_session_credits(100, 20))
         self.assertEqual(item3.credits, get_session_credits(100, 30))
 
+    def test_generate_monthly_statement_session_length(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=100,
+            session_length_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=100,
+            session_length_cost=200,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=100,
+            session_length_cost=300,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item] = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertEqual(item.credits, get_session_length_credits(600, 10))
+        self.assertEqual(item.unit_cost, 100)
+        self.assertEqual(item.cost, 600)
+        self.assertEqual(item.units, 6)
+
+    def test_generate_monthly_statement_different_session_unit_times(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=100,
+            session_length_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_unit_time=21,
+            session_unit_cost=100,
+            session_length_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_unit_time=22,
+            session_unit_cost=100,
+            session_length_cost=100,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description__startswith='Session intervals')
+
+        self.assertEqual(item1.credits, get_session_length_credits(100, 10))
+        self.assertEqual(item1.unit_cost, 100)
+        self.assertEqual(item1.cost, 100)
+        self.assertEqual(item1.units, 1)
+
+        self.assertEqual(
+            item1.description,
+            'Session intervals (billed per 20s)')
+
+        self.assertEqual(item2.credits, get_session_length_credits(100, 10))
+        self.assertEqual(item2.unit_cost, 100)
+        self.assertEqual(item2.cost, 100)
+        self.assertEqual(item2.units, 1)
+
+        self.assertEqual(
+            item2.description,
+            'Session intervals (billed per 21s)')
+
+        self.assertEqual(item3.credits, get_session_length_credits(100, 10))
+        self.assertEqual(item3.unit_cost, 100)
+        self.assertEqual(item3.cost, 100)
+        self.assertEqual(item3.units, 1)
+
+        self.assertEqual(
+            item3.description,
+            'Session intervals (billed per 22s)')
+
+    def test_generate_monthly_statement_different_session_unit_costs(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=100,
+            session_length_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=200,
+            session_length_cost=200,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=300,
+            session_length_cost=600,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertEqual(item1.credits, get_session_length_credits(100, 10))
+        self.assertEqual(item1.unit_cost, 100)
+        self.assertEqual(item1.cost, 100)
+        self.assertEqual(item1.units, 1)
+
+        self.assertEqual(item2.credits, get_session_length_credits(200, 10))
+        self.assertEqual(item2.unit_cost, 200)
+        self.assertEqual(item2.cost, 200)
+        self.assertEqual(item2.units, 1)
+
+        self.assertEqual(item3.credits, get_session_length_credits(600, 10))
+        self.assertEqual(item3.unit_cost, 300)
+        self.assertEqual(item3.cost, 600)
+        self.assertEqual(item3.units, 2)
+
+    def test_generate_monthly_statement_zero_session_unit_cost(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=0,
+            session_length_cost=0,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        items = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertFalse(items.exists())
+
+    def test_generate_monthly_statement_none_session_length(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=0.2,
+            session_length=None,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        items = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertFalse(items.exists())
+
+    def test_generate_monthly_statement_zero_session_length(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=0.2,
+            session_length=0,
+            markup_percent=10.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+
+        items = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertFalse(items.exists())
+
+    def test_generate_monthly_statement_session_length_different_markups(self):
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=100,
+            session_length_cost=100,
+            markup_percent=10.0)
+
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=100,
+            session_length_cost=100,
+            markup_percent=11.0)
+
+        mk_transaction(
+            self.account,
+            session_unit_time=20,
+            session_unit_cost=100,
+            session_length_cost=100,
+            markup_percent=12.0)
+
+        statement = tasks.generate_monthly_statement(
+            self.account.id, *this_month())
+        [item1, item2, item3] = get_line_items(statement).filter(
+            description='Session intervals (billed per 20s)')
+
+        self.assertEqual(item1.credits, get_session_length_credits(100, 10))
+        self.assertEqual(item1.unit_cost, 100)
+        self.assertEqual(item1.cost, 100)
+        self.assertEqual(item1.units, 1)
+
+        self.assertEqual(item2.credits, get_session_length_credits(100, 11))
+        self.assertEqual(item2.unit_cost, 100)
+        self.assertEqual(item2.cost, 100)
+        self.assertEqual(item2.units, 1)
+
+        self.assertEqual(item3.credits, get_session_length_credits(100, 12))
+        self.assertEqual(item3.unit_cost, 100)
+        self.assertEqual(item3.cost, 100)
+        self.assertEqual(item3.units, 1)
+
     def test_generate_monthly_statement_unaccessible_tags(self):
         self.vumi_helper.setup_tagpool(u'pool2', [u'tag2.1'], {
             'display_name': 'Pool 2'
@@ -438,7 +658,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         statement = tasks.generate_monthly_statement(
             self.account.id, *this_month())
 
-        [item] = get_line_items(statement).filter(channel=u'tag2.1')
+        item = get_line_items(statement).filter(channel=u'tag2.1').latest('id')
         self.assertEqual(item.billed_by, 'Pool 2')
 
     def test_generate_monthly_statement_messages_none_message_cost(self):
@@ -1004,22 +1224,22 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
                                  + 'EmailBackend')
         self.user_helper = self.vumi_helper.make_django_user()
 
-    def mk_notification(self, percent, balance):
+    def mk_notification(self, percent, balance, cutoff_notification):
         self.django_user = self.user_helper.get_django_user()
         self.acc = Account.objects.get(user=self.django_user)
         percent = Decimal(percent)
         balance = Decimal(balance)
         return tasks.create_low_credit_notification(
-            self.acc.account_number, percent, balance)
+            self.acc.account_number, percent, balance, cutoff_notification)
 
     def test_confirm_sent(self):
-        notification_id, res = self.mk_notification('0.60', '31.41')
+        notification_id, res = self.mk_notification('0.60', '31.41', False)
         notification = LowCreditNotification.objects.get(pk=notification_id)
         timestamp = res.get()
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
-        notification_id, res = self.mk_notification('0.701', '1234.5678')
+        notification_id, res = self.mk_notification('0.701', '1234.5678', False)
         notification = LowCreditNotification.objects.get(pk=notification_id)
         self.assertTrue(res.get() is not None)
         self.assertEqual(len(mail.outbox), 1)
@@ -1037,3 +1257,72 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertTrue(self.django_user.get_full_name() in email.body)
         self.assertTrue(str(notification.pk) in email.body)
         self.assertTrue(str(self.acc.user.email) in email.body)
+
+    def test_credit_cutoff_email_sent(self):
+        notification_id, res = self.mk_notification('0.701', '1234.5678', True)
+        notification = LowCreditNotification.objects.get(pk=notification_id)
+        self.assertTrue(res.get() is not None)
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertEqual(email.from_email, 'support@vumi.org')
+        self.assertEqual(
+            'Vumi Go account %s (%s) at %s%% left of available credits' % (
+                str(self.acc.user.email), str(self.acc.user.get_full_name()),
+                '70.100'),
+            email.subject)
+        self.assertTrue('29.900%' in email.body)
+        self.assertTrue('1,234.56 credits' in email.body)
+        self.assertTrue(self.django_user.get_full_name() in email.body)
+        self.assertTrue(str(notification.pk) in email.body)
+        self.assertTrue(str(self.acc.user.email) in email.body)
+        self.assertTrue(
+                'You will no longer be able to send messages'
+                in email.body)
+
+
+class TestLoadCreditsForDeveloperAccount(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.user_account = self.user_helper.get_user_account()
+
+    def _set_developer_flag(self, user, value):
+        user.is_developer = value
+        user.save()
+
+    def _assert_account_balance(self, account_number, balance):
+        account = Account.objects.get(account_number=account_number)
+        self.assertEqual(account.credit_balance, balance)
+
+    def _assert_last_transaction_topup(self, credits):
+        transaction = Transaction.objects.order_by('-created')[0]
+        self.assertEqual(
+            transaction.transaction_type, Transaction.TRANSACTION_TYPE_TOPUP)
+        self.assertEqual(transaction.credit_amount, credits)
+
+    def test_set_credit_balance(self):
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        tasks.set_account_balance(self.user_account.key, Decimal('10.0'))
+        self._assert_account_balance(self.user_account.key, Decimal('10.0'))
+        self._assert_last_transaction_topup(Decimal('10.0'))
+
+    def test_set_all_developer_account_balances(self):
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        tasks.set_developer_account_balances(Decimal('10.0'))
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        self.assertEqual(Transaction.objects.count(), 0)
+
+        self._set_developer_flag(self.user_account, True)
+        tasks.set_developer_account_balances(Decimal('10.0'))
+        self._assert_account_balance(self.user_account.key, Decimal('10.0'))
+        self._assert_last_transaction_topup(Decimal('10.0'))
+
+    def test_dont_decrement_developer_account_balance(self):
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        self._set_developer_flag(self.user_account, True)
+        tasks.set_developer_account_balances(Decimal('-10.0'))
+        self._assert_account_balance(self.user_account.key, Decimal('0.0'))
+        self._assert_last_transaction_topup(Decimal('0.0'))
+        self.assertEqual(Transaction.objects.count(), 1)

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -73,22 +73,46 @@ class TestConversationWrapper(VumiTestCase):
         # TODO fix once we support uniques properly again
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(self.conv, 3)
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 3)
         yield self.msg_helper.add_inbound_to_conv(self.conv, 4)
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 4)
         yield self.msg_helper.add_inbound_to_conv(self.conv, 2)
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 4)
 
     @inlineCallbacks
     def test_count_outbound_uniques(self):
         # TODO fix once we support uniques properly again
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(self.conv, 3)
-        self.assertEqual((yield self.conv.count_outbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 3)
         yield self.msg_helper.add_outbound_to_conv(self.conv, 4)
-        self.assertEqual((yield self.conv.count_outbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 4)
         yield self.msg_helper.add_outbound_to_conv(self.conv, 2)
-        self.assertEqual((yield self.conv.count_outbound_uniques()), 0)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 4)
+
+    @inlineCallbacks
+    def test_collect_messages(self):
+        yield self.conv.start()
+        created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        collected_msgs = yield self.conv.collect_messages(
+            [msg['message_id'] for msg in created_msgs],
+            self.conv.mdb.get_inbound_message,
+            include_sensitive=False, scrubber=lambda msg: msg)
+        self.assertEqual(
+            [msg['message_id'] for msg in collected_msgs],
+            [msg['message_id'] for msg in created_msgs])
+
+    @inlineCallbacks
+    def test_collect_messages_with_unknown_key(self):
+        yield self.conv.start()
+        created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        collected_msgs = yield self.conv.collect_messages(
+            [msg['message_id'] for msg in created_msgs] + [u'unknown-key'],
+            self.conv.mdb.get_inbound_message,
+            include_sensitive=False, scrubber=lambda msg: msg)
+        self.assertEqual(
+            [msg['message_id'] for msg in collected_msgs],
+            [msg['message_id'] for msg in created_msgs])
 
     @inlineCallbacks
     def test_received_messages(self):
@@ -270,6 +294,53 @@ class TestConversationWrapper(VumiTestCase):
             'delivery_report_failed': 1,
             'delivery_report_pending': 1,
         })
+
+    @inlineCallbacks
+    def test_get_opted_in_contact_address(self):
+        """
+        If we ask for the opted-in address of a contact that has a suitable
+        address and isn't opted out, we get that address.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, None)
+
+        self.assertEqual(contact_addr, contact.msisdn)
+
+    @inlineCallbacks
+    def test_get_opted_in_contact_address_opted_out(self):
+        """
+        If we ask for the opted-in address of a contact that has a suitable
+        address and is opted out, we get None.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        user_account = yield self.user_helper.get_user_account()
+        opt_out_store = OptOutStore.from_user_account(user_account)
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+        yield opt_out_store.new_opt_out(u"msisdn", contact.msisdn, {
+            "message_id": u"some-message-id",
+        })
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, None)
+
+        self.assertEqual(contact_addr, None)
+
+    @inlineCallbacks
+    def test_get_opted_in_contact_address_no_address(self):
+        """
+        If we ask for the opted-in address of a contact that doesn't have a
+        suitable address, we get None.
+        """
+        contact_store = self.user_helper.user_api.contact_store
+        contact = yield contact_store.new_contact(msisdn=u"+27000000001")
+
+        contact_addr = yield self.conv.get_opted_in_contact_address(
+            contact, "gtalk")
+
+        self.assertEqual(contact_addr, None)
 
     @inlineCallbacks
     def test_get_opted_in_contact_bunches(self):

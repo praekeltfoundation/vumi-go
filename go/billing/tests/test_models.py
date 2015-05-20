@@ -125,6 +125,46 @@ class TestMessageCost(GoDjangoTestCase):
         self.assertEqual(context.flags[Inexact], 1)
         self.assertEqual(context.flags[Rounded], 1)
 
+    def test_calculate_session_length_cost(self):
+        self.assertEqual(
+            MessageCost.calculate_session_length_cost(
+                unit_cost=Decimal('2.0'),
+                unit_length=Decimal('20.0'),
+                length=Decimal('23.0')),
+            Decimal('4.0'))
+
+    def test_calculate_session_length_cost_zero_unit_length(self):
+        self.assertEqual(
+            MessageCost.calculate_session_length_cost(
+                unit_cost=Decimal('2.0'),
+                unit_length=Decimal(0),
+                length=Decimal('23.0')),
+            Decimal(0))
+
+    def test_calculate_session_length_cost_none_unit_cost(self):
+        self.assertEqual(
+            MessageCost.calculate_session_length_cost(
+                unit_cost=None,
+                unit_length=Decimal('20.0'),
+                length=Decimal('23.0')),
+            Decimal(0))
+
+    def test_calculate_session_length_cost_none_unit_length(self):
+        self.assertEqual(
+            MessageCost.calculate_session_length_cost(
+                unit_cost=Decimal('2.0'),
+                unit_length=None,
+                length=Decimal('23.0')),
+            Decimal(0))
+
+    def test_calculate_session_length_cost_none_length(self):
+        self.assertEqual(
+            MessageCost.calculate_session_length_cost(
+                unit_cost=Decimal('2.0'),
+                unit_length=Decimal('20.0'),
+                length=None),
+            Decimal(0))
+
     def test_calculate_credit_cost(self):
         self.assertEqual(
             MessageCost.calculate_credit_cost(

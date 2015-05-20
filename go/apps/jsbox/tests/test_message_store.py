@@ -2,8 +2,8 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.tests.test_sandbox import (
-    ResourceTestCaseBase, DummyAppWorker)
+from vxsandbox.tests.utils import DummyAppWorker
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
 
 from go.apps.jsbox.message_store import MessageStoreResource
 from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
@@ -85,15 +85,13 @@ class TestMessageStoreResource(ResourceTestCaseBase):
     def test_handle_count_inbound_uniques(self):
         reply = yield self.dispatch_command('count_inbound_uniques')
         self.assertTrue(reply['success'])
-        # TODO fix once we support uniques properly again
-        self.assertEqual(reply['count'], 0)
+        self.assertEqual(reply['count'], 1)
 
     @inlineCallbacks
     def test_handle_count_outbound_uniques(self):
         reply = yield self.dispatch_command('count_outbound_uniques')
         self.assertTrue(reply['success'])
-        # TODO fix once we support uniques properly again
-        self.assertEqual(reply['count'], 0)
+        self.assertEqual(reply['count'], 1)
 
     @inlineCallbacks
     def test_handle_inbound_throughput(self):

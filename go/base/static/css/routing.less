@@ -1,4 +1,9 @@
 .routing {
+  @color-normal: #428bca;
+  @color-hover: #b41e31;
+  @secondary-opacity: 0.75;
+  @color-unconnected: #d9534f;
+
   #diagram {
     .column-container {
       .user-select(none);
@@ -36,7 +41,7 @@
         margin:15px auto;
         padding-top:10px;
 
-        z-index:0;
+        z-index:2;
         -webkit-user-select:none;
 
         .name {
@@ -45,16 +50,28 @@
       }
 
       .state:hover {
-        cursor:move;
+        cursor: move;
       }
 
       .endpoint {
-        background: #888;
-        padding: 3px;
+        background: @color-unconnected;
+        padding: 5px;
+      }
 
-        &:hover {
-          cursor:pointer;
-        }
+      ._jsPlumb_connected {
+        background: @color-normal;
+      }
+
+      // need to also select by .endpoint in order to override the normal color
+      .endpoint.is-hovered-target {
+        background: @color-hover;
+        opacity: @secondary-opacity;
+      }
+
+      .endpoint-source:hover {
+        cursor: move;
+        background: @color-hover;
+        opacity: @secondary-opacity;
       }
     }
 
@@ -62,22 +79,19 @@
       z-index:200;
     }
 
-    ._jsPlumb_endpoint svg circle:hover {
+    ._jsPlumb_endpoint {
       cursor: move;
     }
 
     ._jsPlumb_connector {
       z-index: 1;
-      opacity: 0.85;
+      opacity: @secondary-opacity;
     }
 
     ._jsPlumb_endpoint {
-      z-index: 5;
-      opacity: 0.85;
-    }
-
-    ._jsPlumb_endpoint svg circle:hover {
       cursor: move;
+      z-index: 5;
+      opacity: @secondary-opacity;
     }
 
     ._jsPlumb_dragging {
@@ -85,7 +99,12 @@
     }
 
     ._jsPlumb_hover {
-      opacity: 0.75;
+      opacity: @secondary-opacity;
     }
   }
+}
+
+.multiField {
+  padding: 1em 0;
+  border-top: solid 1px grey;
 }

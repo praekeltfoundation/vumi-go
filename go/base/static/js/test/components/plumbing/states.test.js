@@ -1,6 +1,4 @@
 describe("go.components.plumbing.states", function() {
-  var stateMachine = go.components.stateMachine;
-
   var plumbing = go.components.plumbing;
 
   var testHelpers = plumbing.testHelpers,

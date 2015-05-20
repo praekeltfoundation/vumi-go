@@ -1,6 +1,5 @@
-from datetime import datetime
-
 from django.core.management.base import BaseCommand
+from vumi.message import parse_vumi_date
 
 from go.base.utils import vumi_api_for_user
 from go.base.command_utils import get_user_by_email
@@ -105,12 +104,15 @@ class Command(BaseCommand):
         self.out(u'Total Sent in batch %s: %s\n' % (
             batch_key, message_store.batch_outbound_count(batch_key),))
 
+    def parse_timestamp_to_date(self, timestamp):
+        return parse_vumi_date(timestamp).date()
+
     def collect_stats(self, index_page):
         per_date = {}
         uniques = set()
         while index_page is not None:
             for _message_id, timestamp, addr in index_page:
-                date = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").date()
+                date = self.parse_timestamp_to_date(timestamp)
                 per_date.setdefault(date, 0)
                 per_date[date] += 1
                 uniques.add(addr)

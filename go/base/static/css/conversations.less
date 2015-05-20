@@ -1,3 +1,6 @@
+@import "./lesshat";
+
+
 .confirm {
   .details {
     table {
@@ -19,6 +22,11 @@
 }
 
 .dialogue {
+  @color-normal: #428bca;
+  @color-hover: #b41e31;
+  @color-unconnected: #d9534f;
+  @secondary-opacity: 0.75;
+
   .actions {
     .sidebar {
       background: #d9d8d3;
@@ -39,67 +47,84 @@
     }
   }
 
+  .info-add-state {
+    z-index: 3;
+    position: relative;
+    width: 30%;
+    margin: 0 auto;
+  }
+
   #diagram {
+    position: relative;
+    min-height: 800px;
+    .user-select(none);
+
     ._jsPlumb_connector {
       z-index: 1;
-      opacity: 0.75;
+      opacity: @secondary-opacity;
     }
 
     ._jsPlumb_endpoint {
-      z-index: 5;
-      opacity: 0.75;
+      opacity: @secondary-opacity;
     }
 
-    ._jsPlumb_endpoint svg circle:hover {
+    ._jsPlumb_endpoint {
       cursor: move;
     }
 
     ._jsPlumb_dragging {
       z-index: 3;
-      opacity: 0.75;
+      opacity: @secondary-opacity;
     }
 
     ._jsPlumb_hover {
       z-index: 3;
-      opacity: 0.75;
+      opacity: @secondary-opacity;
     }
 
-    .grid {
-      text-align: center;
-      margin: 0 auto;
-
-      .placeholder {
-        background: #2f3436;
-        width: 8px;
-        height: 200px;
-        float: left;
-        .border-radius(10px);
-      }
-
-      .row {
-        margin: 0;
-      }
-
-      .item {
-        margin: 40px 40px;
-        float: left;
-        z-index: 2;
-      }
+    .endpoint {
+      width: 15px;
+      height: 15px;
+      background: @color-unconnected;
+      .border-radius(3px);
     }
 
-    .add {
-      width: 85px;
-      line-height: normal;
-      font-family: serif;
-      font-size: 55px;
+    ._jsPlumb_connected {
+      background: @color-normal;
+    }
+
+    // need to also select by .endpoint in order to override the normal color
+    .endpoint.is-hovered-target {
+      background: @color-hover;
+      opacity: @secondary-opacity;
+    }
+
+    .endpoint-source:hover {
+      cursor: move;
+      background: @color-hover;
+      opacity: @secondary-opacity;
+    }
+
+    .entry-point {
+      left: 10px;
+      top: 15px;
+      position: absolute;
+      min-height: 0;
       .user-select(none);
     }
 
+    .endpoint-entry {
+      margin: 0 auto;
+      margin-bottom: -15px;
+    }
+
     .state {
+      z-index: 2;
+      width: 280px;
       float: left;
       font-size: 12px;
       text-align: left;
-      position: relative;
+      position: absolute;
       .user-select(none);
 
       label {
@@ -194,19 +219,6 @@
       }
     }
 
-    .endpoint {
-      z-index: 4;
-      background: #428bca;
-      width: 15px;
-      height: 15px;
-      .border-radius(15px);
-    }
-
-    .endpoint:hover {
-      cursor: pointer;
-
-    }
-
     .search_enabled {
       input {
         margin: 0;
@@ -229,18 +241,13 @@
     }
 
     .choice.state {
-      .edit.mode {
-        .choices {
-          .choice {
-            .composite-control {
-            }
-          }
-        }
-      }
-
       .preview.mode {
         .choices {
           text-align: left;
+
+          .choice {
+            padding: 4px 0;
+          }
         }
       }
     }

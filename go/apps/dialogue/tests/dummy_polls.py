@@ -15,7 +15,6 @@ def simple_poll():
                 "store_as": "message-1",
                 "type": "choice",  # menu of options
                 "entry_endpoint": None,  # null for the start state
-                "store_on_contact": True,
                 # choice specific
                 "text": "What is your favourite colour?",
                 "choice_endpoints": [  # these are actually also the endpoints
@@ -28,7 +27,6 @@ def simple_poll():
                 "name": "Message 2",
                 "store_as": "message-2",
                 "type": "freetext",
-                "store_on_contact": True,
                 "entry_endpoint": {"uuid": "endpoint-3"},
                 # freetext specific
                 "exit_endpoint": {"uuid": "endpoint-4"},
@@ -39,7 +37,6 @@ def simple_poll():
                 "name": "Ending 1",
                 "store_as": "ending-1",
                 "type": "end",
-                "store_on_contact": True,
                 "entry_endpoint": {"uuid": "endpoint-5"},
                 # end specific
                 "text": "Thank you for taking our survey",

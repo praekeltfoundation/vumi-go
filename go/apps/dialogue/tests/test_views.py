@@ -43,7 +43,7 @@ class TestDialogueViews(GoDjangoTestCase):
         conversation = conv_helper.get_conversation()
         self.assertEqual(send_jsbox_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'send_jsbox',
+            'send_jsbox', command_id=send_jsbox_cmd["command_id"],
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key))
@@ -180,9 +180,3 @@ class TestDialogueViews(GoDjangoTestCase):
 
         model_data = response.context["model_data"]
         self.assertEqual(json.loads(model_data), expected)
-
-    def test_export_user_data(self):
-        conv_helper = self.setup_conversation()
-        response = self.client.get(conv_helper.get_view_url('user_data'))
-        self.assertEqual(response['Content-Type'], 'application/csv')
-        self.assertEqual(response.content, "TODO: write data export.")

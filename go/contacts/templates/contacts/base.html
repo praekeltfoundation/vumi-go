@@ -15,7 +15,7 @@
 {% block content_actions_right %}
     <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right" role="search">
         <div class="form-group">
-            <input type="text" id="search-filter-input" class="form-control" name="q" value="{{query|default:''}}" placeholder="Find people...">
+            <input type="text" id="search-filter-input" class="form-control" name="q" value="{{query|default:''}}" placeholder="e.g. msisdn:'+27761234561'">
         <button type="submit" id="search-filter-btn" class="btn btn-default">Search</button>
     </form>
 {% endblock %}

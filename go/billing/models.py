@@ -138,6 +138,15 @@ class MessageCost(models.Model):
             session_length_cost, markup_percent, context=context)
 
     @classmethod
+    def calculate_session_length_cost(cls, unit_cost, unit_length, length):
+        if not all((unit_cost, unit_length, length)):
+            return Decimal(0)
+
+        units = length / unit_length
+        units = units.to_integral_exact(rounding=ROUND_CEILING)
+        return units * unit_cost
+
+    @classmethod
     def calculate_credit_cost(
             cls, message_cost, storage_cost, markup_percent, session_cost,
             session_created, session_unit_cost=None, session_unit_length=None,
@@ -147,23 +156,23 @@ class MessageCost(models.Model):
         in credits.
         """
         base_cost = message_cost + storage_cost
+
         if session_created:
             base_cost += session_cost
-        if session_length and session_unit_length and session_unit_cost:
-            units = (
-                session_length / session_unit_length
-                ).to_integral_exact(rounding=ROUND_CEILING)
-            base_cost += units * session_unit_cost
+
+        base_cost += cls.calculate_session_length_cost(
+            session_unit_cost, session_unit_length, session_length)
+
         return cls.apply_markup_and_convert_to_credits(
             base_cost, markup_percent, context=context)
 
     class Meta:
         unique_together = [
-            ['account', 'tag_pool', 'message_direction'],
+            ['account', 'tag_pool', 'message_direction', 'provider'],
         ]
 
         index_together = [
-            ['account', 'tag_pool', 'message_direction'],
+            ['account', 'tag_pool', 'message_direction', 'provider'],
         ]
 
     account = models.ForeignKey(
@@ -232,10 +241,10 @@ class MessageCost(models.Model):
             self.session_cost, self.markup_percent)
 
     @property
-    def session_unit_credit_cost(self):
-        """Return the calculated cost per unit of session time (in credits)."""
-        return self.calculate_session_unit_credit_cost(
-            self.session_unit_cost, self.markup_percent)
+    def session_length_credit_cost(self):
+        """Return the calculated cost per session length (in credits)."""
+        return self.calculate_session_length_credit_cost(
+            self.session_cost, self.markup_percent)
 
     def __unicode__(self):
         return u"%s (%s)" % (self.tag_pool, self.message_direction)
@@ -325,19 +334,20 @@ class Transaction(models.Model):
         help_text=_("The markup percentage used to calculate credit_amount."))
 
     message_credits = models.DecimalField(
-        null=True,
-        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The message cost (in credits)."))
 
     storage_credits = models.DecimalField(
-        null=True,
-        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The message storage cost (in credits)."))
 
     session_credits = models.DecimalField(
-        null=True,
-        max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The session cost (in credits)."))
+
+    session_length_credits = models.DecimalField(
+        null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
+        help_text=_("The session length cost (in credits)"))
 
     session_unit_time = models.DecimalField(
         null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
@@ -347,9 +357,9 @@ class Transaction(models.Model):
         null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
         help_text=_("The cost per session unit time."))
 
-    session_length_credits = models.DecimalField(
-        null=True, max_digits=20, decimal_places=6, default=Decimal('0.0'),
-        help_text=_("The session length cost (in credits)"))
+    session_length_cost = models.DecimalField(
+        null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The session length cost (in cents)"))
 
     credit_factor = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True,
@@ -360,6 +370,10 @@ class Transaction(models.Model):
         max_digits=20, decimal_places=6, default=Decimal('0.0'),
         help_text=_("The number of credits this transaction adds or "
                     "subtracts."))
+
+    session_length = models.DecimalField(
+        null=True, max_digits=10, decimal_places=3, default=Decimal('0.0'),
+        help_text=_("The length of the session (in seconds)"))
 
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,

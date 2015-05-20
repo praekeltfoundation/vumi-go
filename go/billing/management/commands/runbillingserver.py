@@ -19,6 +19,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Run the Billing server"""
 
+        self.stderr.write(
+            "NOTE: This command is deprecated. Use twistd and"
+            " go.billing.api.billing_api_resource to start the billing API.")
+
         def connection_established(connection_pool):
             from twisted.web.server import Site
             root = api.Root(connection_pool)

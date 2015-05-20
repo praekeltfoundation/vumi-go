@@ -7,7 +7,8 @@ import logging
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.sandbox import JsSandbox, SandboxResource
+from vxsandbox import JsSandbox, SandboxResource
+
 from vumi.config import ConfigDict
 from vumi import log
 
@@ -129,11 +130,12 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
                 config.conversation.key,)
             yield api.log(log_msg, logging.INFO)
 
-    def process_command_start(self, user_account_key, conversation_key):
+    def process_command_start(self, cmd_id, user_account_key,
+                              conversation_key):
         log.info("Starting javascript sandbox conversation (key: %r)." %
                  (conversation_key,))
         return super(JsBoxApplication, self).process_command_start(
-            user_account_key, conversation_key)
+            cmd_id, user_account_key, conversation_key)
 
     def send_inbound_push_trigger(self, to_addr, conversation):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
@@ -150,8 +152,8 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
             return
 
     @inlineCallbacks
-    def process_command_send_jsbox(self, user_account_key, conversation_key,
-                                   batch_id):
+    def process_command_send_jsbox(self, cmd_id, user_account_key,
+                                   conversation_key, batch_id):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         js_config = self.get_jsbox_js_config(conv)
         if js_config is None:

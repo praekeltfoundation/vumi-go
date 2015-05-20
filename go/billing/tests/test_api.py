@@ -11,12 +11,13 @@ from vumi.tests.helpers import VumiTestCase
 from go.billing import settings as app_settings
 from go.billing import api
 from go.billing.models import Account, Transaction, MessageCost
-from go.billing.utils import DummySite, DictRowConnectionPool, JSONDecoder
+from go.billing.utils import DummySite, JSONDecoder
 from go.base.tests.helpers import DjangoVumiApiHelper
 from go.billing.django_utils import load_account_credits
 from go.billing.tests.helpers import (
+    mk_tagpool, mk_message_cost, get_session_length_cost,
     get_message_credits, get_storage_credits, get_session_credits,
-    mk_tagpool, mk_message_cost)
+    get_session_length_credits)
 
 DB_SUPPORTED = False
 try:
@@ -39,27 +40,19 @@ class ApiCallError(Exception):
 
 
 @skipif_unsupported_db
-@pytest.mark.django_db(transaction=True)
 class BillingApiTestCase(VumiTestCase):
 
     @inlineCallbacks
-    def setUp(self):
-        connection_string = app_settings.get_connection_string()
-        connection_pool = DictRowConnectionPool(
-            None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
-        self.connection_pool = yield connection_pool.start()
-        root = api.Root(connection_pool)
-        self.web = DummySite(root)
+    def get_billing_api(self):
+        root = api.billing_api_resource()
+        connection_pool = yield root._connection_pool_started
+        self.add_cleanup(connection_pool.close)
+        returnValue(DummySite(root))
 
     @inlineCallbacks
-    def tearDown(self):
-        yield super(BillingApiTestCase, self).tearDown()
-        self.connection_pool.close()
-
-    @inlineCallbacks
-    def call_api(self, method, path, **kw):
+    def call_api(self, billing_api, method, path, **kw):
         headers = {'content-type': 'application/json'}
-        http_method = getattr(self.web, method)
+        http_method = getattr(billing_api, method)
         response = yield http_method(path, headers=headers, **kw)
         if response.responseCode != 200:
             raise ApiCallError(response)
@@ -67,53 +60,49 @@ class BillingApiTestCase(VumiTestCase):
         returnValue(result)
 
 
-class TestTransaction(BillingApiTestCase):
+class TestHealthCheck(BillingApiTestCase):
 
-    def setUp(self):
-        self.patch(
-            app_settings,
-            'LOW_CREDIT_NOTIFICATION_PERCENTAGES',
-            [70, 90, 80])
-
-        vumi_helper = self.add_helper(DjangoVumiApiHelper())
-
-        self.account = Account.objects.get(
-            user=vumi_helper.make_django_user().get_django_user())
-
-        self.account2 = Account.objects.get(
-            user=vumi_helper.make_django_user(u'user2').get_django_user())
-
-        self.pool1 = mk_tagpool('pool1')
-        self.pool2 = mk_tagpool('pool2')
-
-        return BillingApiTestCase.setUp(self)
-
-    def create_api_transaction(self, **kwargs):
+    @inlineCallbacks
+    def test_health_okay(self):
         """
-        Create a transaction record via the billing API.
+        The health check returns HTTP 200 if the database connections are
+        alive.
         """
-        content = {
-            'account_number': self.account.account_number,
-            'message_id': 'msg-id-1',
-            'tag_pool_name': 'pool1',
-            'tag_name': 'tag1',
-            'message_direction': MessageCost.DIRECTION_INBOUND,
-            'session_created': False,
-            'provider': None,
-            'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE
-        }
-        content.update(kwargs)
-        return self.call_api('post', 'transactions', content=content)
+        billing_api = yield self.get_billing_api()
+        response = yield billing_api.get('health')
+        self.assertEqual(response.responseCode, 200)
+        self.assertEqual(response.value(), 'OK\n')
 
-    def assert_model(self, model, **kw):
-        for name, value in kw.iteritems():
-            self.assertEqual(getattr(model, name), value)
+    @inlineCallbacks
+    def test_health_disconnected(self):
+        """
+        The health check returns HTTP 503 if the database connections are dead.
+        """
+        billing_api = yield self.get_billing_api()
+        # Clear detectors to avoid reconnects, then disconnect.
+        for conn in billing_api.connection_pool.connections:
+            conn.detector = None
+        yield billing_api.connection_pool.close()
+        response = yield billing_api.get('health')
+        self.assertEqual(response.responseCode, 503)
+        self.assertEqual(response.value(), 'Database connection unavailable\n')
+
+
+class TestTransactionNoDatabase(VumiTestCase):
+    """
+    TransactionResource test cases that don't need database access.
+    """
 
     def test_check_all_low_credit_thresholds(self):
         """
         Tests various combinations of parameters for
         TransactionResource.check_all_low_credit_thresholds.
         """
+        self.patch(
+            app_settings,
+            'LOW_CREDIT_NOTIFICATION_PERCENTAGES',
+            [70, 90, 80])
+
         resource = api.TransactionResource(None)
         crossed = resource.check_all_low_credit_thresholds
         # Argument order: credit_balance, credit_amount, last_topup_balance
@@ -134,6 +123,60 @@ class TestTransaction(BillingApiTestCase):
         self.assertEqual(crossed(100, 0, 100), None)
         self.assertEqual(crossed(-5, 1, 100), None)
         self.assertEqual(crossed(105, 1, 100), None)
+
+
+@pytest.mark.django_db(transaction=True)
+class TestTransaction(BillingApiTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        self.patch(
+            app_settings,
+            'LOW_CREDIT_NOTIFICATION_PERCENTAGES',
+            [70, 90, 80])
+
+        vumi_helper = self.add_helper(DjangoVumiApiHelper())
+
+        self.account = Account.objects.get(
+            user=vumi_helper.make_django_user().get_django_user())
+
+        self.account2 = Account.objects.get(
+            user=vumi_helper.make_django_user(u'user2').get_django_user())
+
+        self.pool1 = mk_tagpool('pool1')
+        self.pool2 = mk_tagpool('pool2')
+
+        self.web = yield self.get_billing_api()
+
+    def create_api_transaction(self, **kwargs):
+        """
+        Create a transaction record via the billing API.
+        """
+        content = {
+            'account_number': self.account.account_number,
+            'message_id': 'msg-id-1',
+            'tag_pool_name': 'pool1',
+            'tag_name': 'tag1',
+            'message_direction': MessageCost.DIRECTION_INBOUND,
+            'session_created': False,
+            'provider': None,
+            'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE,
+            'session_length': None,
+        }
+        content.update(kwargs)
+        return self.call_api(self.web, 'post', 'transactions', content=content)
+
+    def assert_dict(self, dict_obj, **kw):
+        for name, value in kw.iteritems():
+            self.assertEqual(dict_obj[name], value)
+
+    def assert_model(self, model, **kw):
+        for name, value in kw.iteritems():
+            self.assertEqual(getattr(model, name), value)
+
+    def assert_result(self, result, model, **kw):
+        self.assert_dict(result['transaction'], **kw)
+        self.assert_model(model, **kw)
 
     @inlineCallbacks
     def test_low_credit_threshold_notifications(self):
@@ -170,7 +213,8 @@ class TestTransaction(BillingApiTestCase):
         mock_task_delay.assert_called_once_with(
             account.account_number,
             Decimal('0.9'),
-            account.credit_balance)
+            account.credit_balance,
+            False)
         mock_task_delay.reset_mock()
 
         # Create another transaction
@@ -187,7 +231,8 @@ class TestTransaction(BillingApiTestCase):
         mock_task_delay.assert_called_once_with(
             account.account_number,
             Decimal('0.8'),
-            account.credit_balance)
+            account.credit_balance,
+            False)
         mock_task_delay.reset_mock()
 
         # Create a third transaction
@@ -204,7 +249,8 @@ class TestTransaction(BillingApiTestCase):
         mock_task_delay.assert_called_once_with(
             account.account_number,
             Decimal('0.7'),
-            account.credit_balance)
+            account.credit_balance,
+            True)
         mock_task_delay.reset_mock()
 
         # Create a fourth transaction
@@ -249,6 +295,116 @@ class TestTransaction(BillingApiTestCase):
         self.assertFalse(mock_task_delay.called)
 
     @inlineCallbacks
+    def test_credit_cutoff_inbound_not_reached(self):
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_CUTOFF', True)
+
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            message_cost=0.2,
+            )
+
+        load_account_credits(self.account, 10)
+
+        transaction = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            message_id='msg-id-1',
+            tag_pool_name='pool1',
+            tag_name='tag1',
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            session_created=False,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
+        self.assertFalse(transaction['credit_cutoff_reached'])
+        self.assertTrue(transaction['transaction'] is not None)
+        self.assertEqual(Transaction.objects.count(), 2)
+
+    @inlineCallbacks
+    def test_credit_cutoff_inbound_reached(self):
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_CUTOFF', True)
+
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_direction=MessageCost.DIRECTION_INBOUND,
+            message_cost=0.4,
+            )
+
+        load_account_credits(self.account, 10)
+        self.account.credit_balance = 6
+        self.account.save()
+
+        transaction_kwargs = {
+            'account_number': self.account.account_number,
+            'message_id': 'msg-id-1',
+            'tag_pool_name': 'pool1',
+            'tag_name': 'tag1',
+            'message_direction': MessageCost.DIRECTION_INBOUND,
+            'session_created': False,
+            'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE
+        }
+
+        transaction = yield self.create_api_transaction(**transaction_kwargs)
+
+        self.assertTrue(transaction['credit_cutoff_reached'])
+        self.assertTrue(transaction['transaction'] is not None)
+        self.assertEqual(Transaction.objects.count(), 2)
+
+    @inlineCallbacks
+    def test_credit_cutoff_outbound_not_reached(self):
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_CUTOFF', True)
+
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_direction=MessageCost.DIRECTION_OUTBOUND,
+            message_cost=0.2,
+            )
+
+        load_account_credits(self.account, 10)
+
+        transaction = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            message_id='msg-id-1',
+            tag_pool_name='pool1',
+            tag_name='tag1',
+            message_direction=MessageCost.DIRECTION_OUTBOUND,
+            session_created=False,
+            transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
+
+        self.assertFalse(transaction['credit_cutoff_reached'])
+        self.assertTrue(transaction['transaction'] is not None)
+        self.assertEqual(Transaction.objects.count(), 2)
+
+    @inlineCallbacks
+    def test_credit_cutoff_outbound_reached(self):
+        self.patch(app_settings, 'ENABLE_LOW_CREDIT_CUTOFF', True)
+
+        mk_message_cost(
+            tag_pool=self.pool1,
+            message_direction=MessageCost.DIRECTION_OUTBOUND,
+            message_cost=0.4,
+            )
+
+        load_account_credits(self.account, 10)
+        self.account.credit_balance = 6
+        self.account.save()
+
+        transaction_kwargs = {
+            'account_number': self.account.account_number,
+            'message_id': 'msg-id-1',
+            'tag_pool_name': 'pool1',
+            'tag_name': 'tag1',
+            'message_direction': MessageCost.DIRECTION_OUTBOUND,
+            'session_created': False,
+            'transaction_type': Transaction.TRANSACTION_TYPE_MESSAGE
+        }
+
+        transaction = yield self.create_api_transaction(**transaction_kwargs)
+
+        self.assertTrue(transaction['credit_cutoff_reached'])
+        self.assertTrue(transaction['transaction'] is None)
+        self.assertEqual(Transaction.objects.count(), 1)
+
+    @inlineCallbacks
     def test_transaction(self):
         account = self.account
         account2 = self.account2
@@ -277,7 +433,7 @@ class TestTransaction(BillingApiTestCase):
             session_created=True)
 
         # Create a transaction
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=account.account_number,
             message_id='msg-id-1',
             tag_pool_name='pool1',
@@ -286,11 +442,9 @@ class TestTransaction(BillingApiTestCase):
             session_created=False,
             transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
-        # Make sure there was a transaction created
-        transaction = Transaction.objects.latest('created')
-
-        self.assert_model(
-            model=transaction,
+        self.assert_result(
+            result=transaction,
+            model=Transaction.objects.latest('created'),
             message_id='msg-id-1',
             tag_name='tag1',
             tag_pool_name='pool1',
@@ -314,7 +468,7 @@ class TestTransaction(BillingApiTestCase):
         self.assertEqual(account.credit_balance, -credit_amount)
 
         # Create a transaction (with session_created=True)
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=account.account_number,
             message_id='msg-id-2',
             tag_pool_name='pool1',
@@ -322,11 +476,9 @@ class TestTransaction(BillingApiTestCase):
             message_direction=MessageCost.DIRECTION_INBOUND,
             session_created=True)
 
-        # Make sure there was a transaction created (with session_created=True)
-        transaction = Transaction.objects.latest('created')
-
-        self.assert_model(
-            model=transaction,
+        self.assert_result(
+            result=transaction,
+            model=Transaction.objects.latest('created'),
             message_id='msg-id-2',
             tag_name='tag1',
             tag_pool_name='pool1',
@@ -359,7 +511,7 @@ class TestTransaction(BillingApiTestCase):
             session_cost=7.0,
             markup_percent=11.0)
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=account.account_number,
             message_id='msg-id-3',
             tag_pool_name='pool1',
@@ -374,7 +526,8 @@ class TestTransaction(BillingApiTestCase):
             Decimal('7.0'),
             session_created=False)
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_id='msg-id-3',
             tag_name='tag1',
@@ -401,7 +554,7 @@ class TestTransaction(BillingApiTestCase):
             session_cost=0.2,
             markup_percent=12.0)
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=account2.account_number,
             message_id='msg-id-4',
             tag_pool_name='pool2',
@@ -416,7 +569,8 @@ class TestTransaction(BillingApiTestCase):
             Decimal('0.2'),
             session_created=False)
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_id='msg-id-4',
             tag_name='tag2',
@@ -494,9 +648,8 @@ class TestTransaction(BillingApiTestCase):
             account_number=self.account.account_number,
             provider='mtn')
 
-        self.assertEqual(transaction['provider'], 'mtn')
-
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             provider='mtn')
 
@@ -504,11 +657,12 @@ class TestTransaction(BillingApiTestCase):
     def test_transaction_provider_none(self):
         mk_message_cost(tag_pool=self.pool1)
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider=None)
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             provider=None)
 
@@ -529,19 +683,21 @@ class TestTransaction(BillingApiTestCase):
             message_cost=0.6,
             provider='mtn')
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider='mtn')
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.6'))
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider='vodacom')
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.7'))
 
@@ -557,18 +713,65 @@ class TestTransaction(BillingApiTestCase):
             message_cost=0.6,
             provider='mtn')
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider='unknown')
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.8'))
 
-        yield self.create_api_transaction(
+        transaction = yield self.create_api_transaction(
             account_number=self.account.account_number,
             provider=None)
 
-        self.assert_model(
+        self.assert_result(
+            result=transaction,
             model=Transaction.objects.latest('created'),
             message_cost=Decimal('0.8'))
+
+    @inlineCallbacks
+    def test_transaction_session_length_cost(self):
+        mk_message_cost(
+            tag_pool=self.pool1,
+            session_unit_cost=0.2,
+            session_unit_time=20,
+            markup_percent=10)
+
+        transaction = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            session_length=23)
+
+        session_length_cost = get_session_length_cost(0.2, 20, 23)
+
+        self.assert_result(
+            result=transaction,
+            model=Transaction.objects.latest('created'),
+            session_unit_cost=Decimal('0.2'),
+            session_unit_time=Decimal('20.0'),
+            session_length_cost=session_length_cost,
+            session_length_credits=get_session_length_credits(
+                session_length_cost, 10),
+            session_length=Decimal('23.0'))
+
+    @inlineCallbacks
+    def test_transaction_session_length_cost_none_length(self):
+        mk_message_cost(
+            tag_pool=self.pool1,
+            session_unit_cost=0.2,
+            session_unit_time=20,
+            markup_percent=10)
+
+        transaction = yield self.create_api_transaction(
+            account_number=self.account.account_number,
+            session_length=None)
+
+        self.assert_result(
+            result=transaction,
+            model=Transaction.objects.latest('created'),
+            session_unit_cost=Decimal('0.2'),
+            session_unit_time=Decimal('20.0'),
+            session_length_cost=Decimal(0),
+            session_length_credits=Decimal(0),
+            session_length=None)
