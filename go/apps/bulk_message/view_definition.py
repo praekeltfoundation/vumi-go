@@ -11,6 +11,7 @@ DEFAULT_BULK_SEND_DELIVERY_CLASS = 'sms'
 class MessageForm(forms.Form):
     message = forms.CharField(widget=BulkMessageWidget)
     delivery_class = forms.ChoiceField(
+        label="Channel type",
         required=True,
         initial=DEFAULT_BULK_SEND_DELIVERY_CLASS,
         choices=[(d_name, d['label']) for d_name, d
