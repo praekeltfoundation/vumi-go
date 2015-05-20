@@ -269,7 +269,7 @@ class GoWorkerMixin(object):
 
         outbound = yield self._find_outboundmessage_for_event(event)
         outbound_msg = outbound.msg if outbound is not None else None
-        self._store_outbound_in_event_cache(outbound_msg)
+        self._store_outbound_in_event_cache(event, outbound_msg)
         returnValue(outbound_msg)
 
     @inlineCallbacks
