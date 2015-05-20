@@ -485,6 +485,20 @@ def check_action_is_enabled(f):
     return wrapper
 
 
+class FallbackEditConversationView(ConversationApiView):
+    """A fallback 'edit' view that redirects to the 'show' view.
+
+    For use on conversation types that have no custom edit
+    view to prevent 404s from occurring if another part of
+    the user interface directs a person to the edit view.
+    """
+    view_name = 'edit'
+    path_suffix = 'edit/'
+
+    def get(self, request, conversation):
+        return self.redirect_to('show', conversation_key=conversation.key)
+
+
 class ConversationActionView(ConversationTemplateView):
     """View for performing an arbitrary conversation action.
 
@@ -762,6 +776,8 @@ class ConversationViewDefinitionBase(object):
         self._views = list(self.DEFAULT_CONVERSATION_VIEWS)
         if self.edit_view is not None:
             self._views.append(self.edit_view)
+        else:
+            self._views.append(FallbackEditConversationView)
         self._views.extend(self.extra_views)
 
         self._view_mapping = {}
