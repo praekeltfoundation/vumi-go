@@ -476,6 +476,11 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(reloaded_conv.name, 'test-name')
         self.assertEqual(reloaded_conv.description, 'test-desc')
 
+    def test_edit_fallback(self):
+        conv = self.user_helper.create_conversation(u'dummy')
+        response = self.client.get(self.get_view_url(conv, 'edit'))
+        self.assertRedirects(response, self.get_view_url(conv, 'show'))
+
     def test_conversation_contact_group_listing(self):
         conv = self.user_helper.create_conversation(
             u'dummy', name=u'test', description=u'test')
