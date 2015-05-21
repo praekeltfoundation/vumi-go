@@ -5,6 +5,7 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.connectors import IgnoreMessage
+from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
@@ -220,6 +221,67 @@ class TestGoApplicationWorker(VumiTestCase):
         self.assertEqual(cache._models.keys(), [])
         yield self.app_helper.make_dispatch_ack(conv=self.conv)
         self.assertEqual(cache._models.keys(), [self.conv.key])
+
+    def assert_outbound_cached(self, event, outbound):
+        self.assertEqual(
+            event.cache.keys(), [self.app._EVENT_OUTBOUND_CACHE_KEY])
+        cached_outbound = event.cache[self.app._EVENT_OUTBOUND_CACHE_KEY]
+        if cached_outbound is None:
+            self.assertEqual(outbound, cached_outbound)
+        else:
+            self.assertEqual(
+                outbound, TransportUserMessage.from_json(cached_outbound))
+
+    def cache_outbound_on_event(self, event, outbound):
+        outbound_json = (
+            outbound.to_json() if outbound is not None else outbound)
+        event.cache[self.app._EVENT_OUTBOUND_CACHE_KEY] = outbound_json
+
+    @inlineCallbacks
+    def test_outbound_message_lookup_for_event(self):
+        outbound = yield self.app_helper.make_stored_outbound(
+            self.conv, "Oort!")
+        ack = yield self.app_helper.make_stored_ack(
+            self.conv, outbound)
+        self.assertEqual(ack.cache, {})
+
+        ack_outbound = yield self.app.find_message_for_event(ack)
+        self.assertEqual(ack_outbound, outbound)
+        self.assert_outbound_cached(ack, outbound)
+
+    @inlineCallbacks
+    def test_null_outbound_message_lookup_for_event(self):
+        ack = yield self.app_helper.make_stored_ack(
+            self.conv, None)
+        self.assertEqual(ack.cache, {})
+
+        ack_outbound = yield self.app.find_message_for_event(ack)
+        self.assertEqual(ack_outbound, None)
+        self.assert_outbound_cached(ack, None)
+
+    @inlineCallbacks
+    def test_outbound_message_lookup_cached_for_event(self):
+        outbound = yield self.app_helper.make_stored_outbound(
+            self.conv, "Oort!")
+        ack = yield self.app_helper.make_stored_ack(
+            self.conv, outbound)
+        self.cache_outbound_on_event(ack, outbound)
+        self.assert_outbound_cached(ack, outbound)
+
+        ack_outbound = yield self.app.find_message_for_event(ack)
+        self.assertEqual(ack_outbound, outbound)
+        self.assert_outbound_cached(ack, outbound)
+
+    @inlineCallbacks
+    def test_null_outbound_message_lookup_cached_for_event(self):
+        ack = yield self.app_helper.make_stored_ack(
+            self.conv, None)
+        self.cache_outbound_on_event(ack, None)
+        self.assert_outbound_cached(ack, None)
+
+        ack_outbound = yield self.app.find_message_for_event(ack)
+        self.assertEqual(ack_outbound, None)
+        self.assert_outbound_cached(ack, None)
 
 
 class DummyRouter(GoRouterWorker):
