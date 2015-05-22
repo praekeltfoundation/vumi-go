@@ -10,6 +10,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-exec');
   grunt.loadNpmTasks('grunt-contrib-less');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-uncss');
 
   grunt.initConfig({
     paths: require('./js_paths.yml'),
@@ -94,6 +95,13 @@ module.exports = function (grunt) {
       less: {
         files: ['go/base/static/css/*.less'],
         tasks: ['less']
+      }
+    },
+    uncss: {
+      dist: {
+        files: {
+          'go/base/static/css/tidy.css': ['http://localhost:8000/conversations/', 'http://localhost:8000/contacts/people/', 'http://localhost:8000/help/', 'http://localhost:8000/account/details/', 'http://localhost:8000/account/billing/', 'http://localhost:8000/wizard/create/', 'http://localhost:8000/routing/', 'http://localhost:8000/channels/', 'http://localhost:8000/routers/']
+        }
       }
     }
   });

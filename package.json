@@ -32,6 +32,7 @@
     "grunt-karma": "~0.8.3",
     "grunt-mocha-cli": "^1.10.0",
     "grunt-mocha-cov": "~0.2.1",
+    "grunt-uncss": "^0.3.8",
     "js-yaml": "~2.1.0",
     "karma": "^0.12.31",
     "karma-coverage": "~0.1.0",

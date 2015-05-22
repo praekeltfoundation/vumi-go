@@ -342,13 +342,17 @@ paths = yaml.safe_load(open(os.path.join(PROJECT_ROOT, '..', 'js_paths.yml')))
 
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 PIPELINE_CSS = {
-    'vendor': {
-        'source_filenames': static_paths(paths['client']['styles']['vendor']),
-        'output_filename': 'export/vendor.css',
-    },
-    'go': {
-        'source_filenames': static_paths(paths['client']['styles']['go']),
-        'output_filename': 'export/go.css',
+    # 'vendor': {
+    #     'source_filenames': static_paths(paths['client']['styles']['vendor']),
+    #     'output_filename': 'export/vendor.css',
+    # },
+    # 'go': {
+    #     'source_filenames': static_paths(paths['client']['styles']['go']),
+    #     'output_filename': 'export/go.css',
+    # },
+    'tidy': {
+        'source_filenames': static_paths(paths['client']['styles']['tidy']),
+        'output_filename': 'export/tidy.css',
     },
     'invoice': {
         'source_filenames': static_paths(paths['client']['styles']['invoice']),

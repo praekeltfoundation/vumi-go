@@ -107,6 +107,8 @@ client:
       - 'go/base/static/vendor/diamondash/css/diamondash.css'
     go:
       - 'go/base/static/css/vumigo.css'
+    tidy:
+      - 'go/base/static/css/tidy.css'
     invoice:
       - 'go/base/static/css/invoice.css'
 
