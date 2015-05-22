@@ -121,6 +121,23 @@ describe("go.apps.dialogue.layout", function() {
           layout.$el.height(),
           state.$el.position().top + 80 + 10);
       });
+
+      it("should repaint the state", function() {
+        var state = states.get('state2');
+        var repainted = false;
+        state.on('repaint', function() { repainted = true; })
+
+        assert(!repainted);
+
+        state.$('.titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {
+            dx: 1,
+            dy: 1
+          });
+
+        assert(repainted);
+      });
     });
 
     describe(".renderState", function() {

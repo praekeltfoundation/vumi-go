@@ -99,6 +99,42 @@ describe("go.components.plumbing.endpoints", function() {
         assert(x4.$el.hasClass('endpoint-target'));
       });
     });
+
+    describe(".peers", function() {
+      it("should return all endpoints connected to the endpoint", function() {
+        var endpoints = diagram.endpoints;
+
+        diagram.model
+          .get('connections')
+          .reset()
+          .add({
+            source: 'x1',
+            target: 'y1'
+          })
+          .add({
+            source: 'x2',
+            target: 'y1'
+          });
+
+        assert.deepEqual(
+          endpoints.get('x1').peers(),
+          [endpoints.get('y1')]);
+
+        assert.deepEqual(
+          endpoints.get('x2').peers(),
+          [endpoints.get('y1')]);
+
+        assert.deepEqual(
+          sort(endpoints.get('y1').peers()),
+          [endpoints.get('x1'), endpoints.get('x2')]);
+
+        function sort(endpoints) {
+          return _.sortBy(endpoints, function(endpoint) {
+            return endpoint.model.id;
+          });
+        }
+      });
+    });
   });
 
   describe(".EndpointViewCollection", function() {
@@ -231,7 +267,8 @@ describe("go.components.plumbing.endpoints", function() {
 
 
   describe(".PositionableEndpointView", function() {
-    var PositionableEndpointView = plumbing.endpoints.PositionableEndpointView;
+    var EndpointModel = stateMachine.EndpointModel,
+        PositionableEndpointView = plumbing.endpoints.PositionableEndpointView;
 
     var ToyEndpointView = PositionableEndpointView.extend({
       reposition: function(p) { this.p = p; },
@@ -371,7 +408,8 @@ describe("go.components.plumbing.endpoints", function() {
   });
 
   describe(".FollowingEndpointView", function() {
-    var FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
+    var EndpointModel = stateMachine.EndpointModel,
+        FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
     var state,
         endpoint,
@@ -565,6 +603,17 @@ describe("go.components.plumbing.endpoints", function() {
 
         endpoints.render();
         assertAlignment(1/3, 2/3);
+      });
+    });
+
+    describe(".canMakeConnection", function() {
+      it("should return true if the endpoint is not yet a source", function() {
+        assert(diagram.endpoints.get('x1').canMakeConnection());
+        assert(diagram.endpoints.get('y2').canMakeConnection());
+      });
+
+      it("should return false if the endpoint is already a source", function() {
+        assert(!diagram.endpoints.get('x3').canMakeConnection());
       });
     });
   });

@@ -299,8 +299,9 @@
       if (!options.silent) { this.mode.trigger('activate'); }
       if (options.render) {
         this.render();
-        jsPlumb.repaintEverything();
+        this.repaint();
       }
+
       return this;
     },
 
@@ -316,6 +317,19 @@
       this.mode.render().$el.appendTo(this.$el);
       this.endpoints.render();
       return this;
+    },
+
+    repaint: function() {
+      var endpoints = this.endpoints.values();
+
+      _.chain(endpoints)
+        .invoke('peers')
+        .flatten()
+        .concat(endpoints)
+        .map(getEl)
+        .each(plumbing.utils.repaintDraggable);
+
+      this.trigger('repaint');
     }
   });
 
@@ -389,6 +403,12 @@
       return this;
     }
   });
+
+
+  function getEl(view) {
+    return view.$el;
+  }
+
 
   _(exports).extend({
     EntryEndpointView: EntryEndpointView,

@@ -241,7 +241,7 @@ describe("go.routing (views)", function() {
     function $endpointAt(i) {
       return column.states
         .at(i).endpoints
-        .at(0).$el
+        .at(0).$el;
     }
 
     beforeEach(function() {
@@ -259,11 +259,28 @@ describe("go.routing (views)", function() {
         var repainted = false;
         column.on('repaint', function() { repainted = true; });
 
+        assert(!repainted);
+
         // jquery-simulate doesn't seem to be working with jquery ui here,
         // so we are invoking the callback directly
         column.onDrag();
 
         assert(repainted);
+      });
+    });
+
+    describe("when a state is dropped", function() {
+      it("should update the ordinals", function() {
+        var updated = false;
+        column.on('update:ordinals', function() { updated = true; });
+
+        assert(!updated);
+
+        // jquery-simulate doesn't seem to be working with jquery ui here,
+        // so we are invoking the callback directly
+        column.onStop();
+
+        assert(updated);
       });
     });
 
@@ -279,56 +296,59 @@ describe("go.routing (views)", function() {
     });
 
     describe(".repaint", function() {
-      it("should tell jsPlumb to manage all endpoints in the column", function() {
+      it("should repaint all endpoints in the column", function() {
         diagram.model.set('channels', diagram.model.get('channels').first(3));
 
-        sinon.spy(jsPlumb, 'manage');
-        sinon.spy(jsPlumb, 'repaint');
+        var repaint = sinon.spy(plumbing.utils, 'repaintSortable');
         column.repaint();
 
-        assert.equal($endpointAt(0).attr('id'), jsPlumb.manage.args[0][0]);
-        assert.equal($endpointAt(0).get(0), jsPlumb.manage.args[0][1]);
+        assert(repaint.calledWith($endpointAt(0)));
+        assert(repaint.calledWith($endpointAt(1)));
+        assert(repaint.calledWith($endpointAt(2)));
 
-        assert.equal($endpointAt(1).attr('id'), jsPlumb.manage.args[1][0]);
-        assert.equal($endpointAt(1).get(0), jsPlumb.manage.args[1][1]);
-
-        assert.equal($endpointAt(2).attr('id'), jsPlumb.manage.args[2][0]);
-        assert.equal($endpointAt(2).get(0), jsPlumb.manage.args[2][1]);
-
-        jsPlumb.manage.restore();
-        jsPlumb.repaint.restore();
-
-      });
-
-      it("should tell jsPlumb to manage all endpoints in the column", function() {
-        diagram.model.set('channels', diagram.model.get('channels').first(3));
-
-        sinon.spy(jsPlumb, 'repaint');
-        column.repaint();
-
-        assert($endpointAt(0).is(jsPlumb.repaint.args[0][0]));
-        assert($endpointAt(1).is(jsPlumb.repaint.args[1][0]));
-        assert($endpointAt(2).is(jsPlumb.repaint.args[2][0]));
-
-        assert.deepEqual(
-          _.pick(jsPlumb.repaint.args[0][1], 'left', 'top'),
-          $endpointAt(0).offset());
-
-        assert.deepEqual(
-          _.pick(jsPlumb.repaint.args[1][1], 'left', 'top'),
-          $endpointAt(1).offset());
-
-        assert.deepEqual(
-          _.pick(jsPlumb.repaint.args[2][1], 'left', 'top'),
-          $endpointAt(2).offset());
-
-        jsPlumb.repaint.restore();
+        repaint.restore();
       });
 
       it("should trigger a 'repaint' event", function(done) {
         column
           .on('repaint', function() { done(); })
           .repaint();
+      });
+    });
+
+    describe(".updateOrdinals", function() {
+      it("should update the models' ordinals using the DOM ordering", function() {
+        var models = column.states.models;
+
+        models.reset([
+          models.get('channel1'),
+          models.get('channel2'),
+          models.get('channel3')]);
+
+        column.render();
+
+        column.$('[data-uuid="channel1"]')
+          .detach()
+          .insertAfter(column.$('[data-uuid="channel3"]'));
+
+        models.get('channel1').set('ordinal', 1);
+        models.get('channel2').set('ordinal', 0);
+        models.get('channel3').set('ordinal', 2);
+
+        column.updateOrdinals();
+
+        assert.strictEqual(models.get('channel1').get('ordinal'), 2);
+        assert.strictEqual(models.get('channel2').get('ordinal'), 0);
+        assert.strictEqual(models.get('channel3').get('ordinal'), 1);
+      });
+
+      it("should trigger an 'update:ordinals' event", function() {
+        var triggered = false;
+        column.on('update:ordinals', function() { triggered = true; });
+
+        assert(!triggered);
+        column.updateOrdinals();
+        assert(triggered);
       });
     });
   });
@@ -423,7 +443,7 @@ describe("go.routing (views)", function() {
 
       view = new RoutingView({
         el: '#routing',
-        model: new RoutingModel(modelData),
+        model: new RoutingModel(modelData()),
         sessionId: '123'
       });
 
@@ -454,10 +474,23 @@ describe("go.routing (views)", function() {
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint4');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), modelData());
 
         view.$('#save').click();
         server.respond();
+      });
+
+      it("should persist the ordering of the routing table components", function() {
+        server.respondWith(response());
+
+        var triggered = false;
+        view.diagram.model.on('persist:ordinals', function() { triggered = true; });
+
+        view.$('#save').click();
+
+        assert(!triggered);
+        server.respond();
+        assert(triggered);
       });
 
       it("should notify the user if the save was successful", function() {
@@ -481,15 +514,16 @@ describe("go.routing (views)", function() {
 
     describe("when the reset button is clicked", function() {
       it("should reset the routing table changes", function(done) {
-        assert.deepEqual(view.model.toJSON(), modelData);
+        view.model.clear().set(modelData());
+        var expected = view.model.toJSON();
 
         // modify the diagram
         view.diagram.connections.remove('endpoint1-endpoint4');
-        assert.notDeepEqual(view.model.toJSON(), modelData);
+        assert.notDeepEqual(view.model.toJSON(), expected);
 
         view.$('#reset').click();
         view.reset.once('success', function() {
-          assert.deepEqual(view.model.toJSON(), modelData);
+          assert.deepEqual(view.model.toJSON(), expected);
           done();
         });
       });

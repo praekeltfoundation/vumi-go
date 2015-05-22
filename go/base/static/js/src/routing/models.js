@@ -5,15 +5,14 @@
 // We use the state machine models as a base to make use of any
 // custom/overriden functionality the models provide over Backbone.Model,
 // seeing as the models for routing are of a state machine nature.
-var stateMachine = go.components.stateMachine,
-    EndpointModel = stateMachine.EndpointModel,
-    ConnectionModel = stateMachine.ConnectionModel,
-    StateModel = stateMachine.StateModel,
-    StateMachineModel = stateMachine.StateMachineModel;
-
 (function(exports) {
-  var RoutingEndpointModel = EndpointModel.extend({
-  });
+  var stateMachine = go.components.stateMachine,
+      EndpointModel = stateMachine.EndpointModel,
+      ConnectionModel = stateMachine.ConnectionModel,
+      StateModel = stateMachine.StateModel,
+      StateMachineModel = stateMachine.StateMachineModel;
+
+  var RoutingEndpointModel = EndpointModel.extend({});
 
   var RoutingEntryModel = ConnectionModel.extend({
     relations: [{
@@ -29,7 +28,51 @@ var stateMachine = go.components.stateMachine,
     }]
   });
 
-  var ChannelModel = StateModel.extend({
+  var RoutingStateCollection = Backbone.Collection.extend({
+    type: null,
+
+    bindings: {
+      'add': function(model) {
+        model.set('ordinal', this.localOrdinals.indexOf(model.id));
+      }
+    },
+
+    initialize: function(models, options) {
+      this.routingId = options.routingId;
+      this.localOrdinals = go.local.get(this._localOrdinalsKey(), []);
+      go.utils.bindEvents(this.bindings, this);
+    },
+
+    persistOrdinals: function() {
+      go.local.set(this._localOrdinalsKey(), this._getOrdinals());
+    },
+
+    _getOrdinals: function() {
+      return _.pluck(this.sortBy('ordinal'), 'id');
+    },
+
+    _localOrdinalsKey: function() {
+      return localOrdinalsKey(this.routingId, this.type);
+    }
+  });
+
+  var ChannelCollection = RoutingStateCollection.extend({
+    type: 'channels'
+  });
+
+  var RouterCollection = RoutingStateCollection.extend({
+    type: 'routers'
+  });
+
+  var ConversationCollection = RoutingStateCollection.extend({
+    type: 'conversations'
+  });
+
+  var RoutingStateModel = StateModel.extend({
+    defaults: {ordinal: -1}
+  });
+
+  var ChannelModel = RoutingStateModel.extend({
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
@@ -40,7 +83,7 @@ var stateMachine = go.components.stateMachine,
     }
   });
 
-  var RouterModel = StateModel.extend({
+  var RouterModel = RoutingStateModel.extend({
     relations: [{
       type: Backbone.HasMany,
       key: 'conversation_endpoints',
@@ -55,7 +98,7 @@ var stateMachine = go.components.stateMachine,
     }
   });
 
-  var ConversationModel = StateModel.extend({
+  var ConversationModel = RoutingStateModel.extend({
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
@@ -85,31 +128,59 @@ var stateMachine = go.components.stateMachine,
     relations: [{
       type: Backbone.HasMany,
       key: 'channels',
-      relatedModel: ChannelModel
+      relatedModel: ChannelModel,
+      collectionType: ChannelCollection,
+      collectionOptions: stateCollectionOptions
     }, {
       type: Backbone.HasMany,
       key: 'routers',
-      relatedModel: RouterModel
+      relatedModel: RouterModel,
+      collectionType: RouterCollection,
+      collectionOptions: stateCollectionOptions
     }, {
       type: Backbone.HasMany,
       key: 'conversations',
-      relatedModel: ConversationModel
+      relatedModel: ConversationModel,
+      collectionType: ConversationCollection,
+      collectionOptions: stateCollectionOptions
     }, {
       type: Backbone.HasMany,
       key: 'routing_entries',
       parse: true,
       relatedModel: RoutingEntryModel
-    }]
+    }],
+
+    persistOrdinals: function() {
+      this.get('channels').persistOrdinals();
+      this.get('routers').persistOrdinals();
+      this.get('conversations').persistOrdinals();
+      this.trigger('persist:ordinals');
+    }
   });
+
+
+  function stateCollectionOptions(routing) {
+    return {routingId: routing.id};
+  }
+
+
+  function localOrdinalsKey(id, type) {
+    return [id, type, 'ordinals'].join(':');
+  }
+
 
   _.extend(exports, {
     RoutingModel: RoutingModel,
+    RoutingStateCollection: RoutingStateCollection,
 
+    RoutingStateModel: RoutingStateModel,
     ChannelModel: ChannelModel,
     RouterModel: RouterModel,
     ConversationModel: ConversationModel,
 
     RoutingEntryModel: RoutingEntryModel,
-    RoutingEndpointModel: RoutingEndpointModel
+    RoutingEndpointModel: RoutingEndpointModel,
+
+    localOrdinalsKey: localOrdinalsKey
   });
 })(go.routing.models = {});

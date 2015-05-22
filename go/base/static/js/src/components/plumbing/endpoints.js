@@ -33,9 +33,11 @@
 
     // The params passed to jsPlumb when configuring the element as a
     // connection source/target
-    plumbSourceOptions: {
-      anchor: 'Continuous',
-      maxConnections: 1
+    plumbSourceOptions: function() {
+      return {
+        filter: this.canMakeConnection,
+        anchor: 'Continuous',
+      };
     },
 
     plumbTargetOptions: {
@@ -46,6 +48,8 @@
     },
 
     initialize: function(options) {
+      this.canMakeConnection = this.canMakeConnection.bind(this);
+
       // the state view that this endpoint is part of
       this.state = options.state;
       this.$state = this.state.$el;
@@ -79,6 +83,25 @@
       if (this.isSource) { this.$el.addClass('endpoint-source'); }
       if (this.isTarget) { this.$el.addClass('endpoint-target');}
       this.collection.appendToView(this);
+    },
+
+    canMakeConnection: function() {
+      return !this.state.diagram.connections.findWhere({source: this});
+    },
+
+    peers: function() {
+      var results = [];
+      var connections = this.state.diagram.connections.values();
+      var i = connections.length;
+      var conn;
+
+      while (i--) {
+        conn = connections[i];
+        if (conn.target === this) results.push(conn.source);
+        else if (conn.source === this) results.push(conn.target);
+      }
+
+      return results;
     }
   });
 

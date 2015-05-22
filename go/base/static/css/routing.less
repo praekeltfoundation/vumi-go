@@ -1,6 +1,8 @@
 .routing {
+  @color-normal: #428bca;
   @color-hover: #b41e31;
   @secondary-opacity: 0.75;
+  @color-unconnected: #d9534f;
 
   #diagram {
     .column-container {
@@ -39,7 +41,7 @@
         margin:15px auto;
         padding-top:10px;
 
-        z-index:0;
+        z-index:2;
         -webkit-user-select:none;
 
         .name {
@@ -52,8 +54,12 @@
       }
 
       .endpoint {
-        background: #888;
-        padding: 3px;
+        background: @color-unconnected;
+        padding: 5px;
+      }
+
+      ._jsPlumb_connected {
+        background: @color-normal;
       }
 
       // need to also select by .endpoint in order to override the normal color
@@ -96,4 +102,9 @@
       opacity: @secondary-opacity;
     }
   }
+}
+
+.multiField {
+  padding: 1em 0;
+  border-top: solid 1px grey;
 }

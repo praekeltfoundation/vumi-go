@@ -426,13 +426,16 @@ button {
 .dialogue #diagram .endpoint {
   width: 15px;
   height: 15px;
-  background: #428bca;
+  background: #d9534f;
   -webkit-border-radius: 3px;
   -webkit-background-clip: padding-box;
   -moz-border-radius: 3px;
   -moz-background-clip: padding;
   border-radius: 3px;
   background-clip: padding-box;
+}
+.dialogue #diagram ._jsPlumb_connected {
+  background: #428bca;
 }
 .dialogue #diagram .endpoint.is-hovered-target {
   background: #b41e31;
@@ -459,7 +462,6 @@ button {
 .dialogue #diagram .state {
   z-index: 2;
   width: 280px;
-  margin: 10px;
   float: left;
   font-size: 12px;
   text-align: left;
@@ -655,8 +657,8 @@ button {
 .campaigns .actions .right {
   text-align: right;
 }
-.campaigns .actions .right a:first-child {
-  margin-right: 20px;
+.campaigns .actions .right .btn-reset {
+  margin-left: 20px;
 }
 .routing #diagram .column-container {
   -webkit-user-select: none;
@@ -695,7 +697,7 @@ button {
   min-height: 100px;
   margin: 15px auto;
   padding-top: 10px;
-  z-index: 0;
+  z-index: 2;
   -webkit-user-select: none;
 }
 .routing #diagram .column-container .state .name {
@@ -705,8 +707,11 @@ button {
   cursor: move;
 }
 .routing #diagram .column-container .endpoint {
-  background: #888;
-  padding: 3px;
+  background: #d9534f;
+  padding: 5px;
+}
+.routing #diagram .column-container ._jsPlumb_connected {
+  background: #428bca;
 }
 .routing #diagram .column-container .endpoint.is-hovered-target {
   background: #b41e31;
@@ -738,6 +743,10 @@ button {
 }
 .routing #diagram ._jsPlumb_hover {
   opacity: 0.75;
+}
+.multiField {
+  padding: 1em 0;
+  border-top: solid 1px grey;
 }
 .contacts .smart-group-search form {
   display: inline;

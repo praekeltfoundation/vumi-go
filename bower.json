@@ -45,6 +45,11 @@
     "backbone.babysitter": {
       "js": "lib/*.js"
     },
+    "jsplumb": {
+      "js": [
+        "dist/js/*.js"
+      ]
+    },
     "*": {
       "js": [
         "*.js",

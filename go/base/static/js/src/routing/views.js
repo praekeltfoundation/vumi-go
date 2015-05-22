@@ -71,8 +71,8 @@
   var RoutingStateView = StateView.extend({
     endpointType: RoutingEndpointView,
     endpointCollectionType: AligningEndpointCollection,
-    maxEndpoints: 3,
-    heightPerEndpoint: 30,
+    maxEndpoints: 2,
+    heightPerEndpoint: 45,
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
@@ -150,6 +150,12 @@
   });
 
   var RoutingStateCollection = StateViewCollection.extend({
+    ordered: true,
+
+    comparator: function(state) {
+      return state.model.get('ordinal');
+    },
+
     initialize: function(options) {
       this.$column = this.view.$(options.columnEl);
     },
@@ -172,21 +178,16 @@
       this.states = this.diagram.states.members.get(this.collectionName);
       this.setElement(this.diagram.$('#' + this.id));
       this.onDrag = this.onDrag.bind(this);
+      this.onStop = this.onStop.bind(this);
     },
 
     onDrag: function() {
       this.repaint();
     },
 
-    repaintEl: function($el) {
-      // jsPlumb 1.7.5 doesn't seem to play nice with jquery ui's .sortable(),
-      // so we need to give jsPlumb an offset for it to repaint correctly. When
-      // we specify an offset, jsPlumb sometimes gets unhappy: it seems to
-      // expect some internal state for an element to exist, but the state has
-      // been cleared by something else. Calling .manage() seems to ensure that
-      // the state does exist
-      jsPlumb.manage($el.attr('id'), $el.get(0));
-      jsPlumb.repaint($el, $el.offset());
+    onStop: function() {
+      this.repaint();
+      this.updateOrdinals();
     },
 
     repaint: function() {
@@ -194,9 +195,18 @@
        .map(getEndpoints)
        .flatten()
        .map(getEl)
-       .each(this.repaintEl, this);
+       .each(plumbing.utils.repaintSortable);
 
       this.trigger('repaint');
+    },
+
+    updateOrdinals: function() {
+      this.$('.state')
+        .map(getElUuid)
+        .get()
+        .forEach(this._setOrdinal, this);
+
+      this.trigger('update:ordinals');
     },
 
     render: function() {
@@ -206,7 +216,7 @@
         cursor: 'move',
         start: this.onDrag,
         sort: this.onDrag,
-        stop: this.onDrag
+        stop: this.onStop
       });
 
       this.states.each(function(state) {
@@ -214,6 +224,10 @@
       });
 
       this.repaint();
+    },
+
+    _setOrdinal: function(id, i) {
+      return this.states.get(id).model.set('ordinal', i);
     }
   });
 
@@ -282,6 +296,12 @@
   });
 
   var RoutingView = Backbone.View.extend({
+    bindings: {
+      'success save': function() {
+        this.model.persistOrdinals();
+      }
+    },
+
     initialize: function(options) {
       this.diagram = new RoutingDiagramView({
         el: '#diagram',
@@ -302,6 +322,7 @@
       });
 
       go.routing.style.initialize();
+      go.utils.bindEvents(this.bindings, this);
     },
 
     remove: function() {
@@ -324,6 +345,11 @@
 
   function getEl(view) {
     return view.$el;
+  }
+
+
+  function getElUuid($el) {
+    return $(this).attr('data-uuid');
   }
 
 

@@ -52,6 +52,11 @@ class TestBulkMessageViews(GoDjangoTestCase):
         self.assertEqual([], self.app_helper.get_api_commands_sent())
         self.assertContains(response, 'name="message"')
         self.assertContains(response, '<h1>Write and send bulk message</h1>')
+        self.assertContains(response, 'name="delivery_class"')
+        self.assertContains(response, 'Channel type')
+        self.assertContains(response,
+                            '<option value="sms" selected="selected">SMS<')
+        self.assertContains(response, 'name="dedupe"')
         self.assertContains(response, '>Send message</button>')
 
     def test_action_bulk_send_no_group(self):
@@ -104,7 +109,8 @@ class TestBulkMessageViews(GoDjangoTestCase):
             started=True, channel=channel, groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
-            {'message': 'I am ham, not spam.', 'dedupe': True})
+            {'message': 'I am ham, not spam.', 'delivery_class': 'sms',
+             'dedupe': True})
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         [bulk_send_cmd] = self.app_helper.get_api_commands_sent()
         conversation = conv_helper.get_conversation()
@@ -114,7 +120,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key, msg_options={},
-            delivery_class=conversation.delivery_class,
+            delivery_class='sms',
             content='I am ham, not spam.', dedupe=True))
 
     def test_action_bulk_send_no_dedupe(self):
@@ -124,7 +130,8 @@ class TestBulkMessageViews(GoDjangoTestCase):
             started=True, channel=channel, groups=[group])
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
-            {'message': 'I am ham, not spam.', 'dedupe': False})
+            {'message': 'I am ham, not spam.', 'delivery_class': 'sms',
+             'dedupe': False})
         self.assertRedirects(response, conv_helper.get_view_url('show'))
         [bulk_send_cmd] = self.app_helper.get_api_commands_sent()
         conversation = conv_helper.get_conversation()
@@ -134,7 +141,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key, msg_options={},
-            delivery_class=conversation.delivery_class,
+            delivery_class='sms',
             content='I am ham, not spam.', dedupe=False))
 
     def test_action_bulk_send_confirm(self):
@@ -159,7 +166,8 @@ class TestBulkMessageViews(GoDjangoTestCase):
             TokenManager, 'generate_token', lambda s: ('abcdef', '123456'))
         response = self.client.post(
             conv_helper.get_action_view_url('bulk_send'),
-            {'message': 'I am ham, not spam.', 'dedupe': True})
+            {'message': 'I am ham, not spam.', 'delivery_class': 'sms',
+             'dedupe': True})
         self.assertRedirects(response, conv_helper.get_view_url('show'))
 
         # Check that we get a confirmation message
@@ -200,5 +208,5 @@ class TestBulkMessageViews(GoDjangoTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key, msg_options={},
-            delivery_class=conversation.delivery_class,
+            delivery_class='sms',
             content='I am ham, not spam.', dedupe=True))

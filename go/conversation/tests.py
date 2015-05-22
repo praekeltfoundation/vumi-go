@@ -476,6 +476,11 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(reloaded_conv.name, 'test-name')
         self.assertEqual(reloaded_conv.description, 'test-desc')
 
+    def test_edit_fallback(self):
+        conv = self.user_helper.create_conversation(u'dummy')
+        response = self.client.get(self.get_view_url(conv, 'edit'))
+        self.assertRedirects(response, self.get_view_url(conv, 'show'))
+
     def test_conversation_contact_group_listing(self):
         conv = self.user_helper.create_conversation(
             u'dummy', name=u'test', description=u'test')
@@ -838,6 +843,41 @@ class TestConversationViews(BaseConversationViewTestCase):
         assert_messages(1)
         make_stored_msgs({'sensitive': False})
         assert_messages(2)
+
+    def test_message_list_outbound_status_pending(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        self.msg_helper.make_stored_outbound(conv, "hi")
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+        self.assertContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Accepted", html=True)
+        self.assertNotContains(r_out, "<td>Rejected", html=True)
+
+    def test_message_list_outbound_status_failed(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msg = self.msg_helper.make_stored_outbound(conv, "hi")
+        self.msg_helper.make_stored_nack(conv, msg, nack_reason="no spoons")
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+        self.assertContains(r_out, "<td>Rejected: no spoons", html=True)
+        self.assertNotContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Accepted", html=True)
+
+    def test_message_list_outbound_status_sent(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msg = self.msg_helper.make_stored_outbound(conv, "hi")
+        self.msg_helper.make_stored_ack(conv, msg)
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+        self.assertContains(r_out, "<td>Accepted", html=True)
+        self.assertNotContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Rejected", html=True)
 
     def test_message_list_with_bad_transport_type_inbound(self):
         # inbound messages could have an unsupported transport_type

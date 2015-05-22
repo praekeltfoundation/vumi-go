@@ -246,6 +246,24 @@ class MessageListView(ConversationTemplateView):
 
         batch_id = conversation.batch.key
 
+        def add_event_status(msg):
+            msg.event_status = u"Sending"
+            get_event_info = conversation.mdb.message_event_keys_with_statuses
+            for event_id, _, event_type in get_event_info(msg["message_id"]):
+                if event_type == u"ack":
+                    msg.event_status = u"Accepted"
+                    break
+                if event_type == u"nack":
+                    event = conversation.mdb.get_event(event_id)
+                    msg.event_status = u"Rejected: %s" % (
+                        event["nack_reason"],)
+                    break
+            return msg
+
+        def get_sent_messages(start, stop):
+            return [add_event_status(m)
+                    for m in conversation.sent_messages_in_cache(start, stop)]
+
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(PagedMessageCache(
             conversation.count_inbound_messages(),
@@ -253,8 +271,7 @@ class MessageListView(ConversationTemplateView):
                 start, stop)), 20)
         outbound_message_paginator = Paginator(PagedMessageCache(
             conversation.count_outbound_messages(),
-            lambda start, stop: conversation.sent_messages_in_cache(
-                start, stop)), 20)
+            lambda start, stop: get_sent_messages(start, stop)), 20)
 
         tag_context = {
             'batch_id': batch_id,
@@ -466,6 +483,20 @@ def check_action_is_enabled(f):
                 'show', conversation_key=conversation.key)
         return f(self, request, conversation, *args, **kw)
     return wrapper
+
+
+class FallbackEditConversationView(ConversationApiView):
+    """A fallback 'edit' view that redirects to the 'show' view.
+
+    For use on conversation types that have no custom edit
+    view to prevent 404s from occurring if another part of
+    the user interface directs a person to the edit view.
+    """
+    view_name = 'edit'
+    path_suffix = 'edit/'
+
+    def get(self, request, conversation):
+        return self.redirect_to('show', conversation_key=conversation.key)
 
 
 class ConversationActionView(ConversationTemplateView):
@@ -745,6 +776,8 @@ class ConversationViewDefinitionBase(object):
         self._views = list(self.DEFAULT_CONVERSATION_VIEWS)
         if self.edit_view is not None:
             self._views.append(self.edit_view)
+        else:
+            self._views.append(FallbackEditConversationView)
         self._views.extend(self.extra_views)
 
         self._view_mapping = {}

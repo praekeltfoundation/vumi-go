@@ -3,9 +3,10 @@ describe("go.apps.dialogue.states", function() {
       oneElExists = testHelpers.oneElExists,
       noElExists = testHelpers.noElExists;
 
-  var dialogue = go.apps.dialogue;
+  var plumbing = go.components.plumbing;
 
-  var setUp = dialogue.testHelpers.setUp,
+  var dialogue = go.apps.dialogue,
+      setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,
       newDialogueDiagram = dialogue.testHelpers.newDialogueDiagram;
 
@@ -322,6 +323,15 @@ describe("go.apps.dialogue.states", function() {
         state.preview();
         assert(oneElExists(state.$('.preview.mode')));
       });
+
+      it("should repaint", function() {
+        var repainted = false;
+        state.on('repaint', function() { repainted = true; })
+
+        assert(!repainted);
+        state.preview();
+        assert(repainted);
+      });
     });
 
     describe(".edit", function() {
@@ -347,6 +357,73 @@ describe("go.apps.dialogue.states", function() {
         assert(noElExists(state.$('.edit.mode')));
         state.edit();
         assert(oneElExists(state.$('.edit.mode')));
+      });
+
+      it("should repaint", function() {
+        var repainted = false;
+        state.on('repaint', function() { repainted = true; })
+
+        assert(!repainted);
+        state.edit();
+        assert(repainted);
+      });
+    });
+    
+    describe(".repaint", function() {
+      it("should repaint the relevant endpoints", function() {
+        diagram.model
+          .get('states')
+          .add({
+            uuid: 'a',
+            type: 'dummy',
+            entry_endpoint: {uuid: 'a:entry'},
+            exit_endpoint: {uuid: 'a:exit'}
+          })
+          .add({
+            uuid: 'b',
+            type: 'dummy',
+            entry_endpoint: {uuid: 'b:entry'},
+            exit_endpoint: {uuid: 'b:exit'}
+          })
+          .add({
+            uuid: 'c',
+            type: 'dummy',
+            entry_endpoint: {uuid: 'c:entry'},
+            exit_endpoint: {uuid: 'c:exit'}
+          });
+
+        diagram.model
+          .get('connections')
+          .add({
+            source: 'a:exit',
+            target: 'b:entry'
+          })
+          .add({
+            source: 'b:exit',
+            target: 'c:entry'
+          });
+
+        var repaint = sinon.spy(plumbing.utils, 'repaintDraggable');
+        diagram.states.get('b').repaint();
+
+        assert(repaint.calledWith(diagram.endpoints.get('a:exit').$el));
+        assert(repaint.calledWith(diagram.endpoints.get('b:entry').$el));
+        assert(repaint.calledWith(diagram.endpoints.get('b:exit').$el));
+        assert(repaint.calledWith(diagram.endpoints.get('c:entry').$el));
+
+        assert(!repaint.calledWith(diagram.endpoints.get('a:entry').$el));
+        assert(!repaint.calledWith(diagram.endpoints.get('c:exit').$el));
+
+        repaint.restore();
+      });
+
+      it("should trigger a 'repaint' event", function() {
+        var repainted = false;
+        state.on('repaint', function() { repainted = true; })
+
+        assert(!repainted);
+        state.repaint();
+        assert(repainted);
       });
     });
 

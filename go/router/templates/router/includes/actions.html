@@ -10,7 +10,7 @@
               Activate
           </button>
           <button
-           class="btn btn-danger action"
+           class="btn action"
            data-action="stop" 
            data-url="{% router_screen router 'stop' %}"
            disabled>
@@ -27,7 +27,7 @@
     {% elif router.running %}
         <div class="btn-group">
           <button
-           class="btn btn-primary action"
+           class="btn action"
            data-action="activate"
            data-url="{% router_screen router 'start' %}"
            disabled>
@@ -43,7 +43,7 @@
     {% elif router.stopping %}
       <div class="btn-group">
         <button
-         class="btn btn-primary action"
+         class="btn action"
          data-action="activate"
          data-url="{% router_screen router 'start' %}"
          disabled>
@@ -65,7 +65,7 @@
             Activating: Attempt to stop
         </button>
         <button
-         class="btn btn-danger action"
+         class="btn action"
          data-action="stop"
          data-url="{% router_screen router 'stop' %}"
          disabled>
