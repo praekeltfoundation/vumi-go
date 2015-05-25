@@ -64,6 +64,21 @@ describe("go.apps.dialogue.layout", function() {
           y: 23
         }));
       });
+
+      it("should not create a new state if the mouse is on a state", function() {
+        assert.deepEqual(
+          states.models.pluck('uuid'),
+          ['state1', 'state2', 'state3', 'state4', 'state5']);
+
+        states.at(0).$el.trigger($.Event('dblclick', {
+          pageX: 0,
+          pageY: 0
+        }));
+
+        assert.deepEqual(
+          states.models.pluck('uuid'),
+          ['state1', 'state2', 'state3', 'state4', 'state5']);
+      });
     });
 
     describe("when a state is dragged", function() {
