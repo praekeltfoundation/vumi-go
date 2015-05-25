@@ -4,8 +4,8 @@ import json
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.tests.test_sandbox import (
-    ResourceTestCaseBase, DummyAppWorker)
+from vxsandbox.tests.utils import DummyAppWorker
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
 
 from go.apps.jsbox.contacts import ContactsResource, GroupsResource
 from go.vumitools.tests.helpers import VumiApiHelper

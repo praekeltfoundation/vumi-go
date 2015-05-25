@@ -54,14 +54,22 @@
       }, _(this).result('plumbOptions'));
     },
 
-    destroy: function() {
-      var plumbConnection = this.plumbConnection;
+    destroy: function(options) {
+      options = _.defaults(options || {}, {
+        detach: true,
+        fireDetach: false
+      });
 
-      if (plumbConnection) {
-        this.plumbConnection = null;
-        jsPlumb.detach(plumbConnection);
+      if (this.plumbConnection && options.detach) {
+        // `fireEvent` defaults to `false` according to the docs, not setting
+        // it to `false` appears to cause endless recursion for user-initiated
+        // detaches in jsPlumb 1.7.5 (what one would expect if `fireEvent` was
+        // set to `true`).
+        // jsplumbtoolkit.com/apidocs/classes/jsPlumb.html#method_detach
+        jsPlumb.detach(this.plumbConnection, {fireEvent: options.fireDetach});
       }
 
+      this.plumbConnection = null;
       return this;
     },
 
@@ -134,18 +142,27 @@
     },
 
     onPlumbConnect: function(e) {
-      var sourceId = $(e.source).attr('data-uuid'),
-          targetId = $(e.target).attr('data-uuid'),
-          connectionId = idOfConnection(sourceId, targetId);
+      var sourceId = $(e.source).attr('data-uuid');
+      var targetId = $(e.target).attr('data-uuid');
 
       // Case 1:
+      // -------
+      // Either the source, target or both don't have uuids, so this isn't a
+      // connection we can manage. Trigger an event and exit early.
+      if ((typeof sourceId == 'undefined') || typeof targetId == 'undefined') {
+        this.trigger('error:unknown', e);
+        return;
+      }
+
+      // Case 2:
       // -------
       // The connection model and its view have been added, but we haven't
       // rendered the view (drawn the jsPlumb connection) yet. We don't
       // need to add the connection since it already exists.
+      var connectionId = idOfConnection(sourceId, targetId);
       if (this.has(connectionId)) { return; }
 
-      // Case 2:
+      // Case 3:
       // -------
       // The connection was created in the UI, so no model or view exists yet.
       // We need to create a new connection model and its view.
@@ -153,7 +170,7 @@
           target = this.diagram.endpoints.get(targetId),
           collection = this.determineCollection(source, target);
 
-      // Case 3:
+      // Case 4:
       // -------
       // This kind of connection is not supported
       if (collection === null) {
@@ -168,11 +185,28 @@
     },
 
     onPlumbDisconnect: function(e) {
-      var sourceId = $(e.source).attr('data-uuid'),
-          targetId = $(e.target).attr('data-uuid'),
-          connectionId = idOfConnection(sourceId, targetId);
+      var sourceId = $(e.source).attr('data-uuid');
+      var targetId = $(e.target).attr('data-uuid');
+      var connectionId;
 
       // Case 1:
+      // -------
+      // A new connection was created in the UI, but dropped before it reached
+      // a target, we can ignore it.
+      if (typeof targetId == 'undefined') { return; }
+
+      // Case 2:
+      // -------
+      // The source doesn't have a uuid, so this isn't a connection we can
+      // manage. Trigger an event and exit early.
+      if (typeof sourceId == 'undefined') {
+        this.trigger('error:unknown', e);
+        return;
+      }
+
+      connectionId = idOfConnection(sourceId, targetId);
+
+      // Case 3:
       // -------
       // The connection model and its view have been removed from its
       // collection, so its connection view was destroyed (along with the
@@ -180,11 +214,11 @@
       // and view since they no longer exists.
       if (!this.has(connectionId)) { return; }
 
-      // Case 2:
+      // Case 4:
       // -------
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.
-      this.remove(connectionId);
+      this.remove(connectionId, {detach: false});
     }
   });
 

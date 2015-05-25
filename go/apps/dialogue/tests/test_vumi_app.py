@@ -8,9 +8,10 @@ import pkg_resources
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.tests.helpers import find_nodejs_or_skip_test
-from vumi.application.tests.test_sandbox import (
-    ResourceTestCaseBase, DummyAppWorker)
+from vxsandbox.utils import find_nodejs_or_skip_test
+from vxsandbox.tests.utils import DummyAppWorker
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
+
 from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 
@@ -64,7 +65,7 @@ class TestDialogueApplication(VumiTestCase):
                     'cls': 'go.apps.jsbox.contacts.ContactsResource',
                 },
                 'kv': {
-                    'cls': 'vumi.application.sandbox.RedisResource',
+                    'cls': 'vxsandbox.RedisResource',
                     'redis_manager': {'FAKE_REDIS': self.kv_redis},
                 },
                 'outbound': {

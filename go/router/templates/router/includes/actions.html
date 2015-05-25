@@ -2,40 +2,76 @@
 
 {% if not router.archived %}
     {% if router.stopped %}
-        <button
-         class="btn btn-primary action"
-         data-action='activate'
-         data-url="{% router_screen router 'start' %}">
-            Activate
-        </button>
+        <div class="btn-group">
+          <button
+           class="btn btn-primary action"
+           data-action="activate"
+           data-url="{% router_screen router 'start' %}">
+              Activate
+          </button>
+          <button
+           class="btn action"
+           data-action="stop" 
+           data-url="{% router_screen router 'stop' %}"
+           disabled>
+              Deactivate
+          </button>
+        </div>
 
         <button
          class="btn btn-primary action"
-         data-action='archive'
+         data-action="archive"
          data-url="{% router_screen router 'archive' %}">
             Archive
         </button>
     {% elif router.running %}
+        <div class="btn-group">
+          <button
+           class="btn action"
+           data-action="activate"
+           data-url="{% router_screen router 'start' %}"
+           disabled>
+              Activate
+          </button>   
+          <button
+           class="btn btn-danger action"
+           data-action="stop"
+           data-url="{% router_screen router 'stop' %}">
+              Deactivate
+          </button>
+        </div>
+    {% elif router.stopping %}
+      <div class="btn-group">
+        <button
+         class="btn action"
+         data-action="activate"
+         data-url="{% router_screen router 'start' %}"
+         disabled>
+            Activate
+        </button>         
+        <button
+         class="btn btn-danger action"
+         data-action="stop"
+         data-url="{% router_screen router 'stop' %}">
+            Deactivating: Attempt to stop
+        </button>
+      </div>
+    {% elif router.starting %}
+      <div class="btn-group">
         <button
          class="btn btn-primary action"
-         data-action='stop'
+         data-action="stop"
          data-url="{% router_screen router 'stop' %}">
+            Activating: Attempt to stop
+        </button>
+        <button
+         class="btn action"
+         data-action="stop"
+         data-url="{% router_screen router 'stop' %}"
+         disabled>
             Deactivate
         </button>
-    {% elif router.stopping %}
-      <button
-       class="btn btn-primary action"
-       data-action='stop'
-       data-url="{% router_screen router 'stop' %}">
-          Deactivating: Attempt to stop
-      </button>
-    {% elif router.starting %}
-      <button
-       class="btn btn-primary action"
-       data-action='stop'
-       data-url="{% router_screen router 'stop' %}">
-          Activating: Attempt to stop
-      </button>
+      </div>
     {% endif %}
 {% endif %}
 

@@ -106,8 +106,10 @@ def new_conversation(request):
             conv = request.user_api.new_conversation(
                 conversation_type, name=name,
                 description=description, config=config,
-                extra_endpoints=list(view_def.extra_static_endpoints),
-            )
+                extra_endpoints=list(view_def.extra_static_endpoints))
+            conv = request.user_api.wrap_conversation(conv)
+            conv.start()
+
             messages.info(request, 'Conversation created successfully.')
 
             # Get a new view_def with a conversation object in it.

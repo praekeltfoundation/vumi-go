@@ -5,7 +5,7 @@
 
 import re
 
-from vumi.application.sandbox import SandboxResource
+from vxsandbox import SandboxResource
 
 from vumi.blinkenlights.metrics import SUM, AVG, MIN, MAX, LAST
 

@@ -17,6 +17,12 @@ from go.apps.tests.helpers import AppWorkerHelper
 from go.vumitools.api import VumiApiCommand
 
 
+class BreakerError(Exception):
+    """
+    An exception we can flush without clearing other errors.
+    """
+
+
 class MessageSendBreaker(object):
     """
     A helper to break message sending during a bulk send.
@@ -39,7 +45,7 @@ class MessageSendBreaker(object):
         Send up to self.allow messages, then raise an exception.
         """
         if self._messages_sent >= self.allow:
-            raise Exception("oops")
+            raise BreakerError("oops")
         self._messages_sent += 1
         return self._send_message_via_window(*args, **kw)
 
@@ -359,6 +365,8 @@ class TestBulkMessageApplication(VumiTestCase):
         send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, None)
 
+        self.flushLoggedErrors(BreakerError)
+
     @inlineCallbacks
     def test_interrupted_bulk_send_command_with_duplicates_dedupe(self):
         """
@@ -425,6 +433,8 @@ class TestBulkMessageApplication(VumiTestCase):
 
         send_progress = yield self.app.get_send_progress(conversation, cmd_id)
         self.assertEqual(send_progress, None)
+
+        self.flushLoggedErrors(BreakerError)
 
     @inlineCallbacks
     def test_overlapping_bulk_send_commands(self):
@@ -567,3 +577,38 @@ class TestBulkMessageApplication(VumiTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_send_bad_message(self):
+        """
+        If a message can't be sent, we log the error and continue.
+        """
+        old_send_to = self.app.send_to
+
+        def patched_send_to(to_addr, content, endpoint=None, **kw):
+            if to_addr is None:
+                raise BreakerError("no address")
+            return old_send_to(to_addr, content, endpoint=endpoint, **kw)
+        self.patch(self.app, "send_to", patched_send_to)
+
+        conversation = yield self.setup_conversation()
+        yield self.app_helper.start_conversation(conversation)
+        batch_id = conversation.batch.key
+        window_id = self.app.get_window_id(conversation.key, batch_id)
+
+        yield self.app.send_message_via_window(
+            conversation, window_id, batch_id, "12345", {}, "message 1")
+        yield self.app.send_message_via_window(
+            conversation, window_id, batch_id, None, {}, "broken")
+        yield self.app.send_message_via_window(
+            conversation, window_id, batch_id, "12346", {}, "message 2")
+
+        self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
+
+        [msg1, msg2] = self.app_helper.get_dispatched_outbound()
+        self.assertEqual(
+            [msg1["content"], msg2["content"]], ["message 1", "message 2"])
+
+        [err] = self.flushLoggedErrors(BreakerError)
+        self.assertEqual(err.getErrorMessage(), "no address")

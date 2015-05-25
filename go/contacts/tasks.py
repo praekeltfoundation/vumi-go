@@ -149,6 +149,16 @@ def export_contacts(account_key, contact_keys, include_extra=True):
 
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
+    all_key_count = len(contact_keys)
+
+    message_content_template = 'Please find the CSV data for %s contact(s)'
+
+    if all_key_count > settings.CONTACT_EXPORT_TASK_LIMIT:
+        contact_keys = contact_keys[:settings.CONTACT_EXPORT_TASK_LIMIT]
+        message_content_template = '\n'.join([
+            'NOTE: There are too many contacts to export.',
+            'Please find the CSV data for %%s (out of %s) contacts.' % (
+                all_key_count,)])
 
     contacts = contacts_by_key(contact_store, *contact_keys)
     data = contacts_to_csv(contacts, include_extra)
@@ -159,8 +169,7 @@ def export_contacts(account_key, contact_keys, include_extra=True):
     user_profile = UserProfile.objects.get(user_account=account_key)
 
     email = EmailMessage(
-        'Contacts export',
-        'Please find the CSV data for %s contact(s)' % len(contacts),
+        'Contacts export', message_content_template % len(contacts),
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
 
     email.attach('contacts-export.zip', file, 'application/zip')

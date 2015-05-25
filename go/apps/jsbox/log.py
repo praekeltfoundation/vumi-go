@@ -6,8 +6,9 @@ import datetime
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vxsandbox import LoggingResource
+
 from vumi import log
-from vumi.application.sandbox import LoggingResource
 from vumi.persist.redis_base import Manager
 from vumi.persist.txredis_manager import TxRedisManager
 

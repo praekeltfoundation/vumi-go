@@ -436,22 +436,19 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
     transaction_query = Transaction.objects.filter(
         account_number=account.account_number,
         created__gte=from_date,
-        created__lt=(to_date + relativedelta(days=1)))
+        created__lt=(to_date + relativedelta(days=1)),
+    ).order_by("id")  # We order by id because chunking needs it.
 
-    def generate_chunks(item_iter, items_per_chunk=1000, sep="\n"):
-        data = []
-        for i, item in enumerate(item_iter):
-            data.append(item)
-            if i % items_per_chunk == 0:
-                yield sep.join(serializer.to_json(data))
-                yield sep
-                data = []
-        if data:
+    def generate_chunks(queryset, items_per_chunk=1000, sep="\n"):
+        # NOTE: This chunking method only works if the queryset has a well
+        #       defined order.
+        for i in xrange(0, queryset.count(), items_per_chunk):
+            data = list(queryset[i:i + items_per_chunk].iterator())
             yield sep.join(serializer.to_json(data))
             yield sep
 
     bucket = Bucket('billing.archive')
-    chunks = generate_chunks(transaction_query.iterator())
+    chunks = generate_chunks(transaction_query)
 
     archive = TransactionArchive(
         account=account, filename=filename,
@@ -520,10 +517,16 @@ def low_credit_notification_confirm_sent(res, notification_id):
         return None
 
 
-@task()
-def create_low_credit_notification(account_number, threshold, balance, cutoff_notification):
+@task(ignore_result=True)
+def create_low_credit_notification(
+        account_number, threshold, balance, cutoff_notification):
     """
     Sends a low credit notification. Returns (model instance id, email_task).
+
+    The result of this task is ignored because nothing checks it and
+    success is ensured by ending the task with a call to
+    :func:`low_credit_notification_confirm_sent` which records whether or not
+    the notification was successfully sent.
     """
     account = Account.objects.get(account_number=account_number)
     notification = LowCreditNotification(
@@ -541,7 +544,7 @@ def create_low_credit_notification(account_number, threshold, balance, cutoff_no
         template = 'billing/credit_cutoff_notification_email.txt'
     else:
         template = 'billing/low_credit_notification_email.txt'
-	
+
     message = render_to_string(
         template,
         {

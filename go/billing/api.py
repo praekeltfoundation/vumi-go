@@ -8,10 +8,14 @@ from twisted.internet import defer
 from twisted.internet.threads import deferToThread
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
+from txpostgres.reconnection import ConnectionDead
+# Import psycopg2 via txpostgres because they handle multiple implementations.
+from txpostgres.txpostgres import psycopg2
 
 from go.billing import settings as app_settings
 from go.billing.models import MessageCost
-from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
+from go.billing.utils import (
+    JSONEncoder, JSONDecoder, BillingError, DictRowConnectionPool)
 from go.billing.tasks import create_low_credit_notification
 from go.vumitools.billing_worker import BillingDispatcher
 
@@ -478,12 +482,32 @@ class TransactionResource(BaseResource):
         defer.returnValue(result)
 
 
+class HealthResource(Resource):
+    isLeaf = True
+
+    def __init__(self, health_check_func):
+        Resource.__init__(self)
+        self._health_check_func = health_check_func
+
+    def render_GET(self, request):
+        self._render_health_check(request)
+        return NOT_DONE_YET
+
+    @defer.inlineCallbacks
+    def _render_health_check(self, request):
+        code, content = yield self._health_check_func()
+        request.setResponseCode(code)
+        request.write(content + "\n")
+        request.finish()
+
+
 class Root(BaseResource):
     """The root resource"""
 
     def __init__(self, connection_pool):
         BaseResource.__init__(self, connection_pool)
         self.putChild('transactions', TransactionResource(connection_pool))
+        self.putChild('health', HealthResource(self.health_check))
 
     def getChild(self, name, request):
         if name == '':
@@ -493,3 +517,29 @@ class Root(BaseResource):
     def render_GET(self, request):
         request.setResponseCode(200)  # OK
         return ''
+
+    @defer.inlineCallbacks
+    def health_check(self):
+        """
+        We want our health check to be comprehensive, so we implement it here.
+        """
+        try:
+            yield self._connection_pool.runQuery("SELECT 1")
+        except (ConnectionDead, psycopg2.InterfaceError):
+            defer.returnValue((503, "Database connection unavailable"))
+        # Everything's happy.
+        defer.returnValue((200, "OK"))
+
+
+def billing_api_resource():
+    """
+    Create and return a go.billing.api.Root resource for use with twistd.
+    """
+    connection_string = app_settings.get_connection_string()
+    connection_pool = DictRowConnectionPool(
+        None, connection_string, min=app_settings.API_MIN_CONNECTIONS)
+    resource = Root(connection_pool)
+    # Tests need to know when we're connected, so stash the deferred on the
+    # resource for them to look at.
+    resource._connection_pool_started = connection_pool.start()
+    return resource

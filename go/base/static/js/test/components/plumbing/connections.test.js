@@ -1,6 +1,4 @@
 describe("go.components.plumbing.connections", function() {
-  var stateMachine = go.components.stateMachine;
-
   var plumbing = go.components.plumbing;
 
   var testHelpers = plumbing.testHelpers,
@@ -18,9 +16,6 @@ describe("go.components.plumbing.connections", function() {
   });
 
   describe(".ConnectionView", function() {
-    var ConnectionModel = stateMachine.ConnectionModel,
-        ConnectionView = plumbing.connections.ConnectionView;
-
     var diagram,
         x1,
         y1,
@@ -35,18 +30,33 @@ describe("go.components.plumbing.connections", function() {
     });
 
     describe(".destroy", function() {
-      it("should remove the actual jsPlumb connection", function(done) {
+      it("should detach the connection", function(done) {
         var plumbConnection = x3_y2.plumbConnection;
-
-        assert(plumbConnection);
 
         jsPlumb.bind('connectionDetached', function(e) {
           assert.equal(plumbConnection, e.connection);
-          assert.isNull(x3_y2.plumbConnection);
           done();
         });
 
+        x3_y2.destroy({fireDetach: true});
+      });
+
+      it("should unset the jsPlumb connection", function() {
+        assert.isNotNull(x3_y2.plumbConnection);
         x3_y2.destroy();
+        assert.isNull(x3_y2.plumbConnection);
+      });
+
+      it("should not detach if told not to", function() {
+        var plumbConnection = x3_y2.plumbConnection;
+        var detached = false;
+        jsPlumb.detach(plumbConnection);
+        jsPlumb.bind('connectionDetached', function() { detached = true; });
+        x3_y2.destroy({
+          detach: false,
+          fireDetach: true
+        });
+        assert(!detached);
       });
     });
 
@@ -95,8 +105,6 @@ describe("go.components.plumbing.connections", function() {
   });
 
   describe(".DiagramConnectionGroup", function() {
-    var DiagramConnectionGroup = plumbing.connections.DiagramConnectionGroup;
-
     var diagram,
         connections,
         leftToRight;
@@ -125,11 +133,6 @@ describe("go.components.plumbing.connections", function() {
     });
 
     describe("on 'connection' jsPlumb events", function() {
-      var EndpointView = plumbing.endpoints.EndpointView,
-          EndpointModel = stateMachine.EndpointModel;
-
-      var UnknownEndpointView = EndpointView.extend();
-
       beforeEach(function() {
         // render the diagram to ensure the jsPlumb endpoints are drawn
         diagram.render();
@@ -176,6 +179,44 @@ describe("go.components.plumbing.connections", function() {
 
         jsPlumb.connect({source: a1L1.$el, target: a1L2.$el});
       });
+
+      it("should fire an event if the source is not part of the diagram",
+      function(done) {
+        var source = $('<div>').appendTo(diagram.$el);
+        var a1L1 = diagram.endpoints.get('a1L1');
+
+        diagram.connections.on('error:unknown', function(e) {
+          assert(source.is(e.source));
+          assert(a1L1.$el.is(e.target));
+          assert(source.is(e.connection.source));
+          assert(a1L1.$el.is(e.connection.target));
+          done();
+        });
+
+        jsPlumb.connect({
+          source: source,
+          target: a1L1.$el
+        });
+      });
+
+      it("should fire an event if the target is not part of the diagram",
+      function(done) {
+        var target = $('<div>').appendTo(diagram.$el);
+        var a1L1 = diagram.endpoints.get('a1L1');
+
+        diagram.connections.on('error:unknown', function(e) {
+          assert(a1L1.$el.is(e.source));
+          assert(target.is(e.target));
+          assert(a1L1.$el.is(e.connection.source));
+          assert(target.is(e.connection.target));
+          done();
+        });
+
+        jsPlumb.connect({
+          source: a1L1.$el,
+          target: target
+        });
+      });
     });
 
     describe("on 'connectionDetached' jsPlumb events", function() {
@@ -209,6 +250,42 @@ describe("go.components.plumbing.connections", function() {
         });
 
         jsPlumb.detach(a1L2_b2R2.plumbConnection);
+      });
+
+      it("should ignore the event if the connection has no target", function() {
+        var a1L2_b2R2 = connections.get('a1L2-b2R2');
+        var plumbConnection = a1L2_b2R2.plumbConnection;
+
+        plumbConnection.target = null;
+        a1L2_b2R2.plumbConnection.target = null;
+
+        sinon.spy(console, 'log');
+        jsPlumb.detach(a1L2_b2R2.plumbConnection);
+
+        // jsPlumb logs errors instead of throwing them
+        assert(!console.log.called);
+        console.log.restore();
+      });
+
+      it("should fire an event if the source is not part of the diagram",
+      function(done) {
+        var source = $('<div>').appendTo(diagram.$el);
+        var a1L1 = diagram.endpoints.get('a1L1');
+
+        var conn = jsPlumb.connect({
+          source: source,
+          target: a1L1.$el
+        });
+
+        diagram.connections.on('error:unknown', function(e) {
+          assert(source.is(e.source));
+          assert(a1L1.$el.is(e.target));
+          assert(source.is(e.connection.source));
+          assert(a1L1.$el.is(e.connection.target));
+          done();
+        });
+
+        jsPlumb.detach(conn);
       });
     });
   });

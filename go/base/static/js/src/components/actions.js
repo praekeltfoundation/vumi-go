@@ -38,10 +38,10 @@
 
     messages: {
       success: function() {
-        return capitalise(_(this.action).result('name')) + ' successful!';
+        return capitalise(_(this.action).result('name')) + ' successful.';
       },
       error: function() {
-        return capitalise(_(this.action).result('name')) + ' failed :/';
+        return capitalise(_(this.action).result('name')) + ' failed.';
       },
     },
 

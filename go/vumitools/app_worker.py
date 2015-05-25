@@ -4,6 +4,7 @@ from twisted.internet.defer import (
     inlineCallbacks, returnValue, maybeDeferred, gatherResults)
 
 from vumi import log
+from vumi.message import TransportUserMessage
 from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricPublisher, Metric
@@ -198,7 +199,7 @@ class GoWorkerMixin(object):
             self.vumi_api, msg, conversation_cache=self._conversation_cache)
 
     @inlineCallbacks
-    def find_outboundmessage_for_event(self, event):
+    def _find_outboundmessage_for_event(self, event):
         user_message_id = event.get('user_message_id')
         if user_message_id is None:
             log.error('Received event without user_message_id: %s' % (event,))
@@ -210,14 +211,69 @@ class GoWorkerMixin(object):
 
         returnValue(msg)
 
-    @inlineCallbacks
-    def find_message_for_event(self, event):
-        outbound_message = yield self.find_outboundmessage_for_event(event)
-        if outbound_message:
-            returnValue(outbound_message.msg)
+    _EVENT_OUTBOUND_CACHE_KEY = "outbound_message_json"
+
+    def _get_outbound_from_event_cache(
+            self, event, key=_EVENT_OUTBOUND_CACHE_KEY):
+        """ Retrieve outbound message from the cache on an event.
+
+        :type event:
+            TransportEvent
+        :param event:
+            Event to look up the outbound message on.
+        :param str key:
+            Cache key to look up the message under. Defaults to
+            _EVENT_OUTBOUND_CACHE_KEY.
+
+        :returns:
+            A tuple ``(hit, outbound_message)``. ``hit`` is ``True`` if
+            the message was found in the cache and ``False`` if there was
+            a cache miss.
+        """
+        if key not in event.cache:
+            return False, None
+        outbound_json = event.cache[key]
+        if outbound_json is None:
+            return True, None
+        return True, TransportUserMessage.from_json(outbound_json)
+
+    def _store_outbound_in_event_cache(
+            self, event, outbound, key=_EVENT_OUTBOUND_CACHE_KEY):
+        """ Store an outbound message in the cache on an event.
+
+        :type event:
+            TransportEvent
+        :param event:
+            Event to look store the outbound message on.
+        :type outbound:
+            TransportUserMessage
+        :param outbound:
+            Outbound message to cache.
+        :param str key:
+            Cache key to store the message under. Defaults to
+            _EVENT_OUTBOUND_CACHE_KEY.
+
+        :returns:
+            None
+        """
+        if outbound is None:
+            event.cache[key] = None
+        else:
+            event.cache[key] = outbound.to_json()
 
     @inlineCallbacks
-    def find_inboundmessage_for_reply(self, reply):
+    def find_message_for_event(self, event):
+        hit, outbound_msg = self._get_outbound_from_event_cache(event)
+        if hit:
+            returnValue(outbound_msg)
+
+        outbound = yield self._find_outboundmessage_for_event(event)
+        outbound_msg = outbound.msg if outbound is not None else None
+        self._store_outbound_in_event_cache(event, outbound_msg)
+        returnValue(outbound_msg)
+
+    @inlineCallbacks
+    def _find_inboundmessage_for_reply(self, reply):
         user_message_id = reply.get('in_reply_to')
         if user_message_id is None:
             log.error('Received reply without in_reply_to: %s' % (reply,))
@@ -231,7 +287,7 @@ class GoWorkerMixin(object):
 
     @inlineCallbacks
     def find_message_for_reply(self, reply):
-        inbound_message = yield self.find_inboundmessage_for_reply(reply)
+        inbound_message = yield self._find_inboundmessage_for_reply(reply)
         if inbound_message:
             returnValue(inbound_message.msg)
 

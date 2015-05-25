@@ -392,6 +392,15 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
         [reply] = self.get_dispatched_outbound(connector_name)
         self.assert_reply_matches(reply, msg, reply_content, **md)
 
+    def assert_events_equal(self, events1, events2, clear_caches=True):
+        """ Assert that lists of events are equal, clearing the message
+            cache of each event first if requested.
+        """
+        if clear_caches:
+            for ev in events1 + events2:
+                ev.cache.clear()
+        self.assertEqual(events1, events2)
+
     @inlineCallbacks
     def mk_msg_reply(self, **kw):
         "Create and store an outbound message, then create a reply for it."
@@ -697,7 +706,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
                          ['TRANSPORT_TAG:pool1:1234', 'default'],
                          ['CONVERSATION:app1:conv1', 'default'],
                      ], outbound_hops_from=msg)
-        self.assertEqual([ack], self.get_dispatched_events('app1'))
+        self.assert_events_equal([ack], self.get_dispatched_events('app1'))
 
     @inlineCallbacks
     def test_event_routing_to_app2(self):
@@ -715,7 +724,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
                          ['TRANSPORT_TAG:pool1:9012', 'default'],
                          ['CONVERSATION:app2:conv2', 'default'],
                      ], outbound_hops_from=msg)
-        self.assertEqual([ack], self.get_dispatched_events('app2'))
+        self.assert_events_equal([ack], self.get_dispatched_events('app2'))
 
     @inlineCallbacks
     def test_event_routing_via_custom_endpoint(self):
@@ -735,7 +744,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
                          ['TRANSPORT_TAG:pool1:5678', 'default'],
                          ['CONVERSATION:app1:conv1', 'other']
                      ], outbound_hops_from=msg)
-        self.assertEqual([ack], self.get_dispatched_events('app1'))
+        self.assert_events_equal([ack], self.get_dispatched_events('app1'))
 
     @inlineCallbacks
     def test_event_whose_outbound_has_hops_but_no_user_account(self):
@@ -1089,7 +1098,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
                          ['CONVERSATION:app1:conv1', 'default'],
                      ], outbound_hops_from=msg)
 
-        self.assertEqual([ack], self.get_dispatched_events('app1'))
+        self.assert_events_equal([ack], self.get_dispatched_events('app1'))
 
     @inlineCallbacks
     def test_unroutable_inbound_reply_via_billing(self):
@@ -1352,7 +1361,7 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
                 ['TRANSPORT_TAG:pool1:1234', 'default'],
                 ['ROUTER:router:router1:INBOUND', 'other'],
             ])
-        self.assertEqual(expected, event)
+        self.assert_events_equal([expected], [event])
 
     @inlineCallbacks
     def test_event_for_unroutable_inbound_reply_on_last_hop(self):

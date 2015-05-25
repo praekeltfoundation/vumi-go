@@ -6,10 +6,17 @@
 {% block content_title %}Dashboard{% endblock %}
 
 {% block content_actions_left %}
-    <a href="{% url 'wizard:create' %}" class="btn btn-primary">New conversation</a>
+    <a href="{% url 'routing' %}" class="btn btn-primary">Campaign Routing</a>
 {% endblock %}
 
 {% block content_actions_right %}
+
+    <div class="pull-left">
+        <a href="{% url 'channels:new_channel' %}" class="btn btn-primary">New channel</a>
+        <a href="{% url 'routers:new_router' %}" class="btn btn-primary">New router</a>
+        <a href="{% url 'conversations:new_conversation' %}" class="btn btn-primary">New conversation</a>
+    </div>
+
     <form id="search-filter" name="search-filter" action="" method="get" class="form-inline pull-right" role="search">
         <div class="form-group">
             <input type="text" class="form-control" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
@@ -23,11 +30,6 @@
     <div class="row">
         <div class="col-md-3 sidebar" role="navigation">
             
-            <p>
-                <a href="{% url 'routing' %}" class="btn btn-primary">Configure channels (alpha)</a>
-            <p>
-            
-
             <ul class="nav nav-list">
                 
                 <li>

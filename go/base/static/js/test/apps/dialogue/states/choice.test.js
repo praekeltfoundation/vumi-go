@@ -212,5 +212,78 @@ describe("go.apps.dialogue.states.choice", function() {
           editMode.$('[data-uuid="choice:new-endpoint"]')));
       });
     });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+
+        assert.equal(state.$('.char-count').text().trim(), '44 characters used.');
+        var endpoints = state.model.get('choice_endpoints');
+        endpoints.at(0).set('label', 'A new label');
+        endpoints.at(1).set('label', 'Another  new label');
+
+        state.model.set('text', 'Some text for testing char count');
+        state.render();
+        assert.equal(state.$('.char-count').text().trim(), '68 characters used.');
+      });
+    });
+  });
+
+  describe(".ChoiceStatePreviewView", function() {
+    var ChoiceStatePreviewView = states.choice.ChoiceStatePreviewView;
+
+    var state,
+        previewMode,
+        choice1,
+        choice2;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      previewMode = state.modes.preview;
+      state.preview();
+    });
+
+    describe(".render", function() {
+      it("should display the char count", function() {
+        assert.equal(state.$('.char-count').text().trim(), '44 characters used.');
+        var endpoints = state.model.get('choice_endpoints');
+        endpoints.at(0).set('label', 'A new label');
+        endpoints.at(1).set('label', 'Another  new label');
+        state.model.set('text', 'Some text for testing char count');
+        state.render();
+        assert.equal(state.$('.char-count').text().trim(), '68 characters used.');
+      });
+    });
+  });
+
+  describe(".ChoiceStateView", function() {
+    var state;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      state.maxChars = 100;
+    });
+
+    describe(".calcChars", function(){
+      it("should calculate the number of characters used", function(){
+        assert.equal(state.calcChars(), 44);
+      });
+    });
+
+    describe(".charsLeft", function(){
+      it("should calculate the number of characters left", function(){
+        assert.equal(state.charsLeft(), 56);
+      });
+    });
+
+    describe(".tooManyChars", function(){
+      it("should not add a class when maxChars exceeds calcChars", function(){
+        assert.equal(state.tooManyChars(),'');
+      });
+
+      it("should add a class when calcChars exceeds maxChars", function(){
+        state.maxChars = 5;
+        assert.equal(state.tooManyChars(), 'text-danger');
+      });
+    });
   });
 });

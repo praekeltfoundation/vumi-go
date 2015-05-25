@@ -10,10 +10,13 @@
 
   var dialogue = go.apps.dialogue,
       connections = dialogue.connections,
-      states = dialogue.states;
+      states = dialogue.states,
+      entry = dialogue.entry;
 
   // The main view containing all the dialogue states and connections
   var DialogueDiagramView = DiagramView.extend({
+    className: 'boxes',
+
     stateType: states.DialogueStateView,
     stateCollectionType: states.DialogueStateCollection,
 
@@ -22,6 +25,7 @@
 
     initialize: function(options) {
       DialogueDiagramView.__super__.initialize.call(this, options);
+      this.entryPoint = new entry.DialogueEntryPointView({diagram: this});
       go.utils.bindEvents(this.bindings, this);
     },
 
@@ -33,6 +37,13 @@
       'error:unsupported connections': function(source, target, plumbConnection) {
         jsPlumb.detach(plumbConnection, {fireEvent: false});
       }
+    },
+
+    render: function() {
+      this.$el.addClass(this.className);
+      this.entryPoint.$el.appendTo(this.$el);
+      DialogueDiagramView.__super__.render.call(this);
+      this.entryPoint.render();
     }
   });
 

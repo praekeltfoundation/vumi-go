@@ -49,10 +49,15 @@ class BulkMessageApplication(GoApplicationWorker):
         to_addr = data['to_addr']
         content = data['content']
         msg_options = data['msg_options']
-        msg = yield self.send_to(
-            to_addr, content, endpoint='default', **msg_options)
-        yield self.window_manager.set_external_id(
-            window_id, flight_key, msg['message_id'])
+        try:
+            msg = yield self.send_to(
+                to_addr, content, endpoint='default', **msg_options)
+        except Exception:
+            # Log the error and move on.
+            log.err()
+        else:
+            yield self.window_manager.set_external_id(
+                window_id, flight_key, msg['message_id'])
 
     def on_window_cleanup(self, window_id):
         log.info('Finished window %s, removing.' % (window_id,))

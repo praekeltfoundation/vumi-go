@@ -2,12 +2,21 @@
 
 {% if not conversation.archived %}
     {% if conversation.stopped %}
-        <button
-         class="btn btn-primary action" 
-         data-action='activate'
-         data-url="{% conversation_screen conversation 'start' %}">
-            Activate
-        </button>
+        <div class="btn-group">
+          <button
+           class="btn btn-primary action" 
+           data-action='activate'
+           data-url="{% conversation_screen conversation 'start' %}">
+              Activate
+          </button>
+          <button
+            class="btn action" 
+            data-action='stop'
+            data-url="{% conversation_screen conversation 'stop' %}"
+            disabled>
+              Deactivate
+          </button>
+        </div>
 
         <button
          class="btn btn-primary action" 
@@ -16,25 +25,52 @@
             Archive
         </button>
     {% elif conversation.running %}
+        <div class="btn-group">
+           <button
+              class="btn action" 
+              data-action='activate'
+              data-url="{% conversation_screen conversation 'start' %}"
+              disabled>
+                Activate
+          </button>
+          <button
+              class="btn btn-danger action" 
+              data-action='stop'
+              data-url="{% conversation_screen conversation 'stop' %}">
+              Deactivate
+          </button>
+        </div>
+    {% elif conversation.stopping %}
+      <div class="btn-group">
+          <button
+            class="btn action" 
+            data-action='activate'
+            data-url="{% conversation_screen conversation 'start' %}"
+            disabled>
+              Activate
+          </button>
+          <button
+           class="btn btn-danger action" 
+           data-action='stop'
+           data-url="{% conversation_screen conversation 'stop' %}">
+              Deactivating: Attempt to stop
+          </button>
+      </div>
+    {% elif conversation.starting %}
+      <div class="btn-group">
         <button
          class="btn btn-primary action" 
          data-action='stop'
-         data-url="{% conversation_screen conversation 'stop' %}">
+         data-url="{% conversation_screen conversation 'start' %}">
+            Activating: Attempt to stop
+        </button>
+        <button
+         class="btn action" 
+         data-action='stop'
+         data-url="{% conversation_screen conversation 'stop' %}"
+         disabled>
             Deactivate
         </button>
-    {% elif conversation.stopping %}
-      <button
-       class="btn btn-primary action" 
-       data-action='stop'
-       data-url="{% conversation_screen conversation 'stop' %}">
-          Deactivating: Attempt to stop
-      </button>
-    {% elif conversation.starting %}
-      <button
-       class="btn btn-primary action" 
-       data-action='stop'
-       data-url="{% conversation_screen conversation 'stop' %}">
-          Activating: Attempt to stop
-      </button>
+      </div>
     {% endif %}
 {% endif %}

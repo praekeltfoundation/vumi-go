@@ -1,12 +1,12 @@
 describe("go.apps.dialogue.states", function() {
   var testHelpers = go.testHelpers,
       oneElExists = testHelpers.oneElExists,
-      noElExists = testHelpers.noElExists,
-      unregisterModels = testHelpers.unregisterModels;
+      noElExists = testHelpers.noElExists;
 
-  var dialogue = go.apps.dialogue;
+  var plumbing = go.components.plumbing;
 
-  var setUp = dialogue.testHelpers.setUp,
+  var dialogue = go.apps.dialogue,
+      setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,
       newDialogueDiagram = dialogue.testHelpers.newDialogueDiagram;
 
@@ -100,8 +100,6 @@ describe("go.apps.dialogue.states", function() {
   });
 
   describe(".DialogueStateEditView", function() {
-    var DialogueStateEditView = dialogue.states.DialogueStateEditView;
-
     var state,
         editMode;
 
@@ -114,63 +112,34 @@ describe("go.apps.dialogue.states", function() {
     describe("on 'activate'", function() {
       it("should keep a backup of the state's model's attributes",
       function(done) {
-        editMode.on('activate', function() {
-          assert.deepEqual(editMode.modelBackup, {
-            uuid: 'state4',
-            name: 'New Dummy',
-            type: 'dummy',
-            store_as: 'new-dummy',
-            entry_endpoint: {'uuid':'endpoint6'},
-            exit_endpoint: {'uuid':'endpoint7'},
-            user_defined_store_as: false,
-            ordinal: 3
-          });
+        var newData;
+        var oldData;
 
+        editMode.on('activate', function() {
+          assert.deepEqual(editMode.modelBackup, newData);
+          assert.notDeepEqual(editMode.modelBackup, oldData);
           done();
         });
 
-        assert.deepEqual(editMode.modelBackup, {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
-
+        oldData = state.model.toJSON();
         state.model.set('name', 'New Dummy');
+        newData = state.model.toJSON();
         editMode.trigger('activate');
       });
     });
 
     describe(".cancel", function() {
       it("should change the model back to its old state", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
+        var newData;
+        var oldData;
 
+        oldData = state.model.toJSON();
         state.model.set('name', 'New Dummy');
-        editMode.cancel();
+        newData = state.model.toJSON();
 
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
+        editMode.cancel();
+        assert.deepEqual(state.model.toJSON(), oldData);
+        assert.notDeepEqual(state.model.toJSON(), newData);
       });
     });
 
@@ -259,30 +228,17 @@ describe("go.apps.dialogue.states", function() {
 
     describe("when the '.cancel' button is clicked", function() {
       it("should change the model back to its old state", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
+        var newData;
+        var oldData;
 
+        oldData = state.model.toJSON();
         state.model.set('name', 'New Dummy');
+        newData = state.model.toJSON();
         editMode.$('.cancel').click();
 
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          store_as: 'dummy-message-1',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          user_defined_store_as: false,
-          ordinal: 3
-        });
+        editMode.cancel();
+        assert.deepEqual(state.model.toJSON(), oldData);
+        assert.notDeepEqual(state.model.toJSON(), newData);
       });
 
       it("should switch back to the preview view", function() {
@@ -302,8 +258,6 @@ describe("go.apps.dialogue.states", function() {
   });
 
   describe(".DialogueStatePreviewView", function() {
-    var DialogueStatePreviewView = dialogue.states.DialogueStatePreviewView;
-
     var state,
         previewMode;
 
@@ -323,8 +277,6 @@ describe("go.apps.dialogue.states", function() {
   });
 
   describe(".DialogueStateView", function() {
-    var DummyStateModel = dialogue.models.DummyStateModel;
-
     var state;
 
     beforeEach(function() {
@@ -371,6 +323,15 @@ describe("go.apps.dialogue.states", function() {
         state.preview();
         assert(oneElExists(state.$('.preview.mode')));
       });
+
+      it("should repaint", function() {
+        var repainted = false;
+        state.on('repaint', function() { repainted = true; })
+
+        assert(!repainted);
+        state.preview();
+        assert(repainted);
+      });
     });
 
     describe(".edit", function() {
@@ -397,6 +358,73 @@ describe("go.apps.dialogue.states", function() {
         state.edit();
         assert(oneElExists(state.$('.edit.mode')));
       });
+
+      it("should repaint", function() {
+        var repainted = false;
+        state.on('repaint', function() { repainted = true; })
+
+        assert(!repainted);
+        state.edit();
+        assert(repainted);
+      });
+    });
+    
+    describe(".repaint", function() {
+      it("should repaint the relevant endpoints", function() {
+        diagram.model
+          .get('states')
+          .add({
+            uuid: 'a',
+            type: 'dummy',
+            entry_endpoint: {uuid: 'a:entry'},
+            exit_endpoint: {uuid: 'a:exit'}
+          })
+          .add({
+            uuid: 'b',
+            type: 'dummy',
+            entry_endpoint: {uuid: 'b:entry'},
+            exit_endpoint: {uuid: 'b:exit'}
+          })
+          .add({
+            uuid: 'c',
+            type: 'dummy',
+            entry_endpoint: {uuid: 'c:entry'},
+            exit_endpoint: {uuid: 'c:exit'}
+          });
+
+        diagram.model
+          .get('connections')
+          .add({
+            source: 'a:exit',
+            target: 'b:entry'
+          })
+          .add({
+            source: 'b:exit',
+            target: 'c:entry'
+          });
+
+        var repaint = sinon.spy(plumbing.utils, 'repaintDraggable');
+        diagram.states.get('b').repaint();
+
+        assert(repaint.calledWith(diagram.endpoints.get('a:exit').$el));
+        assert(repaint.calledWith(diagram.endpoints.get('b:entry').$el));
+        assert(repaint.calledWith(diagram.endpoints.get('b:exit').$el));
+        assert(repaint.calledWith(diagram.endpoints.get('c:entry').$el));
+
+        assert(!repaint.calledWith(diagram.endpoints.get('a:entry').$el));
+        assert(!repaint.calledWith(diagram.endpoints.get('c:exit').$el));
+
+        repaint.restore();
+      });
+
+      it("should trigger a 'repaint' event", function() {
+        var repainted = false;
+        state.on('repaint', function() { repainted = true; })
+
+        assert(!repainted);
+        state.repaint();
+        assert(repainted);
+      });
     });
 
     describe("when the '.titlebar .remove' button is clicked", function() {
@@ -418,88 +446,6 @@ describe("go.apps.dialogue.states", function() {
     });
   });
 
-  describe(".DialogueStateGridView", function() {
-    var states,
-        grid;
-
-    beforeEach(function() {
-      states = diagram.states.members.get('states');
-      grid = states.grid;
-    });
-
-    describe("when a state is added", function() {
-      it("should add the state to the grid", function(done) {
-        grid.items.on('add', function(key) {
-          assert.equal(key, 'new-state');
-          done();
-        });
-
-        states.add({model: {uuid: 'new-state'}});
-      });
-    });
-
-    describe("when a state is removed", function() {
-      it("should remove the state from the grid", function(done) {
-        grid.items.on('remove', function(key) {
-          assert.equal(key, 'state4');
-          done();
-        });
-
-        states.remove('state4');
-      });
-    });
-
-    describe("when the user tries to drag a state", function() {
-      beforeEach(function() {
-        diagram.render();
-      });
-
-      it("should allow the state to be sorted", function() {
-        assert.deepEqual(
-          states.keys(),
-          ['state1','state2','state3','state4', 'state5']);
-
-        $('[data-uuid="state3"] .titlebar')
-          .simulate('mousedown')
-          .simulate('drag', {dx: -550});
-
-        assert.deepEqual(
-          states.keys(),
-          ['state1','state3','state2','state4', 'state5']);
-      });
-    });
-
-    describe("when the user clicks the '.add' button", function() {
-      var i;
-
-      beforeEach(function() {
-        i = 0;
-        sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
-        diagram.render();
-      });
-
-      afterEach(function() {
-        uuid.v4.restore();
-      });
-
-      it("should add a new state", function() {
-        assert(!diagram.states.has('new-state'));
-        assert.isUndefined(diagram.model.get('states').get('new-state'));
-
-        grid.$('.add').click();
-
-        assert(diagram.states.has('new-state'));
-        assert.isDefined(diagram.model.get('states').get('new-state'));
-      });
-
-      it("should keep the button at the end of the grid", function() {
-        assert.equal(grid.items.indexOfKey('add-btn'), 5);
-        grid.$('.add').click();
-        assert.equal(grid.items.indexOfKey('add-btn'), 6);
-      });
-    });
-  });
-
   describe(".DialogueStateCollection", function() {
     var DummyStateView = dialogue.states.dummy.DummyStateView;
 
@@ -507,54 +453,6 @@ describe("go.apps.dialogue.states", function() {
 
     beforeEach(function() {
       states = diagram.states.members.get('states');
-    });
-
-    describe("when its states are reordered", function() {
-      beforeEach(function() {
-        diagram.render();
-      });
-
-      it("should change its diagram's model's start state accordingly",
-      function() {
-        assert.equal(
-          diagram.model.get('start_state'),
-          states.get('state1').model);
-
-        assert.deepEqual(
-          states.keys(),
-          ['state1', 'state2', 'state3', 'state4', 'state5']);
-
-        $('[data-uuid="state3"] .titlebar')
-          .simulate('mousedown')
-          .simulate('drag', {dx: -750});
-
-        assert.deepEqual(
-          states.keys(),
-          ['state3','state1','state2','state4', 'state5']);
-
-        assert.equal(
-          diagram.model.get('start_state'),
-          states.get('state3').model);
-      });
-    });
-
-    describe("when a state is removed", function() {
-      beforeEach(function() {
-        diagram.render();
-      });
-
-      it("should change its diagram's model's start state accordingly",
-      function() {
-        assert.equal(
-          diagram.model.get('start_state'),
-          states.get('state1').model);
-
-        states.remove('state1');
-
-        assert.equal(
-          diagram.model.get('start_state'),
-          states.get('state2').model);
-      });
     });
 
     describe(".reset", function() {
@@ -568,14 +466,62 @@ describe("go.apps.dialogue.states", function() {
       function(done){
         var old = states.get('state3');
 
+        old.model.get('layout').set({
+          x: 23,
+          y: 21
+        });
+
         states.on('add', function(id, state) {
           assert(state instanceof DummyStateView);
-          assert.equal(state.model.get('ordinal'), 3);
+          assert.deepEqual(state.model.get('layout').coords(), {
+            x: 23,
+            y: 21
+          });
+
           done();
         });
 
-        old.model.set('ordinal', 3);
         states.reset(old, 'dummy');
+      });
+    });
+
+    describe(".render", function() {
+      it("should render its states", function() {
+        var state = states.get('state4');
+        assert.equal(state.$('.main').text().trim(), '');
+
+        states.render();
+
+        assert.equal(
+          state.$('.main').text().trim(),
+          'dummy preview mode: Dummy Message 1');
+      });
+
+      it("should append its state elements to the diagram element", function() {
+        assert(noElExists(diagram.$('[data-uuid="state4"]')));
+        states.render();
+        assert(oneElExists(diagram.$('[data-uuid="state4"]')));
+      });
+
+      it("should render the layout", function() {
+        var state = states.get('state4');
+
+        state.model.get('layout').set({
+          x: 40,
+          y: 40
+        });
+
+        assert.notDeepEqual(state.$el.offset(), states.layout.offsetOf({
+          x: 40,
+          y: 40
+        }));
+
+        states.render();
+
+        assert.deepEqual(state.$el.offset(), states.layout.offsetOf({
+          x: 40,
+          y: 40
+        }));
       });
     });
   });

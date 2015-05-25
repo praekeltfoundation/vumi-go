@@ -4,16 +4,13 @@
 {% block content_extraclass %}campaigns dialogue{% endblock %}
 
 {% block content_actions_left %}
-    <button class="btn btn-primary" id='new-state'>
-        Create new message
-    </button>
 {% endblock %}
 
 {% block content_actions_right %}
   <div class="pull-left form-inline">
       <div class="form-group">
           <input id="repeatable" type="checkbox">
-          <label>Enable users to submit multiple surveys</label>
+          <label>Enable users to submit multiple dialogues</label>
       </div>
 
       <div class="form-group">
@@ -31,13 +28,21 @@
 
   <div class="pull-right">
     <a href="{% conversation_screen conversation %}">Cancel</a>
+    <button id="save-and-exit" class="btn btn-primary">Save and exit</button>
     <button id="save" class="btn btn-primary">Save</button>
   </div>
 {% endblock %}
 
 {% block content_main %}
     <div class="main-content">
-        <div id="diagram"></div>
+        <div id="diagram">
+            <div class="alert alert-info alert-dismissible info-add-state" role="alert">
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+              </button>
+              Double click on any empty space to add a new screen.
+            </div>
+        </div>
     </div>
 {% endblock %}
 

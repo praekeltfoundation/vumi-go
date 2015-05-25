@@ -2,12 +2,10 @@ import csv
 import json
 import logging
 import functools
-import re
 import sys
 from StringIO import StringIO
 from collections import defaultdict
 
-from django.conf import settings
 from django.views.generic import View, TemplateView
 from django import forms
 from django.shortcuts import redirect, Http404
@@ -18,7 +16,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from vumi.message import parse_vumi_date
 
-from go.base import message_store_client as ms_client
 from go.base.utils import page_range_window, sendfile
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
@@ -241,13 +238,30 @@ class MessageListView(ConversationTemplateView):
         :param str query:
             The query string to search messages for in the batch's inbound
             messages.
+            NOTE: This is currently unused.
         """
         direction = request.GET.get('direction', 'inbound')
         page = request.GET.get('p', 1)
-        query = request.GET.get('q', None)
-        token = None
 
         batch_id = conversation.batch.key
+
+        def add_event_status(msg):
+            msg.event_status = u"Sending"
+            get_event_info = conversation.mdb.message_event_keys_with_statuses
+            for event_id, _, event_type in get_event_info(msg["message_id"]):
+                if event_type == u"ack":
+                    msg.event_status = u"Accepted"
+                    break
+                if event_type == u"nack":
+                    event = conversation.mdb.get_event(event_id)
+                    msg.event_status = u"Rejected: %s" % (
+                        event["nack_reason"],)
+                    break
+            return msg
+
+        def get_sent_messages(start, stop):
+            return [add_event_status(m)
+                    for m in conversation.sent_messages_in_cache(start, stop)]
 
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(PagedMessageCache(
@@ -256,8 +270,7 @@ class MessageListView(ConversationTemplateView):
                 start, stop)), 20)
         outbound_message_paginator = Paginator(PagedMessageCache(
             conversation.count_outbound_messages(),
-            lambda start, stop: conversation.sent_messages_in_cache(
-                start, stop)), 20)
+            lambda start, stop: get_sent_messages(start, stop)), 20)
 
         tag_context = {
             'batch_id': batch_id,
@@ -269,32 +282,7 @@ class MessageListView(ConversationTemplateView):
             'message_direction': direction,
         }
 
-        # If we're doing a query we can shortcut the results as we don't
-        # need all the message paginator stuff since we're loading the results
-        # asynchronously with JavaScript.
-        client = ms_client.Client(settings.MESSAGE_STORE_API_URL)
-        if query and not token:
-            token = client.match(batch_id, direction, [{
-                'key': 'msg.content',
-                'pattern': re.escape(query),
-                'flags': 'i',
-                }])
-            tag_context.update({
-                'query': query,
-                'token': token,
-            })
-            return tag_context
-        elif query and token:
-            match_result = ms_client.MatchResult(client, batch_id, direction,
-                                                    token, page=int(page),
-                                                    page_size=20)
-            message_paginator = match_result.paginator
-            tag_context.update({
-                'token': token,
-                'query': query,
-                })
-
-        elif direction == 'inbound':
+        if direction == 'inbound':
             message_paginator = inbound_message_paginator
         else:
             message_paginator = outbound_message_paginator
@@ -339,8 +327,8 @@ class MessageListView(ConversationTemplateView):
                                         in_reply_to, content)
                 messages.info(request, 'Reply scheduled for sending.')
             else:
-                messages.error(request,
-                    'Something went wrong. Please try again.')
+                messages.error(
+                    request, 'Something went wrong. Please try again.')
         return self.redirect_to(
             'message_list', conversation_key=conversation.key)
 
@@ -369,7 +357,7 @@ class EditConversationDetailView(ConversationTemplateView):
     def process_form(self, request, conversation):
         form = self.edit_form(request.POST)
         if not form.is_valid():
-            return self._render_forms(request, conversation, form)
+            return self._render_form(request, conversation, form)
 
         # NOTE: we're dealing with a conversation wrapper here so set the
         #       internal `c` object's attributes.
@@ -414,10 +402,10 @@ class EditConversationView(ConversationTemplateView):
 
     def _render_forms(self, request, conversation, edit_forms):
         return self.render_to_response({
-                'conversation': conversation,
-                'edit_forms_media': self.sum_media(edit_forms),
-                'edit_forms': edit_forms,
-                })
+            'conversation': conversation,
+            'edit_forms_media': self.sum_media(edit_forms),
+            'edit_forms': edit_forms,
+        })
 
     def get(self, request, conversation):
         edit_forms = self.make_forms(conversation)
@@ -494,6 +482,20 @@ def check_action_is_enabled(f):
                 'show', conversation_key=conversation.key)
         return f(self, request, conversation, *args, **kw)
     return wrapper
+
+
+class FallbackEditConversationView(ConversationApiView):
+    """A fallback 'edit' view that redirects to the 'show' view.
+
+    For use on conversation types that have no custom edit
+    view to prevent 404s from occurring if another part of
+    the user interface directs a person to the edit view.
+    """
+    view_name = 'edit'
+    path_suffix = 'edit/'
+
+    def get(self, request, conversation):
+        return self.redirect_to('show', conversation_key=conversation.key)
 
 
 class ConversationActionView(ConversationTemplateView):
@@ -773,6 +775,8 @@ class ConversationViewDefinitionBase(object):
         self._views = list(self.DEFAULT_CONVERSATION_VIEWS)
         if self.edit_view is not None:
             self._views.append(self.edit_view)
+        else:
+            self._views.append(FallbackEditConversationView)
         self._views.extend(self.extra_views)
 
         self._view_mapping = {}
