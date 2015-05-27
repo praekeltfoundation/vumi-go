@@ -437,9 +437,10 @@ def _people(request):
 
     key_count = len(list(keys))
     limit = min(int(request.GET.get('limit', 100)), key_count)
-    # If we have a continuation token, it means there are more than 10k keys.
+    # If we have a continuation token, it means there are more than
+    # `fetch_limit` keys.
     if getattr(keys, 'continuation', None) is not None:
-        key_count = "10k+"
+        key_count = "%s+" % (fetch_limit,)
     messages.info(request, "Showing %s of %s contact(s)" % (limit, key_count))
 
     smart_group_form = SmartGroupForm(initial={'query': query})

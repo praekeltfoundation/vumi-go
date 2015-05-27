@@ -235,7 +235,7 @@ class TestContacts(BaseContactsTestCase):
         # This assumes we're using raw index pagination (which sorts by key)
         # under the hood.
         self.assertEqual(ckeys[:1], sorted(c.key for c in response_contacts))
-        self.assertContains(response, "Showing 1 of 10k+ contact(s)")
+        self.assertContains(response, "Showing 1 of 2+ contact(s)")
         self.assertContains(response, ckeys[0])
         self.assertNotContains(response, ckeys[1])
         self.assertNotContains(response, ckeys[2])
