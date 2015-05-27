@@ -93,7 +93,6 @@ class ShowRouterView(RouterTemplateView):
         params = {
             'router': router,
             'is_editable': self.view_def.is_editable,
-            'user_api': request.user_api,
         }
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 

@@ -423,19 +423,28 @@ def _people(request):
     #       the duplication.
     user_query = request.GET.get('q', '')
     query = user_query
+    # The _fetch_limit param is mostly for testing, but may be useful as a
+    # production hack if we really need to count all contacts or something.
+    fetch_limit = int(request.GET.get('_fetch_limit', 10000))
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
 
+        # TODO: Use pagination here.
         keys = contact_store.contacts.raw_search(query).get_keys()
     else:
-        keys = contact_store.list_contacts()
+        keys = contact_store.list_contacts_page(max_results=fetch_limit)
 
-    limit = min(int(request.GET.get('limit', 100)), len(keys))
-    messages.info(request, "Showing %s of %s contact(s)" % (limit, len(keys)))
+    key_count = len(list(keys))
+    limit = min(int(request.GET.get('limit', 100)), key_count)
+    # If we have a continuation token, it means there are more than
+    # `fetch_limit` keys.
+    if getattr(keys, 'continuation', None) is not None:
+        key_count = "%s+" % (fetch_limit,)
+    messages.info(request, "Showing %s of %s contact(s)" % (limit, key_count))
 
     smart_group_form = SmartGroupForm(initial={'query': query})
-    contacts = utils.contacts_by_key(contact_store, *keys[:limit])
+    contacts = utils.contacts_by_key(contact_store, *list(keys)[:limit])
 
     return render(request, 'contacts/contact_list.html', {
         'query': user_query,
