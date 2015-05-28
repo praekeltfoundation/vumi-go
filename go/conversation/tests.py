@@ -13,6 +13,7 @@ from django.utils.unittest import skip
 from vumi.message import TransportUserMessage
 
 import go.base.utils
+import go.conversation.settings
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
