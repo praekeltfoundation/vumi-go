@@ -5,6 +5,8 @@ from datetime import date
 from StringIO import StringIO
 from zipfile import ZipFile
 
+import mock
+
 from django import forms
 from django.core import mail
 from django.core.urlresolvers import reverse
@@ -181,6 +183,7 @@ class BaseConversationViewTestCase(GoDjangoTestCase):
 
 
 class TestConversationsDashboardView(BaseConversationViewTestCase):
+
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
@@ -353,6 +356,10 @@ class TestNewConversationView(BaseConversationViewTestCase):
 
 
 class TestConversationViews(BaseConversationViewTestCase):
+
+    with_event_statuses = mock.patch(
+        'go.conversation.settings.ENABLE_EVENT_STATUSES_IN_MESSAGE_LIST', True)
+
     def setUp(self):
         super(TestConversationViews, self).setUp()
         self.msg_helper = self.add_helper(
@@ -844,6 +851,19 @@ class TestConversationViews(BaseConversationViewTestCase):
         make_stored_msgs({'sensitive': False})
         assert_messages(2)
 
+    def test_message_list_outbound_statuses_disabled(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        self.msg_helper.make_stored_outbound(conv, "hi")
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+        self.assertContains(r_out, "<td>-", html=True)
+        self.assertNotContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Accepted", html=True)
+        self.assertNotContains(r_out, "<td>Rejected", html=True)
+
+    @with_event_statuses
     def test_message_list_outbound_status_pending(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         self.msg_helper.make_stored_outbound(conv, "hi")
@@ -855,6 +875,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(r_out, "<td>Accepted", html=True)
         self.assertNotContains(r_out, "<td>Rejected", html=True)
 
+    @with_event_statuses
     def test_message_list_outbound_status_failed(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msg = self.msg_helper.make_stored_outbound(conv, "hi")
@@ -867,6 +888,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(r_out, "<td>Sending", html=True)
         self.assertNotContains(r_out, "<td>Accepted", html=True)
 
+    @with_event_statuses
     def test_message_list_outbound_status_sent(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msg = self.msg_helper.make_stored_outbound(conv, "hi")
