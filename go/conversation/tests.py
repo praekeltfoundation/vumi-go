@@ -5,8 +5,6 @@ from datetime import date
 from StringIO import StringIO
 from zipfile import ZipFile
 
-import mock
-
 from django import forms
 from django.core import mail
 from django.core.urlresolvers import reverse
@@ -357,13 +355,15 @@ class TestNewConversationView(BaseConversationViewTestCase):
 
 class TestConversationViews(BaseConversationViewTestCase):
 
-    with_event_statuses = mock.patch(
-        'go.conversation.settings.ENABLE_EVENT_STATUSES_IN_MESSAGE_LIST', True)
-
     def setUp(self):
         super(TestConversationViews, self).setUp()
         self.msg_helper = self.add_helper(
             GoMessageHelper(vumi_helper=self.vumi_helper))
+
+    def enable_event_statuses(self):
+        self.monkey_patch(
+            go.conversation.settings, 'ENABLE_EVENT_STATUSES_IN_MESSAGE_LIST',
+            True)
 
     def test_show_no_content_block(self):
         conv = self.user_helper.create_conversation(u'dummy')
@@ -863,8 +863,8 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(r_out, "<td>Accepted", html=True)
         self.assertNotContains(r_out, "<td>Rejected", html=True)
 
-    @with_event_statuses
     def test_message_list_outbound_status_pending(self):
+        self.enable_event_statuses()
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         self.msg_helper.make_stored_outbound(conv, "hi")
 
@@ -875,8 +875,8 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(r_out, "<td>Accepted", html=True)
         self.assertNotContains(r_out, "<td>Rejected", html=True)
 
-    @with_event_statuses
     def test_message_list_outbound_status_failed(self):
+        self.enable_event_statuses()
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msg = self.msg_helper.make_stored_outbound(conv, "hi")
         self.msg_helper.make_stored_nack(conv, msg, nack_reason="no spoons")
@@ -888,8 +888,8 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(r_out, "<td>Sending", html=True)
         self.assertNotContains(r_out, "<td>Accepted", html=True)
 
-    @with_event_statuses
     def test_message_list_outbound_status_sent(self):
+        self.enable_event_statuses()
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msg = self.msg_helper.make_stored_outbound(conv, "hi")
         self.msg_helper.make_stored_ack(conv, msg)
