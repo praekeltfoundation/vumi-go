@@ -13,6 +13,7 @@ from django.utils.unittest import skip
 from vumi.message import TransportUserMessage
 
 import go.base.utils
+import go.conversation.settings
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
@@ -181,6 +182,7 @@ class BaseConversationViewTestCase(GoDjangoTestCase):
 
 
 class TestConversationsDashboardView(BaseConversationViewTestCase):
+
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
@@ -353,10 +355,16 @@ class TestNewConversationView(BaseConversationViewTestCase):
 
 
 class TestConversationViews(BaseConversationViewTestCase):
+
     def setUp(self):
         super(TestConversationViews, self).setUp()
         self.msg_helper = self.add_helper(
             GoMessageHelper(vumi_helper=self.vumi_helper))
+
+    def enable_event_statuses(self):
+        self.monkey_patch(
+            go.conversation.settings, 'ENABLE_EVENT_STATUSES_IN_MESSAGE_LIST',
+            True)
 
     def test_show_no_content_block(self):
         conv = self.user_helper.create_conversation(u'dummy')
@@ -844,7 +852,20 @@ class TestConversationViews(BaseConversationViewTestCase):
         make_stored_msgs({'sensitive': False})
         assert_messages(2)
 
+    def test_message_list_outbound_statuses_disabled(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        self.msg_helper.make_stored_outbound(conv, "hi")
+
+        r_out = self.client.get(
+            self.get_view_url(conv, 'message_list'),
+            {'direction': 'outbound'})
+        self.assertContains(r_out, "<td>-", html=True)
+        self.assertNotContains(r_out, "<td>Sending", html=True)
+        self.assertNotContains(r_out, "<td>Accepted", html=True)
+        self.assertNotContains(r_out, "<td>Rejected", html=True)
+
     def test_message_list_outbound_status_pending(self):
+        self.enable_event_statuses()
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         self.msg_helper.make_stored_outbound(conv, "hi")
 
@@ -856,6 +877,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(r_out, "<td>Rejected", html=True)
 
     def test_message_list_outbound_status_failed(self):
+        self.enable_event_statuses()
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msg = self.msg_helper.make_stored_outbound(conv, "hi")
         self.msg_helper.make_stored_nack(conv, msg, nack_reason="no spoons")
@@ -868,6 +890,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(r_out, "<td>Accepted", html=True)
 
     def test_message_list_outbound_status_sent(self):
+        self.enable_event_statuses()
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         msg = self.msg_helper.make_stored_outbound(conv, "hi")
         self.msg_helper.make_stored_ack(conv, msg)

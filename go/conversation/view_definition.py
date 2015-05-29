@@ -25,6 +25,8 @@ from go.conversation.tasks import export_conversation_messages_unsorted
 from go.conversation.utils import PagedMessageCache
 from go.dashboard.dashboard import Dashboard, ConversationReportsLayout
 
+import go.conversation.settings as conversation_settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -246,6 +248,9 @@ class MessageListView(ConversationTemplateView):
         batch_id = conversation.batch.key
 
         def add_event_status(msg):
+            if not conversation_settings.ENABLE_EVENT_STATUSES_IN_MESSAGE_LIST:
+                msg.event_status = "-"
+                return msg
             msg.event_status = u"Sending"
             get_event_info = conversation.mdb.message_event_keys_with_statuses
             for event_id, _, event_type in get_event_info(msg["message_id"]):
