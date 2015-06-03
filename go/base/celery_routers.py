@@ -11,3 +11,8 @@ class CeleryRegexRouter(object):
             return {'queue': self.queue}
         else:
             return None
+
+
+class CeleryAppRouter(object):
+    def route_for_task(self, task, args=None, kwargs=None):
+        return {'queue': '.'.join(task.split('.')[:2])}
