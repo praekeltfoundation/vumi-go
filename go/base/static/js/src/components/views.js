@@ -36,15 +36,30 @@
       // we call render to output "0 characters used, 0 smses."
       this.render();
     },
+    contains_non_ascii: function(text) {
+      var ascii = true;
+      for (var i = 0; i < text.length; i++) {
+          if (text.charCodeAt(i) > 127) {
+              ascii = false;
+              break;
+          }
+      }
+      return !ascii;
+    },
     render: function() {
       var $p = this.$el.next();
+      var text = this.$el.val();
       if (!$p.hasClass('textarea-char-count')) {
           $p = $('<p class="textarea-char-count"/>');
           this.$el.after($p);
       }
-      this.totalChars = this.$el.val().length;
+      this.containsNonAscii = this.contains_non_ascii(text);
+      this.totalChars = text.length * (1 + this.containsNonAscii);
       this.totalSMS = Math.ceil(this.totalChars / this.SMS_MAX_CHARS);
-      $p.html(this.totalChars + ' characters used<br>' + this.totalSMS + ' smses');
+      $p.html(
+          this.containsNonAscii ? 'Non-ASCII characters detected<br>' : '' +
+          this.totalChars + ' characters used<br>' +
+          this.totalSMS + ' smses');
 
       return this;
     }
