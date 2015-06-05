@@ -28,10 +28,39 @@ describe("go.components.views", function() {
 
   describe(".MessageTextView", function() {
     var $div = $('<div/>');
-    var text = 'Margle. The. World.';
-    var $textarea = $('<textarea>' + text + '</textarea>');
+    var short_text = 'Margle. The. World.';
+    var long_text = [
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis',
+        ' tortor magna. Sed tristique mattis lectus sed tristique. Proin et',
+        ' diam id libero ullamcorper rhoncus. Cras bibendum aliquet faucibus.',
+        ' Maecenas nunc neque, laoreet sed bibendum eget, ullamcorper nec',
+        ' dui. Nam tortor quam, convallis dignissim auctor id, vehicula in',
+        ' nisl. Aenean accumsan, ipsum ac tristique interdum, leo quam',
+        ' pretium magna, nec sollicitudin ante ligula et sem. Aliquam a nulla',
+        ' orci. Curabitur vitae tortor nibh, id vulputate nisi. Vestibulum',
+        ' ante ipsum primis in faucibus orci luctus et ultrices posuere',
+        ' cubilia Curae;',
+    ].join("");
+    var $textarea = $('<textarea>' + short_text + '</textarea>');
     $div.append($textarea);
     var view = new go.components.views.MessageTextView({el: $textarea});
+
+    function assert_char_counts(text, non_ascii) {
+        var total_chars = text.length * (1 + non_ascii);
+        var total_smses = (Math.ceil(total_chars / 160));
+        assert.equal(non_ascii, view.containsNonAscii);
+        assert.equal(total_chars, view.totalChars);
+        assert.equal(total_smses, view.totalSMS);
+        var p = $div.find('.textarea-char-count').html();
+        if (non_ascii) {
+            assert(p.indexOf('Non-ASCII characters detected') !== -1);
+        }
+        else {
+            assert(p.indexOf('Non-ASCII characters detected') == -1)
+        }
+        assert(p.indexOf(total_chars + ' characters used') !== -1);
+        assert(p.indexOf(total_smses + ' smses') !== -1);
+    }
 
     it("should append an element `.textarea-char-count`", function() {
         $textarea.trigger('keyup');
@@ -39,15 +68,19 @@ describe("go.components.views", function() {
     });
 
     it("should update char and SMS counters on keyup.", function() {
-        $textarea.trigger('keyup');        
-        assert.equal(text.length, view.totalChars);
-        assert.equal(Math.ceil(text.length/160), view.totalSMS);
-
-        text = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis tortor magna. Sed tristique mattis lectus sed tristique. Proin et diam id libero ullamcorper rhoncus. Cras bibendum aliquet faucibus. Maecenas nunc neque, laoreet sed bibendum eget, ullamcorper nec dui. Nam tortor quam, convallis dignissim auctor id, vehicula in nisl. Aenean accumsan, ipsum ac tristique interdum, leo quam pretium magna, nec sollicitudin ante ligula et sem. Aliquam a nulla orci. Curabitur vitae tortor nibh, id vulputate nisi. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae;';
-        $textarea.val(text);
         $textarea.trigger('keyup');
-        assert.equal(text.length, view.totalChars);
-        assert.equal(Math.ceil(text.length/160), view.totalSMS);
+        assert_char_counts(short_text, false);
+
+        $textarea.val(long_text);
+        $textarea.trigger('keyup');
+        assert_char_counts(long_text, false);
+    });
+
+    it("should detect non-ASCII characters", function() {
+        var non_ascii_text = short_text + "ó";
+        $textarea.val(non_ascii_text);
+        $textarea.trigger('keyup');
+        assert_char_counts(non_ascii_text, true);
     });
   });
 
