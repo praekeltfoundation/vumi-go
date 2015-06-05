@@ -57,7 +57,7 @@
       this.totalChars = text.length * (1 + this.containsNonAscii);
       this.totalSMS = Math.ceil(this.totalChars / this.SMS_MAX_CHARS);
       $p.html(
-          this.containsNonAscii ? 'Non-ASCII characters detected<br>' : '' +
+          (this.containsNonAscii ? 'Non-ASCII characters detected<br>' : '') +
           this.totalChars + ' characters used<br>' +
           this.totalSMS + ' smses');
 
