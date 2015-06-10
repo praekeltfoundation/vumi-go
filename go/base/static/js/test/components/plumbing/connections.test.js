@@ -132,6 +132,24 @@ describe("go.components.plumbing.connections", function() {
       });
     });
 
+    describe(".removeZombies", function() {
+      it("should remove connections with a non-existent source", function() {
+        var conn = diagram.connections.get('a1L2-b2R2');
+        conn.source = null;
+        assert(diagram.connections.has('a1L2-b2R2'));
+        connections.removeZombies();
+        assert(!diagram.connections.has('a1L2-b2R2'));
+      });
+
+      it("should remove connections with a non-existent target", function() {
+        var conn = diagram.connections.get('a1L2-b2R2');
+        conn.target = null;
+        assert(diagram.connections.has('a1L2-b2R2'));
+        connections.removeZombies();
+        assert(!diagram.connections.has('a1L2-b2R2'));
+      });
+    });
+
     describe("on 'connection' jsPlumb events", function() {
       beforeEach(function() {
         // render the diagram to ensure the jsPlumb endpoints are drawn
