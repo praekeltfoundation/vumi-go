@@ -54,19 +54,21 @@ describe("go.components.views", function() {
         assert.equal(total_chars, view.totalChars);
         assert.equal(total_smses, view.totalSMS);
         assert.equal(total_bytes, view.totalBytes);
-        var p = $div.find('.textarea-char-count').html();
+        var p = $div.find('.textarea-char-count').first();
         if (!non_ascii) {
-            assert.equal(p, [
+            assert.equal(p.html(), [
                 total_chars + ' characters used',
                 total_smses + ' smses',
             ].join('<br>'))
+            assert.equal(p.hasClass('text-danger'), false);
         }
         else {
-            assert.equal(p, [
+            assert.equal(p.html(), [
                 'Non-ASCII characters: ' + non_ascii_chars.join(', '),
                 total_chars + ' characters used (~' + total_bytes + ' bytes)',
                 total_smses + ' smses',
             ].join('<br>'))
+            assert.equal(p.hasClass('text-danger'), true);
         }
     }
 
@@ -90,6 +92,19 @@ describe("go.components.views", function() {
         $textarea.trigger('keyup');
         assert_char_counts(non_ascii_text, true);
     });
+
+    it("should update text area once non-ASCII characters are removed",
+    function() {
+        var ascii_text = "o";
+        var non_ascii_text = "ó";
+        $textarea.val(non_ascii_text);
+        $textarea.trigger('keyup');
+        assert_char_counts(non_ascii_text, true);
+        $textarea.val(ascii_text);
+        $textarea.trigger('keyup');
+        assert_char_counts(ascii_text, false);
+    });
+
   });
 
   describe(".ConfirmView", function() {

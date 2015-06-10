@@ -56,12 +56,14 @@
                   this.totalBytes + ' bytes)',
               this.totalSMS + ' smses',
           ].join("<br>");
+          $p.addClass("text-danger");
       }
       else {
           html = [
               this.totalChars + ' characters used',
               this.totalSMS + ' smses',
           ].join("<br>");
+          $p.removeClass("text-danger");
       }
       $p.html(html);
       return this;
