@@ -36,24 +36,15 @@
       // we call render to output "0 characters used, 0 smses."
       this.render();
     },
-    contains_non_ascii: function(text) {
-      var ascii = true;
-      for (var i = 0; i < text.length; i++) {
-          if (text.charCodeAt(i) > 127) {
-              ascii = false;
-              break;
-          }
-      }
-      return !ascii;
-    },
     render: function() {
       var $p = this.$el.next();
       var text = this.$el.val();
+      var non_ascii = go.utils.non_ascii(text);
       if (!$p.hasClass('textarea-char-count')) {
           $p = $('<p class="textarea-char-count"/>');
           this.$el.after($p);
       }
-      this.containsNonAscii = this.contains_non_ascii(text);
+      this.containsNonAscii = (non_ascii.length > 0);
       this.totalChars = text.length * (1 + this.containsNonAscii);
       this.totalSMS = Math.ceil(this.totalChars / this.SMS_MAX_CHARS);
       $p.html(
