@@ -81,6 +81,19 @@ describe("go.utils", function() {
     });
   });
 
+  describe(".non_ascii", function() {
+    var non_ascii = go.utils.non_ascii;
+
+    it("should return non-ascii characters in an ordered list", function() {
+      assert.deepEqual(non_ascii("Sôl austan, Mâni vestan"), ["ô", "â"]);
+      assert.deepEqual(non_ascii("´smart quotes´"), ["´", "´"]);
+    });
+    it("should return an empty list in the absence of non-ascii characters",
+    function() {
+      assert.deepEqual(non_ascii("Emmentaler"), []);
+    });
+  });
+
   describe(".bindEvents", function() {
     var Eventable = go.components.structures.Eventable,
         bindEvents = go.utils.bindEvents;

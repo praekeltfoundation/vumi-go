@@ -118,6 +118,17 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
+  var non_ascii = function(s) {
+    var non_ascii = [];
+    var c = 0;
+    for (var i = 0; i < s.length; i++) {
+      if (s.charCodeAt(i) > 127) {
+        non_ascii.push(s.charAt(i));
+      }
+    }
+    return non_ascii;
+  };
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -131,6 +142,7 @@
     bindEvents: bindEvents,
     delayed: delayed,
     capitalise: capitalise,
+    non_ascii: non_ascii,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});
