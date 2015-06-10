@@ -47,26 +47,36 @@ describe("go.components.views", function() {
 
     function assert_char_counts(text, non_ascii) {
         var total_chars = text.length;
-        var total_bytes = text.length * (1 + non_ascii);
-        var total_smses = (Math.ceil(total_bytes / 160));
+        var chars_per_sms = non_ascii ? 70 : 160;
+        var total_smses = (Math.ceil(total_chars / chars_per_sms));
         var non_ascii_chars = go.utils.non_ascii(text);
         assert.equal(non_ascii, view.containsNonAscii);
         assert.equal(total_chars, view.totalChars);
         assert.equal(total_smses, view.totalSMS);
-        assert.equal(total_bytes, view.totalBytes);
+        assert.equal(chars_per_sms, view.charsPerSms);
         var p = $div.find('.textarea-char-count').first();
         if (!non_ascii) {
             assert.equal(p.html(), [
                 total_chars + ' characters used',
-                total_smses + ' smses',
+                total_smses + ' smses (160 characters per SMS)',
             ].join('<br>'))
             assert.equal(p.hasClass('text-danger'), false);
         }
         else {
+            var warning_text = [
+                "These characters may not be understood correctly by some",
+                " USSD and SMS channels. For SMS channels, it will also",
+                " reduce the number of characters per SMS from 160 to 70",
+                " and possibly double the number of SMSes billed for. For",
+                " USSD channels, the maximum number of characters will be",
+                " similarly reduced."
+            ].join("");
             assert.equal(p.html(), [
-                'Non-ASCII characters: ' + non_ascii_chars.join(', '),
-                total_chars + ' characters used (~' + total_bytes + ' bytes)',
-                total_smses + ' smses',
+                'Your message contains the following special characters: '
+                    + non_ascii_chars.join(', ') + '.',
+                warning_text,
+                total_chars + ' characters used',
+                total_smses + ' smses (70 characters per SMS)',
             ].join('<br>'))
             assert.equal(p.hasClass('text-danger'), true);
         }

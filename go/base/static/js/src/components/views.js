@@ -29,6 +29,14 @@
 
   var MessageTextView = Backbone.View.extend({
     SMS_MAX_CHARS: 160,
+    SMS_MAX_CHARS_NONASCII: 70,
+    NON_ASCII_WARNING: [
+        "These characters may not be understood correctly by some USSD and SMS",
+        " channels. For SMS channels, it will also reduce the number of",
+        " characters per SMS from 160 to 70 and possibly double the number of",
+        " SMSes billed for. For USSD channels, the maximum number of characters",
+        " will be similarly reduced."
+    ].join(""),
     events: {
       'keyup': 'render'
     },
@@ -46,22 +54,27 @@
       var non_ascii = go.utils.non_ascii(text);
       this.containsNonAscii = (non_ascii.length > 0);
       this.totalChars = text.length;
-      this.totalBytes = text.length * (1 + this.containsNonAscii);
-      this.totalSMS = Math.ceil(this.totalBytes / this.SMS_MAX_CHARS);
+      this.charsPerSms = (
+          this.containsNonAscii
+              ? this.SMS_MAX_CHARS_NONASCII : this.SMS_MAX_CHARS);
+      this.totalSMS = Math.ceil(this.totalChars / this.charsPerSms);
       var html;
       if (this.containsNonAscii) {
           html = [
-              'Non-ASCII characters: ' + non_ascii.join(', '),
-              this.totalChars + ' characters used (~' +
-                  this.totalBytes + ' bytes)',
-              this.totalSMS + ' smses',
+              "Your message contains the following special characters: "
+                  + non_ascii.join(', ') + ".",
+              this.NON_ASCII_WARNING,
+              this.totalChars + ' characters used',
+              this.totalSMS + ' smses (' + this.charsPerSms
+                  + ' characters per SMS)',
           ].join("<br>");
           $p.addClass("text-danger");
       }
       else {
           html = [
               this.totalChars + ' characters used',
-              this.totalSMS + ' smses',
+              this.totalSMS + ' smses (' + this.charsPerSms
+                  + ' characters per SMS)'
           ].join("<br>");
           $p.removeClass("text-danger");
       }
