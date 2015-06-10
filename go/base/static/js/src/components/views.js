@@ -38,20 +38,32 @@
     },
     render: function() {
       var $p = this.$el.next();
-      var text = this.$el.val();
-      var non_ascii = go.utils.non_ascii(text);
       if (!$p.hasClass('textarea-char-count')) {
           $p = $('<p class="textarea-char-count"/>');
           this.$el.after($p);
       }
+      var text = this.$el.val();
+      var non_ascii = go.utils.non_ascii(text);
       this.containsNonAscii = (non_ascii.length > 0);
-      this.totalChars = text.length * (1 + this.containsNonAscii);
-      this.totalSMS = Math.ceil(this.totalChars / this.SMS_MAX_CHARS);
-      $p.html(
-          (this.containsNonAscii ? 'Non-ASCII characters detected<br>' : '') +
-          this.totalChars + ' characters used<br>' +
-          this.totalSMS + ' smses');
-
+      this.totalChars = text.length;
+      this.totalBytes = text.length * (1 + this.containsNonAscii);
+      this.totalSMS = Math.ceil(this.totalBytes / this.SMS_MAX_CHARS);
+      var html;
+      if (this.containsNonAscii) {
+          html = [
+              'Non-ASCII characters: ' + non_ascii.join(', '),
+              this.totalChars + ' characters used (~' +
+                  this.totalBytes + ' bytes)',
+              this.totalSMS + ' smses',
+          ].join("<br>");
+      }
+      else {
+          html = [
+              this.totalChars + ' characters used',
+              this.totalSMS + ' smses',
+          ].join("<br>");
+      }
+      $p.html(html);
       return this;
     }
   });

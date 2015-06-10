@@ -46,20 +46,28 @@ describe("go.components.views", function() {
     var view = new go.components.views.MessageTextView({el: $textarea});
 
     function assert_char_counts(text, non_ascii) {
-        var total_chars = text.length * (1 + non_ascii);
-        var total_smses = (Math.ceil(total_chars / 160));
+        var total_chars = text.length;
+        var total_bytes = text.length * (1 + non_ascii);
+        var total_smses = (Math.ceil(total_bytes / 160));
+        var non_ascii_chars = go.utils.non_ascii(text);
         assert.equal(non_ascii, view.containsNonAscii);
         assert.equal(total_chars, view.totalChars);
         assert.equal(total_smses, view.totalSMS);
+        assert.equal(total_bytes, view.totalBytes);
         var p = $div.find('.textarea-char-count').html();
-        if (non_ascii) {
-            assert(p.indexOf('Non-ASCII characters detected') !== -1);
+        if (!non_ascii) {
+            assert.equal(p, [
+                total_chars + ' characters used',
+                total_smses + ' smses',
+            ].join('<br>'))
         }
         else {
-            assert(p.indexOf('Non-ASCII characters detected') == -1)
+            assert.equal(p, [
+                'Non-ASCII characters: ' + non_ascii_chars.join(', '),
+                total_chars + ' characters used (~' + total_bytes + ' bytes)',
+                total_smses + ' smses',
+            ].join('<br>'))
         }
-        assert(p.indexOf(total_chars + ' characters used') !== -1);
-        assert(p.indexOf(total_smses + ' smses') !== -1);
     }
 
     it("should append an element `.textarea-char-count`", function() {
