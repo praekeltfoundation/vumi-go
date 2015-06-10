@@ -122,6 +122,8 @@
       jsPlumb.bind(
         'connectionDetached',
         _.bind(this.onPlumbDisconnect, this));
+
+      this.removeZombies();
     },
 
     // Returns the first connection collection found that accepts a connection
@@ -219,6 +221,21 @@
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.
       this.remove(connectionId, {detach: false});
+    },
+
+    removeZombies: function() {
+      // HACK: there appears to be an obscure edge case where states are
+      // removed, but their connection still exists. This case is difficult to
+      // identify, so instead, to prevent broken, unusable dialogues as a
+      // result of this, we remove the connection
+      this
+        .where(this._isZomby)
+        .forEach(this.remove, this);
+    },
+
+    _isZomby: function(connection) {
+      return !connection.source
+          || !connection.target;
     }
   });
 
