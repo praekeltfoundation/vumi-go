@@ -1,0 +1,38 @@
+<h1>Example send</h1>
+
+<p>You can send messages via this conversation using an HTTP PUT request as follows:</p>
+
+<pre><code>
+  $ curl -X PUT \
+       --user '{{ conversation.user_account.key }}:{{ conversation.get_config.http_api_nostream.api_tokens }}' \
+       --data '{"in_reply_to": "59b37288d8d94e42ab804158bdbf53e5", \
+                "to_addr": "27761234567", \
+                "to_addr_type": "msisdn", \
+                "content": "This is an outgoing SMS!"}' \
+       https://go.vumi.org/api/v1/go/http_api_nostream/{{ conversation.key }}/messages.json \
+       -vvv
+</code></pre>
+
+<h1>Example metric firing</h1>
+
+<p>You can fire metrics via this conversation using an HTTP PUT request as follows:</p>
+
+<pre><code>
+  $ curl -X PUT \
+       --user '{{ conversation.user_account.key }}:{{ conversation.get_config.http_api_nostream.api_tokens }}' \
+       --data '[["total_pings", 1200, "MAX"]]' \
+       https://go.vumi.org/api/v1/go/http_api_nostream/{{ conversation.key }}/metrics.json \
+       -vvv
+</pre></code>
+
+<h1>Notes</h1>
+
+This example is based on the currently <em>saved</em>
+configuration. If you change the API token, you'll need to update the
+password used for the HTTP request.
+
+<ul>
+  <li>The <em>username</em> is your Vumi Go account key.</li>
+  <li>The <em>password</em> is the API token you specified for this conversation.</li>
+  <li>The hexadecimal value at the end of the string is the unique identifier for this conversation.</li>
+</ul>
