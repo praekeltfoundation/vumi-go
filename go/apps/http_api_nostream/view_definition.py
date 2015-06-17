@@ -78,6 +78,7 @@ class EditHttpApiNoStreamView(EditConversationView):
     edit_forms = (
         ('http_api_nostream', TokenForm),
     )
+    help_template = 'http_api_nostream/edit_help.html'
 
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):
