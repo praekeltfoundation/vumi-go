@@ -30,6 +30,11 @@
                     {% endfor %}
                 </form>
             </div>
+            {% if help_template %}
+            <div class="col-md-4">
+                {% include help_template with conversation=conversation %}
+            </div>
+            {% endif %}
         </div>
     </div>
 {% endblock %}
