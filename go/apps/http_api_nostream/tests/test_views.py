@@ -194,18 +194,17 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_get_edit_view_help(self):
-        conv_helper = self.app_helper.create_conversation_helper({
+        conv_helper = self.app_helper.create_conversation_helper(config={
             'http_api_nostream': {
                 'api_tokens': ['token1234'],
             },
         })
         conversation = conv_helper.get_conversation()
-        self.assertEqual(conversation.config, {})
         response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "\n".join([
             "  $ curl -X PUT \\",
-            "       --user 'test-0-user:' \\",
+            "       --user 'test-0-user:token1234' \\",
             "       --data '{\"in_reply_to\": "
             "\"59b37288d8d94e42ab804158bdbf53e5\", \\",
             "                \"to_addr\": \"27761234567\", \\",
@@ -217,7 +216,7 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
         ]) % conversation.key)
         self.assertContains(response, "\n".join([
             "  $ curl -X PUT \\",
-            "       --user 'test-0-user:' \\",
+            "       --user 'test-0-user:token1234' \\",
             "       --data '[[\"total_pings\", 1200, \"MAX\"]]' \\",
             "       https://go.vumi.org/api/v1/go/http_api_nostream/%s/"
             "metrics.json \\",
