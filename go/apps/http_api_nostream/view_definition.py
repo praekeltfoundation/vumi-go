@@ -8,18 +8,21 @@ from go.apps.http_api_nostream.definition import DEFAULT_METRIC_STORE
 
 class TokenForm(forms.Form):
     api_tokens = forms.CharField(
+        label='API token',
         help_text='The access token for this HTTP Conversation.',
         required=True)
     ignore_messages = forms.BooleanField(
-        help_text='Ignore messages instead of forwarding them.',
+        label='Ignore messages instead of forwarding them.',
         required=False)
     push_message_url = forms.CharField(
+        label='Push message URL',
         help_text='The URL to forward messages to via HTTP POST.',
         required=False)
     ignore_events = forms.BooleanField(
-        help_text='Ignore events instead of forwarding them.',
+        label='Ignore events instead of forwarding them.',
         required=False)
     push_event_url = forms.CharField(
+        label='Push event URL',
         help_text='The URL to forward events to via HTTP POST.',
         required=False)
     metric_store = forms.CharField(
