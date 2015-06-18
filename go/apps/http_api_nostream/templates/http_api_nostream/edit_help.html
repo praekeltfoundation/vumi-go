@@ -1,3 +1,37 @@
+<h1>Examples</h1>
+
+<p>
+  The examples below show how to send messages and fire metrics using
+  the <code>curl</code> command. The <em>username</em>
+  and <em>password</em> needed for authentication have been filled in
+  for you as follows:
+</p>
+
+<ul>
+  <li>The <em>username</em> is your Vumi Go account key
+    (<code>{{ conversation.user_account.key }}</code>). It can be found at the
+    bottom of your <a href="{% url 'account:details' %}">Account
+    Details</a> page.
+  </li>
+  <li>The <em>password</em> is the API token you specified for this
+    conversation.
+  </li>
+</ul>
+
+<p>
+  The URLs for sending messages and firing metrics contain
+  the <em>conversation id</em> (the string of letters and digits near
+  the end of the URL). This conversation's id is
+  <code>{{ conversation.key }}</code>.
+</p>
+
+<p class="text-warning">
+  The <em>password</em> used is the saved value of the API token. If you
+  have modified the API token, you will have to save the change before the
+  examples include the new password.
+</p>
+
+
 <h1>Example send</h1>
 
 <p>You can send messages via this conversation using an HTTP PUT request as follows:</p>
@@ -24,23 +58,3 @@
        https://go.vumi.org/api/v1/go/http_api_nostream/{{ conversation.key }}/metrics.json \
        -vvv
 </pre></code>
-
-<h1>Notes</h1>
-
-This example is based on the currently <em>saved</em>
-configuration. If you change the API token, you'll need to update the
-password used for the HTTP request.
-
-<ul>
-  <li>The <em>username</em> is your Vumi Go account key
-    (<code>{{ conversation.user_account.key }}</code>). It can be found at the
-    bottom of your <a href="{% url 'account:details' %}">Account
-    Details</a> page.
-  </li>
-  <li>The <em>password</em> is the API token you specified for this
-    conversation.
-  </li>
-  <li>The value near the end of the URL is the unique identifier for
-    the conversation. This conversation is <code>{{ conversation.key}}</code>.
-  </li>
-</ul>

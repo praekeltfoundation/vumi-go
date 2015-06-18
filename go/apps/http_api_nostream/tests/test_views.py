@@ -236,8 +236,11 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
             "  </li>",
         ]))
         self.assertContains(response, "\n".join([
-            "  <li>The value near the end of the URL is the unique identifier"
-            " for",
-            "    the conversation. This conversation is <code>%s</code>.",
-            "  </li>",
+            "<p>",
+            "  The URLs for sending messages and firing metrics contain",
+            "  the <em>conversation id</em> (the string of letters and digits"
+            " near",
+            "  the end of the URL). This conversation's id is",
+            "  <code>%s</code>.",
+            "</p>",
         ]) % conversation.key)
