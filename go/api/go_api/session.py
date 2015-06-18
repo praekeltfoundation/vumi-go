@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 # -*- test-case-name: go.api.go_api.tests.test_session -*-
 
-from django.conf import settings
 from django.contrib.sessions.backends.base import SessionBase, CreateError
-from vumi.persist.redis_manager import RedisManager
 
+from go.base.utils import get_redis_manager
 from go.api.go_api.session_manager import SessionManager
 
 
@@ -14,10 +13,8 @@ class SessionStore(SessionBase):
     """
     def __init__(self, session_key=None):
         super(SessionStore, self).__init__(session_key)
-        redis_config = settings.VUMI_API_CONFIG.get('redis_manager', {})
-        redis = RedisManager.from_config(redis_config)
         self.session_manager = SessionManager(
-            redis.sub_manager('session_manager'))
+            get_redis_manager().sub_manager('session_manager'))
 
     def encode(self, data):
         """Replace Django's pickle serialization with a null-op.
