@@ -1,3 +1,5 @@
+from django.core.urlresolvers import reverse
+
 from go.apps.tests.view_helpers import AppViewsHelper
 from go.base.tests.helpers import GoDjangoTestCase
 
@@ -220,4 +222,23 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
             "       https://go.vumi.org/api/v1/go/http_api_nostream/%s/"
             "metrics.json \\",
             "       -vvv",
+        ]) % conversation.key)
+        self.assertContains(response, "\n".join([
+            "  <li>The <em>username</em> is your Vumi Go account key",
+            "    (<code>test-0-user</code>). It can be found at the",
+            "    bottom of your <a href=\"%s\">Account",
+            "    Details</a> page.",
+            "  </li>",
+        ]) % reverse('account:details'))
+        self.assertContains(response, "\n".join([
+            "  <li>The <em>password</em> is the API token you specified for"
+            " this",
+            "    conversation.",
+            "  </li>",
+        ]))
+        self.assertContains(response, "\n".join([
+            "  <li>The value near the end of the URL is the unique identifier"
+            " for",
+            "    the conversation. This conversation is <code>%s</code>.",
+            "  </li>",
         ]) % conversation.key)

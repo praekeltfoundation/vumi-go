@@ -32,7 +32,15 @@ configuration. If you change the API token, you'll need to update the
 password used for the HTTP request.
 
 <ul>
-  <li>The <em>username</em> is your Vumi Go account key.</li>
-  <li>The <em>password</em> is the API token you specified for this conversation.</li>
-  <li>The hexadecimal value at the end of the string is the unique identifier for this conversation.</li>
+  <li>The <em>username</em> is your Vumi Go account key
+    (<code>{{ conversation.user_account.key }}</code>). It can be found at the
+    bottom of your <a href="{% url 'account:details' %}">Account
+    Details</a> page.
+  </li>
+  <li>The <em>password</em> is the API token you specified for this
+    conversation.
+  </li>
+  <li>The value near the end of the URL is the unique identifier for
+    the conversation. This conversation is <code>{{ conversation.key}}</code>.
+  </li>
 </ul>
