@@ -1,8 +1,6 @@
-from django.core.management.base import BaseCommand
 from vumi.message import parse_vumi_date
 
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import BaseGoCommand
 
 
 def print_dates(bucket, io):
@@ -11,7 +9,7 @@ def print_dates(bucket, io):
         io.write('%s: %s\n' % (item.strftime('%Y-%m-%d'), count))
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = """
     Generate stats for a given Vumi Go account.
 
@@ -31,14 +29,10 @@ class Command(BaseCommand):
         email_address = args[0]
         command = args[1]
 
-        user = get_user_by_email(email=email_address)
-        api = self.get_api(user)
+        user, api = self.mk_user_api(email_address)
 
         handler = getattr(self, 'handle_%s' % (command,), self.unknown_command)
         handler(user, api, args[2:])
-
-    def get_api(self, user):
-        return vumi_api_for_user(user)
 
     def out(self, data):
         self.stdout.write(data.encode(self.encoding))
