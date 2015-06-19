@@ -135,6 +135,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "dialogue", "templates"),
     abspath("apps", "surveys", "templates"),
     abspath("apps", "jsbox", "templates"),
+    abspath("apps", "http_api_nostream", "templates"),
     abspath("conversation", "templates"),
     abspath("router", "templates"),
     abspath("channel", "templates"),

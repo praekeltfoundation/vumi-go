@@ -400,6 +400,7 @@ class EditConversationView(ConversationTemplateView):
     view_name = 'edit'
     path_suffix = 'edit/'
     edit_forms = ()
+    help_template = None
 
     @staticmethod
     def sum_media(form_list):
@@ -410,6 +411,7 @@ class EditConversationView(ConversationTemplateView):
             'conversation': conversation,
             'edit_forms_media': self.sum_media(edit_forms),
             'edit_forms': edit_forms,
+            'help_template': self.help_template,
         })
 
     def get(self, request, conversation):
