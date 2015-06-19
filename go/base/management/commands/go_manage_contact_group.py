@@ -1,12 +1,9 @@
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
-
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import BaseGoCommand, CommandError
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = "Manage contact groups belonging to a Vumi Go account."
 
     LOCAL_OPTIONS = [
@@ -40,7 +37,7 @@ class Command(BaseCommand):
             default=False,
             help='Delete a group'),
     ]
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
 
     def ask_for_option(self, options, opt):
         if options.get(opt.dest) is None:
@@ -71,8 +68,7 @@ class Command(BaseCommand):
             options, ('list', 'create', 'create-smart', 'delete'))
 
         self.ask_for_options(options, ['email-address'])
-        user = get_user_by_email(options['email-address'])
-        user_api = vumi_api_for_user(user)
+        user, user_api = self.mk_user_api(options['email-address'])
 
         if operation == 'list':
             return self.handle_list(user_api, options)
