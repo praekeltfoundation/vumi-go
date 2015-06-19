@@ -1,13 +1,11 @@
 import uuid
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
-
 from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import BaseGoCommand, CommandError, get_user_by_email
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = "Give a Vumi Go user access to a certain tagpool"
 
     LOCAL_OPTIONS = [
@@ -27,7 +25,7 @@ class Command(BaseCommand):
             default=False,
             help='Update an existing permission with a new max-keys value'),
     ]
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
 
     def handle(self, *args, **options):
         options = options.copy()
