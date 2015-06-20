@@ -34,7 +34,7 @@ class BillingApiMock(object):
     def create_transaction(self, account_number, message_id, tag_pool_name,
                            tag_name, provider, message_direction,
                            session_created, transaction_type, session_length):
-        self._record(self.transactions, locals())
+        self._record(self.transactions, dict(locals()))
         return {
             "transaction": {
                 "id": 1,

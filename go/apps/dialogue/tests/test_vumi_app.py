@@ -72,6 +72,10 @@ class TestDialogueApplication(VumiTestCase):
                     'cls': 'go.apps.jsbox.outbound.GoOutboundResource',
                 },
             },
+            'rlimits': {
+                'RLIMIT_STACK': [2 * 1024 * 1024] * 2,
+                'RLIMIT_AS': [256 * 1024 * 1024] * 2,
+            },
         })
 
     @inlineCallbacks

@@ -25,8 +25,8 @@ class DashboardViewsTestCase(GoDjangoTestCase):
             'method': 'GET',
         }])
 
-        self.assertEqual(resp.content, json.dumps({'bar': 'baz'}))
         self.assertEqual(resp.status_code, 201)
+        self.assertEqual(json.loads(resp.content), {'bar': 'baz'})
 
     def test_api_proxy_error(self):
         self.diamondash_api.set_error_response(404, "Bad horse")
@@ -38,8 +38,8 @@ class DashboardViewsTestCase(GoDjangoTestCase):
             'method': 'GET',
         }])
 
-        self.assertEqual(resp.content, json.dumps({
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(json.loads(resp.content), {
             "message": "Bad horse",
             "success": False,
-        }))
-        self.assertEqual(resp.status_code, 404)
+        })
