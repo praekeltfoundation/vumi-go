@@ -1,12 +1,9 @@
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
-
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import BaseGoCommand, CommandError
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = "Tell a conversation to start"
 
     LOCAL_OPTIONS = [
@@ -18,10 +15,7 @@ class Command(BaseCommand):
             default=False,
             help='The account to start a conversation for.'),
     ]
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
-
-    def get_user_api(self, email):
-        return vumi_api_for_user(get_user_by_email(email))
+    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
 
     def handle(self, *apps, **options):
         email_address = options['email_address']
@@ -32,7 +26,7 @@ class Command(BaseCommand):
         if not conversation_key:
             raise CommandError('Please provide --conversation-key.')
 
-        user_api = self.get_user_api(email_address)
+        _, user_api = self.mk_user_api(email_address)
         conversation = user_api.get_wrapped_conversation(conversation_key)
         if conversation is None:
             raise CommandError('Conversation does not exist.')
