@@ -5,8 +5,7 @@ from optparse import make_option
 from django.core.management.base import CommandError
 from django.utils.text import slugify
 
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import BaseGoCommand, get_user_by_email
+from go.base.command_utils import BaseGoCommand
 
 
 class Command(BaseGoCommand):
@@ -38,8 +37,7 @@ class Command(BaseGoCommand):
             raise CommandError('--base-url is mandatory.')
         self.template = kwargs['template']
 
-        self.user = get_user_by_email(self.email)
-        self.user_api = vumi_api_for_user(self.user)
+        self.user, self.user_api = self.mk_user_api(self.email)
 
         conversation_store = self.user_api.conversation_store
         conversation_keys = conversation_store.list_conversations()
