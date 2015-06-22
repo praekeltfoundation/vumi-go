@@ -1,16 +1,13 @@
 from optparse import make_option
 
-from go.base.command_utils import BaseGoCommand, CommandError
+from go.base.command_utils import BaseGoAccountCommand, CommandError
 from go.vumitools.routing_table import GoConnector, RoutingTable
 
 
-class Command(BaseGoCommand):
+class Command(BaseGoAccountCommand):
     help = "Manage the routing table for a Vumi Go user"
 
     LOCAL_OPTIONS = [
-        make_option('--email-address',
-            dest='email-address',
-            help='Email address for the Vumi Go user'),
         make_option('--show',
             dest='show',
             action='store_true',
@@ -34,11 +31,9 @@ class Command(BaseGoCommand):
             help='Remove the routing table entry with four params: '
                     'src_conn src_endpoint dest_conn dest_endpoint'),
     ]
-    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoAccountCommand.option_list + tuple(LOCAL_OPTIONS)
 
-    CONFLICTING_OPTIONS = ['show', 'clear', 'add', 'remove']
-
-    def handle(self, *args, **options):
+    def handle_no_command(self, *args, **options):
         options = options.copy()
         for opt in self.LOCAL_OPTIONS:
             if options.get(opt.dest) is None:
@@ -48,47 +43,46 @@ class Command(BaseGoCommand):
                 else:
                     raise CommandError('Please provide %s:' % (opt.dest,))
 
-        command_options = [c for c in self.CONFLICTING_OPTIONS if options[c]]
-        if len(command_options) != 1:
+        # Ensure a single option is chosen from the local options
+        cmd_options = [c.dest for c in self.LOCAL_OPTIONS if options[c.dest]]
+        if len(cmd_options) != 1:
             raise CommandError('Please provide exactly one of: %s' % (
-                ['--%s' % c for c in self.CONFLICTING_OPTIONS],))
-
-        user, user_api = self.mk_user_api(options['email-address'])
+                ['--%s' % c.dest for c in self.LOCAL_OPTIONS],))
 
         if options['show']:
-            return self.handle_show(user_api, options)
+            return self.handle_show(options)
         elif options['clear']:
-            return self.handle_clear(user_api, options)
+            return self.handle_clear(options)
         elif options['add']:
-            return self.handle_add(user_api, options)
+            return self.handle_add(options)
         elif options['remove']:
-            return self.handle_remove(user_api, options)
+            return self.handle_remove(options)
         raise NotImplementedError('Unknown command.')
 
-    def handle_show(self, user_api, options):
-        self.print_routing_table(user_api.get_routing_table())
+    def handle_show(self, options):
+        self.print_routing_table(self.user_api.get_routing_table())
 
-    def handle_clear(self, user_api, options):
-        account = user_api.get_user_account()
+    def handle_clear(self, options):
+        account = self.user_api.get_user_account()
         account.routing_table = RoutingTable()
         account.save()
         self.stdout.write("Routing table cleared.\n")
 
-    def handle_add(self, user_api, options):
-        account = user_api.get_user_account()
+    def handle_add(self, options):
+        account = self.user_api.get_user_account()
         if account.routing_table is None:
             raise CommandError("No routing table found.")
         account.routing_table.add_entry(*options['add'])
         try:
-            user_api.validate_routing_table(account)
+            self.user_api.validate_routing_table(account)
         except Exception as e:
             raise CommandError(e)
         account.save()
         self.stdout.write("Routing table entry added.\n")
 
-    def handle_remove(self, user_api, options):
+    def handle_remove(self, options):
         src_conn, src_endpoint, dst_conn, dst_endpoint = options['remove']
-        account = user_api.get_user_account()
+        account = self.user_api.get_user_account()
         if account.routing_table is None:
             raise CommandError("No routing table found.")
         target = account.routing_table.lookup_target(src_conn, src_endpoint)
@@ -101,7 +95,7 @@ class Command(BaseGoCommand):
                     target[0], target[1], dst_conn, dst_endpoint))
         account.routing_table.remove_entry(src_conn, src_endpoint)
         try:
-            user_api.validate_routing_table(account)
+            self.user_api.validate_routing_table(account)
         except Exception as e:
             raise CommandError(e)
         account.save()
