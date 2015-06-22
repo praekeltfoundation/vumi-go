@@ -9,7 +9,7 @@ class Command(BaseGoCommand):
     help = "Send a VumiApi command to an application worker"
     args = "<worker-name> <command> key1=value1 key2=value2"
 
-    def handle(self, worker_name, command, *parameters, **config):
+    def handle_no_command(self, worker_name, command, *parameters, **config):
         handler = getattr(self, 'handle_%s' % (command,), None)
         if handler is None:
             raise CommandError('Unknown command %s' % (command,))
@@ -24,7 +24,7 @@ class Command(BaseGoCommand):
                 args.append(parameter)
 
         cmd = handler(worker_name, command, *args, **kwargs)
-        self.mk_vumi_api().mapi.send_command(cmd)
+        self.vumi_api.mapi.send_command(cmd)
 
     def handle_reconcile_cache(self, worker_name, command, account_key,
                                conversation_key):
