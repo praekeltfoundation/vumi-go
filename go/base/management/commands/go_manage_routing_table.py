@@ -7,7 +7,7 @@ from go.vumitools.routing_table import GoConnector, RoutingTable
 class Command(BaseGoAccountCommand):
     help = "Manage the routing table for a Vumi Go user"
 
-    LOCAL_OPTIONS = [
+    COMMAND_OPTIONS = [
         make_option('--show',
             dest='show',
             action='store_true',
@@ -31,7 +31,11 @@ class Command(BaseGoAccountCommand):
             help='Remove the routing table entry with four params: '
                     'src_conn src_endpoint dest_conn dest_endpoint'),
     ]
-    option_list = BaseGoAccountCommand.option_list + tuple(LOCAL_OPTIONS)
+    LOCAL_OPTIONS = []
+    option_list = (
+        BaseGoAccountCommand.option_list +
+        tuple(COMMAND_OPTIONS) +
+        tuple(LOCAL_OPTIONS))
 
     def handle_no_command(self, *args, **options):
         options = options.copy()
@@ -43,11 +47,11 @@ class Command(BaseGoAccountCommand):
                 else:
                     raise CommandError('Please provide %s:' % (opt.dest,))
 
-        # Ensure a single option is chosen from the local options
-        cmd_options = [c.dest for c in self.LOCAL_OPTIONS if options[c.dest]]
+        # Ensure a single option is chosen from the command options
+        cmd_options = [c.dest for c in self.COMMAND_OPTIONS if options[c.dest]]
         if len(cmd_options) != 1:
             raise CommandError('Please provide exactly one of: %s' % (
-                ['--%s' % c.dest for c in self.LOCAL_OPTIONS],))
+                ['--%s' % c.dest for c in self.COMMAND_OPTIONS],))
 
         if options['show']:
             return self.handle_show(options)
