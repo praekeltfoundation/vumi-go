@@ -1,17 +1,13 @@
 import uuid
 from optparse import make_option
 
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import BaseGoCommand, CommandError, get_user_by_email
+from go.base.command_utils import BaseGoAccountCommand, CommandError
 
 
-class Command(BaseGoCommand):
+class Command(BaseGoAccountCommand):
     help = "Give a Vumi Go user access to a certain application"
 
     LOCAL_OPTIONS = [
-        make_option('--email-address',
-            dest='email-address',
-            help='Email address for the Vumi Go user'),
         make_option('--application-module',
             dest='application-module',
             help='The application module to give access to'),
@@ -26,9 +22,9 @@ class Command(BaseGoCommand):
             default=False,
             help='Revoke access to this application'),
     ]
-    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoAccountCommand.option_list + tuple(LOCAL_OPTIONS)
 
-    def handle(self, *args, **options):
+    def handle_no_command(self, *args, **options):
         options = options.copy()
         for opt in self.LOCAL_OPTIONS:
             if options.get(opt.dest) is None:
@@ -41,7 +37,6 @@ class Command(BaseGoCommand):
         self.handle_validated(*args, **options)
 
     def handle_validated(self, *args, **options):
-        email_address = options['email-address']
         application_module = unicode(options['application-module'])
         enable = options['enable']
         disable = options['disable']
@@ -50,8 +45,7 @@ class Command(BaseGoCommand):
             raise CommandError(
                 'Please specify either --enable or --disable.')
 
-        user = get_user_by_email(email_address)
-        account = user.get_profile().get_user_account()
+        account = self.user.get_profile().get_user_account()
         all_permissions = []
         for permissions in account.applications.load_all_bunches():
             all_permissions.extend(permissions)
@@ -67,7 +61,7 @@ class Command(BaseGoCommand):
 
         if enable:
             if application_module not in existing_applications:
-                self.enable_application(user, account, application_module)
+                self.enable_application(account, application_module)
             else:
                 raise CommandError('User already has this permission')
 
@@ -75,9 +69,8 @@ class Command(BaseGoCommand):
         account.applications.remove(app_permission)
         account.save()
 
-    def enable_application(self, user, account, application_module):
-        user_api = vumi_api_for_user(user)
-        api = user_api.api
+    def enable_application(self, account, application_module):
+        api = self.user_api.api
 
         app_permission = api.account_store.application_permissions(
             uuid.uuid4().hex, application=application_module)
