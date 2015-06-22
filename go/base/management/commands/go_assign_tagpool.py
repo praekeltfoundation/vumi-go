@@ -12,7 +12,7 @@ class Command(BaseGoAccountCommand):
             dest='tagpool',
             help='The tagpool to give access to'),
         make_option('--max-keys',
-            dest='max-keys',
+            dest='max_keys',
             help='Maximum number of keys that can be acquired '
                     '(0 == Unlimited)'),
         make_option('--update',
@@ -37,7 +37,7 @@ class Command(BaseGoAccountCommand):
 
     def handle_validated(self, *args, **options):
         tagpool = unicode(options['tagpool'])
-        max_keys = int(options['max-keys']) or None
+        max_keys = int(options['max_keys']) or None
 
         account = self.user.get_profile().get_user_account()
         existing_tagpools = []
