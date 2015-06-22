@@ -10,7 +10,7 @@ class Command(BaseGoAccountCommand):
 
     LOCAL_OPTIONS = [
         make_option('--contacts-csv',
-            dest='contacts-csv',
+            dest='contacts_csv',
             help='The CSV file containing contacts to import'),
         make_option('--group',
             dest='groups',
@@ -36,7 +36,7 @@ class Command(BaseGoAccountCommand):
     def handle_no_command(self, *args, **options):
         options = options.copy()
 
-        self.ask_for_options(options, ['contacts-csv'])
+        self.ask_for_options(options, ['contacts_csv'])
         groups = [g.key for g in self.user_api.list_groups()]
         for group in options['groups']:
             if group not in groups:
@@ -44,7 +44,7 @@ class Command(BaseGoAccountCommand):
         return self.import_contacts(options)
 
     def import_contacts(self, options):
-        file_path = options['contacts-csv']
+        file_path = options['contacts_csv']
         try:
             _, parser = ContactFileParser.get_parser(file_path)
             # No Django silliness, please.
