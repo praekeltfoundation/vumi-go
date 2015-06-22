@@ -1,16 +1,13 @@
 from uuid import uuid4
 from optparse import make_option
 
-from go.base.command_utils import BaseGoCommand, CommandError
+from go.base.command_utils import BaseGoAccountCommand, CommandError
 
 
-class Command(BaseGoCommand):
+class Command(BaseGoAccountCommand):
     help = "manage access to an HTTP api"
 
     LOCAL_OPTIONS = [
-        make_option('--email-address',
-                    dest='email_address',
-                    help='Email address for the Vumi Go user'),
         make_option('--conversation-key',
                     dest='conversation_key',
                     help='The conversation key'),
@@ -35,12 +32,11 @@ class Command(BaseGoCommand):
                     dest='remove_event_url',
                     help='Remove an event URL'),
     ]
-    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoAccountCommand.option_list + tuple(LOCAL_OPTIONS)
     allowed_conversation_types = ['http_api', 'jsbox']
 
-    def handle(self, *args, **options):
-        user, user_api = self.mk_user_api(options['email_address'])
-        conversation = user_api.get_wrapped_conversation(
+    def handle_no_command(self, *args, **options):
+        conversation = self.user_api.get_wrapped_conversation(
             options['conversation_key'])
 
         if conversation is None:
