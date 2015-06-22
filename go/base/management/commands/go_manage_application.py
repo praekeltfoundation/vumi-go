@@ -8,7 +8,7 @@ class Command(BaseGoAccountCommand):
     help = "Give a Vumi Go user access to a certain application"
 
     LOCAL_OPTIONS = [
-        make_option('--application_module',
+        make_option('--application-module',
             dest='application_module',
             help='The application module to give access to'),
         make_option('--enable',
