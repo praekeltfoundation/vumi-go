@@ -15,7 +15,7 @@ class TestGoManageContactGroupCommand(GoDjangoTestCase):
     def invoke_command(self, command, **kw):
         options = {
             'email_address': self.user_helper.get_django_user().email,
-            'command': [command]
+            'command': [command],
         }
         options.update(kw)
         self.command.stdout = StringIO()

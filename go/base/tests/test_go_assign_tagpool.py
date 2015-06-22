@@ -22,7 +22,7 @@ class TestGoAssignTagpoolCommand(GoDjangoTestCase):
             "email_address": self.user_helper.get_django_user().email,
             "tagpool": tagpool,
             "max_keys": max_keys,
-            "update": update
+            "update": update,
         })
         output = self.command.stdout.getvalue().strip().split('\n')
         return output
