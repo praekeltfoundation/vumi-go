@@ -19,7 +19,7 @@ class TestGoAssignTagpoolCommand(GoDjangoTestCase):
 
     def handle_command(self, tagpool=None, max_keys=None, update=False):
         self.command.handle(**{
-            "email-address": self.user_helper.get_django_user().email,
+            "email_address": self.user_helper.get_django_user().email,
             "tagpool": tagpool,
             "max-keys": max_keys,
             "update": update

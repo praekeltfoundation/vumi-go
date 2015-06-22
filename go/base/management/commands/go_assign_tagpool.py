@@ -1,17 +1,13 @@
 import uuid
 from optparse import make_option
 
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import BaseGoCommand, CommandError, get_user_by_email
+from go.base.command_utils import BaseGoAccountCommand, CommandError
 
 
-class Command(BaseGoCommand):
+class Command(BaseGoAccountCommand):
     help = "Give a Vumi Go user access to a certain tagpool"
 
     LOCAL_OPTIONS = [
-        make_option('--email-address',
-            dest='email-address',
-            help='Email address for the Vumi Go user'),
         make_option('--tagpool',
             dest='tagpool',
             help='The tagpool to give access to'),
@@ -25,9 +21,9 @@ class Command(BaseGoCommand):
             default=False,
             help='Update an existing permission with a new max-keys value'),
     ]
-    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoAccountCommand.option_list + tuple(LOCAL_OPTIONS)
 
-    def handle(self, *args, **options):
+    def handle_no_command(self, *args, **options):
         options = options.copy()
         for opt in self.LOCAL_OPTIONS:
             if options.get(opt.dest) is None:
@@ -40,12 +36,10 @@ class Command(BaseGoCommand):
         self.handle_validated(*args, **options)
 
     def handle_validated(self, *args, **options):
-        email_address = options['email-address']
         tagpool = unicode(options['tagpool'])
         max_keys = int(options['max-keys']) or None
 
-        user = get_user_by_email(email_address)
-        account = user.get_profile().get_user_account()
+        account = self.user.get_profile().get_user_account()
         existing_tagpools = []
         for permissions in account.tagpools.load_all_bunches():
             existing_tagpools.extend([
@@ -63,15 +57,14 @@ class Command(BaseGoCommand):
                 raise CommandError('Permission already exists, use '
                     '--update to update the value of max-keys')
         else:
-            self.create_permission(user, account, tagpool, max_keys)
+            self.create_permission(account, tagpool, max_keys)
 
     def update_permission(self, tagpool_permission, max_keys):
         tagpool_permission.max_keys = max_keys
         tagpool_permission.save()
 
-    def create_permission(self, user, account, tagpool, max_keys):
-        user_api = vumi_api_for_user(user)
-        api = user_api.api
+    def create_permission(self, account, tagpool, max_keys):
+        api = self.user_api.api
 
         if tagpool not in api.tpm.list_pools():
             raise CommandError("Tagpool '%s' does not exist" % (tagpool,))
