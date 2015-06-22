@@ -18,6 +18,9 @@ class TestGoStartConversation(GoDjangoTestCase):
         self.command.stderr = StringIO()
 
     def test_sanity_checks(self):
+        self.assertRaisesRegexp(CommandError,
+            '--email-address must be specified', self.command.handle,
+            email_address=None, conversation_key=None)
         self.assertRaisesRegexp(CommandError, 'provide --conversation-key',
             self.command.handle, email_address=self.user_email,
             conversation_key=None)
