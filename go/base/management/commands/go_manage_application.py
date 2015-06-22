@@ -8,8 +8,8 @@ class Command(BaseGoAccountCommand):
     help = "Give a Vumi Go user access to a certain application"
 
     LOCAL_OPTIONS = [
-        make_option('--application-module',
-            dest='application-module',
+        make_option('--application_module',
+            dest='application_module',
             help='The application module to give access to'),
         make_option('--enable',
             dest='enable',
@@ -37,7 +37,7 @@ class Command(BaseGoAccountCommand):
         self.handle_validated(*args, **options)
 
     def handle_validated(self, *args, **options):
-        application_module = unicode(options['application-module'])
+        application_module = unicode(options['application_module'])
         enable = options['enable']
         disable = options['disable']
 

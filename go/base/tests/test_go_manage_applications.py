@@ -24,7 +24,7 @@ class TestGoManageApplicationCommand(GoDjangoTestCase):
     def set_permissions(self, application, enabled):
         self.command.handle(**{
             'email_address': self.user_helper.get_django_user().email,
-            'application-module': application,
+            'application_module': application,
             'enable': enabled,
             'disable': not enabled,
         })
