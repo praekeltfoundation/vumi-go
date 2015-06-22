@@ -1,13 +1,10 @@
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
-
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import BaseGoCommand, CommandError
 from go.vumitools.routing_table import GoConnector, RoutingTable
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = "Manage the routing table for a Vumi Go user"
 
     LOCAL_OPTIONS = [
@@ -37,7 +34,7 @@ class Command(BaseCommand):
             help='Remove the routing table entry with four params: '
                     'src_conn src_endpoint dest_conn dest_endpoint'),
     ]
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
 
     CONFLICTING_OPTIONS = ['show', 'clear', 'add', 'remove']
 
@@ -56,8 +53,7 @@ class Command(BaseCommand):
             raise CommandError('Please provide exactly one of: %s' % (
                 ['--%s' % c for c in self.CONFLICTING_OPTIONS],))
 
-        user = get_user_by_email(options['email-address'])
-        user_api = vumi_api_for_user(user)
+        user, user_api = self.mk_user_api(options['email-address'])
 
         if options['show']:
             return self.handle_show(user_api, options)
