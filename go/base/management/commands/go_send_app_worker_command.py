@@ -1,11 +1,11 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from go.vumitools.api import VumiApiCommand
-from go.base.utils import vumi_api, vumi_api_for_user
-from go.base.command_utils import get_user_by_account_key
+from go.base.utils import vumi_api_for_user
+from go.base.command_utils import BaseGoCommand, get_user_by_account_key
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = "Send a VumiApi command to an application worker"
     args = "<worker-name> <command> key1=value1 key2=value2"
 
@@ -24,7 +24,7 @@ class Command(BaseCommand):
                 args.append(parameter)
 
         cmd = handler(worker_name, command, *args, **kwargs)
-        vumi_api().mapi.send_command(cmd)
+        self.mk_vumi_api().mapi.send_command(cmd)
 
     def handle_reconcile_cache(self, worker_name, command, account_key,
                                conversation_key):
