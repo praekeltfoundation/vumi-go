@@ -21,7 +21,7 @@ class TestGoImportContactsCommand(GoDjangoTestCase):
 
     def invoke_command(self, **kw):
         options = {
-            'email-address': self.user_helper.get_django_user().email,
+            'email_address': self.user_helper.get_django_user().email,
             'contacts-csv': os.path.join(
                 settings.PROJECT_ROOT, 'base', 'fixtures',
                 'sample-contacts-with-headers.csv'),

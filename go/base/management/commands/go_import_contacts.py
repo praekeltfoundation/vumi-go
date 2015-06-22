@@ -2,16 +2,13 @@ from optparse import make_option
 
 from go.contacts.parsers import ContactFileParser
 
-from go.base.command_utils import BaseGoCommand, CommandError
+from go.base.command_utils import BaseGoAccountCommand, CommandError
 
 
-class Command(BaseGoCommand):
+class Command(BaseGoAccountCommand):
     help = "Manage contact groups belonging to a Vumi Go account."
 
     LOCAL_OPTIONS = [
-        make_option('--email-address',
-            dest='email-address',
-            help='Email address for the Vumi Go user'),
         make_option('--contacts-csv',
             dest='contacts-csv',
             help='The CSV file containing contacts to import'),
@@ -21,7 +18,7 @@ class Command(BaseGoCommand):
             default=[],
             help='Group to add the imported contacts to (multiple)'),
     ]
-    option_list = BaseGoCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoAccountCommand.option_list + tuple(LOCAL_OPTIONS)
 
     def ask_for_option(self, options, opt):
         if options.get(opt.dest) is None:
@@ -36,18 +33,17 @@ class Command(BaseGoCommand):
             if opt.dest in opt_dests:
                 self.ask_for_option(options, opt)
 
-    def handle(self, *args, **options):
+    def handle_no_command(self, *args, **options):
         options = options.copy()
 
-        self.ask_for_options(options, ['email-address', 'contacts-csv'])
-        user, user_api = self.mk_user_api(options['email-address'])
-        groups = [g.key for g in user_api.list_groups()]
+        self.ask_for_options(options, ['contacts-csv'])
+        groups = [g.key for g in self.user_api.list_groups()]
         for group in options['groups']:
             if group not in groups:
                 raise CommandError('Group not found: %s' % (group,))
-        return self.import_contacts(user_api, options)
+        return self.import_contacts(options)
 
-    def import_contacts(self, user_api, options):
+    def import_contacts(self, options):
         file_path = options['contacts-csv']
         try:
             _, parser = ContactFileParser.get_parser(file_path)
@@ -62,7 +58,7 @@ class Command(BaseGoCommand):
             try:
                 for contact_dict in contact_dicts:
                     contact_dict['groups'] = options['groups']
-                    c = user_api.contact_store.new_contact(**contact_dict)
+                    c = self.user_api.contact_store.new_contact(**contact_dict)
                     written_contacts.append(c)
                     self.stdout.write('.')
             except:
