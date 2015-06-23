@@ -19,7 +19,7 @@ from go.billing.django_utils import load_account_credits
 from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
     LowCreditNotification)
-from go.billing.django_utils import TransactionSerializer
+from go.billing.django_utils import TransactionSerializer, chunked_query
 from go.base.utils import format_currency
 
 
@@ -439,15 +439,13 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
         created__lt=(to_date + relativedelta(days=1)),
     ).order_by("id")  # We order by id because chunking needs it.
 
+    bucket = Bucket('billing.archive')
+
     def generate_chunks(queryset, items_per_chunk=1000, sep="\n"):
-        # NOTE: This chunking method only works if the queryset has a well
-        #       defined order.
-        for i in xrange(0, queryset.count(), items_per_chunk):
-            data = list(queryset[i:i + items_per_chunk].iterator())
-            yield sep.join(serializer.to_json(data))
+        for items in chunked_query(queryset, items_per_chunk):
+            yield sep.join(serializer.to_json(items))
             yield sep
 
-    bucket = Bucket('billing.archive')
     chunks = generate_chunks(transaction_query)
 
     archive = TransactionArchive(

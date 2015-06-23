@@ -4,6 +4,8 @@ import json
 
 from django.core import serializers
 
+from djorm_core.postgresql import server_side_cursors
+
 from go.billing.utils import JSONEncoder
 from go.billing.models import Transaction
 
@@ -18,6 +20,28 @@ class TransactionSerializer(object):
         simplifier = self._simplifier_cls()
         return (json.dumps(t, cls=JSONEncoder)
                 for t in simplifier.serialize(transactions))
+
+
+def chunked_query(queryset, items_per_chunk=1000):
+    """Iterate over a queryset using server-side cursors (if possible)
+    and return lists of objects in chunks.
+
+    :type queryset:
+        Django query set.
+    :param queryset:
+        Query to iterate over.
+    :param int items_per_chunk:
+        Number of objects to include in each chunk. Default 1000.
+    """
+    with server_side_cursors(itersize=items_per_chunk):
+        items = []
+        for item in queryset.iterator():
+            items.append(item)
+            if len(items) == items_per_chunk:
+                yield items
+                items = []
+        if items:
+            yield items
 
 
 def load_account_credits(account, credit_amount):
