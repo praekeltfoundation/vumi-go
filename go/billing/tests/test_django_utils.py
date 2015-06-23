@@ -9,7 +9,8 @@ from go.billing.tests.helpers import (
     mk_transaction, get_message_credits, get_storage_credits,
     get_session_credits, get_session_length_credits)
 
-from go.billing.django_utils import TransactionSerializer, load_account_credits
+from go.billing.django_utils import (
+    TransactionSerializer, chunked_query, load_account_credits)
 
 
 class TestTransactionSerializer(GoDjangoTestCase):
@@ -56,6 +57,35 @@ class TestTransactionSerializer(GoDjangoTestCase):
                 u"tag_name": u"tag1",
             },
         })
+
+
+class TestChunkedQuery(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.account = Account.objects.get(
+            user=self.user_helper.get_django_user())
+
+    def test_simple_query_without_remainder(self):
+        query = Transaction.objects.order_by('pk').all()
+        transactions = [
+            mk_transaction(self.account) for _ in range(6)]
+        transactions.sort(key=lambda t: t.pk)
+        it = chunked_query(query, 3)
+        self.assertEqual(next(it), transactions[0:3])
+        self.assertEqual(next(it), transactions[3:6])
+        self.assertRaises(StopIteration, next, it)
+
+    def test_simple_query_with_remainder(self):
+        query = Transaction.objects.order_by('pk').all()
+        transactions = [
+            mk_transaction(self.account) for _ in range(8)]
+        transactions.sort(key=lambda t: t.pk)
+        it = chunked_query(query, 3)
+        self.assertEqual(next(it), transactions[0:3])
+        self.assertEqual(next(it), transactions[3:6])
+        self.assertEqual(next(it), transactions[6:8])
+        self.assertRaises(StopIteration, next, it)
 
 
 class TestLoadAccountCredits(GoDjangoTestCase):
