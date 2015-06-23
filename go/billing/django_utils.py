@@ -1,6 +1,7 @@
 """ Billing utils that require Django. """
 
 import json
+import itertools
 
 from django.core import serializers
 
@@ -34,13 +35,11 @@ def chunked_query(queryset, items_per_chunk=1000):
         Number of objects to include in each chunk. Default 1000.
     """
     with server_side_cursors(itersize=items_per_chunk):
-        items = []
-        for item in queryset.iterator():
-            items.append(item)
-            if len(items) == items_per_chunk:
-                yield items
-                items = []
-        if items:
+        iterator = queryset.iterator()
+        while True:
+            items = list(itertools.islice(iterator, items_per_chunk))
+            if not items:
+                break
             yield items
 
 
