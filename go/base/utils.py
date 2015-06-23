@@ -9,6 +9,7 @@ from urlparse import urlparse, urlunparse
 from django import forms
 from django.http import Http404, HttpResponse
 from django.conf import settings
+from vumi.persist.redis_manager import RedisManager
 
 from go.errors import UnknownConversationType, UnknownRouterType
 from go.config import (
@@ -45,6 +46,14 @@ def sendfile(url, buffering=True, filename=None):
         response.write(url)
 
     return response
+
+
+def get_redis_manager():
+    """
+    Build a Django-configured Redis manager.
+    """
+    redis_config = settings.VUMI_API_CONFIG.get('redis_manager', {})
+    return RedisManager.from_config(redis_config)
 
 
 def vumi_api():
