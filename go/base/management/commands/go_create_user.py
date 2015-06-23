@@ -1,13 +1,13 @@
 import getpass
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
 from django.core.validators import validate_email
 from django.core import exceptions
 from django.contrib.auth import get_user_model
 
+from go.base.command_utils import BaseGoCommand, CommandError
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = "Create a Vumi Go user"
 
     PARAMS = [
@@ -21,7 +21,7 @@ class Command(BaseCommand):
                 raw_input),
     ]
 
-    option_list = BaseCommand.option_list + tuple([
+    option_list = BaseGoCommand.option_list + tuple([
         make_option('--%s' % key, dest=key, help=hlp)
         for key, hlp, _ in PARAMS
     ])

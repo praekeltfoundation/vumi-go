@@ -24,7 +24,7 @@ class TestGoManageRoutingTableCommand(GoDjangoTestCase):
 
     def handle_command(self, **options):
         user_email = self.user_helper.get_django_user().email
-        options.setdefault('email-address', user_email)
+        options.setdefault('email_address', user_email)
         options.setdefault('show', False)
         options.setdefault('clear', False)
         options.setdefault('add', ())

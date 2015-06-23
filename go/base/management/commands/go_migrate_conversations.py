@@ -1,13 +1,12 @@
 from optparse import make_option
 import textwrap
 
-from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from vumi.persist.model import ModelMigrationError
 
 from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_users
+from go.base.command_utils import BaseGoCommand, get_users
 
 
 class Migration(object):
@@ -174,7 +173,7 @@ class FixJsboxEndpoint(Migration):
         conv.save()
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = """
     Find and migrate conversations for known accounts in Vumi Go.
     Allows for optional searching on the email.
@@ -200,7 +199,7 @@ class Command(BaseCommand):
 
     args = "[optional username regex]"
     encoding = 'utf-8'
-    option_list = BaseCommand.option_list + (
+    option_list = BaseGoCommand.option_list + (
         make_option('-l', '--list', action='store_true',
                     dest='list_migrations',
                     default=False, help='List available migrations.'),
