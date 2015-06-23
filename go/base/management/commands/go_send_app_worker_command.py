@@ -1,8 +1,7 @@
-from django.core.management.base import BaseCommand, CommandError
-
 from go.vumitools.api import VumiApiCommand
 from go.base.utils import vumi_api_for_user
-from go.base.command_utils import BaseGoCommand, get_user_by_account_key
+from go.base.command_utils import (
+    BaseGoCommand, CommandError, get_user_by_account_key)
 
 
 class Command(BaseGoCommand):
