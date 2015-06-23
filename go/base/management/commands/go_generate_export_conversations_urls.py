@@ -8,6 +8,8 @@ from django.utils.text import slugify
 from go.base.command_utils import BaseGoCommand
 
 
+# We don't extend BaseGoAccountCommand since the '--email' option is used
+# instead of '--email-address'
 class Command(BaseGoCommand):
 
     help = "Dump URLs for use with cURL for downloading message data."
