@@ -1,19 +1,13 @@
 from uuid import uuid4
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
-
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import BaseGoAccountCommand, CommandError
 
 
-class Command(BaseCommand):
+class Command(BaseGoAccountCommand):
     help = "manage access to an HTTP api"
 
     LOCAL_OPTIONS = [
-        make_option('--email-address',
-                    dest='email_address',
-                    help='Email address for the Vumi Go user'),
         make_option('--conversation-key',
                     dest='conversation_key',
                     help='The conversation key'),
@@ -38,13 +32,11 @@ class Command(BaseCommand):
                     dest='remove_event_url',
                     help='Remove an event URL'),
     ]
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoAccountCommand.option_list + tuple(LOCAL_OPTIONS)
     allowed_conversation_types = ['http_api', 'jsbox']
 
-    def handle(self, *args, **options):
-        user = get_user_by_email(options['email_address'])
-        user_api = vumi_api_for_user(user)
-        conversation = user_api.get_wrapped_conversation(
+    def handle_no_command(self, *args, **options):
+        conversation = self.user_api.get_wrapped_conversation(
             options['conversation_key'])
 
         if conversation is None:

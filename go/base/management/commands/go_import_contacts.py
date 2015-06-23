@@ -1,22 +1,16 @@
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
-
-from go.base.utils import vumi_api_for_user
 from go.contacts.parsers import ContactFileParser
 
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import BaseGoAccountCommand, CommandError
 
 
-class Command(BaseCommand):
+class Command(BaseGoAccountCommand):
     help = "Manage contact groups belonging to a Vumi Go account."
 
     LOCAL_OPTIONS = [
-        make_option('--email-address',
-            dest='email-address',
-            help='Email address for the Vumi Go user'),
         make_option('--contacts-csv',
-            dest='contacts-csv',
+            dest='contacts_csv',
             help='The CSV file containing contacts to import'),
         make_option('--group',
             dest='groups',
@@ -24,7 +18,7 @@ class Command(BaseCommand):
             default=[],
             help='Group to add the imported contacts to (multiple)'),
     ]
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
+    option_list = BaseGoAccountCommand.option_list + tuple(LOCAL_OPTIONS)
 
     def ask_for_option(self, options, opt):
         if options.get(opt.dest) is None:
@@ -39,20 +33,18 @@ class Command(BaseCommand):
             if opt.dest in opt_dests:
                 self.ask_for_option(options, opt)
 
-    def handle(self, *args, **options):
+    def handle_no_command(self, *args, **options):
         options = options.copy()
 
-        self.ask_for_options(options, ['email-address', 'contacts-csv'])
-        user = get_user_by_email(options['email-address'])
-        user_api = vumi_api_for_user(user)
-        groups = [g.key for g in user_api.list_groups()]
+        self.ask_for_options(options, ['contacts_csv'])
+        groups = [g.key for g in self.user_api.list_groups()]
         for group in options['groups']:
             if group not in groups:
                 raise CommandError('Group not found: %s' % (group,))
-        return self.import_contacts(user_api, options)
+        return self.import_contacts(options)
 
-    def import_contacts(self, user_api, options):
-        file_path = options['contacts-csv']
+    def import_contacts(self, options):
+        file_path = options['contacts_csv']
         try:
             _, parser = ContactFileParser.get_parser(file_path)
             # No Django silliness, please.
@@ -66,7 +58,7 @@ class Command(BaseCommand):
             try:
                 for contact_dict in contact_dicts:
                     contact_dict['groups'] = options['groups']
-                    c = user_api.contact_store.new_contact(**contact_dict)
+                    c = self.user_api.contact_store.new_contact(**contact_dict)
                     written_contacts.append(c)
                     self.stdout.write('.')
             except:

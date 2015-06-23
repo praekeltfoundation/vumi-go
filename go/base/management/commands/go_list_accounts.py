@@ -1,13 +1,13 @@
 from optparse import make_option
 
-from django.core.management.base import BaseCommand
 from django.db.models import Q
 
-from go.base.command_utils import get_users, user_details_as_string
+from go.base.command_utils import (
+    BaseGoCommand, get_users, user_details_as_string)
 from go.base.utils import vumi_api_for_user
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = """
     List known accounts on Vumi Go. Allows for optional searching on the
     username.
@@ -27,7 +27,7 @@ class Command(BaseCommand):
     args = "[optional username regex]"
     encoding = 'utf-8'
 
-    option_list = BaseCommand.option_list + (
+    option_list = BaseGoCommand.option_list + (
         make_option(
             '--show-pools', dest='show-pools', default=False,
             action='store_true',

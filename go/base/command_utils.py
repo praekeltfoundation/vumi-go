@@ -69,7 +69,7 @@ class BaseGoCommand(BaseCommand):
         if email_address is None and options is None:
             raise ValueError("email_address or options is required")
         if email_address is None:
-            if 'email_address' not in options:
+            if options.get('email_address', None) is None:
                 raise CommandError("--email-address must be specified")
             email_address = options.get('email_address')
         user = get_user_by_email(email_address)

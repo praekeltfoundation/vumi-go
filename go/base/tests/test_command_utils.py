@@ -28,6 +28,9 @@ class TestBaseGoAccountCommand(GoAccountCommandTestCase):
         self.assertRaisesRegexp(
             CommandError, '--email-address must be specified',
             self.command.handle)
+        self.assertRaisesRegexp(
+            CommandError, '--email-address must be specified',
+            self.command.handle, email_address=None)
 
     def test_user_account_must_exist(self):
         self.assertRaisesRegexp(
