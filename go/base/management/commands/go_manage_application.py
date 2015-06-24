@@ -45,7 +45,7 @@ class Command(BaseGoAccountCommand):
             raise CommandError(
                 'Please specify either --enable or --disable.')
 
-        account = self.user.get_profile().get_user_account()
+        account = self.user_api.get_user_account()
         all_permissions = []
         for permissions in account.applications.load_all_bunches():
             all_permissions.extend(permissions)

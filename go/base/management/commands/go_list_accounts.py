@@ -4,7 +4,6 @@ from django.db.models import Q
 
 from go.base.command_utils import (
     BaseGoCommand, get_users, user_details_as_string)
-from go.base.utils import vumi_api_for_user
 
 
 class Command(BaseGoCommand):
@@ -38,7 +37,7 @@ class Command(BaseGoCommand):
             help="Show owned tags in account listing"),
     )
 
-    def handle(self, *usernames, **options):
+    def handle_no_command(self, *usernames, **options):
         users = get_users()
         if usernames:
             or_statements = [Q(email__regex=un) for un in usernames]
@@ -52,7 +51,7 @@ class Command(BaseGoCommand):
     def print_account(self, index, user, options):
         output = u"%s. %s\n" % (index, user_details_as_string(user))
         self.stdout.write(output.encode(self.encoding))
-        user_api = vumi_api_for_user(user)
+        user_api = self.user_api_for_user(user)
         if options.get('show-pools'):
             self.stdout.write("  Pools:\n")
             user_account = user_api.get_user_account()

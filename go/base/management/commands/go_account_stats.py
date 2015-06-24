@@ -17,7 +17,7 @@ class Command(BaseGoCommand):
     args = "<email-address> <command>"
     encoding = 'utf-8'
 
-    def handle(self, *args, **options):
+    def handle_no_command(self, *args, **options):
 
         if len(args) == 0:
             self.print_command_summary()

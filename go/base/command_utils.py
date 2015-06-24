@@ -60,8 +60,11 @@ class BaseGoCommand(BaseCommand):
         return [opt.const for opt in self.option_list
                 if opt.action == 'append_const' and opt.dest == 'command']
 
+    def user_api_for_user(self, user):
+        return vumi_api_for_user(user)
+
     def mk_all_user_apis(self):
-        apis = [(user, vumi_api_for_user(user)) for user in get_users()]
+        apis = [(user, self.user_api_for_user(user)) for user in get_users()]
         apis.sort(key=lambda u: u[0].email)
         return apis
 
@@ -73,7 +76,7 @@ class BaseGoCommand(BaseCommand):
                 raise CommandError("--email-address must be specified")
             email_address = options.get('email_address')
         user = get_user_by_email(email_address)
-        user_api = vumi_api_for_user(user)
+        user_api = self.user_api_for_user(user)
         return user, user_api
 
     def mk_vumi_api(self):

@@ -29,7 +29,7 @@ class Command(BaseGoCommand):
             help='The template for generating the cURL.')
     )
 
-    def handle(self, *args, **kwargs):
+    def handle_no_command(self, *args, **kwargs):
         self.email = kwargs['email']
         if self.email is None:
             raise CommandError('--email is mandatory.')

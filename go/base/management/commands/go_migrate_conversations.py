@@ -5,7 +5,6 @@ from django.db.models import Q
 
 from vumi.persist.model import ModelMigrationError
 
-from go.base.utils import vumi_api_for_user
 from go.base.command_utils import BaseGoCommand, get_users
 
 
@@ -238,7 +237,7 @@ class Command(BaseGoCommand):
         return migrator_cls(dry_run)
 
     def handle_user(self, user, migrator):
-        user_api = vumi_api_for_user(user)
+        user_api = self.user_api_for_user(user)
         all_keys = user_api.conversation_store.list_conversations()
         conversations = []
         for conv_key in all_keys:
@@ -260,7 +259,7 @@ class Command(BaseGoCommand):
             migrator.run(user_api, conv)
             self.outln(u' done.')
 
-    def handle(self, *usernames, **options):
+    def handle_no_command(self, *usernames, **options):
         if options['list_migrations']:
             self.handle_list()
             return

@@ -1,5 +1,4 @@
 from go.vumitools.api import VumiApiCommand
-from go.base.utils import vumi_api_for_user
 from go.base.command_utils import (
     BaseGoCommand, CommandError, get_user_by_account_key)
 
@@ -29,7 +28,7 @@ class Command(BaseGoCommand):
                                conversation_key):
 
         user = get_user_by_account_key(account_key)
-        user_api = vumi_api_for_user(user)
+        user_api = self.user_api_for_user(user)
 
         conversation = user_api.get_wrapped_conversation(conversation_key)
         if conversation is None:

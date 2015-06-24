@@ -39,7 +39,7 @@ class Command(BaseGoAccountCommand):
         tagpool = unicode(options['tagpool'])
         max_keys = int(options['max_keys']) or None
 
-        account = self.user.get_profile().get_user_account()
+        account = self.user_api.get_user_account()
         existing_tagpools = []
         for permissions in account.tagpools.load_all_bunches():
             existing_tagpools.extend([
