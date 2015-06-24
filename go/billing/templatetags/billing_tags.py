@@ -20,6 +20,15 @@ def format_cents(v):
 
 
 @register.filter
+def format_unit_cost_cents(v):
+    """A version of ``format_cents`` tailored to format small fractions of cents
+    for displaying unit costs.
+    """
+    v = v / Decimal('100.0')
+    return format_currency(v, places=settings.UNIT_COST_DOLLAR_DECIMAL_PLACES)
+
+
+@register.filter
 def format_credits(v):
     """Returns a formatted string representation of a number in credits from a
     decimal credits value.
