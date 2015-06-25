@@ -157,6 +157,7 @@ class ConversationApiWorker(BaseWorker):
     @inlineCallbacks
     def teardown_worker(self):
         yield self.webserver.loseConnection()
+        yield self.vumi_api.cleanup()
 
     def setup_connectors(self):
         pass
