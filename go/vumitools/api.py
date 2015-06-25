@@ -82,13 +82,14 @@ class VumiUserApi(object):
 
     conversation_wrapper = ConversationWrapper
 
-    def __init__(self, api, user_account_key):
+    def __init__(self, api, user_account_key, cleanup_api=False):
         # We could get either bytes or unicode here. Decode if necessary.
         if not isinstance(user_account_key, unicode):
             user_account_key = user_account_key.decode('utf8')
         self.api = api
         self.manager = self.api.manager
         self.user_account_key = user_account_key
+        self._cleanup_api = cleanup_api
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
@@ -100,17 +101,24 @@ class VumiUserApi(object):
         self.optout_store = OptOutStore(self.api.manager,
                                         self.user_account_key)
 
+    @Manager.calls_manager
+    def cleanup(self):
+        if self._cleanup_api:
+            yield self.api.cleanup()
+
     def exists(self):
         return self.api.user_exists(self.user_account_key)
 
     @classmethod
     def from_config_sync(cls, user_account_key, config):
-        return cls(VumiApi.from_config_sync(config), user_account_key)
+        return cls(
+            VumiApi.from_config_sync(config), user_account_key,
+            cleanup_api=True)
 
     @classmethod
     def from_config_async(cls, user_account_key, config):
         d = VumiApi.from_config_async(config)
-        return d.addCallback(cls, user_account_key)
+        return d.addCallback(cls, user_account_key, cleanup_api=True)
 
     def get_user_account(self):
         return self.api.get_user_account(self.user_account_key)
@@ -537,6 +545,11 @@ class VumiApi(object):
         self.mapi = sender
         self.metric_publisher = metric_publisher
 
+    @Manager.calls_manager
+    def cleanup(self):
+        yield self.redis.close_manager()
+        yield self.manager.close_manager()
+
     @staticmethod
     def _parse_config(config):
         riak_config = config.get('riak_manager', {})
@@ -581,8 +594,8 @@ class VumiApi(object):
     def get_user_account(self, user_account_key):
         return self.account_store.get_user(user_account_key)
 
-    def get_user_api(self, user_account_key):
-        return VumiUserApi(self, user_account_key)
+    def get_user_api(self, user_account_key, cleanup_api=False):
+        return VumiUserApi(self, user_account_key, cleanup_api=cleanup_api)
 
     def send_command(self, worker_name, command, *args, **kwargs):
         """Create a VumiApiCommand and send it.

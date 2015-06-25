@@ -118,6 +118,8 @@ class EventDispatcher(ApplicationWorker):
         for name, handler in self.handlers.items():
             yield handler.teardown_handler()
 
+        yield self.vumi_api.cleanup()
+
     @inlineCallbacks
     def get_account_config(self, account_key):
         """Find the appropriate account config.

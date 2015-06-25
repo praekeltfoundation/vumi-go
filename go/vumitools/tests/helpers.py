@@ -293,6 +293,7 @@ class VumiApiHelper(object):
         self._users_created = 0
         self._user_helpers = {}
         self._vumi_api = None
+        self._cleanup_vumi_api = False
 
         generate_proxies(self, self._persistence_helper)
 
@@ -308,6 +309,8 @@ class VumiApiHelper(object):
         for worker_helper in self._worker_helpers.values():
             # All of these will wait for the same broker, but that's fine.
             yield worker_helper.cleanup()
+        if self._cleanup_vumi_api:
+            yield self._vumi_api.cleanup()
         yield self._persistence_helper.cleanup()
         self._patch_helper.cleanup()
 
@@ -347,6 +350,8 @@ class VumiApiHelper(object):
 
     @proxyable
     def setup_vumi_api(self):
+        # If we create our own VumiApi, we need to clean it up.
+        self._cleanup_vumi_api = True
         if self.is_sync:
             return self.setup_sync_vumi_api()
         else:
