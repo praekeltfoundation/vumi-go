@@ -136,20 +136,23 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
     """
     user_api = VumiUserApi.from_config_sync(
         account_key, settings.VUMI_API_CONFIG)
-    user_profile = UserProfile.objects.get(user_account=account_key)
-    conversation = user_api.get_wrapped_conversation(conversation_key)
+    try:
+        user_profile = UserProfile.objects.get(user_account=account_key)
+        conversation = user_api.get_wrapped_conversation(conversation_key)
 
-    io = StringIO()
-    writer = UnicodeDictWriter(io, conversation_export_field_names)
-    writer.writeheader()
+        io = StringIO()
+        writer = UnicodeDictWriter(io, conversation_export_field_names)
+        writer.writeheader()
 
-    for messages in load_messages_in_chunks(conversation, 'inbound'):
-        for message in messages:
-            writer.writerow(row_for_inbound_message(message))
+        for messages in load_messages_in_chunks(conversation, 'inbound'):
+            for message in messages:
+                writer.writerow(row_for_inbound_message(message))
 
-    for messages in load_messages_in_chunks(conversation, 'outbound'):
-        for message in messages:
-            mdb = user_api.api.mdb
-            writer.writerow(row_for_outbound_message(message, mdb))
+        for messages in load_messages_in_chunks(conversation, 'outbound'):
+            for message in messages:
+                mdb = user_api.api.mdb
+                writer.writerow(row_for_outbound_message(message, mdb))
 
-    email_export(user_profile, conversation, io)
+        email_export(user_profile, conversation, io)
+    finally:
+        user_api.cleanup()
