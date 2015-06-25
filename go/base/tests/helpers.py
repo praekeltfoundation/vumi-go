@@ -80,8 +80,11 @@ class DjangoVumiApiHelper(object):
             return self.setup_vumi_api()
 
     def cleanup(self):
-        self._vumi_helper.cleanup()
-        self.restore_django_bits()
+        try:
+            self._vumi_helper.cleanup()
+        finally:
+            # This must happen even if vumi_helper cleanup fails.
+            self.restore_django_bits()
         for patch in reversed(self._settings_patches):
             patch.disable()
 
@@ -156,7 +159,7 @@ class DjangoVumiApiHelper(object):
         user.first_name = first_name
         user.last_name = last_name
         user.save()
-        user_api = base_utils.vumi_api_for_user(user)
+        user_api = base_utils.vumi_api_for_user(user, self.get_vumi_api())
         return self.get_user_helper(user_api.user_account_key)
 
     def create_user_profile(self, sender, instance, created, **kwargs):

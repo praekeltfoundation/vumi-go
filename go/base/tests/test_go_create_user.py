@@ -26,6 +26,7 @@ class TestGoCreateUserCommand(GoDjangoTestCase):
         self.assertEqual(user.first_name, 'Name')
         self.assertEqual(user.last_name, 'Surname')
         profile = user.get_profile()
-        riak_account = profile.get_user_account()
+        riak_account = profile.get_user_account(
+            self.vumi_helper.get_vumi_api())
         self.assertEqual(riak_account.key, profile.user_account)
         self.assertEqual(riak_account.username, user.email)

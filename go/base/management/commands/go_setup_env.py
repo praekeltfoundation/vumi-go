@@ -157,6 +157,10 @@ class Command(BaseCommand):
 
         self.write_startup_script()
 
+    def cleanup(self):
+        self.redis.close_manager()
+        self.riak.close_manager()
+
     def setup_backend(self, config):
         self.redis = RedisManager.from_config(config['redis_manager'])
         self.riak = RiakManager.from_config(config['riak_manager'])
@@ -164,6 +168,9 @@ class Command(BaseCommand):
         self.tagpool = TagpoolManager(
             self.redis.sub_manager('tagpool_store'))
         self.api = VumiApi(self.riak, self.redis)
+
+    def get_user_api(self, user):
+        return vumi_api_for_user(user, self.api)
 
     def read_yaml(self, file_path):
         # We remove a top-level '__ignore__' key which can contain blocks
@@ -243,7 +250,7 @@ class Command(BaseCommand):
         user.save()
 
         profile = user.get_profile()
-        account = profile.get_user_account()
+        account = profile.get_user_account(self.api)
 
         for pool_name, max_keys in user_info['tagpools']:
             self.assign_tagpool(account, pool_name, max_keys)
@@ -276,14 +283,14 @@ class Command(BaseCommand):
         return app_permission
 
     def setup_channels(self, user, channels):
-        user_api = vumi_api_for_user(user)
+        user_api = self.get_user_api(user)
         for channel in channels:
             tag = tuple(channel.split(':'))
             user_api.acquire_specific_tag(tag)
             self.stdout.write('Tag %s acquired\n' % (tag,))
 
     def setup_routers(self, user, routers):
-        user_api = vumi_api_for_user(user)
+        user_api = self.get_user_api(user)
         for router_info in routers:
             router_info = router_info.copy()  # So we can modify it.
             self.router_info.append({
@@ -316,7 +323,7 @@ class Command(BaseCommand):
             self.stdout.write('Router %s created\n' % (router.key,))
 
     def setup_conversations(self, user, conversations):
-        user_api = vumi_api_for_user(user)
+        user_api = self.get_user_api(user)
         for conv_info in conversations:
             conv_info = conv_info.copy()  # So we can modify it.
             self.conversation_info.append({
@@ -362,7 +369,7 @@ class Command(BaseCommand):
             rt.add_entry(
                 str(connectors[src]), src_ep, str(connectors[dst]), dst_ep)
 
-        user_account = vumi_api_for_user(user).get_user_account()
+        user_account = self.get_user_api(user).get_user_account()
         user_account.routing_table = rt
         user_account.save()
 
@@ -584,7 +591,7 @@ class Command(BaseCommand):
         self.stdout.write('Wrote %s.\n' % (fn,))
 
     def setup_contact_groups(self, user, contact_groups):
-        user_api = vumi_api_for_user(user)
+        user_api = self.get_user_api(user)
         for group_info in contact_groups:
             self.contact_group_info.append({
                 'account': user.email,

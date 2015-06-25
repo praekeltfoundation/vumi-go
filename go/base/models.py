@@ -6,14 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
 
-from vumi.persist.riak_manager import RiakManager
-from go.vumitools.account import AccountStore
-from go.base.utils import vumi_api_for_user
-
-
-def get_account_store():
-    return AccountStore(RiakManager.from_config(
-            settings.VUMI_API_CONFIG['riak_manager']))
+from go.base.utils import vumi_api, vumi_api_for_user
 
 
 class GoUserManager(BaseUserManager):
@@ -88,19 +81,23 @@ class UserProfile(models.Model):
     def __unicode__(self):
         return u"%s's profile" % self.user.email
 
-    def get_user_account(self):
-        return get_account_store().get_user(self.user_account)
+    def get_user_account(self, api):
+        return api.account_store.get_user(self.user_account)
 
 
 def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        username = instance.get_username()
-        account = get_account_store().new_user(unicode(username))
-        UserProfile.objects.create(user=instance, user_account=account.key)
-    user_api = vumi_api_for_user(instance)
-    # Enable search for the contact & group stores
-    user_api.contact_store.contacts.enable_search()
-    user_api.contact_store.groups.enable_search()
+    api = vumi_api()
+    try:
+        if created:
+            username = instance.get_username()
+            account = api.account_store.new_user(unicode(username))
+            UserProfile.objects.create(user=instance, user_account=account.key)
+        user_api = vumi_api_for_user(instance, api)
+        # Enable search for the contact & group stores
+        user_api.contact_store.contacts.enable_search()
+        user_api.contact_store.groups.enable_search()
+    finally:
+        api.cleanup()
 
 
 post_save.connect(create_user_profile, sender=GoUser,
