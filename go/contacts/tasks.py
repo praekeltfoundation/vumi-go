@@ -1,5 +1,6 @@
 import sys
 import traceback
+from functools import wraps
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 
@@ -19,15 +20,27 @@ from go.contacts.parsers import ContactFileParser
 from go.contacts.utils import contacts_by_key
 
 
+def with_user_api(func):
+    @wraps(func)
+    def wrapper(account_key, *args, **kw):
+        api = VumiUserApi.from_config_sync(
+            account_key, settings.VUMI_API_CONFIG)
+        try:
+            return func(api, account_key, *args, **kw)
+        finally:
+            api.cleanup()
+    return wrapper
+
+
 @task(ignore_result=True)
-def delete_group(account_key, group_key):
+@with_user_api
+def delete_group(api, account_key, group_key):
     # NOTE: There is a small chance that this can break when running in
     #       production if the load is high and the queues have backed up.
     #       What could happen is that while contacts are being removed from
     #       the group, new contacts could have been added before the group
     #       has been deleted. If this happens those contacts will have
     #       secondary indexes in Riak pointing to a non-existent Group.
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
     # We do this one at a time because we're already saving them one at a time
@@ -44,8 +57,8 @@ def delete_group(account_key, group_key):
 
 
 @task(ignore_result=True)
-def delete_group_contacts(account_key, group_key):
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+@with_user_api
+def delete_group_contacts(api, account_key, group_key):
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
     contacts_page = contact_store.get_contact_keys_for_group(group)
@@ -134,7 +147,8 @@ def get_group_contacts(contact_store, *groups):
 
 
 @task(ignore_result=True)
-def export_contacts(account_key, contact_keys, include_extra=True):
+@with_user_api
+def export_contacts(api, account_key, contact_keys, include_extra=True):
     """
     Export a list of contacts as a CSV file and email to the account
     holders' email address.
@@ -146,8 +160,6 @@ def export_contacts(account_key, contact_keys, include_extra=True):
     :param bool include_extra:
         Whether or not to include the extra data stored in the dynamic field.
     """
-
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     all_key_count = len(contact_keys)
 
@@ -177,7 +189,8 @@ def export_contacts(account_key, contact_keys, include_extra=True):
 
 
 @task(ignore_result=True)
-def export_all_contacts(account_key, include_extra=True):
+@with_user_api
+def export_all_contacts(api, account_key, include_extra=True):
     """
     Export all contacts as a CSV file and email to the account
     holders' email address.
@@ -187,7 +200,6 @@ def export_all_contacts(account_key, include_extra=True):
     :param bool include_extra:
         Whether or not to include the extra data stored in the dynamic field.
     """
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     contact_keys = contact_store.contacts.all_keys()
     return export_contacts(account_key, contact_keys,
@@ -195,7 +207,8 @@ def export_all_contacts(account_key, include_extra=True):
 
 
 @task(ignore_result=True)
-def export_group_contacts(account_key, group_key, include_extra=True):
+@with_user_api
+def export_group_contacts(api, account_key, group_key, include_extra=True):
     """
     Export a group's contacts as a CSV file and email to the account
     holders' email address.
@@ -208,7 +221,6 @@ def export_group_contacts(account_key, group_key, include_extra=True):
         Whether or not to include the extra data stored in the dynamic field.
     """
 
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
 
     group = contact_store.get_group(group_key)
@@ -233,7 +245,9 @@ def export_group_contacts(account_key, group_key, include_extra=True):
 
 
 @task(ignore_result=True)
-def export_many_group_contacts(account_key, group_keys, include_extra=True):
+@with_user_api
+def export_many_group_contacts(api, account_key, group_keys,
+                               include_extra=True):
     """
     Export multiple group contacts as a single CSV file and email to the
     account holders' email address.
@@ -247,7 +261,6 @@ def export_many_group_contacts(account_key, group_keys, include_extra=True):
         Whether or not to include the extra data stored in the dynamic field.
     """
 
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
 
     groups = [contact_store.get_group(k) for k in group_keys]
@@ -273,9 +286,9 @@ def export_many_group_contacts(account_key, group_keys, include_extra=True):
 
 
 @task(ignore_result=True)
-def import_new_contacts_file(account_key, group_key, file_name, file_path,
+@with_user_api
+def import_new_contacts_file(api, account_key, group_key, file_name, file_path,
                              fields, has_header):
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
 
@@ -336,9 +349,9 @@ def import_new_contacts_file(account_key, group_key, file_name, file_path,
         default_storage.delete(file_path)
 
 
-def import_and_update_contacts(contact_mangler, account_key, group_key,
+@with_user_api
+def import_and_update_contacts(api, account_key, contact_mangler, group_key,
                                file_name, file_path, fields, has_header):
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
     user_profile = UserProfile.objects.get(user_account=account_key)
@@ -398,9 +411,8 @@ def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
         return contact_dictionary
 
     return import_and_update_contacts(
-        merge_operation, account_key, group_key,
-        file_name, file_path,
-        fields, has_header)
+        account_key, merge_operation, group_key, file_name, file_path, fields,
+        has_header)
 
 
 @task(ignore_result=True)
@@ -435,6 +447,5 @@ def import_existing_is_truth_contacts_file(account_key, group_key, file_name,
         return cloned_contact_dictionary
 
     return import_and_update_contacts(
-        merge_operation, account_key, group_key,
-        file_name, file_path,
-        fields, has_header)
+        account_key, merge_operation, group_key, file_name, file_path, fields,
+        has_header)
