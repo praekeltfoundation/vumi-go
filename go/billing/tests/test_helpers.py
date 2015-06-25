@@ -3,10 +3,12 @@ from datetime import date
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import (
-    Account, TagPool, MessageCost, Transaction, Statement, LineItem)
+    Account, TagPool, MessageCost, Transaction, TransactionArchive,
+    Statement, LineItem)
 from go.billing.tests.helpers import (
     start_of_month, end_of_month, this_month, maybe_decimal,
-    get_billing_account, mk_tagpool, mk_message_cost, mk_transaction,
+    get_billing_account, mk_tagpool, mk_message_cost,
+    mk_transaction, mk_transaction_archive,
     mk_statement, get_session_length_cost,
     get_message_credits, get_session_credits,
     get_storage_credits, get_session_length_credits, get_line_items)
@@ -139,6 +141,21 @@ class TestHelpers(GoDjangoTestCase):
             status=Transaction.STATUS_COMPLETED)
 
         self.assertEqual(transaction, found_transaction)
+
+    def test_mk_transaction_archive(self):
+        archive = mk_transaction_archive(
+            account=self.account,
+            from_date=date(2015, 3, 21),
+            to_date=date(2015, 3, 22),
+            status=TransactionArchive.STATUS_ARCHIVE_COMPLETED)
+
+        [found_archive] = TransactionArchive.objects.filter(
+            account=self.account,
+            from_date=date(2015, 3, 21),
+            to_date=date(2015, 3, 22),
+            status=TransactionArchive.STATUS_ARCHIVE_COMPLETED)
+
+        self.assertEqual(archive, found_archive)
 
     def test_mk_statement(self):
         statement = mk_statement(

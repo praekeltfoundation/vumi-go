@@ -110,9 +110,9 @@ def mk_transaction(account, tag_pool_name='pool1',
 def mk_transaction_archive(account, from_date=None, to_date=None,
                            status=TransactionArchive.STATUS_ARCHIVE_CREATED):
     if from_date is None:
-        from_date = datetime.now()
+        from_date = date.today()
     if to_date is None:
-        to_date = datetime.now()
+        to_date = date.today()
     archive = TransactionArchive(
         account=account, from_date=from_date, to_date=to_date, status=status)
     archive.save()
