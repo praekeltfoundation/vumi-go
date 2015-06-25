@@ -368,7 +368,11 @@ def generate_monthly_statement(account_id, from_date, to_date):
        between the given ``from_date`` and ``to_date``.
     """
     account = Account.objects.get(id=account_id)
-    tagpools = vumi_api().known_tagpools()
+    api = vumi_api()
+    try:
+        tagpools = api.known_tagpools()
+    finally:
+        api.cleanup()
 
     statement = Statement(
         account=account,
@@ -577,8 +581,12 @@ def set_developer_account_balances(balance):
     Credits all accounts with developer flags enough credits for the resulting
     balance to be ``balance``.
     """
-    account_store = vumi_api().account_store
-    for key in account_store.users.all_keys():
-        account = account_store.users.load(key)
-        if account and account.is_developer:
-            set_account_balance(key, balance)
+    api = vumi_api()
+    try:
+        account_store = api.account_store
+        for key in account_store.users.all_keys():
+            account = account_store.users.load(key)
+            if account and account.is_developer:
+                set_account_balance(key, balance)
+    finally:
+        api.cleanup()

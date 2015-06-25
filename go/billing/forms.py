@@ -119,6 +119,9 @@ class TagPoolForm(ModelForm):
         super(TagPoolForm, self).__init__(*args, **kwargs)
         name_choices = [('', '---------')]
         api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
-        for pool_name in api.tpm.list_pools():
-            name_choices.append((pool_name, pool_name))
+        try:
+            for pool_name in api.tpm.list_pools():
+                name_choices.append((pool_name, pool_name))
+        finally:
+            api.cleanup()
         self.fields['name'] = forms.ChoiceField(choices=name_choices)

@@ -3,7 +3,6 @@
 from django.contrib.admin.sites import AdminSite
 from django.core.urlresolvers import reverse
 
-from go.base.utils import vumi_api_for_user
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.billing.models import Account, Transaction
 from go.billing.admin import AccountAdmin
@@ -88,10 +87,9 @@ class TestStatementAdmin(GoDjangoTestCase):
     def test_getting_developer_flag(self):
         admin = AccountAdmin(Account, AdminSite())
         self.assertFalse(admin.is_developer(self.account))
-        vumi_api = vumi_api_for_user(self.account.user)
-        account = vumi_api.get_user_account()
-        account.is_developer = True
-        account.save()
+        user_account = self.user_helper.get_user_account()
+        user_account.is_developer = True
+        user_account.save()
         self.assertTrue(admin.is_developer(self.account))
 
     def test_setting_developer_flag(self):

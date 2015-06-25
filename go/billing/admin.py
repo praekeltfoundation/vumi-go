@@ -39,15 +39,21 @@ class AccountAdmin(admin.ModelAdmin):
     load_credits.short_description = "Load credits for selected accounts"
 
     def is_developer(self, obj):
-        vumi_api = vumi_api_for_user(obj.user)
-        account = vumi_api.get_user_account()
+        user_api = vumi_api_for_user(obj.user)
+        try:
+            account = user_api.get_user_account()
+        finally:
+            user_api.cleanup()
         return account.is_developer
 
     def _set_developer_flag(self, user, value):
-        vumi_api = vumi_api_for_user(user)
-        account = vumi_api.get_user_account()
-        account.is_developer = value
-        account.save()
+        user_api = vumi_api_for_user(user)
+        try:
+            account = user_api.get_user_account()
+            account.is_developer = value
+            account.save()
+        finally:
+            user_api.cleanup()
 
     def set_developer_flag(self, request, queryset):
         for obj in queryset:
