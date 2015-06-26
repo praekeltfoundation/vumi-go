@@ -155,6 +155,15 @@ class TransactionAdmin(admin.ModelAdmin):
         return False
 
 
+class TransactionArchiveAdmin(admin.ModelAdmin):
+    list_display = ('account', 'from_date', 'to_date', 'status', 'created')
+    search_fields = (
+        'account__account_number', 'account__user__email',
+        'from_date', 'to_date', 'status', 'created',
+    )
+    list_filter = ('account', 'status')
+
+
 class LineItemInline(admin.TabularInline):
     model = LineItem
 
@@ -193,6 +202,6 @@ admin.site.register(TagPool, TagPoolAdmin)
 admin.site.register(Account, AccountAdmin)
 admin.site.register(MessageCost, MessageCostAdmin)
 admin.site.register(Transaction, TransactionAdmin)
+admin.site.register(TransactionArchive, TransactionArchiveAdmin)
 admin.site.register(Statement, StatementAdmin)
 admin.site.register(LowCreditNotification)
-admin.site.register(TransactionArchive)

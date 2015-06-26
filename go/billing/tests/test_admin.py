@@ -4,10 +4,10 @@ from django.contrib.admin.sites import AdminSite
 from django.core.urlresolvers import reverse
 
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import Account, Transaction
+from go.billing.models import Account, Transaction, TransactionArchive
 from go.billing.admin import AccountAdmin
 
-from .helpers import mk_statement, mk_transaction
+from .helpers import mk_statement, mk_transaction, mk_transaction_archive
 
 
 class MockRequest(object):
@@ -70,6 +70,39 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, "Credits")
         self.assertContains(response, "Unit cost")
         self.assertContains(response, "Cost")
+
+    def test_transaction_archive_admin_view(self):
+        mk_transaction_archive(self.account)
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_transactionarchive_changelist'))
+        self.assertContains(response, "Transaction archives")
+        self.assertContains(response, "Account")
+        self.assertContains(response, "From date")
+        self.assertContains(response, "To date")
+        self.assertContains(response, "Status")
+        self.assertContains(response, "Created")
+
+    def test_transaction_archive_search(self):
+        archive1 = mk_transaction_archive(
+            self.account,
+            status=TransactionArchive.STATUS_ARCHIVE_CREATED)
+        archive2 = mk_transaction_archive(
+            self.account,
+            status=TransactionArchive.STATUS_ARCHIVE_COMPLETED)
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_transactionarchive_changelist'),
+            {'q': 'completed'})
+        self.assertContains(response, "1 result")
+        self.assertContains(
+            response,
+            '<a href="/admin/billing/transactionarchive/%d/">' % archive2.pk)
+        self.assertNotContains(
+            response,
+            '<a href="/admin/billing/transactionarchive/%d/">' % archive1.pk)
 
     def test_account_admin_view(self):
         client = self.vumi_helper.get_client()
