@@ -112,11 +112,13 @@ class AccountAdmin(admin.ModelAdmin):
 
 
 class MessageCostAdmin(admin.ModelAdmin):
-    list_display = ('id', 'account', 'tag_pool', 'message_direction',
-                    'message_cost', 'storage_cost', 'session_cost',
-                    'session_unit_cost', 'session_unit_time', 'markup_percent',
-                    'message_credit_cost', 'storage_credit_cost',
-                    'session_credit_cost', 'session_length_credit_cost')
+    list_display = (
+        'id', 'account', 'provider', 'tag_pool', 'message_direction',
+        'message_cost', 'storage_cost', 'session_cost',
+        'session_unit_cost', 'session_unit_time', 'markup_percent',
+        'message_credit_cost', 'storage_credit_cost',
+        'session_credit_cost', 'session_length_credit_cost',
+    )
 
     search_fields = (
         'tag_pool__name', 'tag_pool__description', 'account__account_number',

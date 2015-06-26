@@ -9,7 +9,8 @@ from go.billing.models import (
     Account, Transaction, TransactionArchive, LowCreditNotification)
 from go.billing.admin import AccountAdmin
 
-from .helpers import mk_statement, mk_transaction, mk_transaction_archive
+from .helpers import (
+    mk_message_cost, mk_statement, mk_transaction, mk_transaction_archive)
 
 
 class MockRequest(object):
@@ -105,6 +106,28 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertNotContains(
             response,
             '<a href="/admin/billing/transactionarchive/%d/">' % archive1.pk)
+
+    def test_message_cost_admin_view(self):
+        mk_message_cost()
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_messagecost_changelist'))
+        self.assertContains(response, "Message costs")
+        self.assertContains(response, "Account")
+        self.assertContains(response, "Provider")
+        self.assertContains(response, "Tag pool")
+        self.assertContains(response, "Message direction")
+        self.assertContains(response, "Message cost")
+        self.assertContains(response, "Storage cost")
+        self.assertContains(response, "Session cost")
+        self.assertContains(response, "Session unit cost")
+        self.assertContains(response, "Session unit time")
+        self.assertContains(response, "Markup percent")
+        self.assertContains(response, "Message credit cost")
+        self.assertContains(response, "Storage credit cost")
+        self.assertContains(response, "Session credit cost")
+        self.assertContains(response, "Session length credit cost")
 
     def test_low_credit_notification_admin_view(self):
         notification = LowCreditNotification(
