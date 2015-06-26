@@ -195,6 +195,10 @@ class StatementAdmin(admin.ModelAdmin):
 
 
 class LowCreditNotificationAdmin(admin.ModelAdmin):
+    list_display = (
+        'account', 'created', 'success', 'threshold', 'credit_balance',
+    )
+
     list_filter = ('account',)
 
 
