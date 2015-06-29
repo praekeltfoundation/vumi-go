@@ -112,16 +112,18 @@ class AccountAdmin(admin.ModelAdmin):
 
 
 class MessageCostAdmin(admin.ModelAdmin):
-    list_display = ('id', 'account', 'tag_pool', 'message_direction',
-                    'message_cost', 'storage_cost', 'session_cost',
-                    'session_unit_cost', 'session_unit_time', 'markup_percent',
-                    'message_credit_cost', 'storage_credit_cost',
-                    'session_credit_cost', 'session_length_credit_cost')
+    list_display = (
+        'id', 'account', 'provider', 'tag_pool', 'message_direction',
+        'message_cost', 'storage_cost', 'session_cost',
+        'session_unit_cost', 'session_unit_time', 'markup_percent',
+        'message_credit_cost', 'storage_credit_cost',
+        'session_credit_cost', 'session_length_credit_cost',
+    )
 
     search_fields = (
         'tag_pool__name', 'tag_pool__description', 'account__account_number',
         'account__user__email', 'account__description')
-    list_filter = ('tag_pool', 'message_direction')
+    list_filter = ('account', 'tag_pool', 'message_direction')
     form = MessageCostForm
 
 
@@ -182,6 +184,8 @@ class StatementAdmin(admin.ModelAdmin):
         'view_html',
     )
 
+    list_filter = ('account',)
+
     readonly_fields = (
         'account', 'title', 'type', 'from_date', 'to_date', 'created',
     )
@@ -192,10 +196,18 @@ class StatementAdmin(admin.ModelAdmin):
     view_html.short_description = "HTML"
 
 
+class LowCreditNotificationAdmin(admin.ModelAdmin):
+    list_display = (
+        'account', 'created', 'success', 'threshold', 'credit_balance',
+    )
+
+    list_filter = ('account',)
+
+
 admin.site.register(TagPool, TagPoolAdmin)
 admin.site.register(Account, AccountAdmin)
 admin.site.register(MessageCost, MessageCostAdmin)
 admin.site.register(Transaction, TransactionAdmin)
 admin.site.register(TransactionArchive, TransactionArchiveAdmin)
 admin.site.register(Statement, StatementAdmin)
-admin.site.register(LowCreditNotification)
+admin.site.register(LowCreditNotification, LowCreditNotificationAdmin)
