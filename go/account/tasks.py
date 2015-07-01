@@ -1,5 +1,6 @@
-from celery.task import task
+from contextlib import closing
 
+from celery.task import task
 from django.contrib.auth import get_user_model
 
 from go.account.utils import send_user_account_summary
@@ -12,8 +13,7 @@ def update_account_details(user_id, first_name=None, last_name=None,
                            confirm_start_conversation=None,
                            email_summary=None):
     user = get_user_model().objects.get(pk=user_id)
-    user_api = vumi_api_for_user(user)
-    try:
+    with closing(vumi_api_for_user(user)) as user_api:
         account = user_api.get_user_account()
 
         if new_password:
@@ -27,18 +27,13 @@ def update_account_details(user_id, first_name=None, last_name=None,
         account.confirm_start_conversation = confirm_start_conversation
         account.email_summary = email_summary
         account.save()
-    finally:
-        user_api.close()
 
 
 @task(ignore_result=True)
 def send_scheduled_account_summary(interval):
     users = get_user_model().objects.all()
-    api = vumi_api()
-    try:
+    with closing(vumi_api()) as api:
         for user in users:
             user_account = vumi_api_for_user(user, api).get_user_account()
             if user_account.email_summary == interval:
                 send_user_account_summary(user)
-    finally:
-        api.close()

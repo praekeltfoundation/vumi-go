@@ -1,5 +1,6 @@
 import time
 import logging
+from contextlib import closing
 
 from django.core.urlresolvers import resolve, Resolver404
 from vumi.blinkenlights.metrics import Metric
@@ -79,11 +80,8 @@ class ResponseTimeMiddleware(object):
         response_time = start_time - time.time()
         response['X-Response-Time'] = response_time
         # TODO: Better way to fire these metrics.
-        api = vumi_api()
-        try:
+        with closing(vumi_api()) as api:
             metrics = api.get_metric_manager(get_django_metric_prefix())
             metrics.oneshot(metric, response_time)
             metrics.publish_metrics()
-        finally:
-            api.close()
         return response

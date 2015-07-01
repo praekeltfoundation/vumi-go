@@ -1,4 +1,5 @@
 from StringIO import StringIO
+from contextlib import closing
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from celery.task import task
@@ -6,9 +7,8 @@ from celery.task import task
 from django.conf import settings
 from django.core.mail import EmailMessage
 
-from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
-from go.base.utils import UnicodeDictWriter
+from go.base.utils import UnicodeDictWriter, vumi_api
 
 
 # The field names to export
@@ -134,9 +134,8 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
     :param str conversation_key:
         The key of the conversation we want to export the messages for.
     """
-    user_api = VumiUserApi.from_config_sync(
-        account_key, settings.VUMI_API_CONFIG)
-    try:
+    with closing(vumi_api()) as api:
+        user_api = api.get_user_api(account_key)
         user_profile = UserProfile.objects.get(user_account=account_key)
         conversation = user_api.get_wrapped_conversation(conversation_key)
 
@@ -154,5 +153,3 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
                 writer.writerow(row_for_outbound_message(message, mdb))
 
         email_export(user_profile, conversation, io)
-    finally:
-        user_api.close()

@@ -1,3 +1,4 @@
+from contextlib import closing
 from operator import attrgetter
 
 from go.base.utils import vumi_api_for_user
@@ -32,8 +33,7 @@ def get_messages_count(conversations):
 
 
 def send_user_account_summary(user):
-    user_api = vumi_api_for_user(user)
-    try:
+    with closing(vumi_api_for_user(user)) as user_api:
         contact_store = user_api.contact_store
         conv_store = user_api.conversation_store
 
@@ -49,8 +49,6 @@ def send_user_account_summary(user):
             all_conversations.extend(
                 [user_api.wrap_conversation(conv) for conv in bunch])
         all_conversations.sort(key=attrgetter('created_at'), reverse=True)
-    finally:
-        user_api.close()
 
     active_conversations = {}
     known_types = configured_conversation_types()
