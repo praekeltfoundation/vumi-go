@@ -103,7 +103,7 @@ class OptOutMiddleware(BaseMiddleware):
             self.casing(word) for word in self.config.optout_keywords)
 
     def teardown_middleware(self):
-        return self.vumi_api.cleanup()
+        return self.vumi_api.close()
 
     def casing(self, word):
         if not self.case_sensitive:
@@ -633,7 +633,7 @@ class GoStoringMiddleware(StoringMiddleware):
     @inlineCallbacks
     def teardown_middleware(self):
         yield self._conversation_cache.cleanup()
-        yield self.vumi_api.cleanup()
+        yield self.vumi_api.close()
         yield super(GoStoringMiddleware, self).teardown_middleware()
 
     def get_batch_id(self, msg):

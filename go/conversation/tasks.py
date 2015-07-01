@@ -155,4 +155,4 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
 
         email_export(user_profile, conversation, io)
     finally:
-        user_api.cleanup()
+        user_api.close()

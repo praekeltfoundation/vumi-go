@@ -189,7 +189,7 @@ class JsBoxSendWorker(Worker):
 
     @inlineCallbacks
     def stopWorker(self):
-        yield self.vumi_api.cleanup()
+        yield self.vumi_api.close()
 
     def emit(self, obj, err=False):
         msg = '%s\n' % (obj,)

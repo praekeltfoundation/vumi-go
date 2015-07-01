@@ -102,9 +102,9 @@ class VumiUserApi(object):
                                         self.user_account_key)
 
     @Manager.calls_manager
-    def cleanup(self):
+    def close(self):
         if self._cleanup_api:
-            yield self.api.cleanup()
+            yield self.api.close()
 
     def exists(self):
         return self.api.user_exists(self.user_account_key)
@@ -546,7 +546,13 @@ class VumiApi(object):
         self.metric_publisher = metric_publisher
 
     @Manager.calls_manager
-    def cleanup(self):
+    def close(self):
+        """
+        Clean up our Redis and Riak managers.
+
+        This method is called `close` rather than `cleanup` so we can use
+        `contextlib.closing()`.
+        """
         yield self.redis.close_manager()
         yield self.manager.close_manager()
 

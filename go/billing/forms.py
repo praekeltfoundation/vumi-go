@@ -123,5 +123,5 @@ class TagPoolForm(ModelForm):
             for pool_name in api.tpm.list_pools():
                 name_choices.append((pool_name, pool_name))
         finally:
-            api.cleanup()
+            api.close()
         self.fields['name'] = forms.ChoiceField(choices=name_choices)

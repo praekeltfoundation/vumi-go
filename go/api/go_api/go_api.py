@@ -289,7 +289,7 @@ class GoApiWorker(BaseWorker):
     def teardown_worker(self):
         if self._web_service is not None:
             yield self._web_service.stopService()
-        yield self.vumi_api.cleanup()
+        yield self.vumi_api.close()
 
     def setup_connectors(self):
         pass

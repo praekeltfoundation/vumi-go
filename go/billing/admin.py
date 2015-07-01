@@ -43,7 +43,7 @@ class AccountAdmin(admin.ModelAdmin):
         try:
             account = user_api.get_user_account()
         finally:
-            user_api.cleanup()
+            user_api.close()
         return account.is_developer
 
     def _set_developer_flag(self, user, value):
@@ -53,7 +53,7 @@ class AccountAdmin(admin.ModelAdmin):
             account.is_developer = value
             account.save()
         finally:
-            user_api.cleanup()
+            user_api.close()
 
     def set_developer_flag(self, request, queryset):
         for obj in queryset:

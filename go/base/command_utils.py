@@ -93,7 +93,7 @@ class BaseGoCommand(BaseCommand):
             return self.dispatch_command(*args, **options)
         finally:
             if self._vumi_api is not None:
-                self._vumi_api.cleanup()
+                self._vumi_api.close()
                 self._vumi_api = None
 
     def dispatch_command(self, *args, **options):

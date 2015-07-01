@@ -28,7 +28,7 @@ class VumiUserApiMiddleware(object):
             # seen by process_request (this is normal when other middleware
             # returns a response).
             return
-        user_api.cleanup()
+        user_api.close()
 
     def process_response(self, request, response):
         self._cleanup_user_api(request)
@@ -85,5 +85,5 @@ class ResponseTimeMiddleware(object):
             metrics.oneshot(metric, response_time)
             metrics.publish_metrics()
         finally:
-            api.cleanup()
+            api.close()
         return response

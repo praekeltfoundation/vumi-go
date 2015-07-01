@@ -310,7 +310,7 @@ class VumiApiHelper(object):
             # All of these will wait for the same broker, but that's fine.
             yield worker_helper.cleanup()
         if self._cleanup_vumi_api:
-            yield self._vumi_api.cleanup()
+            yield self._vumi_api.close()
         yield self._persistence_helper.cleanup()
         self._patch_helper.cleanup()
 

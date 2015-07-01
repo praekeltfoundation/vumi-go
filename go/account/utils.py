@@ -50,7 +50,7 @@ def send_user_account_summary(user):
                 [user_api.wrap_conversation(conv) for conv in bunch])
         all_conversations.sort(key=attrgetter('created_at'), reverse=True)
     finally:
-        user_api.cleanup()
+        user_api.close()
 
     active_conversations = {}
     known_types = configured_conversation_types()

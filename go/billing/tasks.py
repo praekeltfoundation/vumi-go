@@ -372,7 +372,7 @@ def generate_monthly_statement(account_id, from_date, to_date):
     try:
         tagpools = api.known_tagpools()
     finally:
-        api.cleanup()
+        api.close()
 
     statement = Statement(
         account=account,
@@ -589,4 +589,4 @@ def set_developer_account_balances(balance):
             if account and account.is_developer:
                 set_account_balance(key, balance)
     finally:
-        api.cleanup()
+        api.close()

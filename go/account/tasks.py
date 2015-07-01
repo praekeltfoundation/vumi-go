@@ -28,7 +28,7 @@ def update_account_details(user_id, first_name=None, last_name=None,
         account.email_summary = email_summary
         account.save()
     finally:
-        user_api.cleanup()
+        user_api.close()
 
 
 @task(ignore_result=True)
@@ -41,4 +41,4 @@ def send_scheduled_account_summary(interval):
             if user_account.email_summary == interval:
                 send_user_account_summary(user)
     finally:
-        api.cleanup()
+        api.close()

@@ -121,7 +121,7 @@ class GoWorkerMixin(object):
         if self.control_consumer is not None:
             yield self.control_consumer.stop()
             self.control_consumer = None
-        yield self.vumi_api.cleanup()
+        yield self.vumi_api.close()
 
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
