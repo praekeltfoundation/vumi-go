@@ -381,7 +381,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if msg_mdh.has_user_account():
             user_account_key = msg_mdh.get_account_key()
         elif msg_mdh.tag is not None:
-            tag_info = yield msg_mdh.get_tag_info()
+            tag_info = yield self.vumi_api.mdb.get_tag_info(msg_mdh.tag)
             user_account_key = tag_info.metadata['user_account']
             if user_account_key is None:
                 raise UnownedTagError(

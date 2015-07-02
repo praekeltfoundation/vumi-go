@@ -188,13 +188,6 @@ class MessageMetadataHelper(MessageMetadataDictHelper):
         TaggingMiddleware.add_tag_to_msg(self.message, tag)
         self.tag = TaggingMiddleware.map_msg_to_tag(self.message)
 
-    def get_tag_info(self):
-        if self.tag is None:
-            raise ValueError("No tag to look up metadata for.")
-
-        return self._get_if_not_stashed(
-            'tag_info', self.vumi_api.mdb.get_tag_info, tuple(self.tag))
-
     def get_tagpool_metadata(self):
         if self.tag is None:
             raise ValueError("No tag to look up metadata for.")

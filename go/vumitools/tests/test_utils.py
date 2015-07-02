@@ -264,10 +264,8 @@ class TestMessageMetadataHelper(VumiTestCase):
         md.set_tag(["pool", "tag"])
         self.assertEqual(md._store_objects, {})
         md_conv = yield md.get_conversation()
-        tag_info = yield md.get_tag_info()
         self.assertEqual(md._store_objects, {
             'conversation': md_conv,
-            'tag_info': tag_info,
         })
         md.clear_object_cache()
         self.assertEqual(md._store_objects, {})
@@ -459,39 +457,10 @@ class TestMessageMetadataHelper(VumiTestCase):
         self.assertEqual({}, other_md._store_objects)
         self.assertEqual(md._go_metadata, other_md._go_metadata)
 
-    def test_get_tag_info_no_tag(self):
-        md = self.mk_md()
-        self.assertEqual(None, md.tag)
-        self.assertRaises(ValueError, md.get_tag_info)
-
     def test_get_tagpool_metadata_no_tag(self):
         md = self.mk_md()
         self.assertEqual(None, md.tag)
         self.assertRaises(ValueError, md.get_tagpool_metadata)
-
-    @inlineCallbacks
-    def test_get_tag_info(self):
-        md = self.mk_md()
-        md.set_tag(["pool", "tagname"])
-
-        tag_info = yield md.get_tag_info()
-        self.assertEqual(("pool", "tagname"), tag_info.tag)
-
-    @inlineCallbacks
-    def test_tag_info_caching(self):
-        md = self.mk_md()
-        md.set_tag(["pool", "tagname"])
-
-        self.assertEqual({}, md._store_objects)
-        tag_info = yield md.get_tag_info()
-        self.assertEqual(("pool", "tagname"), tag_info.tag)
-        self.assertEqual({'tag_info': tag_info}, md._store_objects)
-
-        # Stash a fake thing in the cache to make sure that what we get is
-        # actually the thing in the cache.
-        md._store_objects['tag_info'] = "I am the cached tag_info"
-        cached_tag_info = yield md.get_tag_info()
-        self.assertEqual(cached_tag_info, "I am the cached tag_info")
 
     @inlineCallbacks
     def test_get_tagpool_metadata(self):
