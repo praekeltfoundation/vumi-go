@@ -1,5 +1,6 @@
 import time
 import logging
+from contextlib import closing
 
 from django.core.urlresolvers import resolve, Resolver404
 from vumi.blinkenlights.metrics import Metric
@@ -19,6 +20,23 @@ class VumiUserApiMiddleware(object):
             request.user_api = user_api
             SessionManager.set_user_account_key(
                 request.session, user_api.user_account_key)
+
+    def _cleanup_user_api(self, request):
+        try:
+            user_api = request.user_api
+        except AttributeError:
+            # Ignoring AttributeError as that just means this request wasn't
+            # seen by process_request (this is normal when other middleware
+            # returns a response).
+            return
+        user_api.close()
+
+    def process_response(self, request, response):
+        self._cleanup_user_api(request)
+        return response
+
+    def process_exception(self, request, exception):
+        self._cleanup_user_api(request)
 
 
 class ResponseTimeMiddleware(object):
@@ -62,7 +80,8 @@ class ResponseTimeMiddleware(object):
         response_time = start_time - time.time()
         response['X-Response-Time'] = response_time
         # TODO: Better way to fire these metrics.
-        metrics = vumi_api().get_metric_manager(get_django_metric_prefix())
-        metrics.oneshot(metric, response_time)
-        metrics.publish_metrics()
+        with closing(vumi_api()) as api:
+            metrics = api.get_metric_manager(get_django_metric_prefix())
+            metrics.oneshot(metric, response_time)
+            metrics.publish_metrics()
         return response

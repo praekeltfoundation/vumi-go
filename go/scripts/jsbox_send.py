@@ -187,6 +187,10 @@ class JsBoxSendWorker(Worker):
             yield self.make_publisher(conv_type)
         self.WORKER_QUEUE.put(self)
 
+    @inlineCallbacks
+    def stopWorker(self):
+        yield self.vumi_api.close()
+
     def emit(self, obj, err=False):
         msg = '%s\n' % (obj,)
         if err:

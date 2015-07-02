@@ -1,12 +1,11 @@
+from contextlib import closing
 from decimal import Decimal, Context, Inexact
 
-from django.conf import settings
 from django import forms
 from django.forms import ModelForm
 from django.forms.models import BaseModelFormSet
 
-from go.vumitools.api import VumiApi
-
+from go.base.utils import vumi_api
 from go.billing.models import Account, TagPool, MessageCost
 from go.billing.django_utils import load_account_credits
 
@@ -118,7 +117,7 @@ class TagPoolForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(TagPoolForm, self).__init__(*args, **kwargs)
         name_choices = [('', '---------')]
-        api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
-        for pool_name in api.tpm.list_pools():
-            name_choices.append((pool_name, pool_name))
+        with closing(vumi_api()) as api:
+            for pool_name in api.tpm.list_pools():
+                name_choices.append((pool_name, pool_name))
         self.fields['name'] = forms.ChoiceField(choices=name_choices)

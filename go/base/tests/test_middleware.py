@@ -22,6 +22,10 @@ class TestVumiUserApiMiddleware(GoDjangoTestCase):
         self.mw.process_request(request)
         self.assertFalse(hasattr(request, 'user_api'))
         self.assertFalse(hasattr(request, 'session'))
+        # process_response() has nothing to clean up, but it should return
+        # the response object we give it.
+        response = object()
+        self.assertEqual(response, self.mw.process_response(request, response))
 
     def test_authenticated_access(self):
         request = self.factory.get('/accounts/login/')
@@ -32,6 +36,10 @@ class TestVumiUserApiMiddleware(GoDjangoTestCase):
         self.assertEqual(
             SessionManager.get_user_account_key(request.session),
             self.user_helper.account_key)
+        # process_response() should clean up the VumiUserApi on the request and
+        # return the response object we give it.
+        response = object()
+        self.assertEqual(response, self.mw.process_response(request, response))
 
 
 class ResponseTimeMiddlewareTestcase(GoDjangoTestCase):

@@ -1,3 +1,5 @@
+from contextlib import closing
+
 from django.core import urlresolvers
 from django.conf.urls import patterns
 from django.http import HttpResponseRedirect
@@ -39,15 +41,15 @@ class AccountAdmin(admin.ModelAdmin):
     load_credits.short_description = "Load credits for selected accounts"
 
     def is_developer(self, obj):
-        vumi_api = vumi_api_for_user(obj.user)
-        account = vumi_api.get_user_account()
+        with closing(vumi_api_for_user(obj.user)) as user_api:
+            account = user_api.get_user_account()
         return account.is_developer
 
     def _set_developer_flag(self, user, value):
-        vumi_api = vumi_api_for_user(user)
-        account = vumi_api.get_user_account()
-        account.is_developer = value
-        account.save()
+        with closing(vumi_api_for_user(user)) as user_api:
+            account = user_api.get_user_account()
+            account.is_developer = value
+            account.save()
 
     def set_developer_flag(self, request, queryset):
         for obj in queryset:

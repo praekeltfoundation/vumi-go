@@ -63,9 +63,12 @@ def vumi_api():
 
 def vumi_api_for_user(user, api=None):
     """Return a Vumi API instance for the given user."""
+    cleanup_api = False
     if api is None:
         api = vumi_api()
-    return api.get_user_api(user.get_profile().user_account)
+        cleanup_api = True
+    return api.get_user_api(
+        user.get_profile().user_account, cleanup_api=cleanup_api)
 
 
 def padded_queryset(queryset, size=6, padding=None):

@@ -29,9 +29,8 @@ class GoRegistrationView(RegistrationView):
 
 @login_required
 def details(request):
-    profile = request.user.get_profile()
     token_manager = DjangoTokenManager(request.user_api.api.token_manager)
-    account = profile.get_user_account()
+    account = request.user_api.get_user_account()
     account_form = AccountForm(request.user, initial={
         'name': request.user.first_name,
         'surname': request.user.last_name,

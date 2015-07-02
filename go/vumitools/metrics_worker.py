@@ -8,7 +8,7 @@ from vumi.worker import BaseWorker
 from vumi.config import ConfigInt, ConfigError
 from vumi.persist.model import Manager
 
-from go.vumitools.api import VumiApi, VumiApiCommand, ApiCommandPublisher
+from go.vumitools.api import VumiApiCommand, ApiCommandPublisher
 from go.vumitools.app_worker import GoWorkerConfigMixin, GoWorkerMixin
 
 
@@ -62,12 +62,6 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
         yield self._go_setup_worker()
         config = self.get_static_config()
 
-        self.vumi_api = yield VumiApi.from_config_async({
-            'riak_manager': config.riak_manager,
-            'redis_manager': config.redis_manager,
-        })
-        self.redis = self.vumi_api.redis
-
         self.command_publisher = yield self.start_publisher(
             ApiCommandPublisher)
 
@@ -84,8 +78,6 @@ class GoMetricsWorker(BaseWorker, GoWorkerMixin):
     def teardown_worker(self):
         if self._looper.running:
             self._looper.stop()
-
-        yield self.redis.close_manager()
         yield self._go_teardown_worker()
 
     def bucket_for_conversation(self, conv_key):
