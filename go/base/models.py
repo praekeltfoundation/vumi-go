@@ -1,3 +1,5 @@
+from contextlib import closing
+
 from django.db import connection, models
 from django.db.models.signals import post_save, post_syncdb
 from django.contrib.auth.models import (
@@ -86,8 +88,7 @@ class UserProfile(models.Model):
 
 
 def create_user_profile(sender, instance, created, **kwargs):
-    api = vumi_api()
-    try:
+    with closing(vumi_api()) as api:
         if created:
             username = instance.get_username()
             account = api.account_store.new_user(unicode(username))
@@ -96,8 +97,6 @@ def create_user_profile(sender, instance, created, **kwargs):
         # Enable search for the contact & group stores
         user_api.contact_store.contacts.enable_search()
         user_api.contact_store.groups.enable_search()
-    finally:
-        api.cleanup()
 
 
 post_save.connect(create_user_profile, sender=GoUser,

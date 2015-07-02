@@ -1,5 +1,6 @@
 import sys
 import traceback
+from contextlib import closing
 from functools import wraps
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -12,10 +13,9 @@ from django.core.files.storage import default_storage
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 
-from go.vumitools.api import VumiUserApi
 from go.vumitools.contact.models import ContactNotFoundError
 from go.base.models import UserProfile
-from go.base.utils import UnicodeCSVWriter
+from go.base.utils import UnicodeCSVWriter, vumi_api
 from go.contacts.parsers import ContactFileParser
 from go.contacts.utils import contacts_by_key
 
@@ -23,12 +23,9 @@ from go.contacts.utils import contacts_by_key
 def with_user_api(func):
     @wraps(func)
     def wrapper(account_key, *args, **kw):
-        api = VumiUserApi.from_config_sync(
-            account_key, settings.VUMI_API_CONFIG)
-        try:
-            return func(api, account_key, *args, **kw)
-        finally:
-            api.cleanup()
+        with closing(vumi_api()) as api:
+            user_api = api.get_user_api(account_key)
+            return func(user_api, account_key, *args, **kw)
     return wrapper
 
 

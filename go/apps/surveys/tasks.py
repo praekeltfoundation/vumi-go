@@ -1,14 +1,13 @@
+from contextlib import closing
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from celery.task import task
-
 from django.conf import settings
 from django.core.mail import EmailMessage
 
-from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
-
+from go.base.utils import vumi_api
 from go.apps.surveys.view_definition import get_poll_config
 
 
@@ -18,10 +17,10 @@ def export_vxpolls_data(account_key, conversation_key, include_old_questions):
     Export the data from a vxpoll and send it as a zipped attachment
     via email.
     """
-    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
-    try:
+    with closing(vumi_api()) as api:
+        user_api = api.get_user_api(account_key)
         user_profile = UserProfile.objects.get(user_account=account_key)
-        conversation = api.get_wrapped_conversation(conversation_key)
+        conversation = user_api.get_wrapped_conversation(conversation_key)
 
         poll_id = 'poll-%s' % (conversation.key,)
         pm, poll_data = get_poll_config(poll_id)
@@ -42,5 +41,3 @@ def export_vxpolls_data(account_key, conversation_key, include_old_questions):
         email.attach('survey-data-export.zip', zipio.getvalue(),
                      'application/zip')
         email.send()
-    finally:
-        api.cleanup()
