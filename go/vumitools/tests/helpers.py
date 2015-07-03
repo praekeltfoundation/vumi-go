@@ -139,13 +139,13 @@ class GoMessageHelper(object):
     def store_inbound(self, conv, msg):
         if self.mdb is None:
             raise ValueError("No message store provided.")
-        return self.mdb.add_inbound_message(msg, batch_id=conv.batch.key)
+        return self.mdb.add_inbound_message(msg, batch_ids=[conv.batch.key])
 
     @proxyable
     def store_outbound(self, conv, msg):
         if self.mdb is None:
             raise ValueError("No message store provided.")
-        return self.mdb.add_outbound_message(msg, batch_id=conv.batch.key)
+        return self.mdb.add_outbound_message(msg, batch_ids=[conv.batch.key])
 
     @proxyable
     def store_event(self, event):

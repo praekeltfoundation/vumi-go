@@ -104,10 +104,10 @@ class FixBatches(Migration):
     def _copy_msgs(self, mdb, old_batch, new_batch):
         for key in mdb.batch_outbound_keys(old_batch):
             msg = mdb.get_outbound_message(key)
-            mdb.add_outbound_message(msg, batch_id=new_batch)
+            mdb.add_outbound_message(msg, batch_ids=[new_batch])
         for key in mdb.batch_inbound_keys(old_batch):
             msg = mdb.get_inbound_message(key)
-            mdb.add_inbound_message(msg, batch_id=new_batch)
+            mdb.add_inbound_message(msg, batch_ids=[new_batch])
 
     def migrate(self, user_api, conv):
         conv_batches = conv.batches.keys()
@@ -136,10 +136,10 @@ class SplitBatches(Migration):
     def _copy_msgs(self, mdb, old_batch, new_batch):
         for key in mdb.batch_outbound_keys(old_batch):
             msg = mdb.get_outbound_message(key)
-            mdb.add_outbound_message(msg, batch_id=new_batch)
+            mdb.add_outbound_message(msg, batch_ids=[new_batch])
         for key in mdb.batch_inbound_keys(old_batch):
             msg = mdb.get_inbound_message(key)
-            mdb.add_inbound_message(msg, batch_id=new_batch)
+            mdb.add_inbound_message(msg, batch_ids=[new_batch])
 
     def migrate(self, user_api, conv):
         old_batch = conv.batch.key

@@ -19,7 +19,7 @@ class SubscriptionApplication(GoApplicationWorker):
         # TODO: Update
         msg = yield self.send_to(
             to_addr, content, endpoint='default', **msg_options)
-        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
+        yield self.vumi_api.mdb.add_outbound_message(msg, batch_ids=[batch_id])
         log.info('Stored outbound %s' % (msg,))
 
     def handlers_for_content(self, conv, content):

@@ -136,9 +136,9 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
         for i, batch_id in enumerate(batches):
             conv.batches.add_key(batch_id)
             msg1 = msg_helper.make_inbound("in", message_id=u"msg-%d" % i)
-            mdb.add_inbound_message(msg1, batch_id=batch_id)
+            mdb.add_inbound_message(msg1, batch_ids=[batch_id])
             msg2 = msg_helper.make_outbound("out", message_id=u"msg-%d" % i)
-            mdb.add_outbound_message(msg2, batch_id=batch_id)
+            mdb.add_outbound_message(msg2, batch_ids=[batch_id])
 
         conv.save()
 
