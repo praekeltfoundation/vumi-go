@@ -105,16 +105,16 @@ class Command(BaseGoCommand):
             writer.writerow(row)
 
     def _increment_msg_stats(self, conv, stats):
-        inbound_stats = conv.FIXME_mdb.batch_inbound_stats(conv.batch.key)
-        outbound_stats = conv.FIXME_mdb.batch_outbound_stats(conv.batch.key)
+        key = conv.batch.key
+        qms = conv.qms
+        from_addr_count = qms.get_batch_from_addr_count(key)
+        to_addr_count = qms.get_batch_to_addr_count(key)
         stats["conversations_started"] += 1
-        stats["inbound_message_count"] += inbound_stats['total']
-        stats["outbound_message_count"] += outbound_stats['total']
-        stats["inbound_uniques"] += inbound_stats['unique_addresses']
-        stats["outbound_uniques"] += outbound_stats['unique_addresses']
-        stats["total_uniques"] += max(
-            inbound_stats['unique_addresses'],
-            outbound_stats['unique_addresses'])
+        stats["inbound_message_count"] += qms.get_batch_inbound_count(key)
+        stats["outbound_message_count"] += qms.get_batch_outbound_count(key)
+        stats["inbound_uniques"] += from_addr_count
+        stats["outbound_uniques"] += to_addr_count
+        stats["total_uniques"] += max(from_addr_count, to_addr_count)
 
     def handle_command_message_counts_by_month(self, *args, **options):
         month_stats = {}

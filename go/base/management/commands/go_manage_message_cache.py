@@ -110,6 +110,7 @@ class Command(BaseGoCommand):
 
     def handle_command_rebuild(self, *args, **options):
         def rebuild(batch_id):
-            self.vumi_api.FIXME_mdb.reconcile_cache(batch_id)
+            qms = self.vumi_api.get_query_message_store()
+            self.vumi_api.get_batch_manager().rebuild_cache(batch_id, qms)
 
         self._apply_command(rebuild)

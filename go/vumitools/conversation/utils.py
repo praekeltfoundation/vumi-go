@@ -24,7 +24,6 @@ class ConversationWrapper(object):
         self.manager = self.c.manager
         self.base_manager = self.api.manager
         self._channels = None
-        self.FIXME_mdb = self.api.FIXME_mdb
 
     @Manager.calls_manager
     def stop_conversation(self):
@@ -116,7 +115,7 @@ class ConversationWrapper(object):
                          'delivery_report_delivered', 'delivery_report_failed',
                          'delivery_report_pending'))
 
-        batch_status = yield self.FIXME_mdb.batch_status(self.batch.key)
+        batch_status = yield self.qms.get_batch_info_status(self.batch.key)
         for k, v in batch_status.items():
             k = k.replace('.', '_')
             statuses[k] += v
@@ -189,28 +188,28 @@ class ConversationWrapper(object):
         Count the total number of replies received.
         This is pulled from the cache.
         """
-        return self.FIXME_mdb.cache.count_inbound_message_keys(self.batch.key)
+        return self.qms.get_batch_inbound_count(self.batch.key)
 
     def count_outbound_messages(self):
         """
         Count the total number of messages sent.
         This is pulled from the cache.
         """
-        return self.FIXME_mdb.cache.count_outbound_message_keys(self.batch.key)
+        return self.qms.get_batch_outbound_count(self.batch.key)
 
     def count_inbound_uniques(self):
         """
         Count the total unique `from_addr` values seen for the batch_key.
         Pulled from the cache.
         """
-        return self.FIXME_mdb.cache.count_from_addrs(self.batch.key)
+        return self.qms.get_batch_from_addr_count(self.batch.key)
 
     def count_outbound_uniques(self):
         """
         Count the total unique `to_addr` values seen for the batch_key.
         Pulled from the cache.
         """
-        return self.FIXME_mdb.cache.count_to_addrs(self.batch.key)
+        return self.qms.get_batch_to_addr_count(self.batch.key)
 
     @Manager.calls_manager
     def collect_messages(self, keys, get_msg, include_sensitive, scrubber):
@@ -288,14 +287,14 @@ class ConversationWrapper(object):
             content of the message to be scrubbed. By default it is a noop
             which leaves the content unchanged.
         """
+        # FIXME: limit actually means end, apparently.
         scrubber = scrubber or (lambda msg: msg)
 
-        # Redis counts from zero, so we - 1 on the limit.
-        keys = yield self.FIXME_mdb.cache.get_inbound_message_keys(
-            self.batch.key, start, limit - 1)
+        keys = yield self.qms.list_batch_recent_inbound_keys(self.batch.key)
+        keys = keys[start:limit]
 
         replies = yield self.collect_messages(
-            keys, self.FIXME_mdb.get_inbound_message, include_sensitive, scrubber)
+            keys, self.qms.get_inbound_message, include_sensitive, scrubber)
 
         # Preserve order
         returnValue(
@@ -331,13 +330,14 @@ class ConversationWrapper(object):
             content of the message to be scrubbed. By default it is a noop
             which leaves the content unchanged.
         """
+        # FIXME: limit actually means end, apparently.
         scrubber = scrubber or (lambda msg: msg)
 
-        keys = yield self.FIXME_mdb.cache.get_outbound_message_keys(
-            self.batch.key, start, limit - 1)
+        keys = yield self.qms.list_batch_recent_outbound_keys(self.batch.key)
+        keys = keys[start:limit]
 
         sent_messages = yield self.collect_messages(
-            keys, self.FIXME_mdb.get_outbound_message, include_sensitive, scrubber)
+            keys, self.qms.get_outbound_message, include_sensitive, scrubber)
 
         # Preserve order
         returnValue(
@@ -383,7 +383,7 @@ class ConversationWrapper(object):
         Calculate how many inbound messages per minute we've been doing on
         average.
         """
-        inbounds = yield self.FIXME_mdb.cache.get_inbound_message_keys(
+        inbounds = yield self.qms.list_batch_recent_inbound_keys(
             self.batch.key, with_timestamp=True)
         if not inbounds:
             returnValue(0.0)
@@ -397,7 +397,7 @@ class ConversationWrapper(object):
         Calculate how many outbound messages per minute we've been doing on
         average.
         """
-        outbounds = yield self.FIXME_mdb.cache.get_outbound_message_keys(
+        outbounds = yield self.qms.list_batch_recent_outbound_keys(
             self.batch.key, with_timestamp=True)
         if not outbounds:
             returnValue(0.0)

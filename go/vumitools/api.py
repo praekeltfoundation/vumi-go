@@ -12,7 +12,6 @@ from vumi.blinkenlights.metrics import MetricManager
 from vumi.errors import VumiError
 from vumi.message import Message
 from vumi.components.tagpool import TagpoolManager
-from vumi.components.message_store import MessageStore
 from vumi.persist.model import Manager
 from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
@@ -537,9 +536,6 @@ class VumiApi(object):
         self.redis = redis
 
         self.tpm = TagpoolManager(self.redis.sub_manager('tagpool_store'))
-        self.FIXME_mdb = MessageStore(
-            self.manager, self.redis.sub_manager('message_store'))
-        self.mdb = None
         self.account_store = AccountStore(self.manager)
         self.token_manager = TokenManager(
             self.redis.sub_manager('token_manager'))

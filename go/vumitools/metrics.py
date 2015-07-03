@@ -66,7 +66,8 @@ class MessagesSentMetric(ConversationMetric):
 
     def get_value(self, user_api):
         batch_id = self.conv.batch.key
-        return user_api.api.FIXME_mdb.cache.count_outbound_message_keys(batch_id)
+        qms = user_api.api.get_query_message_store()
+        return qms.get_batch_outbound_count(batch_id)
 
 
 class MessagesReceivedMetric(ConversationMetric):
@@ -74,7 +75,8 @@ class MessagesReceivedMetric(ConversationMetric):
 
     def get_value(self, user_api):
         batch_id = self.conv.batch.key
-        return user_api.api.FIXME_mdb.cache.count_inbound_message_keys(batch_id)
+        qms = user_api.api.get_query_message_store()
+        return qms.get_batch_inbound_count(batch_id)
 
 
 def get_account_metric_prefix(account_key, store):

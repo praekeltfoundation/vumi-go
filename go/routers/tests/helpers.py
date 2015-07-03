@@ -155,7 +155,6 @@ class RouterWorkerHelper(object):
         worker = yield self.ri.get_worker(self._worker_class, config, start)
         # Set up our other bits of helper.
         self.vumi_helper.set_vumi_api(worker.vumi_api)
-        self.msg_helper.mdb = worker.vumi_api.mdb
         returnValue(worker)
 
     @inlineCallbacks
