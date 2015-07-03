@@ -831,21 +831,20 @@ class TestConversationStoringMiddleware(VumiTestCase):
         self.mw_helper = self.add_helper(
             MiddlewareHelper(ConversationStoringMiddleware))
         yield self.mw_helper.setup_vumi_api()
+        self.qms = self.mw_helper.get_vumi_api().get_query_message_store()
         self.user_helper = yield self.mw_helper.make_user(u'user')
         self.conv = yield self.user_helper.create_conversation(u'dummy_conv')
 
     @inlineCallbacks
     def assert_stored_inbound(self, msgs):
-        mdb = self.mw_helper.get_vumi_api().mdb
-        index_page = yield mdb.batch_inbound_keys_page(self.conv.batch.key)
-        ids = yield collect_all_results(index_page)
+        page = yield self.qms.list_batch_inbound_keys(self.conv.batch.key)
+        ids = yield collect_all_results(page)
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
     def assert_stored_outbound(self, msgs):
-        mdb = self.mw_helper.get_vumi_api().mdb
-        index_page = yield mdb.batch_outbound_keys_page(self.conv.batch.key)
-        ids = yield collect_all_results(index_page)
+        page = yield self.qms.list_batch_outbound_keys(self.conv.batch.key)
+        ids = yield collect_all_results(page)
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
@@ -946,21 +945,20 @@ class TestRouterStoringMiddleware(VumiTestCase):
         self.mw_helper = self.add_helper(
             MiddlewareHelper(RouterStoringMiddleware))
         yield self.mw_helper.setup_vumi_api()
+        self.qms = self.mw_helper.get_vumi_api().get_query_message_store()
         self.user_helper = yield self.mw_helper.make_user(u'user')
         self.router = yield self.user_helper.create_router(u'dummy_conv')
 
     @inlineCallbacks
     def assert_stored_inbound(self, msgs):
-        mdb = self.mw_helper.get_vumi_api().mdb
-        index_page = yield mdb.batch_inbound_keys_page(self.router.batch.key)
-        ids = yield collect_all_results(index_page)
+        page = yield self.qms.list_batch_inbound_keys(self.router.batch.key)
+        ids = yield collect_all_results(page)
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
     def assert_stored_outbound(self, msgs):
-        mdb = self.mw_helper.get_vumi_api().mdb
-        index_page = yield mdb.batch_outbound_keys_page(self.router.batch.key)
-        ids = yield collect_all_results(index_page)
+        page = yield self.qms.list_batch_outbound_keys(self.router.batch.key)
+        ids = yield collect_all_results(page)
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks

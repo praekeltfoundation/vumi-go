@@ -105,8 +105,8 @@ class Command(BaseGoCommand):
             writer.writerow(row)
 
     def _increment_msg_stats(self, conv, stats):
-        inbound_stats = conv.mdb.batch_inbound_stats(conv.batch.key)
-        outbound_stats = conv.mdb.batch_outbound_stats(conv.batch.key)
+        inbound_stats = conv.FIXME_mdb.batch_inbound_stats(conv.batch.key)
+        outbound_stats = conv.FIXME_mdb.batch_outbound_stats(conv.batch.key)
         stats["conversations_started"] += 1
         stats["inbound_message_count"] += inbound_stats['total']
         stats["outbound_message_count"] += outbound_stats['total']

@@ -63,10 +63,10 @@ class SequentialSendApplication(GoApplicationWorker):
         log.msg('WARNING: Received inbound message: %s' % (message,))
 
     def consume_ack(self, event):
-        return self.vumi_api.mdb.add_event(event)
+        return self.vumi_api.get_operational_message_store().add_event(event)
 
     def consume_delivery_report(self, event):
-        return self.vumi_api.mdb.add_event(event)
+        return self.vumi_api.get_operational_message_store().add_event(event)
 
     def _get_last_poll_time(self):
         return self.redis.get('last_poll_time')
@@ -152,7 +152,9 @@ class SequentialSendApplication(GoApplicationWorker):
     def send_message(self, batch_id, to_addr, content, msg_options):
         msg = yield self.send_to(
             to_addr, content, endpoint='default', **msg_options)
-        yield self.vumi_api.mdb.add_outbound_message(msg, batch_ids=[batch_id])
+        # XXX: Do we need to do this?
+        opms = self.vumi_api.get_operational_message_store()
+        yield opms.add_outbound_message(msg, batch_ids=[batch_id])
         log.info('Stored outbound %s' % (msg,))
 
     @inlineCallbacks

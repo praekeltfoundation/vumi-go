@@ -22,13 +22,13 @@ class TestGoManageMessageCache(GoCommandTestCase):
         """
         vumi_api = self.vumi_helper.get_vumi_api()
         for batch_id in batches:
-            vumi_api.mdb.cache.clear_batch(batch_id)
+            vumi_api.FIXME_mdb.cache.clear_batch(batch_id)
         self.assert_batches_cleared(batches)
 
     def assert_batches_cleared(self, batches):
         vumi_api = self.vumi_helper.get_vumi_api()
         for batch_id in batches:
-            self.assertFalse(vumi_api.mdb.cache.batch_exists(batch_id))
+            self.assertFalse(vumi_api.FIXME_mdb.cache.batch_exists(batch_id))
 
     def count_results(self, index_page):
         count = 0
@@ -48,14 +48,14 @@ class TestGoManageMessageCache(GoCommandTestCase):
         vumi_api = self.vumi_helper.get_vumi_api()
 
         inbound = float(self.count_results(
-            vumi_api.mdb.batch_inbound_keys_page(batch_id)))
-        cached_inbound = vumi_api.mdb.cache.inbound_message_count(batch_id)
+            vumi_api.FIXME_mdb.batch_inbound_keys_page(batch_id)))
+        cached_inbound = vumi_api.FIXME_mdb.cache.inbound_message_count(batch_id)
         if inbound and (abs(cached_inbound - inbound) / inbound) > delta:
             return True
 
         outbound = float(self.count_results(
-            vumi_api.mdb.batch_outbound_keys_page(batch_id)))
-        cached_outbound = vumi_api.mdb.cache.outbound_message_count(batch_id)
+            vumi_api.FIXME_mdb.batch_outbound_keys_page(batch_id)))
+        cached_outbound = vumi_api.FIXME_mdb.cache.outbound_message_count(batch_id)
         if outbound and (abs(cached_outbound - outbound) / outbound) > delta:
             return True
 

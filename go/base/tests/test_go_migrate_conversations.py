@@ -68,7 +68,8 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
         conversation = self.old_conv_model(conversation_id, **conv_fields)
 
         if create_batch:
-            conversation.batches.add_key(self.user_api.api.mdb.batch_start())
+            batch_manager = self.user_api.api.get_batch_manager()
+            conversation.batches.add_key(batch_manager.batch_start())
 
         for group in groups:
             conversation.add_group(group)
@@ -133,9 +134,9 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
             self.assertEqual(conv.name, loaded_conv.name)
 
     def setup_fix_batches(self, tags=(), num_batches=1):
-        mdb = self.user_api.api.mdb
+        FIXME_mdb = self.user_api.api.FIXME_mdb
         msg_helper = GoMessageHelper()  # We can't use .store_*(), so no mdb.
-        batches = [mdb.batch_start(tags=tags) for i in range(num_batches)]
+        batches = [FIXME_mdb.batch_start(tags=tags) for i in range(num_batches)]
 
         conv = self.mkoldconv(
             create_batch=False, conversation_type=u'dummy_type',
@@ -145,9 +146,9 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
         for i, batch_id in enumerate(batches):
             conv.batches.add_key(batch_id)
             msg1 = msg_helper.make_inbound("in", message_id=u"msg-%d" % i)
-            mdb.add_inbound_message(msg1, batch_ids=[batch_id])
+            FIXME_mdb.add_inbound_message(msg1, batch_ids=[batch_id])
             msg2 = msg_helper.make_outbound("out", message_id=u"msg-%d" % i)
-            mdb.add_outbound_message(msg2, batch_ids=[batch_id])
+            FIXME_mdb.add_outbound_message(msg2, batch_ids=[batch_id])
 
         conv.save()
 
@@ -160,16 +161,20 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
         new_batch = new_conv.batch.key
         self.assertTrue(new_batch not in old_batches)
 
-        mdb = self.user_api.api.mdb
-        old_out, old_in = set(), set()
+        FIXME_mdb = self.user_api.api.FIXME_mdb
+        old_outbound, old_inbound = set(), set()
         for batch in old_batches:
-            collect_all_results(mdb.batch_outbound_keys_page(batch), old_out)
-            collect_all_results(mdb.batch_inbound_keys_page(batch), old_in)
+            collect_all_results(
+                FIXME_mdb.batch_outbound_keys_page(batch), old_outbound)
+            collect_all_results(
+                FIXME_mdb.batch_inbound_keys_page(batch), old_inbound)
 
-        new_out = collect_all_results(mdb.batch_outbound_keys_page(new_batch))
-        new_in = collect_all_results(mdb.batch_inbound_keys_page(new_batch))
-        self.assertEqual(new_out, old_out)
-        self.assertEqual(new_in, old_in)
+        new_outbound = collect_all_results(
+            FIXME_mdb.batch_outbound_keys_page(new_batch))
+        new_inbound = collect_all_results(
+            FIXME_mdb.batch_inbound_keys_page(new_batch))
+        self.assertEqual(new_outbound, old_outbound)
+        self.assertEqual(new_inbound, old_inbound)
 
     def _check_fix_batches(self, migration_name, tags, num_batches, migrated):
         conv = self.setup_fix_batches(tags, num_batches)

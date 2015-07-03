@@ -107,19 +107,19 @@ class FixBatches(Migration):
                 add_message(get_message(key), batch_ids=[batch_id])
             index_page = index_page.next_page()
 
-    def _copy_msgs(self, mdb, old_batch, new_batch):
+    def _copy_msgs(self, FIXME_mdb, old_batch, new_batch):
         self._process_pages(
-            mdb.batch_outbound_keys_page(old_batch), new_batch,
-            mdb.get_outbound_message, mdb.add_outbound_message)
+            FIXME_mdb.batch_outbound_keys_page(old_batch), new_batch,
+            FIXME_mdb.get_outbound_message, FIXME_mdb.add_outbound_message)
         self._process_pages(
-            mdb.batch_inbound_keys_page(old_batch), new_batch,
-            mdb.get_inbound_message, mdb.add_inbound_message)
+            FIXME_mdb.batch_inbound_keys_page(old_batch), new_batch,
+            FIXME_mdb.get_inbound_message, FIXME_mdb.add_inbound_message)
 
     def migrate(self, user_api, conv):
         conv_batches = conv.batches.keys()
-        new_batch = user_api.api.mdb.batch_start()
+        new_batch = user_api.api.get_batch_manager().batch_start()
         for batch in conv_batches:
-            self._copy_msgs(user_api.api.mdb, batch, new_batch)
+            self._copy_msgs(user_api.api.FIXME_mdb, batch, new_batch)
         conv.batches.clear()
         conv.batches.add_key(new_batch)
         conv.save()
@@ -133,8 +133,8 @@ class SplitBatches(Migration):
         " conversation batches to the new batch.")
 
     def applies_to(self, user_api, conv):
-        mdb = user_api.api.mdb
-        tag_keys = mdb.current_tags.index_keys('current_batch', conv.batch.key)
+        FIXME_mdb = user_api.api.FIXME_mdb
+        tag_keys = FIXME_mdb.current_tags.index_keys('current_batch', conv.batch.key)
         if tag_keys:
             return True
         return False
@@ -145,18 +145,18 @@ class SplitBatches(Migration):
                 add_message(get_message(key), batch_ids=[batch_id])
             index_page = index_page.next_page()
 
-    def _copy_msgs(self, mdb, old_batch, new_batch):
+    def _copy_msgs(self, FIXME_mdb, old_batch, new_batch):
         self._process_pages(
-            mdb.batch_outbound_keys_page(old_batch), new_batch,
-            mdb.get_outbound_message, mdb.add_outbound_message)
+            FIXME_mdb.batch_outbound_keys_page(old_batch), new_batch,
+            FIXME_mdb.get_outbound_message, FIXME_mdb.add_outbound_message)
         self._process_pages(
-            mdb.batch_inbound_keys_page(old_batch), new_batch,
-            mdb.get_inbound_message, mdb.add_inbound_message)
+            FIXME_mdb.batch_inbound_keys_page(old_batch), new_batch,
+            FIXME_mdb.get_inbound_message, FIXME_mdb.add_inbound_message)
 
     def migrate(self, user_api, conv):
         old_batch = conv.batch.key
-        new_batch = user_api.api.mdb.batch_start()
-        self._copy_msgs(user_api.api.mdb, old_batch, new_batch)
+        new_batch = user_api.api.get_batch_manager().batch_start()
+        self._copy_msgs(user_api.api.FIXME_mdb, old_batch, new_batch)
         conv.batch.key = new_batch
         conv.save()
 

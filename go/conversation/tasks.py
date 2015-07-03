@@ -51,8 +51,10 @@ def row_for_inbound_message(message):
     return row
 
 
-def row_for_outbound_message(message, mdb):
-    events = sorted(mdb.get_events_for_message(message['message_id']),
+def row_for_outbound_message(message, qms):
+    event_keys = qms.list_message_event_keys(message["message_id"])
+    # NOTE: We assume only one page of results here.
+    events = sorted((qms.get_event(key) for key in event_keys),
                     key=lambda event: event['timestamp'],
                     reverse=True)
     row = dict((field, unicode(message.payload[field]))
@@ -89,13 +91,13 @@ def load_messages_in_chunks(conversation, direction='inbound',
         modified on the fly.
     """
     if direction == 'inbound':
-        index_page = conversation.mdb.batch_inbound_keys_page(
+        index_page = conversation.qms.list_batch_inbound_keys(
             conversation.batch.key)
-        get_msg = conversation.mdb.get_inbound_message
+        get_msg = conversation.qms.get_inbound_message
     elif direction == 'outbound':
-        index_page = conversation.mdb.batch_outbound_keys_page(
+        index_page = conversation.qms.list_batch_outbound_keys(
             conversation.batch.key)
-        get_msg = conversation.mdb.get_outbound_message
+        get_msg = conversation.qms.get_outbound_message
     else:
         raise ValueError('Invalid value (%s) received for `direction`. '
                          'Only `inbound` and `outbound` are allowed.' %
@@ -149,7 +151,7 @@ def export_conversation_messages_unsorted(account_key, conversation_key):
 
         for messages in load_messages_in_chunks(conversation, 'outbound'):
             for message in messages:
-                mdb = user_api.api.mdb
-                writer.writerow(row_for_outbound_message(message, mdb))
+                qms = user_api.api.get_query_message_store()
+                writer.writerow(row_for_outbound_message(message, qms))
 
         email_export(user_profile, conversation, io)

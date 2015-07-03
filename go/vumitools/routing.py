@@ -344,6 +344,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         self.transport_connectors -= self.billing_connectors
 
         self.optouts = OptOutHelper(self.vumi_api, config.optouts)
+        self.opms = self.vumi_api.get_operational_message_store()
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -381,7 +382,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if msg_mdh.has_user_account():
             user_account_key = msg_mdh.get_account_key()
         elif msg_mdh.tag is not None:
-            tag_info = yield self.vumi_api.mdb.get_tag_info(msg_mdh.tag)
+            tag_info = yield self.opms.get_tag_info(msg_mdh.tag)
             user_account_key = tag_info.metadata['user_account']
             if user_account_key is None:
                 raise UnownedTagError(
@@ -658,7 +659,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         """
         if connector_name in self.transport_connectors:
             if self.get_static_config().store_messages_to_transports:
-                yield self.vumi_api.mdb.add_outbound_message(msg)
+                yield self.opms.add_outbound_message(msg)
 
         yield super(RoutingTableDispatcher, self).publish_outbound(
             msg, connector_name, endpoint)

@@ -94,9 +94,10 @@ class TestConversationWrapper(VumiTestCase):
     def test_collect_messages(self):
         yield self.conv.start()
         created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        qms = self.vumi_helper.get_vumi_api().get_query_message_store()
         collected_msgs = yield self.conv.collect_messages(
             [msg['message_id'] for msg in created_msgs],
-            self.conv.mdb.get_inbound_message,
+            qms.get_inbound_message,
             include_sensitive=False, scrubber=lambda msg: msg)
         self.assertEqual(
             [msg['message_id'] for msg in collected_msgs],
@@ -106,9 +107,10 @@ class TestConversationWrapper(VumiTestCase):
     def test_collect_messages_with_unknown_key(self):
         yield self.conv.start()
         created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        qms = self.vumi_helper.get_vumi_api().get_query_message_store()
         collected_msgs = yield self.conv.collect_messages(
             [msg['message_id'] for msg in created_msgs] + [u'unknown-key'],
-            self.conv.mdb.get_inbound_message,
+            qms.get_inbound_message,
             include_sensitive=False, scrubber=lambda msg: msg)
         self.assertEqual(
             [msg['message_id'] for msg in collected_msgs],

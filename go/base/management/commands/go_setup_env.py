@@ -310,7 +310,7 @@ class Command(BaseCommand):
             config = router_info.pop('config', {})
             extra_inbound_endpoints = view_def.get_inbound_endpoints(config)
             extra_outbound_endpoints = view_def.get_outbound_endpoints(config)
-            batch_id = user_api.api.mdb.batch_start()
+            batch_id = user_api.api.get_batch_manager().batch_start()
 
             # We bypass the usual mechanisms so we can set the key ourselves.
             router = user_api.router_store.routers(
@@ -341,7 +341,7 @@ class Command(BaseCommand):
             conversation_type = conv_info.pop('conversation_type')
             view_def = get_conversation_view_definition(conversation_type)
             config = conv_info.pop('config', {})
-            batch_id = user_api.api.mdb.batch_start()
+            batch_id = user_api.api.get_batch_manager().batch_start()
             # We bypass the usual mechanisms so we can set the key ourselves.
             conv = user_api.conversation_store.conversations(
                 conversation_key, user_account=user_api.user_account_key,

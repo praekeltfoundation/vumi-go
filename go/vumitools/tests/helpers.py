@@ -52,15 +52,17 @@ class GoMessageHelper(object):
         self._msg_helper = MessageHelper(**kw)
         self.transport_name = self._msg_helper.transport_name
         self._vumi_helper = vumi_helper
-        self.mdb = None
-        if self._vumi_helper is not None:
-            self.mdb = self._vumi_helper.get_vumi_api().mdb
 
     def setup(self):
         pass
 
     def cleanup(self):
         return self._msg_helper.cleanup()
+
+    def _get_opms(self):
+        if self._vumi_helper is None:
+            raise ValueError("No message store provided.")
+        return self._vumi_helper.get_vumi_api().get_operational_message_store()
 
     @proxyable
     def add_router_metadata(self, msg, router):
@@ -137,21 +139,17 @@ class GoMessageHelper(object):
 
     @proxyable
     def store_inbound(self, conv, msg):
-        if self.mdb is None:
-            raise ValueError("No message store provided.")
-        return self.mdb.add_inbound_message(msg, batch_ids=[conv.batch.key])
+        return self._get_opms().add_inbound_message(
+            msg, batch_ids=[conv.batch.key])
 
     @proxyable
     def store_outbound(self, conv, msg):
-        if self.mdb is None:
-            raise ValueError("No message store provided.")
-        return self.mdb.add_outbound_message(msg, batch_ids=[conv.batch.key])
+        return self._get_opms().add_outbound_message(
+            msg, batch_ids=[conv.batch.key])
 
     @proxyable
     def store_event(self, event):
-        if self.mdb is None:
-            raise ValueError("No message store provided.")
-        return self.mdb.add_event(event)
+        return self._get_opms().add_event(event)
 
     @proxyable
     def make_stored_inbound(self, conv, content, **kw):
