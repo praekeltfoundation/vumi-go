@@ -92,11 +92,20 @@ class Command(BaseGoCommand):
         self.do_batch_key(message_store, batch_key)
         self.do_batch_key_breakdown(message_store, batch_key)
 
+    def _count_results(self, index_page):
+        count = 0
+        while index_page is not None:
+            count += len(list(index_page))
+            index_page = index_page.next_page()
+        return count
+
     def do_batch_key(self, message_store, batch_key):
-        self.out(u'Total Received in batch %s: %s\n' % (
-            batch_key, message_store.batch_inbound_count(batch_key),))
-        self.out(u'Total Sent in batch %s: %s\n' % (
-            batch_key, message_store.batch_outbound_count(batch_key),))
+        in_count = self._count_results(
+            message_store.batch_inbound_keys_page(batch_key))
+        out_count = self._count_results(
+            message_store.batch_outbound_keys_page(batch_key))
+        self.out(u'Total Received in batch %s: %s\n' % (batch_key, in_count))
+        self.out(u'Total Sent in batch %s: %s\n' % (batch_key, out_count))
 
     def parse_timestamp_to_date(self, timestamp):
         return parse_vumi_date(timestamp).date()
