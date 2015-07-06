@@ -101,13 +101,19 @@ class FixBatches(Migration):
             return False
         return len(conv.batches.keys()) != 1
 
+    def _process_pages(self, index_page, batch_id, get_message, add_message):
+        while index_page is not None:
+            for key in index_page:
+                add_message(get_message(key), batch_ids=[batch_id])
+            index_page = index_page.next_page()
+
     def _copy_msgs(self, mdb, old_batch, new_batch):
-        for key in mdb.batch_outbound_keys(old_batch):
-            msg = mdb.get_outbound_message(key)
-            mdb.add_outbound_message(msg, batch_ids=[new_batch])
-        for key in mdb.batch_inbound_keys(old_batch):
-            msg = mdb.get_inbound_message(key)
-            mdb.add_inbound_message(msg, batch_ids=[new_batch])
+        self._process_pages(
+            mdb.batch_outbound_keys_page(old_batch), new_batch,
+            mdb.get_outbound_message, mdb.add_outbound_message)
+        self._process_pages(
+            mdb.batch_inbound_keys_page(old_batch), new_batch,
+            mdb.get_inbound_message, mdb.add_inbound_message)
 
     def migrate(self, user_api, conv):
         conv_batches = conv.batches.keys()
@@ -133,13 +139,19 @@ class SplitBatches(Migration):
             return True
         return False
 
+    def _process_pages(self, index_page, batch_id, get_message, add_message):
+        while index_page is not None:
+            for key in index_page:
+                add_message(get_message(key), batch_ids=[batch_id])
+            index_page = index_page.next_page()
+
     def _copy_msgs(self, mdb, old_batch, new_batch):
-        for key in mdb.batch_outbound_keys(old_batch):
-            msg = mdb.get_outbound_message(key)
-            mdb.add_outbound_message(msg, batch_ids=[new_batch])
-        for key in mdb.batch_inbound_keys(old_batch):
-            msg = mdb.get_inbound_message(key)
-            mdb.add_inbound_message(msg, batch_ids=[new_batch])
+        self._process_pages(
+            mdb.batch_outbound_keys_page(old_batch), new_batch,
+            mdb.get_outbound_message, mdb.add_outbound_message)
+        self._process_pages(
+            mdb.batch_inbound_keys_page(old_batch), new_batch,
+            mdb.get_inbound_message, mdb.add_inbound_message)
 
     def migrate(self, user_api, conv):
         old_batch = conv.batch.key
