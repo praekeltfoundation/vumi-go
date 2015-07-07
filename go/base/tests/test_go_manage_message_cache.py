@@ -30,19 +30,44 @@ class TestGoManageMessageCache(GoCommandTestCase):
         for batch_id in batches:
             self.assertFalse(vumi_api.mdb.cache.batch_exists(batch_id))
 
-    def _assert_batches_recon_state(self, batches, recon_required):
+    def count_results(self, index_page):
+        count = 0
+        while index_page is not None:
+            count += len(list(index_page))
+            index_page = index_page.next_page()
+        return count
+
+    def needs_rebuild(self, batch_id, delta=0.01):
+        """
+        Check if a batch_id's cache values need to be rebuilt.
+
+        :param float delta:
+            What an acceptable delta is for the cached values. Defaults to 0.01
+            If the cached values are off by the delta then this returns True.
+        """
         vumi_api = self.vumi_helper.get_vumi_api()
-        needs_recon = vumi_api.mdb.needs_reconciliation
+
+        inbound = float(self.count_results(
+            vumi_api.mdb.batch_inbound_keys_page(batch_id)))
+        cached_inbound = vumi_api.mdb.cache.inbound_message_count(batch_id)
+        if inbound and (abs(cached_inbound - inbound) / inbound) > delta:
+            return True
+
+        outbound = float(self.count_results(
+            vumi_api.mdb.batch_outbound_keys_page(batch_id)))
+        cached_outbound = vumi_api.mdb.cache.outbound_message_count(batch_id)
+        if outbound and (abs(cached_outbound - outbound) / outbound) > delta:
+            return True
+
+        return False
+
+    def _assert_batches_recon_state(self, batches, recon_required):
         self.assertEqual(
-            [(batch_id, needs_recon(batch_id)) for batch_id in batches],
+            [(batch_id, self.needs_rebuild(batch_id)) for batch_id in batches],
             [(batch_id, recon_required) for batch_id in batches])
 
     def assert_batches_rebuilt(self, batches):
         self._assert_batches_recon_state(batches, False)
-
-    def uses_counters(self, batch_id):
-        vumi_api = self.vumi_helper.get_vumi_api()
-        return vumi_api.mdb.cache.uses_counters(batch_id)
 
     def test_rebuild_conversation(self):
         conv = self.user_helper.create_conversation(u"http_api")

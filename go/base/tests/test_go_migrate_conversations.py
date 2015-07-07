@@ -12,6 +12,15 @@ from go.vumitools.conversation.old_models import ConversationV1
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
+def collect_all_results(index_page, results=None):
+    if results is None:
+        results = set()
+    while index_page is not None:
+        results.update(index_page)
+        index_page = index_page.next_page()
+    return results
+
+
 class TestGoMigrateConversationsCommand(GoDjangoTestCase):
 
     def setUp(self):
@@ -152,15 +161,15 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
         self.assertTrue(new_batch not in old_batches)
 
         mdb = self.user_api.api.mdb
-        old_outbound, old_inbound = set(), set()
+        old_out, old_in = set(), set()
         for batch in old_batches:
-            old_outbound.update(mdb.batch_outbound_keys(batch))
-            old_inbound.update(mdb.batch_inbound_keys(batch))
+            collect_all_results(mdb.batch_outbound_keys_page(batch), old_out)
+            collect_all_results(mdb.batch_inbound_keys_page(batch), old_in)
 
-        self.assertEqual(set(mdb.batch_outbound_keys(new_batch)),
-                         old_outbound)
-        self.assertEqual(set(mdb.batch_inbound_keys(new_batch)),
-                         old_inbound)
+        new_out = collect_all_results(mdb.batch_outbound_keys_page(new_batch))
+        new_in = collect_all_results(mdb.batch_inbound_keys_page(new_batch))
+        self.assertEqual(new_out, old_out)
+        self.assertEqual(new_in, old_in)
 
     def _check_fix_batches(self, migration_name, tags, num_batches, migrated):
         conv = self.setup_fix_batches(tags, num_batches)

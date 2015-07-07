@@ -1136,8 +1136,14 @@ class TestConversationTasks(GoDjangoTestCase):
         reader = csv.DictReader(fp)
         message_ids = [row['message_id'] for row in reader]
         all_keys = set()
-        all_keys.update(conv.mdb.batch_inbound_keys(conv.batch.key))
-        all_keys.update(conv.mdb.batch_outbound_keys(conv.batch.key))
+        index_page = conv.mdb.batch_inbound_keys_page(conv.batch.key)
+        while index_page is not None:
+            all_keys.update(index_page)
+            index_page = index_page.next_page()
+        index_page = conv.mdb.batch_outbound_keys_page(conv.batch.key)
+        while index_page is not None:
+            all_keys.update(index_page)
+            index_page = index_page.next_page()
         self.assertEqual(set(message_ids), all_keys)
 
     def test_export_conversation_message_session_events(self):
