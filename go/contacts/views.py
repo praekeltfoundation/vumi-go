@@ -427,7 +427,7 @@ def _people(request):
     # production hack if we really need to count all contacts or something.
     fetch_limit = int(request.GET.get('_fetch_limit', 10000))
     if query:
-        if not ':' in query:
+        if ':' not in query:
             query = 'name:%s' % (query,)
 
         # TODO: Use pagination here.
@@ -506,6 +506,7 @@ def person(request, person_key):
     return render(request, 'contacts/contact_detail.html', {
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
+        'contact_subscription_items': contact.subscription.items(),
         'form': form,
     })
 

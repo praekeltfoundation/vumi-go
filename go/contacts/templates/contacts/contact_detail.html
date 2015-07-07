@@ -19,13 +19,15 @@
             <form class="form-horizontal details" method="post" action="">
                 {% csrf_token %}
                     <section class='profile'>
-                        <h4>Profile details</h4>
+                        <h4>Contact details</h4>
+                        {% if contact.created_at %}
+                          <p>Contact record created at {{ contact.created_at }}.</p>
+                        {% endif %}
                         {{ form|crispy }}
                     </section>
 
-                    <hr>
-
                     {% if contact_extra_items %}
+                      <hr>
                       <section class="extras">
                           <h4>Extra details</h4>
                           <table class="table">
@@ -37,6 +39,29 @@
                               </thead>
                               <tbody>
                                   {% for field, value in contact_extra_items %}
+                                  <tr>
+                                      <td>{{ field }}</td>
+                                      <td>{{ value }}</td>
+                                  </tr>
+                                  {% endfor %}
+                              </tbody>
+                        </table>
+                      </section>
+                    {% endif %}
+
+                    {% if contact_subscription_items %}
+                      <hr>
+                      <section class="extras">
+                          <h4>Subscriptions</h4>
+                          <table class="table">
+                              <thead>
+                                  <tr>
+                                      <th>Name</td>
+                                      <th>Position</td>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  {% for field, value in contact_subscription_items %}
                                   <tr>
                                       <td>{{ field }}</td>
                                       <td>{{ value }}</td>
