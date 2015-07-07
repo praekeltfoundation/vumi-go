@@ -815,7 +815,9 @@ class TestMetricsMiddleware(VumiTestCase):
         self.assertEqual(fail1, fail2)
 
 
-def collect_all_results(index_page, results):
+def collect_all_results(index_page, results=None):
+    if results is None:
+        results = []
     if index_page is None:
         return results
     results.extend(index_page)
@@ -836,14 +838,14 @@ class TestConversationStoringMiddleware(VumiTestCase):
     def assert_stored_inbound(self, msgs):
         mdb = self.mw_helper.get_vumi_api().mdb
         index_page = yield mdb.batch_inbound_keys_page(self.conv.batch.key)
-        ids = yield collect_all_results(index_page, [])
+        ids = yield collect_all_results(index_page)
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
     def assert_stored_outbound(self, msgs):
         mdb = self.mw_helper.get_vumi_api().mdb
         index_page = yield mdb.batch_outbound_keys_page(self.conv.batch.key)
-        ids = yield collect_all_results(index_page, [])
+        ids = yield collect_all_results(index_page)
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
@@ -951,14 +953,14 @@ class TestRouterStoringMiddleware(VumiTestCase):
     def assert_stored_inbound(self, msgs):
         mdb = self.mw_helper.get_vumi_api().mdb
         index_page = yield mdb.batch_inbound_keys_page(self.router.batch.key)
-        ids = yield collect_all_results(index_page, [])
+        ids = yield collect_all_results(index_page)
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
     def assert_stored_outbound(self, msgs):
         mdb = self.mw_helper.get_vumi_api().mdb
         index_page = yield mdb.batch_outbound_keys_page(self.router.batch.key)
-        ids = yield collect_all_results(index_page, [])
+        ids = yield collect_all_results(index_page)
         self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
 
     @inlineCallbacks
