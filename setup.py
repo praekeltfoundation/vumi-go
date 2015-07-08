@@ -13,6 +13,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'vumi>=0.5.21',
+        'vumi-message-store',
         'vxsandbox>=0.5.0',
         'vxpolls',
         'vumi-wikipedia>=0.2.1',
