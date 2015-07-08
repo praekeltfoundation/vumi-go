@@ -95,7 +95,7 @@ class Command(BaseGoCommand):
     def _count_results(self, index_page):
         count = 0
         while index_page is not None:
-            count += len(list(index_page))
+            count += len(index_page)
             index_page = index_page.next_page()
         return count
 

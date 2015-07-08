@@ -435,7 +435,7 @@ def _people(request):
     else:
         keys = contact_store.list_contacts_page(max_results=fetch_limit)
 
-    key_count = len(list(keys))
+    key_count = len(keys)
     limit = min(int(request.GET.get('limit', 100)), key_count)
     # If we have a continuation token, it means there are more than
     # `fetch_limit` keys.

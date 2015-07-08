@@ -298,7 +298,7 @@ class TestContactStore(VumiTestCase):
             contact_keys.add(contact.key)
 
         index_page = yield store.get_static_contact_keys_for_group(group)
-        self.assertEqual(len(list(index_page)), 2)
+        self.assertEqual(len(index_page), 2)
         self.assertEqual(index_page.has_next_page(), False)
 
     @inlineCallbacks
@@ -334,7 +334,7 @@ class TestContactStore(VumiTestCase):
             contact_keys.add(contact.key)
 
         index_page = yield store.get_contact_keys_for_group(group)
-        self.assertEqual(len(list(index_page)), 2)
+        self.assertEqual(len(index_page), 2)
         self.assertEqual(index_page.has_next_page(), False)
 
     @inlineCallbacks
