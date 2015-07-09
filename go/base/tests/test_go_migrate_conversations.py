@@ -136,7 +136,7 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
     def setup_fix_batches(self, tags=(), num_batches=1):
         batch_manager = self.user_api.api.get_batch_manager()
         opms = self.user_api.api.get_operational_message_store()
-        msg_helper = GoMessageHelper()  # We can't use .store_*(), so no mdb.
+        msg_helper = self.add_helper(GoMessageHelper())
         batches = [batch_manager.batch_start(tags=tags)
                    for i in range(num_batches)]
 
