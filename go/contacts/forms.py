@@ -19,8 +19,8 @@ class ContactForm(forms.Form):
     def __init__(self, *args, **kw):
         groups = kw.pop('groups')
         super(ContactForm, self).__init__(*args, **kw)
-        self.fields['groups'] = forms.MultipleChoiceField(required=False,
-            choices=[(g.key, g.name) for g in groups])
+        self.fields['groups'] = forms.MultipleChoiceField(
+            required=False, choices=[(g.key, g.name) for g in groups])
 
     def clean(self):
         """
@@ -43,9 +43,10 @@ class SmartGroupForm(forms.Form):
 
 
 class UploadContactsForm(forms.Form):
-    file = forms.FileField(label="File with Contact data",
+    file = forms.FileField(
+        label="File with Contact data",
         help_text="This can either be a double-quoted UTF-8 encoded CSV file "
-                    "or an Excel spreadsheet")
+                  "or an Excel spreadsheet")
 
 
 class SelectContactGroupForm(forms.Form):
