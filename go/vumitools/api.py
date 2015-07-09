@@ -353,10 +353,10 @@ class VumiUserApi(object):
         # The batch we create here gets added to the tag_info and we can fish
         # it out later. When we replace this with proper channel objects we can
         # stash it there like we do with conversations and routers.
-        yield self.api.get_batch_manager().batch_start(
-            [tag], user_account=user_account.key)
+        batch_manager = self.api.get_batch_manager()
+        yield batch_manager.batch_start([tag], user_account=user_account.key)
         user_account.tags.append(tag)
-        tag_info = yield self.api.get_batch_manager().get_tag_info(tag)
+        tag_info = yield batch_manager.get_tag_info(tag)
         tag_info.metadata['user_account'] = user_account.key.decode('utf-8')
         yield tag_info.save()
         yield user_account.save()
@@ -424,7 +424,8 @@ class VumiUserApi(object):
         except ValueError, e:
             log.error("Tag not allocated to account: %s" % (tag,), e)
         else:
-            tag_info = yield self.api.get_batch_manager().get_tag_info(tag)
+            batch_manager = self.api.get_batch_manager()
+            tag_info = yield batch_manager.get_tag_info(tag)
             if 'user_account' in tag_info.metadata:
                 del tag_info.metadata['user_account']
             yield tag_info.save()
@@ -432,8 +433,7 @@ class VumiUserApi(object):
             #       We should probably refactor the message store to make this
             #       less clumsy.
             if tag_info.current_batch.key:
-                yield self.api.get_batch_manager().batch_done(
-                    tag_info.current_batch.key)
+                yield batch_manager.batch_done(tag_info.current_batch.key)
 
             # Clean up routing table entries.
             routing_table = yield self.get_routing_table(user_account)
