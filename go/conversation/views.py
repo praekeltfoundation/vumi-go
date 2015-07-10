@@ -127,31 +127,3 @@ def new_conversation(request):
     return render(request, 'conversation/new.html', {
         'conversation_form': form,
     })
-
-
-# TODO: The following should probably be moved over to view_definition.py
-
-@login_required
-def incoming_detail(request, conversation_key, contact_key):
-    conversation = conversation_or_404(request.user_api, conversation_key)
-    form = ReplyToMessageForm()
-
-    if request.method == 'POST':
-        # TODO: process sending message from form
-        pass
-
-    # TODO: Conversation data.
-    # FAKE DATA FOR BADLARD.
-    message_list = (
-        {'contact': 'You', 'message': 'Thank you'},
-        {'contact': '55555 539 521', 'message': 'Saturday'},
-        {'contact': 'You', 'message': 'What days do you eat?'},
-        {'contact': '55555 539 521', 'message': 'Hotdogs'},
-        {'contact': 'You', 'message': 'What is your favourite meal?'},
-    )
-
-    return render(request, 'conversation/incoming_detail.html', {
-        'conversation': conversation,
-        'form': form,
-        'message_list': message_list
-    })
