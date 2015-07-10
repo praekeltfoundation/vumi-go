@@ -6,7 +6,6 @@ from decimal import Decimal, ROUND_DOWN
 from StringIO import StringIO
 from urlparse import urlparse, urlunparse
 
-from django import forms
 from django.http import Http404, HttpResponse
 from django.conf import settings
 from vumi.persist.redis_manager import RedisManager
@@ -80,28 +79,6 @@ def padded_queryset(queryset, size=6, padding=None):
     results = list(queryset)
     results.extend(filler)
     return results
-
-
-def make_read_only_formset(formset):
-    for form in formset:
-        make_read_only_form(form)
-    return formset
-
-
-def make_read_only_form(form):
-    """turn all fields in a form readonly"""
-    for field_name, field in form.fields.items():
-        widget = field.widget
-        if isinstance(
-                widget, (forms.RadioSelect, forms.CheckboxSelectMultiple)):
-            widget.attrs.update({
-                'disabled': 'disabled'
-            })
-        else:
-            widget.attrs.update({
-                'readonly': 'readonly'
-            })
-    return form
 
 
 def page_range_window(page, padding):
