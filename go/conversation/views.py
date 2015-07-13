@@ -17,7 +17,7 @@ CONVERSATIONS_PER_PAGE = 12
 def index(request):
     # grab the fields from the GET request
     user_api = request.user_api
-    apps = [v for k, v in sorted(user_api.applications().iteritems())]
+    apps = (v for k, v in sorted(user_api.applications().iteritems()))
     conversation_types = [(app['namespace'], app['display_name'])
                           for app in apps]
     search_form = ConversationSearchForm(
