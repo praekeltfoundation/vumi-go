@@ -8,6 +8,7 @@ include setup.py
 include pytest.ini
 include tox.ini
 include *.sh
+include go/js_paths.yml
 
 # Prune stray bytecode files.
 global-exclude *.pyc

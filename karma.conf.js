@@ -1,7 +1,7 @@
 require('js-yaml');
 
 module.exports = function(config) {
-  var paths = require('./js_paths.yml');
+  var paths = require('./go/js_paths.yml');
 
   var files_to_cover = [].concat(
       paths.client.scripts.go,
