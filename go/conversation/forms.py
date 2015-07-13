@@ -10,8 +10,9 @@ class ConversationDetailForm(forms.Form):
 class NewConversationForm(ConversationDetailForm):
     def __init__(self, user_api, *args, **kwargs):
         super(NewConversationForm, self).__init__(*args, **kwargs)
+        apps = [v for k, v in sorted(user_api.applications().iteritems())]
         type_choices = [(app['namespace'], app['display_name'])
-                        for app in user_api.applications().itervalues()]
+                        for app in apps]
         self.fields['conversation_type'] = forms.ChoiceField(
             label="Which kind of conversation would you like?",
             choices=type_choices)
