@@ -24,12 +24,6 @@ from go.contacts.parsers.base import FieldNormalizer
 from go.vumitools.contact import ContactError
 
 
-def _query_to_kwargs(query):
-    pattern = r'(?P<key>[^ :]+):[ ]*(?P<value>[^:]*[^ :])(?:(?=( [^:]+:)|$))'
-    tuples = re.findall(pattern, query)
-    return dict([(t[0], t[1]) for t in tuples])
-
-
 def _group_url(group_key):
     return reverse('contacts:group', kwargs={'group_key': group_key})
 
