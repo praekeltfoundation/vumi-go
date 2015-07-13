@@ -31,8 +31,6 @@ from go.vumitools.router import RouterStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.token_manager import TokenManager
 
-from django.utils.datastructures import SortedDict
-
 from vumi.message import TransportUserMessage
 
 
@@ -258,17 +256,17 @@ class VumiUserApi(object):
         applications = [permission.application for permission
                         in app_permissions]
         app_settings = configured_conversations()
-        returnValue(SortedDict([(application, app_settings[application])
-                                for application in sorted(applications)
-                                if application in app_settings]))
+        returnValue(dict((application, app_settings[application])
+                         for application in applications
+                         if application in app_settings))
 
     @Manager.calls_manager
     def router_types(self):
         # TODO: Permissions.
         yield None
         router_settings = configured_routers()
-        returnValue(SortedDict([(router_type, router_settings[router_type])
-                                for router_type in sorted(router_settings)]))
+        returnValue(dict((router_type, router_settings[router_type])
+                         for router_type in router_settings))
 
     def list_groups(self):
         return self.contact_store.list_groups()
