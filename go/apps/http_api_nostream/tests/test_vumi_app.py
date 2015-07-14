@@ -14,10 +14,11 @@ from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer, LogCatcher
 from vumi.tests.helpers import VumiTestCase
 
-from go.apps.http_api_nostream.vumi_app import (
-    ConcurrencyLimitManager, NoStreamingHTTPWorker)
 from go.apps.http_api_nostream.resource import ConversationResource
 from go.apps.tests.helpers import AppWorkerHelper
+
+from go.apps.http_api_nostream.vumi_app import (
+    ConcurrencyLimitManager, NoStreamingHTTPWorker)
 
 
 class TestConcurrencyLimitManager(VumiTestCase):
