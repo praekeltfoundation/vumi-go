@@ -1,10 +1,13 @@
 import json
 
-import requests
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.dashboard.client import DiamondashApiError, DiamondashApiClient
-from go.dashboard.tests.utils import FakeDiamondashApiClient
+with djangotest_imports(globals()):
+    import requests
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.dashboard.client import DiamondashApiError, DiamondashApiClient
+    from go.dashboard.tests.utils import FakeDiamondashApiClient
 
 
 class FakeResponse(object):

@@ -1,9 +1,11 @@
-from django.core.urlresolvers import reverse
+from go.vumitools.tests.helpers import djangotest_imports
 
-from django.contrib.flatpages.models import FlatPage
-from django.contrib.sites.models import Site
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+    from django.contrib.flatpages.models import FlatPage
+    from django.contrib.sites.models import Site
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestNav(GoDjangoTestCase):

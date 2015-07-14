@@ -1,13 +1,17 @@
 from os import path
 
-from django.conf import settings
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.tests.helpers import GoDjangoTestCase
-from go.contacts.parsers import ContactParserException
-from go.contacts.parsers.csv_parser import CSVFileParser
-from go.contacts.parsers.xls_parser import XLSFileParser
+parser_classes = ['CSVFileParser', 'XLSFileParser']
+with djangotest_imports(globals(), dummy_classes=parser_classes):
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+
+    from go.base.tests.helpers import GoDjangoTestCase
+    from go.contacts.parsers import ContactParserException
+    from go.contacts.parsers.csv_parser import CSVFileParser
+    from go.contacts.parsers.xls_parser import XLSFileParser
 
 
 class ParserTestCase(GoDjangoTestCase):

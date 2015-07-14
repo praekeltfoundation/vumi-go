@@ -1,7 +1,5 @@
 import os.path
 
-from django.core.files.storage import default_storage
-
 from vumi.utils import load_class, normalize_msisdn
 
 
@@ -158,6 +156,7 @@ class ContactFileParser(object):
         self.normalizer = FieldNormalizer()
 
     def get_real_path(self, file_path):
+        from django.core.files.storage import default_storage
         return default_storage.path(file_path)
 
     def is_header_row(self, columns):

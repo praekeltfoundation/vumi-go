@@ -1,20 +1,24 @@
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.dashboard import client
-from go.dashboard.tests.utils import FakeDiamondashApiClient
-from go.dashboard.dashboard import (
-    DashboardError, DashboardSyncError, DashboardParseError,
-    Dashboard, DashboardLayout,
-    ConversationReportsLayout, visit_dicts, ensure_handler_fields)
+from go.vumitools.tests.helpers import djangotest_imports
 
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.dashboard import client
+    from go.dashboard.tests.utils import FakeDiamondashApiClient
+    from go.dashboard.dashboard import (
+        DashboardError, DashboardSyncError, DashboardParseError,
+        Dashboard, DashboardLayout,
+        ConversationReportsLayout, visit_dicts, ensure_handler_fields)
 
-class ToyDashboardLayout(DashboardLayout):
-    @ensure_handler_fields('name')
-    def handle_foo_metric(self, target):
-        return "foo.%s" % target['name']
+    # We define this in here because it's easier than making dummies for
+    # ToyDashboardLayout and ensure_handler_fields.
+    class ToyDashboardLayout(DashboardLayout):
+        @ensure_handler_fields('name')
+        def handle_foo_metric(self, target):
+            return "foo.%s" % target['name']
 
-    @ensure_handler_fields('name')
-    def handle_bar_metric(self, target):
-        return "bar.%s" % target['name']
+        @ensure_handler_fields('name')
+        def handle_bar_metric(self, target):
+            return "bar.%s" % target['name']
 
 
 class TestDashboard(GoDjangoTestCase):
