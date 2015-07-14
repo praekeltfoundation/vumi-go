@@ -6,12 +6,15 @@ from decimal import Decimal
 from StringIO import StringIO
 from unittest import TestCase
 
-from go.base.tests.helpers import GoDjangoTestCase
-import go.base.utils
-from go.base.utils import (
-    get_conversation_view_definition, get_router_view_definition,
-    UnicodeDictWriter, sendfile, format_currency)
-from go.errors import UnknownConversationType, UnknownRouterType
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase
+    import go.base.utils
+    from go.base.utils import (
+        get_conversation_view_definition, get_router_view_definition,
+        UnicodeDictWriter, sendfile, format_currency)
+    from go.errors import UnknownConversationType, UnknownRouterType
 
 
 class TestConversationDefinitionHelpers(GoDjangoTestCase):

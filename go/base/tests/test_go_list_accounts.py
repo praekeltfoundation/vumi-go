@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 from StringIO import StringIO
 
-from go.base.management.commands import go_list_accounts
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.management.commands import go_list_accounts
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoListAccountsCommand(GoDjangoTestCase):

@@ -1,5 +1,8 @@
-from go.base.celery_routers import CeleryAppRouter, CeleryRegexRouter
-from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.celery_routers import CeleryAppRouter, CeleryRegexRouter
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestCeleryRegexRouter(GoDjangoTestCase):

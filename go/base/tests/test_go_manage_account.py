@@ -1,7 +1,10 @@
-from go.base.command_utils import make_command_option
-from go.base.management.commands import go_manage_account
-from go.base.tests.helpers import GoCommandTestCase
-from go.billing.models import Account
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals(), dummy_classes=['GoCommandTestCase']):
+    from go.base.command_utils import make_command_option
+    from go.base.management.commands import go_manage_account
+    from go.base.tests.helpers import GoCommandTestCase
+    from go.billing.models import Account
 
 
 class TestGoManageAccount(GoCommandTestCase):

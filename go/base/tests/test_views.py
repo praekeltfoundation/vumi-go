@@ -1,9 +1,13 @@
 """Test for go.base.utils."""
 
 from mock import patch, Mock
-from django.core.urlresolvers import reverse
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestBaseViews(GoDjangoTestCase):

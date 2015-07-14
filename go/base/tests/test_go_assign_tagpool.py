@@ -1,9 +1,12 @@
 from StringIO import StringIO
 
-from django.core.management.base import CommandError
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.management.commands import go_assign_tagpool
+with djangotest_imports(globals()):
+    from django.core.management.base import CommandError
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.management.commands import go_assign_tagpool
 
 
 class TestGoAssignTagpoolCommand(GoDjangoTestCase):

@@ -6,10 +6,12 @@ from datetime import datetime
 
 from vumi.persist.model import ModelMigrationError
 
-from go.base.management.commands import go_migrate_conversations
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.conversation.old_models import ConversationV1
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.vumitools.tests.helpers import GoMessageHelper, djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.management.commands import go_migrate_conversations
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 def collect_all_results(index_page, results=None):
