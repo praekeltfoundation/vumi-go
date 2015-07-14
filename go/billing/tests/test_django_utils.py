@@ -3,14 +3,16 @@
 import json
 from decimal import Decimal
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import Account, Transaction
-from go.billing.tests.helpers import (
-    mk_transaction, get_message_credits, get_storage_credits,
-    get_session_credits, get_session_length_credits)
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.billing.django_utils import (
-    TransactionSerializer, chunked_query, load_account_credits)
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.billing.models import Account, Transaction
+    from go.billing.tests.helpers import (
+        mk_transaction, get_message_credits, get_storage_credits,
+        get_session_credits, get_session_length_credits)
+    from go.billing.django_utils import (
+        TransactionSerializer, chunked_query, load_account_credits)
 
 
 class TestTransactionSerializer(GoDjangoTestCase):
