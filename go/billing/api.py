@@ -8,14 +8,15 @@ from twisted.internet import defer
 from twisted.internet.threads import deferToThread
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
-from txpostgres.reconnection import ConnectionDead
+from txpostgres.txpostgres import Connection, ConnectionPool
+from txpostgres.reconnection import ConnectionDead, DeadConnectionDetector
 # Import psycopg2 via txpostgres because they handle multiple implementations.
 from txpostgres.txpostgres import psycopg2
+import psycopg2.extras
 
 from go.billing import settings as app_settings
 from go.billing.models import MessageCost
-from go.billing.utils import (
-    JSONEncoder, JSONDecoder, BillingError, DictRowConnectionPool)
+from go.billing.utils import JSONEncoder, JSONDecoder, BillingError
 from go.billing.tasks import create_low_credit_notification
 from go.vumitools.billing_worker import BillingDispatcher
 
@@ -543,3 +544,55 @@ def billing_api_resource():
     # resource for them to look at.
     resource._connection_pool_started = connection_pool.start()
     return resource
+
+
+def real_dict_connect(*args, **kwargs):
+    kwargs['connection_factory'] = psycopg2.extras.RealDictConnection
+    return psycopg2.connect(*args, **kwargs)
+
+
+class DictRowConnection(Connection):
+    """Extend the txpostgres ``Connection`` and override the
+    ``cursorFactory``
+
+    """
+
+    connectionFactory = staticmethod(real_dict_connect)
+
+    def __init__(self, *args, **kw):
+        super(DictRowConnection, self).__init__(*args, **kw)
+        if self.detector is None:
+            self.detector = DeadConnectionDetector()
+
+    def connect(self, *args, **kw):
+        d = super(DictRowConnection, self).connect(*args, **kw)
+        # We set self.detector in __init__ if there isn't one already.
+        d.addErrback(self.detector.checkForDeadConnection)
+        return d
+
+    @property
+    def closed(self):
+        """Return ``True`` if the underlying connection is closed
+        ``False`` otherwise
+
+        """
+        if self._connection:
+            return self._connection.closed
+        return True
+
+
+class DictRowConnectionPool(ConnectionPool):
+    """Extend the txpostgres ``ConnectionPool`` and override the
+    ``connectionFactory``
+
+    """
+
+    connectionFactory = DictRowConnection
+
+    @property
+    def closed(self):
+        """Return ``True`` all the connections are closed
+        ``False`` otherwise
+
+        """
+        return all(c.closed for c in self.connections)
