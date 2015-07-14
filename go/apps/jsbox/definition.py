@@ -13,7 +13,9 @@ def slugify(value):
     underscores) and converts spaces to hyphens. Also strips leading and
     trailing whitespace.
 
-    Borrowed and slightly modified from django.utils.text.slugify().
+    Borrowed from django.utils.text.slugify() and modified to remove
+    Django-specific "safe string" code, handle non-unicode input, and be PEP-8
+    compliant.
     """
     if not isinstance(value, unicode):
         value = value.decode('utf-8')
