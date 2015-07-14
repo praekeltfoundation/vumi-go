@@ -12,8 +12,8 @@ from vumi import log
 
 from go.apps.http_api_nostream.auth import AuthorizedResource
 from go.apps.http_api_nostream.resource import ConversationResource
-from go.base.utils import extract_auth_from_url
 from go.vumitools.app_worker import GoApplicationWorker
+from go.vumitools.utils import extract_auth_from_url
 
 
 # NOTE: Things in this module are subclassed and used by go.apps.http_api.

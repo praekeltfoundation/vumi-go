@@ -4,8 +4,27 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase, MessageHelper
 
 from go.vumitools.model_object_cache import ModelObjectCache
-from go.vumitools.utils import MessageMetadataDictHelper, MessageMetadataHelper
+from go.vumitools.utils import (
+    extract_auth_from_url, MessageMetadataDictHelper, MessageMetadataHelper)
 from go.vumitools.tests.helpers import VumiApiHelper
+
+
+class TestExtractAuthFromUrl(VumiTestCase):
+
+    def test_extract_auth_from_url_no_auth(self):
+        auth, url = extract_auth_from_url('http://go.vumi.org')
+        self.assertEqual(auth, None)
+        self.assertEqual(url, 'http://go.vumi.org')
+
+    def test_extract_auth_from_url_with_auth(self):
+        auth, url = extract_auth_from_url('http://u:p@go.vumi.org')
+        self.assertEqual(auth, ('u', 'p'))
+        self.assertEqual(url, 'http://go.vumi.org')
+
+    def test_extract_auth_from_url_with_username(self):
+        auth, url = extract_auth_from_url('http://u@go.vumi.org')
+        self.assertEqual(auth, ('u', None))
+        self.assertEqual(url, 'http://go.vumi.org')
 
 
 class TestMessageMetadataDictHelper(VumiTestCase):
