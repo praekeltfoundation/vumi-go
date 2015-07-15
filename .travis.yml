@@ -6,15 +6,17 @@ node_js:
   - "0.10"
 env:
   - RIAK_VERSION="1.4.12-1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
-## Riak 2.0 sometimes doesn't have enough file descriptors:
-## https://github.com/travis-ci/travis-ci/issues/3328
-## Until that's fixed, don't build against new Riak.
-# matrix:
-#   include:
-#     # Test against the Travis-provided version of Riak (currently 2.0.x).
-#     # This is a separate matrix inclusion to avoid spawning unnecessary builds.
-#     - python: "2.7"
-#       env: RIAK_VERSION=current VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+matrix:
+  include:
+    # Riak 2.0 sometimes doesn't have enough file descriptors:
+    # https://github.com/travis-ci/travis-ci/issues/3328
+    # # Until that's fixed, don't build against new Riak.
+    # # Test against the Travis-provided version of Riak (currently 2.0.x).
+    # # This is a separate matrix inclusion to avoid spawning unnecessary builds.
+    # - python: "2.7"
+    #   env: RIAK_VERSION=current VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+    - python: "2.7"
+      env: RIAK_VERSION="1.4.12-1" VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10 VUMIGO_SKIP_DJANGO=1
 services:
   - postgresql
   - redis-server
@@ -22,15 +24,13 @@ before_install:
   # Set up an appropriate version of Riak.
   - sudo utils/setup_travis_riak.sh "${RIAK_VERSION}"
 install:
-  - "pip install -r requirements.pip"
+  - "if [ $VUMIGO_SKIP_DJANGO ]; then pip install -e .; else pip install -r requirements.pip; fi"
   - "pip install -r requirements-dev.pip"
   - "pip install overalls"
   - "npm install"
 before_script:
-  - "psql -c \"create user go with createdb password 'go';\" -U postgres"
-  - "psql -c 'create database go owner go;' -U postgres"
+  - "if [ ! $VUMIGO_SKIP_DJANGO ]; then utils/setup-test-database.sh; fi"
   - "export PYTHONPATH=."
-  - "django-admin.py syncdb --migrate --noinput --settings=go.testsettings"
   - "pip list"
   # To see what version of Riak we're running and check that it's happy.
   - riak version
@@ -38,8 +38,5 @@ before_script:
 script:
   - ./run-tests.sh
   - grunt test
-after_script:
-  - "psql -c 'drop database go;' -U postgres"
-  - "psql -c 'drop user go;' -U postgres"
 after_success:
   - overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info

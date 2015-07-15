@@ -1,3 +1,5 @@
 # Our dependencies are all specified in setup.py.
+# If we're using this requirements file, we almost certainly want Django extras
+# as well.
 
--e .
+-e .[django]
