@@ -39,4 +39,4 @@ script:
   - ./run-tests.sh
   - grunt test
 after_success:
-  - overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info
+  - "if [ ! $VUMIGO_SKIP_DJANGO ]; then overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info; fi"
