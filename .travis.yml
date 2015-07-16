@@ -1,3 +1,5 @@
+sudo: false # We want container builds.
+
 language: python
 python:
   - "2.6"
@@ -13,6 +15,10 @@ matrix:
     - python: "2.7"
       env: RIAK_VERSION="2.1.1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
 
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/downloads
 services:
   - postgresql
   - redis-server
@@ -21,6 +27,8 @@ before_install:
   # Set up an appropriate version of Riak.
   - utils/setup_travis_riak.sh "${RIAK_VERSION}"
 install:
+  # Travis seems to have pip 6.x, which doesn't build and cache wheels.
+  - "pip install 'pip>=7.1.0'"
   - "pip install -r requirements.pip"
   - "pip install -r requirements-dev.pip"
   - "pip install overalls"
