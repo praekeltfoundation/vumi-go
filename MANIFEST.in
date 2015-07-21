@@ -15,7 +15,6 @@ recursive-include go/templates *
 recursive-include go/*/templates *
 recursive-include go/fixtures *
 recursive-include go/*/fixtures *
-recursive-include go/static *
 recursive-include go/*/static *
 
 # Prune stray bytecode files.
