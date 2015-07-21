@@ -1,3 +1,5 @@
+sudo: false # We want container builds.
+
 language: python
 python:
   - "2.6"
@@ -5,38 +7,47 @@ python:
 node_js:
   - "0.10"
 env:
-  - RIAK_VERSION="1.4.12-1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+  - RIAK_VERSION="1.4.12" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
 matrix:
   include:
-    # Riak 2.0 sometimes doesn't have enough file descriptors:
-    # https://github.com/travis-ci/travis-ci/issues/3328
-    # # Until that's fixed, don't build against new Riak.
-    # # Test against the Travis-provided version of Riak (currently 2.0.x).
-    # # This is a separate matrix inclusion to avoid spawning unnecessary builds.
-    # - python: "2.7"
-    #   env: RIAK_VERSION=current VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+    # Test against Riak 2.1.1.
+    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
     - python: "2.7"
-      env: RIAK_VERSION="1.4.12-1" VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10 VUMIGO_SKIP_DJANGO=1
+      env: RIAK_VERSION="2.1.1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+    # Test without Django.
+    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
+    - python: "2.7"
+      env: RIAK_VERSION="1.4.12" VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10 VUMIGO_SKIP_DJANGO=1
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/downloads
 services:
   - postgresql
   - redis-server
+
 before_install:
   # Set up an appropriate version of Riak.
-  - sudo utils/setup_travis_riak.sh "${RIAK_VERSION}"
+  - utils/setup_travis_riak.sh "${RIAK_VERSION}"
 install:
+  # Travis seems to have pip 6.x, which doesn't build and cache wheels.
+  - "pip install 'pip>=7.1.0'"
   - "if [ $VUMIGO_SKIP_DJANGO ]; then pip install -e .; else pip install -r requirements.pip; fi"
   - "pip install -r requirements-dev.pip"
   - "pip install overalls"
   - "npm install"
+
 before_script:
   - "if [ ! $VUMIGO_SKIP_DJANGO ]; then utils/setup-test-database.sh; fi"
   - "export PYTHONPATH=."
   - "pip list"
   # To see what version of Riak we're running and check that it's happy.
-  - riak version
-  - sudo riak-admin member-status
+  - $HOME/riak/bin/riak version
+  - $HOME/riak/bin/riak-admin member-status
 script:
   - ./run-tests.sh
   - grunt test
+
 after_success:
   - "if [ ! $VUMIGO_SKIP_DJANGO ]; then overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info; fi"
