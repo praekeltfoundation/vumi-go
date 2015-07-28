@@ -36,7 +36,7 @@ class TestConversationWrapper(VumiTestCase):
         for message in messages:
             event_maker = getattr(self.msg_helper, 'make_%s' % (event_type,))
             event = event_maker(message, **kwargs)
-            yield self.msg_helper.store_event(event)
+            yield self.msg_helper.store_event(self.conv, event)
             events.append(event)
         returnValue(events)
 

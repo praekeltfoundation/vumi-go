@@ -48,7 +48,7 @@ class TestMessageStoreResource(ResourceTestCaseBase):
 
         # ack outbound
         event = self.msg_helper.make_ack(outbound_msg)
-        yield opms.add_event(event)
+        yield opms.add_event(event, batch_ids=[self.conversation.batch.key])
 
         # monkey patch for when no conversation_key is provided
         self.app_worker.conversation_for_api = lambda *a: self.conversation

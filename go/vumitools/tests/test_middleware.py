@@ -6,7 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from zope.interface import implements
 
 from vumi.transports.failures import FailureMessage
-from vumi.message import TransportUserMessage
+from vumi.message import TransportUserMessage, format_vumi_date
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.helpers import VumiTestCase, generate_proxies, IHelper
 from vumi.worker import BaseWorker
@@ -14,7 +14,8 @@ from vumi.worker import BaseWorker
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.middleware import (
     NormalizeMsisdnMiddleware, OptOutMiddleware, MetricsMiddleware,
-    ConversationStoringMiddleware, RouterStoringMiddleware)
+    TransportStoringMiddleware, ConversationStoringMiddleware,
+    RouterStoringMiddleware)
 from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
 
 
@@ -824,7 +825,201 @@ def collect_all_results(index_page, results=None):
     return index_page.next_page().addCallback(collect_all_results, results)
 
 
-class TestConversationStoringMiddleware(VumiTestCase):
+def msg_timestamp(msg):
+    return format_vumi_date(msg['timestamp'])[:-7] + ".000000"
+
+
+def event_tuple(event):
+    return (event['event_id'], msg_timestamp(event), event['event_type'])
+
+
+class BaseStoringMiddlewareTestCase(VumiTestCase):
+    """
+    Base class for some assertion methods.
+    """
+
+    @inlineCallbacks
+    def assert_stored_inbound(self, msgs):
+        page = yield self.qms.list_batch_inbound_keys(self.batch_id)
+        ids = yield collect_all_results(page)
+        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+
+    @inlineCallbacks
+    def assert_stored_outbound(self, msgs):
+        page = yield self.qms.list_batch_outbound_keys(self.batch_id)
+        ids = yield collect_all_results(page)
+        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+
+    @inlineCallbacks
+    def assert_stored_event(self, events):
+        page = yield self.qms.list_batch_events(self.batch_id)
+        event_tuples = yield collect_all_results(page)
+        expected_tuples = [event_tuple(e) for e in events]
+        self.assertEqual(sorted(event_tuples), sorted(expected_tuples))
+
+
+class TestTransportStoringMiddleware(BaseStoringMiddlewareTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        self.mw_helper = self.add_helper(
+            MiddlewareHelper(TransportStoringMiddleware))
+        yield self.mw_helper.setup_vumi_api()
+        self.qms = self.mw_helper.get_vumi_api().get_query_message_store()
+        self.user_helper = yield self.mw_helper.make_user(u'user')
+        yield self.mw_helper.setup_tagpool(u'pool', [u'tag'])
+        yield self.user_helper.add_tagpool_permission(u'pool', 1)
+        self.tag = yield self.user_helper.user_api.acquire_tag(u'pool')
+        opms = self.mw_helper.get_vumi_api().get_operational_message_store()
+        tag_info = yield opms.get_tag_info(self.tag)
+        self.batch_id = tag_info.current_batch.key
+
+    @inlineCallbacks
+    def test_inbound_message(self):
+        """
+        When we consume or publish an inbound message, it is added to the
+        appropriate batch in the message store.
+        """
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_inbound("inbound", tag=self.tag)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([msg1])
+
+        msg2 = self.mw_helper.make_inbound("inbound", tag=self.tag)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound([msg1, msg2])
+
+    @inlineCallbacks
+    def test_inbound_message_no_tag(self):
+        """
+        When we consume or publish an inbound message with no tag, it is not
+        added to a batch in the message store.
+        """
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_inbound("inbound")
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([])
+
+        msg2 = self.mw_helper.make_inbound("inbound")
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound([])
+
+    @inlineCallbacks
+    def test_inbound_message_no_consume_store(self):
+        """
+        When we consume an inbound message, it is not added to the message
+        store when `store_on_consume` is disabled.
+        """
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        msg1 = self.mw_helper.make_inbound("inbound", tag=self.tag)
+        yield mw.handle_consume_inbound(msg1, 'default')
+        yield self.assert_stored_inbound([])
+
+        msg2 = self.mw_helper.make_inbound("inbound", tag=self.tag)
+        yield mw.handle_publish_inbound(msg2, 'default')
+        yield self.assert_stored_inbound([msg2])
+
+    @inlineCallbacks
+    def test_outbound_message(self):
+        """
+        When we consume or publish an outbound message, it is added to the
+        appropriate batch in the message store.
+        """
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_outbound("outbound", tag=self.tag)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([msg1])
+
+        msg2 = self.mw_helper.make_outbound("outbound", tag=self.tag)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound([msg1, msg2])
+
+    @inlineCallbacks
+    def test_outbound_message_no_tag(self):
+        """
+        When we consume or publish an outbound message with no tag, it is not
+        added to a batch in the message store.
+        """
+        mw = yield self.mw_helper.create_middleware()
+
+        msg1 = self.mw_helper.make_outbound("outbound")
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([])
+
+        msg2 = self.mw_helper.make_outbound("outbound")
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound([])
+
+    @inlineCallbacks
+    def test_outbound_message_no_consume_store(self):
+        """
+        When we consume an outbound message, it is not added to the message
+        store when `store_on_consume` is disabled.
+        """
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        msg1 = self.mw_helper.make_outbound("outbound", tag=self.tag)
+        yield mw.handle_consume_outbound(msg1, 'default')
+        yield self.assert_stored_outbound([])
+
+        msg2 = self.mw_helper.make_outbound("outbound", tag=self.tag)
+        yield mw.handle_publish_outbound(msg2, 'default')
+        yield self.assert_stored_outbound([msg2])
+
+    @inlineCallbacks
+    def test_event(self):
+        """
+        When we consume or publish an event, it is added to the appropriate
+        batch in the message store.
+        """
+        mw = yield self.mw_helper.create_middleware()
+
+        # Store an outbound message so we have something to refer to.
+        outmsg = self.mw_helper.make_outbound("outbound", tag=self.tag)
+        yield mw.handle_publish_outbound(outmsg, 'default')
+        yield self.assert_stored_outbound([outmsg])
+
+        ack = self.mw_helper.make_ack(outmsg)
+        yield mw.handle_consume_event(ack, 'default')
+        yield self.assert_stored_event([ack])
+
+        nack = self.mw_helper.make_nack(outmsg)
+        yield mw.handle_publish_event(nack, 'default')
+        yield self.assert_stored_event([ack, nack])
+
+    @inlineCallbacks
+    def test_event_no_consume_store(self):
+        """
+        When we consume an event, it is not added to the message store when
+        `store_on_consume` is disabled.
+        """
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        # Store an outbound message so we have something to refer to.
+        outmsg = self.mw_helper.make_outbound("outbound", tag=self.tag)
+        yield mw.handle_publish_outbound(outmsg, 'default')
+        yield self.assert_stored_outbound([outmsg])
+
+        ack = self.mw_helper.make_ack(outmsg)
+        yield mw.handle_consume_event(ack, 'default')
+        yield self.assert_stored_event([])
+
+        nack = self.mw_helper.make_nack(outmsg)
+        yield mw.handle_publish_event(nack, 'default')
+        yield self.assert_stored_event([nack])
+
+
+class TestConversationStoringMiddleware(BaseStoringMiddlewareTestCase):
 
     @inlineCallbacks
     def setUp(self):
@@ -834,18 +1029,7 @@ class TestConversationStoringMiddleware(VumiTestCase):
         self.qms = self.mw_helper.get_vumi_api().get_query_message_store()
         self.user_helper = yield self.mw_helper.make_user(u'user')
         self.conv = yield self.user_helper.create_conversation(u'dummy_conv')
-
-    @inlineCallbacks
-    def assert_stored_inbound(self, msgs):
-        page = yield self.qms.list_batch_inbound_keys(self.conv.batch.key)
-        ids = yield collect_all_results(page)
-        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
-
-    @inlineCallbacks
-    def assert_stored_outbound(self, msgs):
-        page = yield self.qms.list_batch_outbound_keys(self.conv.batch.key)
-        ids = yield collect_all_results(page)
-        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+        self.batch_id = self.conv.batch.key
 
     @inlineCallbacks
     def test_conversation_cache_ttl_config(self):
@@ -912,6 +1096,50 @@ class TestConversationStoringMiddleware(VumiTestCase):
         yield self.assert_stored_outbound([msg2])
 
     @inlineCallbacks
+    def test_event(self):
+        """
+        When we consume or publish an event, it is added to the appropriate
+        batch in the message store.
+        """
+        mw = yield self.mw_helper.create_middleware()
+
+        # Store an outbound message so we have something to refer to.
+        outmsg = self.mw_helper.make_outbound("outbound", conv=self.conv)
+        yield mw.handle_publish_outbound(outmsg, 'default')
+        yield self.assert_stored_outbound([outmsg])
+
+        ack = self.mw_helper.make_ack(outmsg)
+        yield mw.handle_consume_event(ack, 'default')
+        yield self.assert_stored_event([ack])
+
+        nack = self.mw_helper.make_nack(outmsg)
+        yield mw.handle_publish_event(nack, 'default')
+        yield self.assert_stored_event([ack, nack])
+
+    @inlineCallbacks
+    def test_event_no_consume_store(self):
+        """
+        When we consume an event, it is not added to the message store when
+        `store_on_consume` is disabled.
+        """
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        # Store an outbound message so we have something to refer to.
+        outmsg = self.mw_helper.make_outbound("outbound", conv=self.conv)
+        yield mw.handle_publish_outbound(outmsg, 'default')
+        yield self.assert_stored_outbound([outmsg])
+
+        ack = self.mw_helper.make_ack(outmsg)
+        yield mw.handle_consume_event(ack, 'default')
+        yield self.assert_stored_event([])
+
+        nack = self.mw_helper.make_nack(outmsg)
+        yield mw.handle_publish_event(nack, 'default')
+        yield self.assert_stored_event([nack])
+
+    @inlineCallbacks
     def test_conversation_cached_for_inbound_message(self):
         """
         When we process an inbound message, the conversation lookup is cached.
@@ -938,7 +1166,7 @@ class TestConversationStoringMiddleware(VumiTestCase):
         self.assertEqual(cache._models.keys(), [self.conv.key])
 
 
-class TestRouterStoringMiddleware(VumiTestCase):
+class TestRouterStoringMiddleware(BaseStoringMiddlewareTestCase):
 
     @inlineCallbacks
     def setUp(self):
@@ -948,18 +1176,7 @@ class TestRouterStoringMiddleware(VumiTestCase):
         self.qms = self.mw_helper.get_vumi_api().get_query_message_store()
         self.user_helper = yield self.mw_helper.make_user(u'user')
         self.router = yield self.user_helper.create_router(u'dummy_conv')
-
-    @inlineCallbacks
-    def assert_stored_inbound(self, msgs):
-        page = yield self.qms.list_batch_inbound_keys(self.router.batch.key)
-        ids = yield collect_all_results(page)
-        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
-
-    @inlineCallbacks
-    def assert_stored_outbound(self, msgs):
-        page = yield self.qms.list_batch_outbound_keys(self.router.batch.key)
-        ids = yield collect_all_results(page)
-        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+        self.batch_id = self.router.batch.key
 
     @inlineCallbacks
     def test_inbound_message(self):
@@ -1012,3 +1229,47 @@ class TestRouterStoringMiddleware(VumiTestCase):
         msg2 = self.mw_helper.make_outbound("outbound", router=self.router)
         yield mw.handle_publish_outbound(msg2, 'default')
         yield self.assert_stored_outbound([msg2])
+
+    @inlineCallbacks
+    def test_event(self):
+        """
+        When we consume or publish an event, it is added to the appropriate
+        batch in the message store.
+        """
+        mw = yield self.mw_helper.create_middleware()
+
+        # Store an outbound message so we have something to refer to.
+        outmsg = self.mw_helper.make_outbound("outbound", router=self.router)
+        yield mw.handle_publish_outbound(outmsg, 'default')
+        yield self.assert_stored_outbound([outmsg])
+
+        ack = self.mw_helper.make_ack(outmsg)
+        yield mw.handle_consume_event(ack, 'default')
+        yield self.assert_stored_event([ack])
+
+        nack = self.mw_helper.make_nack(outmsg)
+        yield mw.handle_publish_event(nack, 'default')
+        yield self.assert_stored_event([ack, nack])
+
+    @inlineCallbacks
+    def test_event_no_consume_store(self):
+        """
+        When we consume an event, it is not added to the message store when
+        `store_on_consume` is disabled.
+        """
+        mw = yield self.mw_helper.create_middleware({
+            'store_on_consume': False,
+        })
+
+        # Store an outbound message so we have something to refer to.
+        outmsg = self.mw_helper.make_outbound("outbound", router=self.router)
+        yield mw.handle_publish_outbound(outmsg, 'default')
+        yield self.assert_stored_outbound([outmsg])
+
+        ack = self.mw_helper.make_ack(outmsg)
+        yield mw.handle_consume_event(ack, 'default')
+        yield self.assert_stored_event([])
+
+        nack = self.mw_helper.make_nack(outmsg)
+        yield mw.handle_publish_event(nack, 'default')
+        yield self.assert_stored_event([nack])
