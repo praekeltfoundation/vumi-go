@@ -253,7 +253,7 @@ class MessageListView(ConversationTemplateView):
                 return msg
             msg.event_status = u"Sending"
             qms = conversation.qms
-            get_event_info = qms.list_message_event_keys_with_statuses
+            get_event_info = qms.list_message_events
             for event_id, _, event_type in get_event_info(msg["message_id"]):
                 if event_type == u"ack":
                     msg.event_status = u"Accepted"
@@ -604,14 +604,14 @@ class AggregatesConversationView(ConversationTemplateView):
         Get aggregated total count of messages handled bucketed per day.
         """
         message_callback = {
-            'inbound': conv.qms.list_batch_inbound_keys_with_timestamps,
-            'outbound': conv.qms.list_batch_outbound_keys_with_timestamps,
-        }.get(direction, conv.qms.list_batch_inbound_keys_with_timestamps)
+            'inbound': conv.qms.list_batch_inbound_messages,
+            'outbound': conv.qms.list_batch_outbound_messages,
+        }.get(direction, conv.qms.list_batch_inbound_messages)
 
         aggregates = defaultdict(int)
         index_page = message_callback(conv.batch.key)
         while index_page is not None:
-            for key, timestamp in index_page:
+            for key, timestamp, _addr in index_page:
                 timestamp = parse_vumi_date(timestamp)
                 aggregates[timestamp.date()] += 1
             index_page = index_page.next_page()

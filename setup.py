@@ -14,7 +14,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'vumi>=0.5.21',
-        'vumi-message-store',
+        'vumi-message-store>=0.1.4',
         'vxsandbox>=0.5.0',
         'vxpolls',
         'vumi-wikipedia>=0.2.1',

@@ -829,33 +829,33 @@ def msg_timestamp(msg):
     return format_vumi_date(msg['timestamp'])[:-7] + ".000000"
 
 
-def event_tuple(event):
-    return (event['event_id'], msg_timestamp(event), event['event_type'])
-
-
 class BaseStoringMiddlewareTestCase(VumiTestCase):
     """
     Base class for some assertion methods.
     """
 
     @inlineCallbacks
+    def assert_stored_messages(self, page, expected_tuples):
+        msg_tuples = yield collect_all_results(page)
+        self.assertEqual(sorted(msg_tuples), sorted(expected_tuples))
+
+    @inlineCallbacks
     def assert_stored_inbound(self, msgs):
-        page = yield self.qms.list_batch_inbound_keys(self.batch_id)
-        ids = yield collect_all_results(page)
-        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+        page = yield self.qms.list_batch_inbound_messages(self.batch_id)
+        totuple = lambda m: (m['message_id'], msg_timestamp(m), m['from_addr'])
+        self.assert_stored_messages(page, [totuple(m) for m in msgs])
 
     @inlineCallbacks
     def assert_stored_outbound(self, msgs):
-        page = yield self.qms.list_batch_outbound_keys(self.batch_id)
-        ids = yield collect_all_results(page)
-        self.assertEqual(sorted(ids), sorted(m['message_id'] for m in msgs))
+        page = yield self.qms.list_batch_outbound_messages(self.batch_id)
+        totuple = lambda m: (m['message_id'], msg_timestamp(m), m['to_addr'])
+        self.assert_stored_messages(page, [totuple(m) for m in msgs])
 
     @inlineCallbacks
     def assert_stored_event(self, events):
         page = yield self.qms.list_batch_events(self.batch_id)
-        event_tuples = yield collect_all_results(page)
-        expected_tuples = [event_tuple(e) for e in events]
-        self.assertEqual(sorted(event_tuples), sorted(expected_tuples))
+        totuple = lambda e: (e['event_id'], msg_timestamp(e), e['event_type'])
+        self.assert_stored_messages(page, [totuple(e) for e in events])
 
 
 class TestTransportStoringMiddleware(BaseStoringMiddlewareTestCase):

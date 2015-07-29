@@ -104,7 +104,7 @@ class FixBatches(Migration):
 
     def _process_pages(self, index_page, batch_id, get_message, add_message):
         while index_page is not None:
-            for key in index_page:
+            for key, _timestamp, _addr in index_page:
                 add_message(get_message(key), batch_ids=[batch_id])
             index_page = index_page.next_page()
 
@@ -112,10 +112,10 @@ class FixBatches(Migration):
         qms = self.vumi_api.get_query_message_store()
         opms = self.vumi_api.get_operational_message_store()
         self._process_pages(
-            qms.list_batch_outbound_keys(old_batch), new_batch,
+            qms.list_batch_outbound_messages(old_batch), new_batch,
             opms.get_outbound_message, opms.add_outbound_message)
         self._process_pages(
-            qms.list_batch_inbound_keys(old_batch), new_batch,
+            qms.list_batch_inbound_messages(old_batch), new_batch,
             opms.get_inbound_message, opms.add_inbound_message)
 
     def migrate(self, user_api, conv):
@@ -143,7 +143,7 @@ class SplitBatches(Migration):
 
     def _process_pages(self, index_page, batch_id, get_message, add_message):
         while index_page is not None:
-            for key in index_page:
+            for key, _timestamp, _addr in index_page:
                 add_message(get_message(key), batch_ids=[batch_id])
             index_page = index_page.next_page()
 
@@ -151,10 +151,10 @@ class SplitBatches(Migration):
         qms = self.vumi_api.get_query_message_store()
         opms = self.vumi_api.get_operational_message_store()
         self._process_pages(
-            qms.list_batch_outbound_keys(old_batch), new_batch,
+            qms.list_batch_outbound_messages(old_batch), new_batch,
             opms.get_outbound_message, opms.add_outbound_message)
         self._process_pages(
-            qms.list_batch_inbound_keys(old_batch), new_batch,
+            qms.list_batch_inbound_messages(old_batch), new_batch,
             opms.get_inbound_message, opms.add_inbound_message)
 
     def migrate(self, user_api, conv):

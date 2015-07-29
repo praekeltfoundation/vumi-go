@@ -101,9 +101,9 @@ class Command(BaseGoCommand):
 
     def do_batch_key(self, qms, batch_key):
         in_count = self._count_results(
-            qms.list_batch_inbound_keys(batch_key))
+            qms.list_batch_inbound_messages(batch_key))
         out_count = self._count_results(
-            qms.list_batch_outbound_keys(batch_key))
+            qms.list_batch_outbound_messages(batch_key))
         self.out(u'Total Received in batch %s: %s\n' % (batch_key, in_count))
         self.out(u'Total Sent in batch %s: %s\n' % (batch_key, out_count))
 
@@ -123,9 +123,9 @@ class Command(BaseGoCommand):
         return per_date, uniques
 
     def do_batch_key_breakdown(self, qms, batch_key):
-        inbound = qms.list_batch_inbound_keys_with_addresses(batch_key)
+        inbound = qms.list_batch_inbound_messages(batch_key)
         inbound_per_date, inbound_uniques = self.collect_stats(inbound)
-        outbound = qms.list_batch_outbound_keys_with_addresses(batch_key)
+        outbound = qms.list_batch_outbound_messages(batch_key)
         outbound_per_date, outbound_uniques = self.collect_stats(outbound)
         all_uniques = inbound_uniques.union(outbound_uniques)
 

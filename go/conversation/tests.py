@@ -1136,13 +1136,13 @@ class TestConversationTasks(GoDjangoTestCase):
         reader = csv.DictReader(fp)
         message_ids = [row['message_id'] for row in reader]
         all_keys = set()
-        index_page = conv.qms.list_batch_inbound_keys(conv.batch.key)
+        index_page = conv.qms.list_batch_inbound_messages(conv.batch.key)
         while index_page is not None:
-            all_keys.update(index_page)
+            all_keys.update(mt[0] for mt in index_page)
             index_page = index_page.next_page()
-        index_page = conv.qms.list_batch_outbound_keys(conv.batch.key)
+        index_page = conv.qms.list_batch_outbound_messages(conv.batch.key)
         while index_page is not None:
-            all_keys.update(index_page)
+            all_keys.update(mt[0] for mt in index_page)
             index_page = index_page.next_page()
         self.assertEqual(set(message_ids), all_keys)
 

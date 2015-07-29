@@ -12,11 +12,11 @@ from go.vumitools.conversation.old_models import ConversationV1
 from go.vumitools.tests.helpers import GoMessageHelper
 
 
-def collect_all_results(index_page, results=None):
+def collect_all_keys(index_page, results=None):
     if results is None:
         results = set()
     while index_page is not None:
-        results.update(index_page)
+        results.update(result[0] for result in index_page)
         index_page = index_page.next_page()
     return results
 
@@ -167,11 +167,11 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
 
         old_out, old_in = set(), set()
         for batch in old_batches:
-            collect_all_results(qms.list_batch_outbound_keys(batch), old_out)
-            collect_all_results(qms.list_batch_inbound_keys(batch), old_in)
+            collect_all_keys(qms.list_batch_outbound_messages(batch), old_out)
+            collect_all_keys(qms.list_batch_inbound_messages(batch), old_in)
 
-        new_out = collect_all_results(qms.list_batch_outbound_keys(new_batch))
-        new_in = collect_all_results(qms.list_batch_inbound_keys(new_batch))
+        new_out = collect_all_keys(qms.list_batch_outbound_messages(new_batch))
+        new_in = collect_all_keys(qms.list_batch_inbound_messages(new_batch))
         self.assertEqual(new_out, old_out)
         self.assertEqual(new_in, old_in)
 

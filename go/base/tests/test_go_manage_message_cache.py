@@ -45,13 +45,13 @@ class TestGoManageMessageCache(GoCommandTestCase):
             If the cached values are off by the delta then this returns True.
         """
         inbound = float(self.count_results(
-            self.qms.list_batch_inbound_keys(batch_id)))
+            self.qms.list_batch_inbound_messages(batch_id)))
         cached_inbound = self.qms.get_batch_inbound_count(batch_id)
         if inbound and (abs(cached_inbound - inbound) / inbound) > delta:
             return True
 
         outbound = float(self.count_results(
-            self.qms.list_batch_outbound_keys(batch_id)))
+            self.qms.list_batch_outbound_messages(batch_id)))
         cached_outbound = self.qms.get_batch_outbound_count(batch_id)
         if outbound and (abs(cached_outbound - outbound) / outbound) > delta:
             return True
