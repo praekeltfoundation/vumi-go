@@ -269,13 +269,15 @@ class MessageListView(ConversationTemplateView):
             return [add_event_status(m)
                     for m in conversation.sent_messages_in_cache(start, stop)]
 
+        # FIXME: This is horrible and inefficient.
+        #        https://github.com/praekelt/vumi-go/issues/1321
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(PagedMessageCache(
-            conversation.count_inbound_messages(),
+            min(conversation.count_inbound_messages(), 2000),
             lambda start, stop: conversation.received_messages_in_cache(
                 start, stop)), 20)
         outbound_message_paginator = Paginator(PagedMessageCache(
-            conversation.count_outbound_messages(),
+            min(conversation.count_outbound_messages(), 2000),
             lambda start, stop: get_sent_messages(start, stop)), 20)
 
         tag_context = {

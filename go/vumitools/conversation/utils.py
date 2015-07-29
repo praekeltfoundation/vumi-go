@@ -1,8 +1,6 @@
 # -*- test-case-name: go.vumitools.conversation.tests.test_utils -*-
 # -*- coding: utf-8 -*-
 
-import warnings
-
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
@@ -258,20 +256,15 @@ class ConversationWrapper(object):
                     collection.append(scrubbed_msg)
         return collection
 
-    def received_messages(self, start=0, limit=100, include_sensitive=False,
-                          scrubber=None):
-        warnings.warn('received_messages() is deprecated. Please use '
-                      'received_messages_in_cache() instead.',
-                      category=DeprecationWarning)
-        return self.received_messages_in_cache(start, limit, include_sensitive,
-                                               scrubber)
-
     @Manager.calls_manager
     def received_messages_in_cache(self, start=0, limit=100,
                                    include_sensitive=False, scrubber=None):
         """
         Get a list of replies from the message store. The keys come from
         the message store's cache.
+
+        FIXME: The name of this method and many of its parameters are lies.
+               See https://github.com/praekelt/vumi-go/issues/1321
 
         :param int start:
             Where to start in the result set.
@@ -290,8 +283,13 @@ class ConversationWrapper(object):
         # FIXME: limit actually means end, apparently.
         scrubber = scrubber or (lambda msg: msg)
 
-        keys = yield self.qms.list_batch_recent_inbound_keys(self.batch.key)
-        keys = keys[start:limit]
+        # If we're not actually being asked for anything, return nothing.
+        if limit <= 0:
+            returnValue([])
+
+        page = yield self.qms.list_batch_inbound_messages(
+            self.batch.key, page_size=limit)
+        keys = [key for key, _timestamp, _addr in list(page)[start:limit]]
 
         replies = yield self.collect_messages(
             keys, self.qms.get_inbound_message, include_sensitive, scrubber)
@@ -301,20 +299,15 @@ class ConversationWrapper(object):
             sorted(replies, key=lambda msg: msg['timestamp'],
                    reverse=True))
 
-    def sent_messages(self, start=0, limit=100, include_sensitive=False,
-                      scrubber=None):
-        warnings.warn('sent_messages() is deprecated. Please use '
-                      'sent_messages_in_cache() instead.',
-                      category=DeprecationWarning)
-        return self.sent_messages_in_cache(start, limit, include_sensitive,
-                                           scrubber)
-
     @Manager.calls_manager
     def sent_messages_in_cache(self, start=0, limit=100,
                                include_sensitive=False, scrubber=None):
         """
         Get a list of sent_messages from the message store. The keys come from
         the message store's cache.
+
+        FIXME: The name of this method and many of its parameters are lies.
+               See https://github.com/praekelt/vumi-go/issues/1321
 
         :param int start:
             Where to start
@@ -333,8 +326,13 @@ class ConversationWrapper(object):
         # FIXME: limit actually means end, apparently.
         scrubber = scrubber or (lambda msg: msg)
 
-        keys = yield self.qms.list_batch_recent_outbound_keys(self.batch.key)
-        keys = keys[start:limit]
+        # If we're not actually being asked for anything, return nothing.
+        if limit <= 0:
+            returnValue([])
+
+        page = yield self.qms.list_batch_outbound_messages(
+            self.batch.key, page_size=limit)
+        keys = [key for key, _timestamp, _addr in list(page)[start:limit]]
 
         sent_messages = yield self.collect_messages(
             keys, self.qms.get_outbound_message, include_sensitive, scrubber)
