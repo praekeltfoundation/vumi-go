@@ -8,8 +8,9 @@ class NewRouterForm(forms.Form):
 
     def __init__(self, user_api, *args, **kwargs):
         super(NewRouterForm, self).__init__(*args, **kwargs)
+        routers = (v for k, v in sorted(user_api.router_types().iteritems()))
         type_choices = [(router['namespace'], router['display_name'])
-                        for router in user_api.router_types().itervalues()]
+                        for router in routers]
         self.fields['router_type'] = forms.ChoiceField(
             label="Which kind of router would you like?",
             choices=type_choices)

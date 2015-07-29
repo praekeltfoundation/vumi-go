@@ -12,7 +12,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-watch');
 
   grunt.initConfig({
-    paths: require('./js_paths.yml'),
+    paths: require('./go/js_paths.yml'),
     bower: {
       install: {
         options: {

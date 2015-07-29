@@ -5,8 +5,7 @@ from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
-from go.conversation.forms import (
-    NewConversationForm, ConversationSearchForm, ReplyToMessageForm)
+from go.conversation.forms import NewConversationForm, ConversationSearchForm
 from go.base.utils import (
     get_conversation_view_definition, conversation_or_404)
 
@@ -18,8 +17,9 @@ CONVERSATIONS_PER_PAGE = 12
 def index(request):
     # grab the fields from the GET request
     user_api = request.user_api
+    apps = (v for k, v in sorted(user_api.applications().iteritems()))
     conversation_types = [(app['namespace'], app['display_name'])
-                          for app in user_api.applications().values()]
+                          for app in apps]
     search_form = ConversationSearchForm(
         request.GET, conversation_types=conversation_types)
     search_form.is_valid()
@@ -35,7 +35,7 @@ def index(request):
     }.get(conversation_status, user_api.active_conversations)
 
     conversations = [user_api.wrap_conversation(c)
-                        for c in get_conversations()]
+                     for c in get_conversations()]
 
     if conversation_type:
         conversations = [c for c in conversations
@@ -47,7 +47,7 @@ def index(request):
 
     # sort with newest first
     conversations = sorted(conversations, key=lambda c: c.created_at,
-                            reverse=True)
+                           reverse=True)
 
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     try:
@@ -126,32 +126,4 @@ def new_conversation(request):
         form = NewConversationForm(request.user_api)
     return render(request, 'conversation/new.html', {
         'conversation_form': form,
-    })
-
-
-# TODO: The following should probably be moved over to view_definition.py
-
-@login_required
-def incoming_detail(request, conversation_key, contact_key):
-    conversation = conversation_or_404(request.user_api, conversation_key)
-    form = ReplyToMessageForm()
-
-    if request.method == 'POST':
-        # TODO: process sending message from form
-        pass
-
-    # TODO: Conversation data.
-    # FAKE DATA FOR BADLARD.
-    message_list = (
-        {'contact': 'You', 'message': 'Thank you'},
-        {'contact': '55555 539 521', 'message': 'Saturday'},
-        {'contact': 'You', 'message': 'What days do you eat?'},
-        {'contact': '55555 539 521', 'message': 'Hotdogs'},
-        {'contact': 'You', 'message': 'What is your favourite meal?'},
-    )
-
-    return render(request, 'conversation/incoming_detail.html', {
-        'conversation': conversation,
-        'form': form,
-        'message_list': message_list
     })

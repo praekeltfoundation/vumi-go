@@ -12,6 +12,7 @@ from django.core import mail
 from django.core.files.storage import default_storage
 from django.core.urlresolvers import reverse
 from django.utils.html import escape
+from django.templatetags.l10n import localize
 
 from go.contacts.parsers.base import FieldNormalizer
 from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
@@ -115,16 +116,45 @@ class TestContacts(BaseContactsTestCase):
 
         response = self.client.get(person_url(contact.key))
 
+        self.assertContains(
+            response,
+            "Contact record created at %s." % localize(contact.created_at))
+
         self.assertContains(response, 'Foo')
         self.assertContains(response, 'Bar')
 
         self.assertContains(response, 'lerp')
         self.assertContains(response, 'larp')
 
+        self.assertContains(response, 'Extra details')
         self.assertContains(response, 'black')
         self.assertContains(response, 'moth')
         self.assertContains(response, 'super')
         self.assertContains(response, 'rainbow')
+
+        self.assertNotContains(response, 'Subscriptions')
+
+    def test_subscriptions(self):
+        contact = self.mkcontact(
+            name='Foo',
+            surname='Bar',
+            subscription={'app_sub_1': 1, 'app_sub_2': 2})
+
+        response = self.client.get(person_url(contact.key))
+
+        self.assertContains(response, 'Subscriptions')
+        self.assertContains(response, 'app_sub_1')
+        self.assertContains(response, '1')
+        self.assertContains(response, 'app_sub_2')
+        self.assertContains(response, '2')
+
+        self.assertNotContains(response, 'Extra details')
+
+    def test_contact_creation_form(self):
+        response = self.client.get(reverse('contacts:new_person'))
+        for label in ["Name", "Surname", "Email address", "Groups"]:
+            self.assertContains(response, label)
+        self.assertNotContains(response, "Contact record created at")
 
     def test_contact_creation(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)

@@ -15,8 +15,7 @@ from go.vumitools.billing_worker import BillingApi, BillingDispatcher
 from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
 from go.vumitools.utils import MessageMetadataHelper
 
-from go.billing.api import BillingError
-from go.billing.utils import JSONEncoder
+from go.billing.utils import BillingError, JSONEncoder
 
 SESSION_CLOSE = TransportUserMessage.SESSION_CLOSE
 

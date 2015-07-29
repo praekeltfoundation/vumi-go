@@ -6,12 +6,11 @@ from decimal import Decimal
 from StringIO import StringIO
 from unittest import TestCase
 
-
 from go.base.tests.helpers import GoDjangoTestCase
 import go.base.utils
 from go.base.utils import (
     get_conversation_view_definition, get_router_view_definition,
-    UnicodeDictWriter, extract_auth_from_url, sendfile, format_currency)
+    UnicodeDictWriter, sendfile, format_currency)
 from go.errors import UnknownConversationType, UnknownRouterType
 
 
@@ -118,22 +117,7 @@ class TestUnicodeDictWriter(TestCase):
             rows)
 
 
-class TestRandomUtils(GoDjangoTestCase):
-
-    def test_extract_auth_from_url_no_auth(self):
-        auth, url = extract_auth_from_url('http://go.vumi.org')
-        self.assertEqual(auth, None)
-        self.assertEqual(url, 'http://go.vumi.org')
-
-    def test_extract_auth_from_url_with_auth(self):
-        auth, url = extract_auth_from_url('http://u:p@go.vumi.org')
-        self.assertEqual(auth, ('u', 'p'))
-        self.assertEqual(url, 'http://go.vumi.org')
-
-    def test_extract_auth_from_url_with_username(self):
-        auth, url = extract_auth_from_url('http://u@go.vumi.org')
-        self.assertEqual(auth, ('u', None))
-        self.assertEqual(url, 'http://go.vumi.org')
+class TestSendfile(GoDjangoTestCase):
 
     def test_sendfile(self):
         resp = sendfile('/foo')

@@ -4,14 +4,9 @@ import datetime
 
 from StringIO import StringIO
 
-import psycopg2
-import psycopg2.extras
-
 from twisted.internet import defer
 from twisted.web import server
 from twisted.web.test import test_web
-
-from txpostgres import txpostgres, reconnection
 
 from go.config import billing_quantization_exponent
 
@@ -64,58 +59,6 @@ class JSONDecoder(json.JSONDecoder):
             raise self.DecodeError("Decimal quantization resulted in 0")
 
         return value
-
-
-def real_dict_connect(*args, **kwargs):
-    kwargs['connection_factory'] = psycopg2.extras.RealDictConnection
-    return psycopg2.connect(*args, **kwargs)
-
-
-class DictRowConnection(txpostgres.Connection):
-    """Extend the txpostgres ``Connection`` and override the
-    ``cursorFactory``
-
-    """
-
-    connectionFactory = staticmethod(real_dict_connect)
-
-    def __init__(self, *args, **kw):
-        super(DictRowConnection, self).__init__(*args, **kw)
-        if self.detector is None:
-            self.detector = reconnection.DeadConnectionDetector()
-
-    def connect(self, *args, **kw):
-        d = super(DictRowConnection, self).connect(*args, **kw)
-        # We set self.detector in __init__ if there isn't one already.
-        d.addErrback(self.detector.checkForDeadConnection)
-        return d
-
-    @property
-    def closed(self):
-        """Return ``True`` if the underlying connection is closed
-        ``False`` otherwise
-
-        """
-        if self._connection:
-            return self._connection.closed
-        return True
-
-
-class DictRowConnectionPool(txpostgres.ConnectionPool):
-    """Extend the txpostgres ``ConnectionPool`` and override the
-    ``connectionFactory``
-
-    """
-
-    connectionFactory = DictRowConnection
-
-    @property
-    def closed(self):
-        """Return ``True`` all the connections are closed
-        ``False`` otherwise
-
-        """
-        return all(c.closed for c in self.connections)
 
 
 class DummyRequest(test_web.DummyRequest):
