@@ -393,7 +393,7 @@ class TestConversationWrapper(VumiTestCase):
     def test_get_inbound_throughput(self):
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(
-            self.conv, 20, time_multiplier=0)
+            self.conv, 20, time_multiplier=0, start_date=datetime.utcnow())
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_inbound_throughput()), 4)
@@ -405,7 +405,7 @@ class TestConversationWrapper(VumiTestCase):
     def test_get_outbound_throughput(self):
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(
-            self.conv, 20, time_multiplier=0)
+            self.conv, 20, time_multiplier=0, start_date=datetime.utcnow())
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_outbound_throughput()), 4)

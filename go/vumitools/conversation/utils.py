@@ -1,8 +1,10 @@
 # -*- test-case-name: go.vumitools.conversation.tests.test_utils -*-
 # -*- coding: utf-8 -*-
 
-from twisted.internet.defer import returnValue
+from datetime import datetime, timedelta
 
+from twisted.internet.defer import returnValue
+from vumi.message import format_vumi_date
 from vumi.persist.model import Manager
 
 from go.vumitools.opt_out import OptOutStore
@@ -380,13 +382,15 @@ class ConversationWrapper(object):
         """
         Calculate how many inbound messages per minute we've been doing on
         average.
+
+        NOTE: This will underestimate if there are more messages within the
+              sample time than will fit in an index page.
         """
-        inbounds = yield self.qms.list_batch_recent_inbound_keys(
-            self.batch.key, with_timestamp=True)
-        if not inbounds:
-            returnValue(0.0)
-        threshold = inbounds[0][1] - sample_time
-        count = sum(1 for _, timestamp in inbounds if timestamp >= threshold)
+        start = format_vumi_date(
+            datetime.utcnow() - timedelta(seconds=sample_time))
+        inbounds = yield self.qms.list_batch_inbound_messages(
+            self.batch.key, start=start)
+        count = sum(1 for _key, ts, _addr in inbounds if ts >= start)
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
@@ -394,13 +398,15 @@ class ConversationWrapper(object):
         """
         Calculate how many outbound messages per minute we've been doing on
         average.
+
+        NOTE: This will underestimate if there are more messages within the
+              sample time than will fit in an index page.
         """
-        outbounds = yield self.qms.list_batch_recent_outbound_keys(
-            self.batch.key, with_timestamp=True)
-        if not outbounds:
-            returnValue(0.0)
-        threshold = outbounds[0][1] - sample_time
-        count = sum(1 for _, timestamp in outbounds if timestamp >= threshold)
+        start = format_vumi_date(
+            datetime.utcnow() - timedelta(seconds=(sample_time)))
+        outbounds = yield self.qms.list_batch_outbound_messages(
+            self.batch.key, start=start)
+        count = sum(1 for _key, ts, _addr in outbounds if ts >= start)
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
