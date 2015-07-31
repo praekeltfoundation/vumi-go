@@ -92,13 +92,13 @@ class StreamingHTTPWorker(NoStreamingHTTPWorker):
 
     def send_message_to_client(self, message, conversation, push_url):
         if push_url:
-            return self.push(push_url, message)
+            return self.push(conversation.user_account.key, push_url, message)
         else:
             return self.stream(MessageStream, conversation.key, message)
 
     def send_event_to_client(self, event, conversation, push_url):
         if push_url:
-            return self.push(push_url, event)
+            return self.push(conversation.user_account.key, push_url, event)
         else:
             return self.stream(EventStream, conversation.key, event)
 
