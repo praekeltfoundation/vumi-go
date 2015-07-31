@@ -276,7 +276,7 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 "push_message_url not configured for conversation: %s" % (
                     conversation.key))
             return
-        return self.push(push_url, message)
+        return self.push(conversation.user_account.key, push_url, message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
@@ -293,15 +293,16 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 "push_event_url not configured for conversation: %s" % (
                     conversation.key))
             return
-        return self.push(push_url, event)
+        return self.push(conversation.user_account.key, push_url, event)
 
     @inlineCallbacks
-    def schedule_push_retry(self, url, method, data, headers):
+    def schedule_push_retry(self, user_account_key, url, method, data,
+                            headers):
         if self.http_retry_api is None:
             returnValue(None)
         list_headers = dict((k, [v]) for k, v in headers.iteritems())
         retry_headers = {
-            'X-Owner-ID': 'XXX',  # TODO: set account id
+            'X-Owner-ID': user_account_key,
         }
         retry_data = json.dumps({
             "intervals": self.http_retry_intervals,
@@ -318,17 +319,22 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 headers=retry_headers, timeout=self.http_retry_timeout)
             if not (200 <= resp.code < 300):
                 log.warning(
-                    'Failed to schedule retry request. Request: %r'
-                    ' Response: %r' % (retry_data, resp))
+                    'Failed to schedule retry request.'
+                    ' [account: %r, request: %r, response: %r]'
+                    % (user_account_key, retry_data, resp))
         except Exception as err:
             log.warning(
-                'Error scheduling retry of request. Request: %r Error: %r' %
-                (retry_data, err))
+                'Error scheduling retry of request.'
+                ' [account: %r, request: %r, error: %r]'
+                % (user_account_key, retry_data, err))
         else:
-            log.info('Successfully scheduled retry of request to %r' % url)
+            log.info(
+                'Successfully scheduled retry of request'
+                ' [account: %r, url: %r]'
+                % (user_account_key, url))
 
     @inlineCallbacks
-    def push(self, url, vumi_message):
+    def push(self, user_account_key, url, vumi_message):
         data = vumi_message.to_json().encode('utf-8')
         retry_required = True
         try:
@@ -369,7 +375,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning("Connection refused pushing message to %s" % (url,))
         if retry_required:
             yield self.schedule_push_retry(
-                url, method='POST', data=data, headers=headers)
+                user_account_key, url=url, method='POST', data=data,
+                headers=headers)
 
     def get_health_response(self):
         return "OK"
