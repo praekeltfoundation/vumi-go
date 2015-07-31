@@ -1,7 +1,9 @@
 # -*- test-case-name: go.apps.http_api_nostream.tests.test_vumi_app -*-
 import base64
+import json
 
-from twisted.internet.defer import inlineCallbacks, Deferred, succeed
+from twisted.internet.defer import (
+    inlineCallbacks, returnValue, Deferred, succeed)
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
 
@@ -47,11 +49,14 @@ class HTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         "Base URL for the HTTP Retry API. If set to null, message and"
         " event requests are not retried.",
         default=None, static=True)
-    http_retry_seconds = ConfigList(
-        "List of delays, relative to the initial failed request, at which"
-        " retries should be scheduled. Default is 5 minutes, 30 minutes and"
-        " 1 hour.",
+    http_retry_intervals = ConfigList(
+        "List of delays, in seconds relative to the initial failed request, at"
+        " which retries should be scheduled. Default is 5 minutes, 30 minutes"
+        " and 1 hour.",
         default=(300, 1800, 3600), static=True)
+    http_retry_timeout = ConfigInt(
+        "How long to wait for a response from the retry API (in seconds).",
+        default=5, static=True)
 
 
 class ConcurrencyLimiterError(Exception):
@@ -218,6 +223,14 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         self.web_port = config.web_port
         self.health_path = config.health_path
 
+        # HTTP request settings
+        self.http_request_timeout = config.timeout
+
+        # HTTP retry API settings
+        self.http_retry_api = config.http_retry_api
+        self.http_retry_intervals = config.http_retry_intervals
+        self.http_retry_timeout = config.http_retry_timeout
+
         # Set these to empty dictionaries because we're not interested
         # in using any of the helper functions at this point.
         self._event_handlers = {}
@@ -283,9 +296,39 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         return self.push(push_url, event)
 
     @inlineCallbacks
+    def schedule_push_retry(self, url, method, data, headers):
+        if self.http_retry_api is None:
+            returnValue(None)
+        list_headers = dict((k, [v]) for k, v in headers.iteritems())
+        retry_headers = {
+            'X-Owner-ID': 'XXX',  # TODO: set account id
+        }
+        retry_data = json.dumps({
+            "intervals": self.http_retry_intervals,
+            "request": {
+                "url": url,
+                "method": method,
+                "body": data,
+                "headers": list_headers,
+            },
+        })
+        try:
+            resp = yield http_request_full(
+                self.http_retry_api, data=retry_data,
+                headers=retry_headers, timeout=self.http_retry_timeout)
+            if not (200 <= resp.code < 300):
+                log.warning(
+                    'Failed to schedule retry request. Request: %r'
+                    ' Response: %r' % (retry_data, resp))
+        except Exception as err:
+            log.warning(
+                'Error scheduling retry of request. Request: %r Error: %r' %
+                (retry_data, err))
+
+    @inlineCallbacks
     def push(self, url, vumi_message):
-        config = self.get_static_config()
         data = vumi_message.to_json().encode('utf-8')
+        retry_required = True
         try:
             auth, url = extract_auth_from_url(url.encode('utf-8'))
             headers = {
@@ -305,12 +348,16 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                         base64.b64encode('%s:%s' % (username, password)),)
                 })
             resp = yield http_request_full(
-                url, data=data, headers=headers, timeout=config.timeout)
+                url, data=data, headers=headers,
+                timeout=self.http_request_timeout)
             if not (200 <= resp.code < 300):
                 # We didn't get a 2xx response.
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, url))
+            else:
+                retry_required = False
         except SchemeNotSupported:
+            retry_required = False  # retrying bad URLs won't help
             log.warning('Unsupported scheme for URL: %s' % (url,))
         except HttpTimeoutError:
             log.warning("Timeout pushing message to %s" % (url,))
@@ -318,6 +365,9 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning("DNS lookup error pushing message to %s" % (url,))
         except ConnectionRefusedError:
             log.warning("Connection refused pushing message to %s" % (url,))
+        if retry_required:
+            yield self.schedule_push_retry(
+                url, method='POST', data=data, headers=headers)
 
     def get_health_response(self):
         return "OK"
