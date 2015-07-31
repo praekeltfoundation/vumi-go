@@ -5,7 +5,7 @@ from twisted.internet.defer import inlineCallbacks, Deferred, succeed
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
 
-from vumi.config import ConfigInt, ConfigText
+from vumi.config import ConfigInt, ConfigText, ConfigList
 from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.transports.httprpc import httprpc
 from vumi import log
@@ -43,6 +43,15 @@ class HTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         "zero disables the limit. (Unlike concurrency_limit, this queues "
         "requests instead of rejecting them.)",
         default=1, static=True)
+    http_retry_api = ConfigText(
+        "Base URL for the HTTP Retry API. If set to null, message and"
+        " event requests are not retried.",
+        default=None, static=True)
+    http_retry_seconds = ConfigList(
+        "List of delays, relative to the initial failed request, at which"
+        " retries should be scheduled. Default is 5 minutes, 30 minutes and"
+        " 1 hour.",
+        default=(300, 1800, 3600), static=True)
 
 
 class ConcurrencyLimiterError(Exception):
