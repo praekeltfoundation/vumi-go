@@ -192,6 +192,20 @@ class TestNoStreamingHTTPWorkerBase(VumiTestCase):
         return self.mock_push_server.url
 
     @inlineCallbacks
+    def start_retry_server(self):
+        """ Start mock server to test retries with. """
+        retry_queue = DeferredQueue()
+
+        def handle_request(request):
+            retry_queue.put(request)
+            return NOT_DONE_YET
+
+        mock_retry_server = MockHttpServer(handle_request)
+        yield mock_retry_server.start()
+        self.add_cleanup(mock_retry_server.stop)
+        returnValue((mock_retry_server.url, retry_queue))
+
+    @inlineCallbacks
     def create_conversation(self, message_url, event_url, tokens):
         config = {
             'http_api_nostream': {
@@ -817,6 +831,54 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         [warning_log] = lc.messages()
         self.assertTrue(self.get_message_url() in warning_log)
         self.assertTrue('500' in warning_log)
+
+    @inlineCallbacks
+    def test_post_inbound_message_500_schedule_retry(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+        })
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+
+        # return 500 response to message push
+        req = yield self.push_calls.get()
+        req.setResponseCode(500)
+        req.finish()
+
+        # catch and check retry
+        retry = yield retry_calls.get()
+        self.assertEqual(retry.method, "POST")
+        headers = dict(retry.requestHeaders.getAllRawHeaders())
+        self.assertEqual(
+            headers['Content-Type'], ['application/json; charset=utf-8'])
+        self.assertEqual(
+            headers['X-Owner-Id'], ['test-0-user'])
+        body = json.loads(retry.content.read())
+        message_body = json.loads(body['request'].pop('body'))
+        self.assertEqual(body, {
+            'intervals': [300, 1800, 3600],
+            'request': {
+                'url': self.get_message_url(),
+                'method': 'POST',
+                'headers': {
+                    'Content-Type': ['application/json; charset=utf-8'],
+                },
+            },
+        })
+
+        retry.setResponseCode(200)
+        retry.finish()
+
+        with LogCatcher(log_level=logging.INFO) as lc:
+            msg = yield msg_d
+
+        self.assertEqual(lc.messages(), [
+            "Successfully scheduled retry of request [account: u'test-0-user'"
+            ", url: '%s']" % self.get_message_url(),
+        ])
+
+        self.assertEqual(message_body['message_id'], msg['message_id'])
 
     def _patch_http_request_full(self, exception_class):
         from go.apps.http_api_nostream import vumi_app
