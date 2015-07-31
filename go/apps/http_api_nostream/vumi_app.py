@@ -324,6 +324,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning(
                 'Error scheduling retry of request. Request: %r Error: %r' %
                 (retry_data, err))
+        else:
+            log.info('Successfully scheduled retry of request to %r' % url)
 
     @inlineCallbacks
     def push(self, url, vumi_message):
