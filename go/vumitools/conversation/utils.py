@@ -384,14 +384,13 @@ class ConversationWrapper(object):
         average.
 
         NOTE: This will underestimate if there are more messages within the
-              sample time than will fit in an index page.
+              sample time than will fit in an index page, currently 1000.
         """
         start = format_vumi_date(
             datetime.utcnow() - timedelta(seconds=sample_time))
         inbounds = yield self.qms.list_batch_inbound_messages(
             self.batch.key, start=start)
-        count = sum(1 for _key, ts, _addr in inbounds if ts >= start)
-        returnValue(count / (sample_time / 60.0))
+        returnValue(len(inbounds) / (sample_time / 60.0))
 
     @Manager.calls_manager
     def get_outbound_throughput(self, sample_time=300):
@@ -400,14 +399,13 @@ class ConversationWrapper(object):
         average.
 
         NOTE: This will underestimate if there are more messages within the
-              sample time than will fit in an index page.
+              sample time than will fit in an index page, currently 1000.
         """
         start = format_vumi_date(
             datetime.utcnow() - timedelta(seconds=(sample_time)))
         outbounds = yield self.qms.list_batch_outbound_messages(
             self.batch.key, start=start)
-        count = sum(1 for _key, ts, _addr in outbounds if ts >= start)
-        returnValue(count / (sample_time / 60.0))
+        returnValue(len(outbounds) / (sample_time / 60.0))
 
     @Manager.calls_manager
     def get_opted_in_contact_address(self, contact, delivery_class):
