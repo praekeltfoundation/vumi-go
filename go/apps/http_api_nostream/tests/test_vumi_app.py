@@ -289,6 +289,7 @@ class TestNoStreamingHTTPWorkerBase(VumiTestCase):
     def assert_retry(self, retry, url, method='POST', owner='test-0-user',
                      intervals=(300, 1800, 3600)):
         self.assertEqual(retry.method, "POST")
+        self.assertEqual(retry.uri, '/requests/')
         headers = dict(retry.requestHeaders.getAllRawHeaders())
         self.assertEqual(
             headers['Content-Type'], ['application/json; charset=utf-8'])

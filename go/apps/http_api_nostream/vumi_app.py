@@ -307,6 +307,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         if self.http_retry_api is None:
             returnValue(None)
         list_headers = dict((k, [v]) for k, v in headers.iteritems())
+        retry_url = (
+            self.http_retry_api.encode("utf-8").rstrip('/') + '/requests/')
         retry_headers = {
             'Content-Type': 'application/json; charset=utf-8',
             'X-Owner-ID': user_account_key.encode("utf-8"),
@@ -322,8 +324,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         }).encode('utf-8')
         try:
             resp = yield http_request_full(
-                self.http_retry_api.encode("utf-8"), data=retry_data,
-                headers=retry_headers, timeout=self.http_retry_timeout)
+                retry_url, data=retry_data, headers=retry_headers,
+                timeout=self.http_retry_timeout)
             if not (200 <= resp.code < 300):
                 raise HttpRetryApiError(
                     "HTTP retry failed: %s - %s" % (resp.code, resp.phrase))
