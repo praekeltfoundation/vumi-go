@@ -828,6 +828,16 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         req = yield self.push_calls.get()
         self.assertEqual(req, None)
 
+    def _patch_http_request_full(self, exception_class):
+        from go.apps.http_api_nostream import vumi_app
+        http_calls = []
+
+        def raiser(*args, **kw):
+            http_calls.append((args, kw))
+            raise exception_class()
+        self.patch(vumi_app, 'http_request_full', raiser)
+        return http_calls
+
     @inlineCallbacks
     def test_post_inbound_message_201_response(self):
         yield self.start_app_worker()
@@ -914,6 +924,38 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         ])
 
     @inlineCallbacks
+    def test_post_inbound_message_500_schedule_retry_exception(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+        })
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+
+        # return 500 response to message push
+        req = yield self.push_calls.get()
+        req.setResponseCode(500)
+        req.finish()
+
+        class TestException(Exception):
+            """Custom test exception."""
+
+        http_calls = self._patch_http_request_full(TestException)
+
+        with LogCatcher(log_level=logging.WARNING) as lc:
+            yield msg_d
+
+        [(_, http_kw)] = http_calls
+        self.assertEqual(lc.messages(), [
+            "Got unexpected response code 500 from %s"
+            % self.get_message_url(),
+            "Error scheduling retry of request [account: u'test-0-user'"
+            ", request: %r, error: TestException()]" % (http_kw['data'],),
+        ])
+
+        self.assertEqual(retry_calls.pending, [])
+
+    @inlineCallbacks
     def test_post_inbound_message_300_does_not_schedule_retry(self):
         retry_url, retry_calls = yield self.start_retry_server()
         yield self.start_app_worker({
@@ -932,13 +974,6 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
         self.assertEqual(lc.messages(), [])
         self.assertEqual(retry_calls.pending, [])
-
-    def _patch_http_request_full(self, exception_class):
-        from go.apps.http_api_nostream import vumi_app
-
-        def raiser(*args, **kw):
-            raise exception_class()
-        self.patch(vumi_app, 'http_request_full', raiser)
 
     @inlineCallbacks
     def test_post_inbound_message_no_url(self):
