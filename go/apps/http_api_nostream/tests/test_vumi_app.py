@@ -985,6 +985,11 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
         self.assertEqual(retry_calls.pending, [])
 
+        # wait for inbound processing to complete and check that the
+        # TestException has been re-raised as an unhandled error.
+        yield self.app_helper.kick_delivery()
+        [_err] = self.flushLoggedErrors(TestException)
+
     @inlineCallbacks
     def test_post_inbound_message_300_does_not_schedule_retry(self):
         retry_url, retry_calls = yield self.start_retry_server()

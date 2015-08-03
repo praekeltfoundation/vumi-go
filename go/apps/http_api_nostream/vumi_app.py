@@ -328,6 +328,7 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 'Error scheduling retry of request'
                 ' [account: %r, request: %r, error: %r]'
                 % (user_account_key, retry_data, err))
+            raise
         else:
             log.info(
                 'Successfully scheduled retry of request'
