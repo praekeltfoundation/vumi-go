@@ -341,28 +341,27 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 ' [account: %r, url: %r]'
                 % (user_account_key, url))
 
+    def _push_headers(self, auth=None):
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+        }
+        if auth is not None:
+            username, password = auth
+            if username is None:
+                username = ''
+            if password is None:
+                password = ''
+            headers['Authorization'] = 'Basic %s' % (
+                base64.b64encode('%s:%s' % (username, password)),)
+        return headers
+
     @inlineCallbacks
     def push(self, user_account_key, url, vumi_message):
         data = vumi_message.to_json().encode('utf-8')
+        auth, url = extract_auth_from_url(url.encode('utf-8'))
+        headers = self._push_headers(auth=auth)
         retry_required = True
         try:
-            auth, url = extract_auth_from_url(url.encode('utf-8'))
-            headers = {
-                'Content-Type': 'application/json; charset=utf-8',
-            }
-            if auth is not None:
-                username, password = auth
-
-                if username is None:
-                    username = ''
-
-                if password is None:
-                    password = ''
-
-                headers.update({
-                    'Authorization': 'Basic %s' % (
-                        base64.b64encode('%s:%s' % (username, password)),)
-                })
             resp = yield http_request_full(
                 url, data=data, headers=headers,
                 timeout=self.http_request_timeout)
