@@ -828,14 +828,17 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         req = yield self.push_calls.get()
         self.assertEqual(req, None)
 
-    def _patch_http_request_full(self, exception_class):
+    def _patch_http_request_full(self, exception_class, once=False):
         from go.apps.http_api_nostream import vumi_app
         http_calls = []
 
         def raiser(*args, **kw):
+            if once:
+                patch.restore()
             http_calls.append((args, kw))
             raise exception_class()
-        self.patch(vumi_app, 'http_request_full', raiser)
+
+        patch = self.patch(vumi_app, 'http_request_full', raiser)
         return http_calls
 
     @inlineCallbacks
@@ -865,7 +868,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertTrue('500' in warning_log)
 
     @inlineCallbacks
-    def test_post_inbound_message_500_schedule_retry(self):
+    def test_post_inbound_message_500_schedules_retry(self):
         retry_url, retry_calls = yield self.start_retry_server()
         yield self.start_app_worker({
             'http_retry_api': retry_url,
@@ -895,7 +898,34 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertEqual(retry_msg['message_id'], msg['message_id'])
 
     @inlineCallbacks
-    def test_post_inbound_message_500_schedule_retry_failed_500(self):
+    def test_post_inbound_message_timeout_schedules_retry(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+        })
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+
+        self._patch_http_request_full(HttpTimeoutError, once=True)
+
+        # catch and check retry
+        retry = yield retry_calls.get()
+        retry_msg = self.assert_retry(retry, self.get_message_url())
+        retry.setResponseCode(200)
+        retry.finish()
+
+        with LogCatcher(log_level=logging.INFO) as lc:
+            msg = yield msg_d
+
+        self.assertEqual(lc.messages(), [
+            "Successfully scheduled retry of request [account: u'test-0-user'"
+            ", url: '%s']" % self.get_message_url(),
+        ])
+
+        self.assertEqual(retry_msg['message_id'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_post_inbound_message_500_retry_fails_with_500(self):
         retry_url, retry_calls = yield self.start_retry_server()
         yield self.start_app_worker({
             'http_retry_api': retry_url,
@@ -924,7 +954,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         ])
 
     @inlineCallbacks
-    def test_post_inbound_message_500_schedule_retry_exception(self):
+    def test_post_inbound_message_500_retry_fails_with_exception(self):
         retry_url, retry_calls = yield self.start_retry_server()
         yield self.start_app_worker({
             'http_retry_api': retry_url,
