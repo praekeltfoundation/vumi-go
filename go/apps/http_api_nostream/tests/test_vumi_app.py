@@ -842,6 +842,18 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         patch = self.patch(vumi_app, 'http_request_full', raiser)
         return http_calls
 
+    def _record_http_request_full(self):
+        from go.apps.http_api_nostream import vumi_app
+        http_calls = []
+        orig_http_request_full = vumi_app.http_request_full
+
+        def record(*args, **kw):
+            http_calls.append((args, kw))
+            return orig_http_request_full(*args, **kw)
+
+        self.patch(vumi_app, 'http_request_full', record)
+        return http_calls
+
     @inlineCallbacks
     def test_post_inbound_message_201_response(self):
         yield self.start_app_worker()
@@ -1036,6 +1048,59 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             'Unsupported scheme for URL: %s' % self.get_message_url(),
         ])
         self.assertEqual(retry_calls.pending, [])
+
+    @inlineCallbacks
+    def test_post_inbound_message_retry_sets_default_timeout(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+        })
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+
+        # return 500 response to message push
+        req = yield self.push_calls.get()
+        req.setResponseCode(500)
+        req.finish()
+
+        http_calls = self._record_http_request_full()
+
+        # catch and check retry
+        retry = yield retry_calls.get()
+        retry.setResponseCode(200)
+        retry.finish()
+
+        yield msg_d
+
+        [(_, http_kw)] = http_calls
+        self.assertEqual(http_kw['timeout'], 5)
+
+    @inlineCallbacks
+    def test_post_inbound_message_retry_sets_custom_timeout(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+            'http_retry_timeout': 31,
+        })
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+
+        # return 500 response to message push
+        req = yield self.push_calls.get()
+        req.setResponseCode(500)
+        req.finish()
+
+        http_calls = self._record_http_request_full()
+
+        # catch and check retry
+        retry = yield retry_calls.get()
+        retry.setResponseCode(200)
+        retry.finish()
+
+        yield msg_d
+
+        [(_, http_kw)] = http_calls
+        self.assertEqual(http_kw['timeout'], 31)
 
     @inlineCallbacks
     def test_post_inbound_message_no_url(self):
