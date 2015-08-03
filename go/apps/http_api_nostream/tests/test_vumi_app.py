@@ -1116,6 +1116,38 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
 
     @inlineCallbacks
+    def test_post_inbound_event_500_schedules_retry(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+        })
+        msg = yield self.app_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+        ack_d = self.app_helper.make_dispatch_ack(
+            msg, conv=self.conversation)
+
+        # return 500 response to message push
+        req = yield self.push_calls.get()
+        req.setResponseCode(500)
+        req.finish()
+
+        # catch and check retry
+        retry = yield retry_calls.get()
+        retry_msg = self.assert_retry(retry, self.get_event_url())
+        retry.setResponseCode(200)
+        retry.finish()
+
+        with LogCatcher(log_level=logging.INFO) as lc:
+            ack = yield ack_d
+
+        self.assertEqual(lc.messages(), [
+            "Successfully scheduled retry of request [account: u'test-0-user'"
+            ", url: '%s']" % self.get_event_url(),
+        ])
+
+        self.assertEqual(retry_msg['event_id'], ack['event_id'])
+
+    @inlineCallbacks
     def test_post_inbound_event_ignored(self):
         yield self.start_app_worker()
         self.conversation.config['http_api_nostream'].update({
