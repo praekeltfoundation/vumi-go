@@ -320,12 +320,12 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 headers=retry_headers, timeout=self.http_retry_timeout)
             if not (200 <= resp.code < 300):
                 log.warning(
-                    'Failed to schedule retry request.'
+                    'Failed to schedule retry request'
                     ' [account: %r, request: %r, response: %r]'
-                    % (user_account_key, retry_data, resp))
+                    % (user_account_key, retry_data, [resp.code, resp.phrase]))
         except Exception as err:
             log.warning(
-                'Error scheduling retry of request.'
+                'Error scheduling retry of request'
                 ' [account: %r, request: %r, error: %r]'
                 % (user_account_key, retry_data, err))
         else:
