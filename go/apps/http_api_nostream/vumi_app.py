@@ -363,6 +363,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 # We didn't get a 2xx response.
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, url))
+                if not (500 <= resp.code < 600):
+                    retry_required = False
             else:
                 retry_required = False
         except SchemeNotSupported:

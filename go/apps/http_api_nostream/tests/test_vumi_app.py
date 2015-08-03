@@ -884,6 +884,26 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
         self.assertEqual(retry_msg['message_id'], msg['message_id'])
 
+    @inlineCallbacks
+    def test_post_inbound_message_300_does_not_schedule_retry(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+        })
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+
+        # return 300 response to message push
+        req = yield self.push_calls.get()
+        req.setResponseCode(300)
+        req.finish()
+
+        with LogCatcher(log_level=logging.INFO) as lc:
+            yield msg_d
+
+        self.assertEqual(lc.messages(), [])
+        self.assertEqual(retry_calls.pending, [])
+
     def _patch_http_request_full(self, exception_class):
         from go.apps.http_api_nostream import vumi_app
 
