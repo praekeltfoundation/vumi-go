@@ -15,7 +15,7 @@ from vumi.tests.utils import MockHttpServer, LogCatcher
 from vumi.tests.helpers import VumiTestCase
 
 from go.apps.http_api_nostream.vumi_app import (
-    ConcurrencyLimitManager, NoStreamingHTTPWorker)
+    ConcurrencyLimitManager, NoStreamingHTTPWorker, HttpRetryApiError)
 from go.apps.http_api_nostream.resource import ConversationResource
 from go.apps.tests.helpers import AppWorkerHelper
 
@@ -948,10 +948,17 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             yield msg_d
 
         self.assertEqual(lc.messages(), [
-            "Failed to schedule retry request [account: u'test-0-user'"
-            ", request: %r, response: [500, 'Internal Server Error']]"
+            "Error scheduling retry of request [account: u'test-0-user'"
+            ", request: %r"
+            ", error: HttpRetryApiError('HTTP retry failed:"
+            " 500 - Internal Server Error',)]"
             % (retry_data,),
         ])
+
+        # wait for inbound processing to complete and check that an
+        # HttpRetryApiError has been re-raised as an unhandled error.
+        yield self.app_helper.kick_delivery()
+        [_err] = self.flushLoggedErrors(HttpRetryApiError)
 
     @inlineCallbacks
     def test_post_inbound_message_500_retry_fails_with_exception(self):

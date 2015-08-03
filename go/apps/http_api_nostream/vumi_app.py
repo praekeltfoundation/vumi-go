@@ -210,6 +210,12 @@ class ConcurrencyLimitManager(object):
         self._cleanup_limiter(key)
 
 
+class HttpRetryApiError(Exception):
+    """
+    Raised when an error occurs while submitting HTTP requests for retrying.
+    """
+
+
 class NoStreamingHTTPWorker(GoApplicationWorker):
 
     worker_name = 'http_api_nostream_worker'
@@ -319,10 +325,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 self.http_retry_api.encode("utf-8"), data=retry_data,
                 headers=retry_headers, timeout=self.http_retry_timeout)
             if not (200 <= resp.code < 300):
-                log.warning(
-                    'Failed to schedule retry request'
-                    ' [account: %r, request: %r, response: %r]'
-                    % (user_account_key, retry_data, [resp.code, resp.phrase]))
+                raise HttpRetryApiError(
+                    "HTTP retry failed: %s - %s" % (resp.code, resp.phrase))
         except Exception as err:
             log.warning(
                 'Error scheduling retry of request'
