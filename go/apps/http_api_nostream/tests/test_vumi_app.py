@@ -286,6 +286,28 @@ class TestNoStreamingHTTPWorkerBase(VumiTestCase):
             [("%s.%s" % (prefix, name), value, agg)
              for name, value, agg in metrics])
 
+    def assert_retry(self, retry, url, method='POST', owner='test-0-user',
+                     intervals=(300, 1800, 3600)):
+        self.assertEqual(retry.method, "POST")
+        headers = dict(retry.requestHeaders.getAllRawHeaders())
+        self.assertEqual(
+            headers['Content-Type'], ['application/json; charset=utf-8'])
+        self.assertEqual(
+            headers['X-Owner-Id'], [owner])
+        body = json.loads(retry.content.read())
+        retry_body = json.loads(body['request'].pop('body'))
+        self.assertEqual(body, {
+            'intervals': list(intervals),
+            'request': {
+                'url': url,
+                'method': method,
+                'headers': {
+                    'Content-Type': ['application/json; charset=utf-8'],
+                },
+            },
+        })
+        return retry_body
+
 
 class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
@@ -848,25 +870,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
 
         # catch and check retry
         retry = yield retry_calls.get()
-        self.assertEqual(retry.method, "POST")
-        headers = dict(retry.requestHeaders.getAllRawHeaders())
-        self.assertEqual(
-            headers['Content-Type'], ['application/json; charset=utf-8'])
-        self.assertEqual(
-            headers['X-Owner-Id'], ['test-0-user'])
-        body = json.loads(retry.content.read())
-        message_body = json.loads(body['request'].pop('body'))
-        self.assertEqual(body, {
-            'intervals': [300, 1800, 3600],
-            'request': {
-                'url': self.get_message_url(),
-                'method': 'POST',
-                'headers': {
-                    'Content-Type': ['application/json; charset=utf-8'],
-                },
-            },
-        })
-
+        retry_msg = self.assert_retry(retry, self.get_message_url())
         retry.setResponseCode(200)
         retry.finish()
 
@@ -878,7 +882,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             ", url: '%s']" % self.get_message_url(),
         ])
 
-        self.assertEqual(message_body['message_id'], msg['message_id'])
+        self.assertEqual(retry_msg['message_id'], msg['message_id'])
 
     def _patch_http_request_full(self, exception_class):
         from go.apps.http_api_nostream import vumi_app
