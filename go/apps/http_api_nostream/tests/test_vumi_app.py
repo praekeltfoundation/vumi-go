@@ -829,7 +829,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         req = yield self.push_calls.get()
         self.assertEqual(req, None)
 
-    def _patch_http_request_full(self, exception_class, once=False):
+    def _patch_http_request_full(self, exception_class, once=True):
         from go.apps.http_api_nostream import vumi_app
         http_calls = []
 
