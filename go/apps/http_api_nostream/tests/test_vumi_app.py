@@ -976,6 +976,25 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertEqual(retry_calls.pending, [])
 
     @inlineCallbacks
+    def test_post_inbound_message_scheme_unsupported_does_not_retry(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+        })
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+
+        self._patch_http_request_full(SchemeNotSupported)
+
+        with LogCatcher(log_level=logging.WARNING) as lc:
+            yield msg_d
+
+        self.assertEqual(lc.messages(), [
+            'Unsupported scheme for URL: %s' % self.get_message_url(),
+        ])
+        self.assertEqual(retry_calls.pending, [])
+
+    @inlineCallbacks
     def test_post_inbound_message_no_url(self):
         yield self.start_app_worker()
         self.conversation.config['http_api_nostream'].update({
