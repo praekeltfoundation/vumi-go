@@ -58,3 +58,28 @@
        https://go.vumi.org/api/v1/go/http_api_nostream/{{ conversation.key }}/metrics.json \
        -vvv
 </pre></code>
+
+<h1>Retrying failed requests</h1>
+
+<p>When an HTTP request to a <i>Push message URL</i> or <i>Push event URL</i>
+fails, it is scheduled for retrying after 5 minutes, 30 minutes and 1 hour.
+If all three retries fail, the HTTP request is discarded.</p>
+
+<p>If your account has more than 10 000 pending retries, failed requests will
+not be scheduled for retrying until some of the pending retries have either
+succeeded or failed their last retry.</p>
+
+<p>HTTP errors that will cause a retry to be scheduled:</p>
+
+<ul>
+    <li>a 5xx HTTP response code</li>
+    <li>a timeout completing the request</li>
+    <li>a failure to establish the HTTP connection</li>
+    <li>a failure to look up the host using DNS</li>
+</ul>
+
+<p>Errors that will not cause a retry:</p>
+
+<ul>
+    <li>a badly formatted URL</li>
+</ul>
