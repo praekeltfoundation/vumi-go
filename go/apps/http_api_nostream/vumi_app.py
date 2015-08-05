@@ -326,7 +326,12 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             resp = yield http_request_full(
                 retry_url, data=retry_data, headers=retry_headers,
                 timeout=self.http_retry_timeout)
-            if not (200 <= resp.code < 300):
+            if resp.code == 429:
+                log.warning(
+                    "Retrying is rate limited for account '%s'."
+                    " Discarding HTTP request." % (user_account_key,))
+                returnValue(None)
+            elif not (200 <= resp.code < 300):
                 raise HttpRetryApiError(
                     "HTTP retry failed: %s - %s" % (resp.code, resp.phrase))
         except Exception as err:
@@ -335,11 +340,10 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 ' [account: %r, request: %r, error: %r]'
                 % (user_account_key, retry_data, err))
             raise
-        else:
-            log.info(
-                'Successfully scheduled retry of request'
-                ' [account: %r, url: %r]'
-                % (user_account_key, url))
+        log.info(
+            'Successfully scheduled retry of request'
+            ' [account: %r, url: %r]'
+            % (user_account_key, url))
 
     def _push_headers(self, auth=None):
         headers = {
