@@ -974,6 +974,33 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         [_err] = self.flushLoggedErrors(HttpRetryApiError)
 
     @inlineCallbacks
+    def test_post_inbound_message_500_retry_rate_limited(self):
+        retry_url, retry_calls = yield self.start_retry_server()
+        yield self.start_app_worker({
+            'http_retry_api': retry_url,
+        })
+        msg_d = self.app_helper.make_dispatch_inbound(
+            'in 1', message_id='1', conv=self.conversation)
+
+        # return 500 response to message push
+        req = yield self.push_calls.get()
+        req.setResponseCode(500)
+        req.finish()
+
+        # return rate limited response from retry api
+        retry = yield retry_calls.get()
+        retry.setResponseCode(429)
+        retry.finish()
+
+        with LogCatcher(log_level=logging.WARNING) as lc:
+            yield msg_d
+
+        self.assertEqual(lc.messages(), [
+            "Retrying is rate limited for account 'test-0-user'."
+            " Discarding HTTP request.",
+        ])
+
+    @inlineCallbacks
     def test_post_inbound_message_500_retry_fails_with_exception(self):
         retry_url, retry_calls = yield self.start_retry_server()
         yield self.start_app_worker({
