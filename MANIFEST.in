@@ -13,10 +13,11 @@ include *.sh
 include go/js_paths.yml
 recursive-include go/templates *
 recursive-include go/*/templates *
+recursive-include go/apps/*/templates *
 recursive-include go/fixtures *
 recursive-include go/*/fixtures *
-recursive-include go/static *
 recursive-include go/*/static *
+recursive-include go/apps *.js
 
 # Prune stray bytecode files.
 global-exclude *.pyc
