@@ -1,8 +1,28 @@
 import json
-from django.template.defaultfilters import slugify
+import re
+import unicodedata
+
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.apps.jsbox.utils import jsbox_js_config
+
+
+def slugify(value):
+    """
+    Converts to lowercase, removes non-word characters (alphanumerics and
+    underscores) and converts spaces to hyphens. Also strips leading and
+    trailing whitespace.
+
+    Borrowed from django.utils.text.slugify() and modified to remove
+    Django-specific "safe string" code, handle non-unicode input, and be PEP-8
+    compliant.
+    """
+    if not isinstance(value, unicode):
+        value = value.decode('utf-8')
+    value = unicodedata.normalize('NFKD', value)
+    value = value.encode('ascii', 'ignore').decode('ascii')
+    value = re.sub('[^\w\s-]', '', value).strip().lower()
+    return re.sub('[-\s]+', '-', value)
 
 
 class SendJsboxAction(ConversationAction):

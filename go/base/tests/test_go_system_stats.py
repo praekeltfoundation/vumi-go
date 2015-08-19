@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
 
-from django.core.management.base import CommandError
-from django.core.management import call_command
+from go.vumitools.tests.helpers import GoMessageHelper, djangotest_imports
 
-from go.base.tests.helpers import (
-    GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
-from go.vumitools.tests.helpers import GoMessageHelper
+with djangotest_imports(globals()):
+    from django.core.management.base import CommandError
+    from django.core.management import call_command
+
+    from go.base.tests.helpers import (
+        GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
 
 
 class TestGoSystemStatsCommand(GoDjangoTestCase):

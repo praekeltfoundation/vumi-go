@@ -3,28 +3,31 @@ from decimal import Decimal
 
 import mock
 import pytest
-
 from twisted.internet.defer import inlineCallbacks, returnValue
-
 from vumi.tests.helpers import VumiTestCase
 
-from go.billing import settings as app_settings
-from go.billing import api
-from go.billing.models import Account, Transaction, MessageCost
-from go.billing.utils import DummySite, JSONDecoder
-from go.base.tests.helpers import DjangoVumiApiHelper
-from go.billing.django_utils import load_account_credits
-from go.billing.tests.helpers import (
-    mk_tagpool, mk_message_cost, get_session_length_cost,
-    get_message_credits, get_storage_credits, get_session_credits,
-    get_session_length_credits)
+from go.vumitools.tests.helpers import djangotest_imports
 
 DB_SUPPORTED = False
-try:
-    app_settings.get_connection_string()
-    DB_SUPPORTED = True
-except ValueError:
-    pass
+
+with djangotest_imports(globals()):
+    from go.billing import settings as app_settings
+    from go.billing import api
+    from go.billing.models import Account, Transaction, MessageCost
+    from go.billing.utils import DummySite, JSONDecoder
+    from go.base.tests.helpers import DjangoVumiApiHelper
+    from go.billing.django_utils import load_account_credits
+    from go.billing.tests.helpers import (
+        mk_tagpool, mk_message_cost, get_session_length_cost,
+        get_message_credits, get_storage_credits, get_session_credits,
+        get_session_length_credits)
+
+    # This can only be `True` if we can import the things we need to import.
+    try:
+        app_settings.get_connection_string()
+        DB_SUPPORTED = True
+    except ValueError:
+        pass
 
 skipif_unsupported_db = pytest.mark.skipif(
     "True" if not DB_SUPPORTED else "False",

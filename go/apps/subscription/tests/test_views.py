@@ -1,7 +1,10 @@
-from django.utils.unittest import skip
+import pytest
 
-from go.apps.tests.view_helpers import AppViewsHelper
-from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.apps.tests.view_helpers import AppViewsHelper
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestSubscriptionViews(GoDjangoTestCase):
@@ -27,6 +30,6 @@ class TestSubscriptionViews(GoDjangoTestCase):
         response = self.client.get(conv_helper.get_view_url('show'))
         self.assertContains(response, u"<h1>myconv</h1>")
 
-    @skip("TODO")
+    @pytest.mark.skipif(True, reason="TODO")
     def test_edit_subscription(self):
         raise NotImplementedError("TODO")

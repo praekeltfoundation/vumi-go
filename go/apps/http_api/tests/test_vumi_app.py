@@ -15,8 +15,8 @@ from vumi.utils import http_request_full
 
 from go.apps.http_api.resource import (
     StreamResourceMixin, StreamingConversationResource)
-from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.tests.helpers import AppWorkerHelper
+from go.apps.http_api.vumi_app import StreamingHTTPWorker
 
 
 class TestStreamingHTTPWorker(VumiTestCase):

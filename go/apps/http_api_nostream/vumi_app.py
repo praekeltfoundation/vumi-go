@@ -1,19 +1,21 @@
 # -*- test-case-name: go.apps.http_api_nostream.tests.test_vumi_app -*-
 import base64
+import json
 
-from twisted.internet.defer import inlineCallbacks, Deferred, succeed
+from twisted.internet.defer import (
+    inlineCallbacks, returnValue, Deferred, succeed)
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
 
-from vumi.config import ConfigInt, ConfigText
+from vumi.config import ConfigInt, ConfigText, ConfigList
 from vumi.utils import http_request_full, HttpTimeoutError
 from vumi.transports.httprpc import httprpc
 from vumi import log
 
 from go.apps.http_api_nostream.auth import AuthorizedResource
 from go.apps.http_api_nostream.resource import ConversationResource
-from go.base.utils import extract_auth_from_url
 from go.vumitools.app_worker import GoApplicationWorker
+from go.vumitools.utils import extract_auth_from_url
 
 
 # NOTE: Things in this module are subclassed and used by go.apps.http_api.
@@ -43,6 +45,18 @@ class HTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         "zero disables the limit. (Unlike concurrency_limit, this queues "
         "requests instead of rejecting them.)",
         default=1, static=True)
+    http_retry_api = ConfigText(
+        "Base URL for the HTTP Retry API. If set to null, message and"
+        " event requests are not retried.",
+        default=None, static=True)
+    http_retry_intervals = ConfigList(
+        "List of delays, in seconds relative to the initial failed request, at"
+        " which retries should be scheduled. Default is 5 minutes, 30 minutes"
+        " and 1 hour.",
+        default=(300, 1800, 3600), static=True)
+    http_retry_timeout = ConfigInt(
+        "How long to wait for a response from the retry API (in seconds).",
+        default=5, static=True)
 
 
 class ConcurrencyLimiterError(Exception):
@@ -196,6 +210,12 @@ class ConcurrencyLimitManager(object):
         self._cleanup_limiter(key)
 
 
+class HttpRetryApiError(Exception):
+    """
+    Raised when an error occurs while submitting HTTP requests for retrying.
+    """
+
+
 class NoStreamingHTTPWorker(GoApplicationWorker):
 
     worker_name = 'http_api_nostream_worker'
@@ -208,6 +228,14 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
         self.web_path = config.web_path
         self.web_port = config.web_port
         self.health_path = config.health_path
+
+        # HTTP request settings
+        self.http_request_timeout = config.timeout
+
+        # HTTP retry API settings
+        self.http_retry_api = config.http_retry_api
+        self.http_retry_intervals = config.http_retry_intervals
+        self.http_retry_timeout = config.http_retry_timeout
 
         # Set these to empty dictionaries because we're not interested
         # in using any of the helper functions at this point.
@@ -254,7 +282,7 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 "push_message_url not configured for conversation: %s" % (
                     conversation.key))
             return
-        return self.push(push_url, message)
+        return self.push(conversation.user_account.key, push_url, message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
@@ -271,37 +299,86 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
                 "push_event_url not configured for conversation: %s" % (
                     conversation.key))
             return
-        return self.push(push_url, event)
+        return self.push(conversation.user_account.key, push_url, event)
 
     @inlineCallbacks
-    def push(self, url, vumi_message):
-        config = self.get_static_config()
-        data = vumi_message.to_json().encode('utf-8')
+    def schedule_push_retry(self, user_account_key, url, method, data,
+                            headers):
+        if self.http_retry_api is None:
+            returnValue(None)
+        list_headers = dict((k, [v]) for k, v in headers.iteritems())
+        retry_url = (
+            self.http_retry_api.encode("utf-8").rstrip('/') + '/requests/')
+        retry_headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+            'X-Owner-ID': user_account_key.encode("utf-8"),
+        }
+        retry_data = json.dumps({
+            "intervals": self.http_retry_intervals,
+            "request": {
+                "url": url,
+                "method": method,
+                "body": data,
+                "headers": list_headers,
+            },
+        }).encode('utf-8')
         try:
-            auth, url = extract_auth_from_url(url.encode('utf-8'))
-            headers = {
-                'Content-Type': 'application/json; charset=utf-8',
-            }
-            if auth is not None:
-                username, password = auth
-
-                if username is None:
-                    username = ''
-
-                if password is None:
-                    password = ''
-
-                headers.update({
-                    'Authorization': 'Basic %s' % (
-                        base64.b64encode('%s:%s' % (username, password)),)
-                })
             resp = yield http_request_full(
-                url, data=data, headers=headers, timeout=config.timeout)
+                retry_url, data=retry_data, headers=retry_headers,
+                timeout=self.http_retry_timeout)
+            if resp.code == 429:
+                log.warning(
+                    "Retrying is rate limited for account '%s'."
+                    " Discarding HTTP request." % (user_account_key,))
+                returnValue(None)
+            elif not (200 <= resp.code < 300):
+                raise HttpRetryApiError(
+                    "HTTP retry failed: %s - %s" % (resp.code, resp.phrase))
+        except Exception as err:
+            log.warning(
+                'Error scheduling retry of request'
+                ' [account: %r, request: %r, error: %r]'
+                % (user_account_key, retry_data, err))
+            raise
+        log.info(
+            'Successfully scheduled retry of request'
+            ' [account: %r, url: %r]'
+            % (user_account_key, url))
+
+    def _push_headers(self, auth=None):
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+        }
+        if auth is not None:
+            username, password = auth
+            if username is None:
+                username = ''
+            if password is None:
+                password = ''
+            headers['Authorization'] = 'Basic %s' % (
+                base64.b64encode('%s:%s' % (username, password)),)
+        return headers
+
+    @inlineCallbacks
+    def push(self, user_account_key, url, vumi_message):
+        data = vumi_message.to_json().encode('utf-8')
+        auth, url = extract_auth_from_url(url.encode('utf-8'))
+        headers = self._push_headers(auth=auth)
+        retry_required = True
+        try:
+            resp = yield http_request_full(
+                url, data=data, headers=headers,
+                timeout=self.http_request_timeout)
             if not (200 <= resp.code < 300):
                 # We didn't get a 2xx response.
                 log.warning('Got unexpected response code %s from %s' % (
                     resp.code, url))
+                if not (500 <= resp.code < 600):
+                    retry_required = False
+            else:
+                retry_required = False
         except SchemeNotSupported:
+            retry_required = False  # retrying bad URLs won't help
             log.warning('Unsupported scheme for URL: %s' % (url,))
         except HttpTimeoutError:
             log.warning("Timeout pushing message to %s" % (url,))
@@ -309,6 +386,10 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning("DNS lookup error pushing message to %s" % (url,))
         except ConnectionRefusedError:
             log.warning("Connection refused pushing message to %s" % (url,))
+        if retry_required:
+            yield self.schedule_push_retry(
+                user_account_key, url=url, method='POST', data=data,
+                headers=headers)
 
     def get_health_response(self):
         return "OK"

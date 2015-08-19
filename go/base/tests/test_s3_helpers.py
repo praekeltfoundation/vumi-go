@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test for go.base.tests.s3_helpers."""
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.tests.s3_helpers import S3Helper
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.tests.s3_helpers import S3Helper
 
 
 class TestS3Helper(GoDjangoTestCase):

@@ -1,10 +1,12 @@
+from contextlib import contextmanager
 from datetime import datetime, timedelta
+import os
 import uuid
 
+import pytest
 from twisted.internet.defer import (
     inlineCallbacks, returnValue, Deferred, gatherResults)
 from twisted.python.monkey import MonkeyPatcher
-
 from zope.interface import implements
 
 from vumi.tests.helpers import (
@@ -17,6 +19,42 @@ from go.vumitools.api import (
 from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.routing import RoutingMetadata
 from go.vumitools.utils import MessageMetadataHelper
+
+
+skip_django = bool(os.environ.get('VUMIGO_SKIP_DJANGO'))
+djangotest = pytest.mark.skipif(skip_django, reason='Test requires Django.')
+
+
+def is_django_importerror(importerror):
+    return any(importerror.args[0].startswith('No module named %s' % (mod,))
+               for mod in ['django', 'psycopg2'])
+
+
+@contextmanager
+def djangotest_imports(mod_globals, **kw):
+    try:
+        mod_globals['pytestmark'] = djangotest
+        yield
+    except ImportError as importerror:
+        if skip_django and is_django_importerror(importerror):
+            # We're skipping Django tests and we caught an ImportError for a
+            # Django module, so ignore it and add any fakes we need.
+            add_django_test_dummies(mod_globals, **kw)
+        else:
+            # We're not skipping Django or the ImportError is for something
+            # else, so reraise it.
+            raise
+
+
+def add_django_test_dummies(mod_globals, dummy_classes=None):
+    class DummyClass(object):
+        pass
+    if dummy_classes is None:
+        dummy_classes = []
+    # Most Django tests need GoDjangoTestCase, so always add that.
+    dummy_classes = ['GoDjangoTestCase'] + dummy_classes
+    for dummy in dummy_classes:
+        mod_globals[dummy] = DummyClass
 
 
 class PatchHelper(object):

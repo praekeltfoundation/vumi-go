@@ -1,7 +1,10 @@
 from cStringIO import StringIO
 
-from go.base.management.commands import go_manage_contact_group
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.management.commands import go_manage_contact_group
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoManageContactGroupCommand(GoDjangoTestCase):

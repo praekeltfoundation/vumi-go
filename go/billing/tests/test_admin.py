@@ -1,15 +1,18 @@
 """ Test for billing admin. """
 
-from django.contrib.admin.sites import AdminSite
-from django.core.urlresolvers import reverse
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import (
-    Account, Transaction, TransactionArchive, LowCreditNotification)
-from go.billing.admin import AccountAdmin
+with djangotest_imports(globals()):
+    from django.contrib.admin.sites import AdminSite
+    from django.core.urlresolvers import reverse
 
-from .helpers import (
-    mk_message_cost, mk_statement, mk_transaction, mk_transaction_archive)
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.billing.models import (
+        Account, Transaction, TransactionArchive, LowCreditNotification)
+    from go.billing.admin import AccountAdmin
+
+    from go.billing.tests.helpers import (
+        mk_message_cost, mk_statement, mk_transaction, mk_transaction_archive)
 
 
 class MockRequest(object):

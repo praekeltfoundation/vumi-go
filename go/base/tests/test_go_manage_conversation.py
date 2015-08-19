@@ -3,12 +3,15 @@ from StringIO import StringIO
 from pprint import pformat
 from datetime import datetime
 
-from django.core.management.base import CommandError
-
 from vumi.message import parse_vumi_date
 
-from go.base.management.commands import go_manage_conversation
-from go.base.tests.helpers import GoAccountCommandTestCase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals(), dummy_classes=['GoAccountCommandTestCase']):
+    from django.core.management.base import CommandError
+
+    from go.base.management.commands import go_manage_conversation
+    from go.base.tests.helpers import GoAccountCommandTestCase
 
 
 class TestGoManageConversation(GoAccountCommandTestCase):

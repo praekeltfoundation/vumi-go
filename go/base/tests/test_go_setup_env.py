@@ -1,17 +1,19 @@
-import yaml
-
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 from ConfigParser import ConfigParser
 
-from django.contrib.auth import authenticate
-from django.core.management.base import CommandError
-
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.management.commands import go_setup_env
-from go.vumitools.routing_table import RoutingTable
-
 from mock import Mock
+import yaml
+
+from go.vumitools.routing_table import RoutingTable
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.contrib.auth import authenticate
+    from django.core.management.base import CommandError
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.management.commands import go_setup_env
 
 
 def tmp_yaml_file(lines):

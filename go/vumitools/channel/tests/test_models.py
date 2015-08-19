@@ -7,7 +7,7 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase
 
 from go.vumitools.channel.models import ChannelStore, CheapPlasticChannel
-from go.vumitools.tests.helpers import VumiApiHelper
+from go.vumitools.tests.helpers import VumiApiHelper, djangotest
 
 
 class TestChannel(VumiTestCase):
@@ -60,5 +60,6 @@ class TestChannelStore(VumiTestCase):
         self.assertEqual(channel.batch.key, "batch1")
 
 
+@djangotest
 class TestChannelStoreSync(TestChannelStore):
     is_sync = True
