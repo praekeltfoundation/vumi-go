@@ -1,17 +1,19 @@
+from twisted.internet.defer import inlineCallbacks
+
 from vumi.tests.helpers import VumiTestCase
 
-
 from go.vumitools.tests.helpers import VumiApiHelper
-from go.apps.dialogue.definition import ConversationDefinition
 from go.apps.dialogue.tests.dummy_polls import simple_poll
+from go.apps.dialogue.definition import ConversationDefinition
 
 
 class TestConversationDefinition(VumiTestCase):
+    @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = self.add_helper(VumiApiHelper(is_sync=True))
-        self.user_helper = self.vumi_helper.get_or_create_user()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.get_or_create_user()
         self.user_api = self.user_helper.user_api
-        self.conv = self.user_helper.create_conversation(u'jsbox')
+        self.conv = yield self.user_helper.create_conversation(u'jsbox')
 
     def test_configured_endpoints(self):
         poll = simple_poll()

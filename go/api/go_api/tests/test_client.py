@@ -1,11 +1,14 @@
 import json
 
-from django.conf import settings
-
-from go.api.go_api import client
-from go.base.tests.helpers import GoDjangoTestCase
-
 from mock import patch
+
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.conf import settings
+
+    from go.api.go_api import client
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestClient(GoDjangoTestCase):

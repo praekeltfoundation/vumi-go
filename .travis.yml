@@ -14,6 +14,10 @@ matrix:
     # This is a separate matrix inclusion to avoid spawning unnecessary builds.
     - python: "2.7"
       env: RIAK_VERSION="2.1.1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+    # Test without Django.
+    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
+    - python: "2.7"
+      env: RIAK_VERSION="1.4.12" VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10 VUMIGO_SKIP_DJANGO=1
 
 cache:
   directories:
@@ -29,16 +33,14 @@ before_install:
 install:
   # Travis seems to have pip 6.x, which doesn't build and cache wheels.
   - "pip install 'pip>=7.1.0'"
-  - "pip install -r requirements.pip"
+  - "if [ $VUMIGO_SKIP_DJANGO ]; then pip install -e .; else pip install -r requirements.pip; fi"
   - "pip install -r requirements-dev.pip"
   - "pip install overalls"
   - "npm install"
 
 before_script:
-  - "psql -c \"create user go with createdb password 'go';\" -U postgres"
-  - "psql -c 'create database go owner go;' -U postgres"
+  - "if [ ! $VUMIGO_SKIP_DJANGO ]; then utils/setup-test-database.sh; fi"
   - "export PYTHONPATH=."
-  - "django-admin.py syncdb --migrate --noinput --settings=go.testsettings"
   - "pip list"
   # To see what version of Riak we're running and check that it's happy.
   - $HOME/riak/bin/riak version
@@ -48,4 +50,4 @@ script:
   - grunt test
 
 after_success:
-  - overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info
+  - "if [ ! $VUMIGO_SKIP_DJANGO ]; then overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info; fi"

@@ -1,7 +1,10 @@
 from StringIO import StringIO
 
-from go.base.management.commands import go_manage_metrics
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.management.commands import go_manage_metrics
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoManageMetricsCommand(GoDjangoTestCase):

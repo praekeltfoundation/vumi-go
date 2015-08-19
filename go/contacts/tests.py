@@ -7,15 +7,18 @@ from os import path
 from StringIO import StringIO
 from zipfile import ZipFile
 
-from django.conf import settings
-from django.core import mail
-from django.core.files.storage import default_storage
-from django.core.urlresolvers import reverse
-from django.utils.html import escape
-from django.templatetags.l10n import localize
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.contacts.parsers.base import FieldNormalizer
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+with djangotest_imports(globals()):
+    from django.conf import settings
+    from django.core import mail
+    from django.core.files.storage import default_storage
+    from django.core.urlresolvers import reverse
+    from django.utils.html import escape
+    from django.templatetags.l10n import localize
+
+    from go.contacts.parsers.base import FieldNormalizer
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 TEST_GROUP_NAME = u"Test Group"

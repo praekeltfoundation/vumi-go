@@ -1,10 +1,13 @@
 import urllib
 
-from django.core.urlresolvers import reverse
-
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.utils import get_router_view_definition
 from go.vumitools.router.models import ROUTER_ARCHIVED
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.utils import get_router_view_definition
 
 
 class TestRouterViews(GoDjangoTestCase):

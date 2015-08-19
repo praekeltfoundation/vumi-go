@@ -1,6 +1,6 @@
 import json
-from vumi.tests.helpers import VumiTestCase
 
+from vumi.tests.helpers import VumiTestCase
 
 from go.apps.jsbox.definition import ConversationDefinition
 

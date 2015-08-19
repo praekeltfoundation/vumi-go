@@ -10,12 +10,12 @@ from vumi.tests.helpers import VumiTestCase
 from vumi.tests.utils import LogCatcher
 from vumi.utils import mkheaders, StringProducer
 
+from go.billing.utils import BillingError, JSONEncoder
 from go.vumitools import billing_worker
 from go.vumitools.billing_worker import BillingApi, BillingDispatcher
 from go.vumitools.tests.helpers import VumiApiHelper, GoMessageHelper
 from go.vumitools.utils import MessageMetadataHelper
 
-from go.billing.utils import BillingError, JSONEncoder
 
 SESSION_CLOSE = TransportUserMessage.SESSION_CLOSE
 

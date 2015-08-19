@@ -1,7 +1,10 @@
-from django.core.urlresolvers import reverse
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.apps.tests.view_helpers import AppViewsHelper
-from go.base.tests.helpers import GoDjangoTestCase
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+
+    from go.apps.tests.view_helpers import AppViewsHelper
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestHttpApiNoStreamViews(GoDjangoTestCase):

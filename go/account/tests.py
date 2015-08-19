@@ -2,15 +2,18 @@ import urlparse
 from datetime import datetime
 
 import mock
-from django.core.urlresolvers import reverse
-from django.core import mail
-from django.conf import settings
 
-from go.account.utils import send_user_account_summary
-from go.account.tasks import send_scheduled_account_summary
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.vumitools.tests.helpers import GoMessageHelper
-from go.billing.tests.helpers import mk_statement, get_billing_account
+from go.vumitools.tests.helpers import GoMessageHelper, djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+    from django.core import mail
+    from django.conf import settings
+
+    from go.account.utils import send_user_account_summary
+    from go.account.tasks import send_scheduled_account_summary
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.billing.tests.helpers import mk_statement, get_billing_account
 
 
 def get_statement_html_url(statement_id):

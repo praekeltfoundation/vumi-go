@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 from datetime import date
 
-from django.core.management import call_command
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.tests.helpers import (
-    GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
-from go.billing.models import Account, Statement
+with djangotest_imports(globals()):
+    from django.core.management import call_command
+
+    from go.base.tests.helpers import (
+        GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
+    from go.billing.models import Account, Statement
 
 
 class TestGenStatements(GoDjangoTestCase):

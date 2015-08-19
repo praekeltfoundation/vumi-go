@@ -1,12 +1,15 @@
 from StringIO import StringIO
 from zipfile import ZipFile
 
-from django.core import mail
-
-from go.apps.surveys.view_definition import get_poll_config
-from go.apps.tests.view_helpers import AppViewsHelper
-from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.core import mail
+
+    from go.apps.surveys.view_definition import get_poll_config
+    from go.apps.tests.view_helpers import AppViewsHelper
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestSurveysViews(GoDjangoTestCase):

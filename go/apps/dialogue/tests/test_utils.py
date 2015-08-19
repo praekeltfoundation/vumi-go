@@ -1,3 +1,5 @@
+from twisted.internet.defer import inlineCallbacks
+
 from vumi.tests.helpers import VumiTestCase
 
 from go.apps.dialogue.utils import dialogue_js_config, configured_endpoints
@@ -6,20 +8,23 @@ from go.apps.dialogue.tests.dummy_polls import simple_poll
 
 
 class TestDialogueJsConfig(VumiTestCase):
+    @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = self.add_helper(VumiApiHelper(is_sync=True))
-        self.user_helper = self.vumi_helper.get_or_create_user()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.get_or_create_user()
 
+    @inlineCallbacks
     def test_config_delivery_class(self):
         poll = simple_poll()
         poll['poll_metadata']['delivery_class'] = 'twitter'
 
-        conv = self.user_helper.create_conversation(
+        conv = yield self.user_helper.create_conversation(
             u'dialogue', config={'poll': poll})
 
         config = dialogue_js_config(conv)
         self.assertEqual(config['delivery_class'], 'twitter')
 
+    @inlineCallbacks
     def test_config_endpoints(self):
         poll = simple_poll()
 
@@ -46,7 +51,7 @@ class TestDialogueJsConfig(VumiTestCase):
             'channel_type': 'sms'
         }]
 
-        conv = self.user_helper.create_conversation(
+        conv = yield self.user_helper.create_conversation(
             u'dialogue', config={'poll': poll})
         config = dialogue_js_config(conv)
         self.assertEqual(config['endpoints'], {
