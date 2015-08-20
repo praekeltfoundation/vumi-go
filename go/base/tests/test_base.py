@@ -1,13 +1,16 @@
-from django.core.urlresolvers import reverse
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
-from django.core.paginator import Paginator
-
-from go.base import utils
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.api import VumiApi, VumiUserApi
 from go.vumitools.conversation.definition import ConversationDefinitionBase
-from go.conversation.view_definition import ConversationViewDefinitionBase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.core.paginator import Paginator
+
+    from go.base import utils
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.conversation.view_definition import ConversationViewDefinitionBase
 
 
 class TestAuthentication(GoDjangoTestCase):

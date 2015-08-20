@@ -1,10 +1,13 @@
-from django import forms
-
 from vumi.tests.helpers import VumiTestCase
 
-from go.apps.rapidsms.view_definition import (
-    EndpointsField, RapidSmsForm, AuthTokensForm, EditRapidSmsView,
-    ConversationViewDefinition)
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django import forms
+
+    from go.apps.rapidsms.view_definition import (
+        EndpointsField, RapidSmsForm, AuthTokensForm, EditRapidSmsView,
+        ConversationViewDefinition)
 
 
 class TestEndpointsField(VumiTestCase):

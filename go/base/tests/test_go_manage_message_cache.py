@@ -1,7 +1,10 @@
 from tempfile import NamedTemporaryFile
 
-from go.base.management.commands import go_manage_message_cache
-from go.base.tests.helpers import GoCommandTestCase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals(), dummy_classes=['GoCommandTestCase']):
+    from go.base.management.commands import go_manage_message_cache
+    from go.base.tests.helpers import GoCommandTestCase
 
 
 def make_batch_keys_file(batch_keys):

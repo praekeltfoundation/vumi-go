@@ -1,12 +1,15 @@
 import urllib
 
-from django.test.client import Client
-from django.core.urlresolvers import reverse
-from django.contrib import messages
-
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.token_manager import TokenManager
-from go.token.django_token_manager import DjangoTokenManager
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.test.client import Client
+    from django.core.urlresolvers import reverse
+    from django.contrib import messages
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.token.django_token_manager import DjangoTokenManager
 
 
 class TestDjangoTokenManager(GoDjangoTestCase):

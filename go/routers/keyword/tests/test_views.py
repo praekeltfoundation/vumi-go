@@ -1,6 +1,9 @@
-from go.base.tests.helpers import GoDjangoTestCase
-from go.routers.tests.view_helpers import RouterViewsHelper
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase
+    from go.routers.tests.view_helpers import RouterViewsHelper
 
 
 class KeywordViewTests(GoDjangoTestCase):

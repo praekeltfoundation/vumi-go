@@ -2,14 +2,18 @@
 
 from datetime import datetime
 
-from django.core.management import call_command
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.s3utils import Bucket
-from go.base.tests.helpers import (
-    GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
-from go.base.tests.s3_helpers import S3Helper
-from go.billing.models import Account, Transaction, TransactionArchive
-from go.billing.tests.helpers import mk_statement, mk_transaction, this_month
+with djangotest_imports(globals()):
+    from django.core.management import call_command
+
+    from go.base.s3utils import Bucket
+    from go.base.tests.helpers import (
+        GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
+    from go.base.tests.s3_helpers import S3Helper
+    from go.billing.models import Account, Transaction, TransactionArchive
+    from go.billing.tests.helpers import (
+        mk_statement, mk_transaction, this_month)
 
 
 class TestArchiveTransactions(GoDjangoTestCase):

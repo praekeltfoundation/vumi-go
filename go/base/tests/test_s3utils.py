@@ -4,13 +4,16 @@ import gzip
 import md5
 import StringIO
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.tests.s3_helpers import S3Helper
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.s3utils import (
-    BucketConfig, Bucket, IMultipartWriter,
-    MultipartWriter, GzipMultipartWriter,
-    KeyAlreadyExistsError)
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.tests.s3_helpers import S3Helper
+
+    from go.base.s3utils import (
+        BucketConfig, Bucket, IMultipartWriter,
+        MultipartWriter, GzipMultipartWriter,
+        KeyAlreadyExistsError)
 
 
 def gunzip(data):

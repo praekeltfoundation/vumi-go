@@ -1,7 +1,10 @@
-from django.contrib.auth import get_user_model
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.management.commands import go_create_user
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+with djangotest_imports(globals()):
+    from django.contrib.auth import get_user_model
+
+    from go.base.management.commands import go_create_user
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoCreateUserCommand(GoDjangoTestCase):

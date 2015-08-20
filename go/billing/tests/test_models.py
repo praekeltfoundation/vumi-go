@@ -1,10 +1,13 @@
 from decimal import Decimal, Context, Inexact, Rounded
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import (
-    TagPool, Account, MessageCost, Transaction, create_billing_account,
-    LowCreditNotification)
-from go.billing.settings import QUANTIZATION_EXPONENT
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.billing.models import (
+        TagPool, Account, MessageCost, Transaction, create_billing_account,
+        LowCreditNotification)
+    from go.billing.settings import QUANTIZATION_EXPONENT
 
 
 class TestTagPool(GoDjangoTestCase):

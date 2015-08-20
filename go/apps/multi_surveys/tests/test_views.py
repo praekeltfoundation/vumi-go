@@ -2,10 +2,13 @@ from datetime import date
 from zipfile import ZipFile
 from StringIO import StringIO
 
-from django.core import mail
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.apps.tests.view_helpers import AppViewsHelper
-from go.base.tests.helpers import GoDjangoTestCase
+with djangotest_imports(globals()):
+    from django.core import mail
+
+    from go.apps.tests.view_helpers import AppViewsHelper
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestMultiSurveyViews(GoDjangoTestCase):

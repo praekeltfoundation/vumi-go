@@ -2,12 +2,15 @@
 from decimal import Decimal
 
 import mock
-from django.core.urlresolvers import reverse
 
-from go.base.tests.helpers import DjangoVumiApiHelper, GoDjangoTestCase
-from go.billing.models import Account
+from go.vumitools.tests.helpers import djangotest_imports
 
-from .helpers import mk_statement, get_line_items
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+
+    from go.base.tests.helpers import DjangoVumiApiHelper, GoDjangoTestCase
+    from go.billing.models import Account
+    from go.billing.tests.helpers import mk_statement, get_line_items
 
 
 class TestStatementView(GoDjangoTestCase):

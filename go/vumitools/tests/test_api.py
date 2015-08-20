@@ -12,7 +12,7 @@ from vumi.errors import VumiError
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.routing_table import GoConnector, RoutingTable
-from go.vumitools.tests.helpers import VumiApiHelper
+from go.vumitools.tests.helpers import VumiApiHelper, djangotest
 from go.vumitools.api import (
     VumiUserApi, VumiApiCommand, VumiApiEvent, TagpoolSet)
 
@@ -67,6 +67,7 @@ class TestTxVumiApi(VumiTestCase):
         self.assertEqual(sorted(pools.pools()), [u'pool1', u'pool2'])
 
 
+@djangotest
 class TestVumiApi(TestTxVumiApi):
     is_sync = True
 
@@ -494,6 +495,7 @@ class TestTxVumiUserApi(VumiTestCase):
         self.assertEqual(pools.pools(), [])
 
 
+@djangotest
 class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True
 
@@ -605,6 +607,7 @@ class TestTxVumiRouterApi(VumiTestCase):
         })
 
 
+@djangotest
 class TestVumiRouterApi(TestTxVumiRouterApi):
     is_sync = True
 

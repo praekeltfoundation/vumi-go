@@ -1,7 +1,10 @@
 """Tests for go.api.go_api.session."""
 
-from go.api.go_api.session import SessionStore, CreateError
-from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.api.go_api.session import SessionStore, CreateError
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestSessionStore(GoDjangoTestCase):

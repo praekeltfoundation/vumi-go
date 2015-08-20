@@ -1,10 +1,13 @@
 from uuid import uuid4
 import urllib
 
-from django.core.urlresolvers import reverse
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.channel.views import get_channel_view_definition
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.channel.views import get_channel_view_definition
 
 
 class TestChannelViews(GoDjangoTestCase):

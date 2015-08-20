@@ -1,11 +1,13 @@
-from django.core.urlresolvers import reverse
-
 from vumi.tests.utils import RegexMatcher
 
-from go.apps.tests.view_helpers import AppViewsHelper
-from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.tests.helpers import djangotest_imports
 from go.vumitools.token_manager import TokenManager
+
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+    from go.apps.tests.view_helpers import AppViewsHelper
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestBulkMessageViews(GoDjangoTestCase):

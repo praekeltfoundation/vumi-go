@@ -1,11 +1,16 @@
 import time
-from django.http import HttpResponse
-from django.test.client import RequestFactory
 
-from go.api.go_api.session_manager import SessionManager
-from go.base.middleware import VumiUserApiMiddleware, ResponseTimeMiddleware
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.api import VumiUserApi
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.http import HttpResponse
+    from django.test.client import RequestFactory
+
+    from go.api.go_api.session_manager import SessionManager
+    from go.base.middleware import (
+        VumiUserApiMiddleware, ResponseTimeMiddleware)
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestVumiUserApiMiddleware(GoDjangoTestCase):
