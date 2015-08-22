@@ -17,7 +17,8 @@ matrix:
     #   env: RIAK_VERSION=current
     # Test on pypy without coverage, because it's unnecessary and very slow.
     - python: "pypy"
-      env: NO_COVERAGE="1" RIAK_VERSION="1.4.12-1"
+      # PYPY_GC_MAX_PINNED=0 worka around an obscure gc bug in pypy<=2.6.0
+      env: NO_COVERAGE="1" RIAK_VERSION="1.4.12-1" PYPY_GC_MAX_PINNED=0
 
 services:
   - postgresql
