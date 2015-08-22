@@ -1,11 +1,16 @@
 import platform
+import sys
 from setuptools import setup, find_packages
 
 
 # We need `psycopg2cffi` for pypy, but `psycopg2` for cpython.
 psycopg2 = 'psycopg2==2.4'
+# cryptography>=1.0 requires pypy>=2.6.0 because of the new cffi stuff.
+cryptography = 'cryptography'
 if platform.python_implementation() == "PyPy":
     psycopg2 = 'psycopg2cffi'
+    if sys.pypy_version_info < (2, 6):
+        cryptography = 'cryptography<1.0'
 
 
 setup(
@@ -19,6 +24,7 @@ setup(
     author_email='dev@praekeltfoundation.org',
     packages=find_packages(),
     install_requires=[
+        cryptography,  # See above for pypy-version-dependent requirement.
         'vumi>=0.5.19',
         'vxsandbox>=0.5.1',
         'vxpolls',
@@ -26,8 +32,7 @@ setup(
         'Django==1.5.8',
         'gunicorn==0.15.0',
         'South==0.8.2',
-        # We choose psycopg2 based on Python implementation above.
-        psycopg2,
+        psycopg2,  # We choose psycopg2 based on Python implementation above.
         'celery==3.0.23',
         'django-celery==3.0.23',
         # https://github.com/pmclanahan/django-celery-email/pull/14
