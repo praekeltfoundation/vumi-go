@@ -16,11 +16,11 @@ matrix:
       env: RIAK_VERSION="2.1.1" VUMIGO_TEST_DB=postgres
     # Test without Django.
     - python: "2.7"
-      env: VUMIGO_SKIP_DJANGO=1
+      env: VUMIGO_SKIP_DJANGO=1 NO_COVERAGE=1
     # Test on pypy. We need to install our own because 2.5.1 is too old.
     # Also, set PYPY_GC_MAX_PINNED to avoid an obscure GC bug in pypy<=2.6.0.
     - python: "pypy"
-      env: PYPY_VERSION="2.6.0" PYPY_GC_MAX_PINNED=0 VUMIGO_TEST_DB=postgres
+      env: PYPY_VERSION="2.6.0" PYPY_GC_MAX_PINNED=0 VUMIGO_TEST_DB=postgres NO_COVERAGE=1
 
 cache:
   directories:
@@ -58,4 +58,4 @@ script:
   - grunt test
 
 after_success:
-  - "if [ ! $VUMIGO_SKIP_DJANGO ]; then overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info; fi"
+  - "[ -z $NO_COVERAGE ] && overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info"
