@@ -7,28 +7,36 @@ python:
 node_js:
   - "0.10"
 env:
-  - RIAK_VERSION="1.4.12" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+  - VUMIGO_TEST_DB=postgres
 matrix:
+  # Some separate matrix inclusions to avoid spawning unnecessary builds.
   include:
     # Test against Riak 2.1.1.
-    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
     - python: "2.7"
-      env: RIAK_VERSION="2.1.1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+      env: RIAK_VERSION="2.1.1" VUMIGO_TEST_DB=postgres
     # Test without Django.
-    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
     - python: "2.7"
-      env: RIAK_VERSION="1.4.12" VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10 VUMIGO_SKIP_DJANGO=1
+      env: VUMIGO_SKIP_DJANGO=1
+    # Test on pypy.
+    # Currently without Django, and we need to install our own pypy.
+    # Also, set PYPY_GC_MAX_PINNED to avoid an obscure GC bug in pypy<=2.6.0.
+    - python: "pypy"
+      env: VUMIGO_SKIP_DJANGO=1 PYPY_VERSION="2.6.0" PYPY_GC_MAX_PINNED=0
 
 cache:
   directories:
     - $HOME/.cache/pip
     - $HOME/downloads
+    - $HOME/.pyenv
 services:
   - postgresql
   - redis-server
 
 before_install:
+  # If necessary, set up an appropriate version of pypy.
+  - if [ ! -z "$PYPY_VERSION" ]; then source utils/setup-pypy-travis.sh; fi
   # Set up an appropriate version of Riak.
+  - export RIAK_VERSION="${RIAK_VERSION-1.4.12}"
   - utils/setup_travis_riak.sh "${RIAK_VERSION}"
 install:
   # Travis seems to have pip 6.x, which doesn't build and cache wheels.
@@ -46,6 +54,7 @@ before_script:
   - $HOME/riak/bin/riak version
   - $HOME/riak/bin/riak-admin member-status
 script:
+  - export VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10
   - ./run-tests.sh
   - grunt test
 
