@@ -17,8 +17,8 @@ matrix:
     #   env: RIAK_VERSION=current
     # Test on pypy without coverage, because it's unnecessary and very slow.
     - python: "pypy"
-      # PYPY_GC_MAX_PINNED=0 worka around an obscure gc bug in pypy<=2.6.0
-      env: NO_COVERAGE="1" RIAK_VERSION="1.4.12-1" PYPY_GC_MAX_PINNED=0
+      # PYPY_GC_MAX_PINNED=0 works around an obscure gc bug in pypy<=2.6.0
+      env: NO_COVERAGE="1" RIAK_VERSION="1.4.12-1" PYPY_GC_MAX_PINNED=0 PYPY_VERSION="2.6.0"
 
 services:
   - postgresql
@@ -27,6 +27,8 @@ before_install:
   # Set up an appropriate version of Riak.
   - sudo utils/setup_travis_riak.sh "${RIAK_VERSION}"
 install:
+  - if [ ! -z "$PYPY_VERSION" ]; then deactivate; pyenv install pypy-$PYPY_VERSION; pyenv global pypy-$PYPY_VERSION; virtualenv -p $(which python) ~/env-pypy-$PYPY_VERSION; source ~/env-pypy-$PYPY_VERSION/bin/activate; fi
+  - "python --version"
   - "pip install -r requirements.pip"
   - "pip install -r requirements-dev.pip"
   - "pip install overalls"
