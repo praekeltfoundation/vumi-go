@@ -27,6 +27,7 @@ before_install:
   # Set up an appropriate version of Riak.
   - sudo utils/setup_travis_riak.sh "${RIAK_VERSION}"
 install:
+  - if [ ! -z "$PYPY_VERSION" ]; then curl -L https://raw.githubusercontent.com/yyuu/pyenv-installer/master/bin/pyenv-installer | bash; fi
   - if [ ! -z "$PYPY_VERSION" ]; then deactivate; pyenv install pypy-$PYPY_VERSION; pyenv global pypy-$PYPY_VERSION; virtualenv -p $(which python) ~/env-pypy-$PYPY_VERSION; source ~/env-pypy-$PYPY_VERSION/bin/activate; fi
   - "python --version"
   - "pip install -r requirements.pip"
