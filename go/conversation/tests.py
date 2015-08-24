@@ -1078,10 +1078,12 @@ class TestConversationReportsView(BaseConversationViewTestCase):
         conv = self.user_helper.create_conversation(u'dummy')
         response = self.client.get(self.get_view_url(conv, 'reports'))
 
+        [error_log] = self.error_log
         self.assertEqual(
-            self.error_log,
-            ['Dashboard sync failed: '
-             '400: {"message": ":(", "success": false}'])
+            error_log.split(": {")[0], "Dashboard sync failed: 400")
+        self.assertEqual(
+            json.loads("{" + error_log.split(": {", 1)[1]),
+            {"message": ":(", "success": False})
 
         self.assertEqual(response.context['dashboard_config'], None)
 

@@ -1,9 +1,11 @@
-
 # Django settings for go project.
 import os
 import djcelery
 import yaml
 
+# Tell psycopg2cffi to impersonate psycopg2
+from psycopg2cffi import compat
+compat.register()
 
 djcelery.setup_loader()
 
