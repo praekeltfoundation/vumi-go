@@ -32,7 +32,7 @@ services:
 
 before_install:
   # Set up an appropriate version of Riak.
-  - "[ ! $TEST_JS_ONLY ] && utils/setup_travis_riak.sh ${RIAK_VERSION}"
+  - "if [ ! $TEST_JS_ONLY ]; then utils/setup_travis_riak.sh ${RIAK_VERSION}; fi"
 install:
   # Travis seems to have pip 6.x, which doesn't build and cache wheels.
   - "pip install 'pip>=7.1.0'"
@@ -48,8 +48,8 @@ before_script:
   - "export PYTHONPATH=."
   - "pip list"
   # To see what version of Riak we're running and check that it's happy.
-  - "[ ! $TEST_JS_ONLY ] && $HOME/riak/bin/riak version"
-  - "[ ! $TEST_JS_ONLY ] && $HOME/riak/bin/riak-admin member-status"
+  - "if [ ! $TEST_JS_ONLY ]; then $HOME/riak/bin/riak version; fi"
+  - "if [ ! $TEST_JS_ONLY ]; then $HOME/riak/bin/riak-admin member-status; fi"
 script:
   - "if [ ! $TEST_JS_ONLY ]; then ./run-tests.sh; else grunt test; fi"
 
