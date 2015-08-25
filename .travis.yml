@@ -18,6 +18,9 @@ matrix:
     # This is a separate matrix inclusion to avoid spawning unnecessary builds.
     - python: "2.7"
       env: RIAK_VERSION="1.4.12" VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10 VUMIGO_SKIP_DJANGO=1
+    # Test JS stuff.
+    - python: "2.7"
+      env: TEST_JS_ONLY=1 VUMIGO_SKIP_DJANGO=1
 
 cache:
   directories:
@@ -36,7 +39,9 @@ install:
   - "if [ $VUMIGO_SKIP_DJANGO ]; then pip install -e .; else pip install -r requirements.pip; fi"
   - "pip install -r requirements-dev.pip"
   - "pip install overalls"
-  - "npm install"
+  # Minimal set of JS libs necessary for jsbox and dialogue app tests.
+  - "npm install --production --no-optional"
+  - "if [ $TEST_JS_ONLY ]; then npm install; fi"
 
 before_script:
   - "if [ ! $VUMIGO_SKIP_DJANGO ]; then utils/setup-test-database.sh; fi"
@@ -46,8 +51,8 @@ before_script:
   - $HOME/riak/bin/riak version
   - $HOME/riak/bin/riak-admin member-status
 script:
-  - ./run-tests.sh
-  - grunt test
+  - "if [ ! $TEST_JS_ONLY ]; then ./run-tests.sh; else grunt test; fi"
 
 after_success:
   - "if [ ! $VUMIGO_SKIP_DJANGO ]; then overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info; fi"
+  - "if [ $TEST_JS_ONLY ]; then overalls --lcov mochacov.lcov --lcov coverage/*/lcov.info; fi"
