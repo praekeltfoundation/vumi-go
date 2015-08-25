@@ -6,6 +6,7 @@ from twisted.internet.defer import (
     inlineCallbacks, returnValue, Deferred, succeed)
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
+from twisted.web.client import ResponseFailed
 
 from vumi.config import ConfigInt, ConfigText, ConfigList
 from vumi.utils import http_request_full, HttpTimeoutError
@@ -386,6 +387,8 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             log.warning("DNS lookup error pushing message to %s" % (url,))
         except ConnectionRefusedError:
             log.warning("Connection refused pushing message to %s" % (url,))
+        except ResponseFailed:
+            log.warning("Response failed pushing message to %s" % (url,))
         if retry_required:
             yield self.schedule_push_retry(
                 user_account_key, url=url, method='POST', data=data,
