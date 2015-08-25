@@ -6,7 +6,7 @@ from twisted.internet.defer import (
     inlineCallbacks, returnValue, Deferred, succeed)
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
-from twisted.web._newclient import ResponseFailed
+from twisted.web.client import ResponseFailed
 
 from vumi.config import ConfigInt, ConfigText, ConfigList
 from vumi.utils import http_request_full, HttpTimeoutError

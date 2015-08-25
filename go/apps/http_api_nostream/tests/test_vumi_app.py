@@ -6,7 +6,7 @@ from urlparse import urlparse, urlunparse
 from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
-from twisted.web._newclient import ResponseFailed
+from twisted.web.client import ResponseFailed
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
