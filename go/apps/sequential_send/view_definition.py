@@ -24,7 +24,7 @@ class ScheduleForm(forms.Form):
                   " sends.")
 
     time = forms.CharField(
-        help_text="Time at which messages should be sent, in 'HH:MM:SS'"
+        help_text="Time in UTC at which messages should be sent, in 'HH:MM:SS'"
                   " format.")
 
 
