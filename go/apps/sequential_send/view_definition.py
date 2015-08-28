@@ -5,11 +5,27 @@ from go.conversation.view_definition import (
 
 
 class ScheduleForm(forms.Form):
-    recurring = forms.CharField(
-        help_text="Currently supports 'daily' or 'day_of_month'.")
-    days = forms.CharField(required=False,
-        help_text="Required for 'day_of_month', comma-separated numbers.")
-    time = forms.CharField(help_text="Time in 'HH:MM:SS' format.")
+
+    RECURRING = (
+        ('daily', 'Daily'),
+        ('day_of_week', 'Day of Week'),
+        ('day_of_month', 'Day of Month'),
+        ('never', 'Never'),
+    )
+
+    recurring = forms.ChoiceField(
+        choices=RECURRING,
+        help_text="When messages should be sent.")
+
+    days = forms.CharField(
+        required=False,
+        help_text="Which days of the week or month messages should be sent on."
+                  " List of comma-separated numbers. Not required for daily"
+                  " sends.")
+
+    time = forms.CharField(
+        help_text="Time at which messages should be sent, in 'HH:MM:SS'"
+                  " format.")
 
 
 class MessageForm(forms.Form):
