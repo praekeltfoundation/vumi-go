@@ -6,6 +6,7 @@ from urlparse import urlparse, urlunparse
 from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
+from twisted.web.client import ResponseFailed
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
@@ -1191,6 +1192,16 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         self.assertTrue(self.mock_push_server.url in dns_log)
 
     @inlineCallbacks
+    def test_post_inbound_message_response_failed_error(self):
+        yield self.start_app_worker()
+        self._patch_http_request_full(lambda: ResponseFailed(reasons=[]))
+        with LogCatcher(message='Response failed') as lc:
+            yield self.app_helper.make_dispatch_inbound(
+                'in 1', message_id='1', conv=self.conversation)
+            [msg_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in msg_log)
+
+    @inlineCallbacks
     def test_post_inbound_event(self):
         yield self.start_app_worker()
         msg1 = yield self.app_helper.make_stored_outbound(
@@ -1312,6 +1323,19 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
                 msg1, conv=self.conversation)
             [dns_log] = lc.messages()
         self.assertTrue(self.mock_push_server.url in dns_log)
+
+    @inlineCallbacks
+    def test_post_inbound_event_response_failed_error(self):
+        yield self.start_app_worker()
+        msg1 = yield self.app_helper.make_stored_outbound(
+            self.conversation, 'out 1', message_id='1')
+
+        self._patch_http_request_full(lambda: ResponseFailed(reasons=[]))
+        with LogCatcher(message='Response failed') as lc:
+            yield self.app_helper.make_dispatch_ack(
+                msg1, conv=self.conversation)
+            [msg_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in msg_log)
 
     @inlineCallbacks
     def test_bad_urls(self):

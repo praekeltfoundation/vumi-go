@@ -116,6 +116,9 @@ class SequentialSendApplication(GoApplicationWorker):
     def process_conversation_schedule(self, then, now, conv):
         schedule = self.get_config_for_conversation(conv).schedule
         if ScheduleManager(schedule).is_scheduled(then, now):
+            log.info(
+                'Sending scheduled messages for conversation %s from'
+                ' account %s' % (conv.key, conv.user_account.key))
             yield self.send_scheduled_messages(conv)
 
     @inlineCallbacks
