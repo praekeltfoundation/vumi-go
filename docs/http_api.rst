@@ -42,7 +42,7 @@ User messages are JSON objects of the following format:
         "session_event": null,
         "to_addr": "1234",
         "to_addr_type": "msisdn",
-        "from_addr": "27761234567",
+        "from_addr": "+27761234567",
         "from_addr_type": "msisdn",
         "content": "This is an incoming SMS!",
         "transport_name": "smpp_transport",
@@ -90,7 +90,7 @@ Sending Messages
     $ curl -X PUT \
            --user '<account-key>:<access-token>' \
            --data '{"in_reply_to": "59b37288d8d94e42ab804158bdbf53e5", \
-                    "to_addr": "27761234567", \
+                    "to_addr": "+27761234567", \
                     "to_addr_type": "msisdn", \
                     "content": "This is an outgoing SMS!"}' \
            http://go.vumi.org/api/v1/go/http_api_nostream/<conversation-key>/messages.json \
