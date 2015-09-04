@@ -91,6 +91,7 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         statement = Statement.objects.get(
             account=self.account, type=Statement.TYPE_MONTHLY)
 
+        self.assertEqual(statement.status, Statement.STATUS_STATEMENT_COMPLETED)
         self.assertEqual(result, statement)
 
     def test_generate_monthly_statement_inbound_messages(self):
