@@ -1257,7 +1257,8 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
-        notification_id, res = self.mk_notification('0.701', '1234.5678', False)
+        notification_id, res = self.mk_notification(
+            '0.701', '1234.5678', False)
         notification = LowCreditNotification.objects.get(pk=notification_id)
         self.assertTrue(res.get() is not None)
         self.assertEqual(len(mail.outbox), 1)
