@@ -10,7 +10,7 @@ class Migration(SchemaMigration):
     def forwards(self, orm):
         # Adding field 'Statement.status'
         db.add_column(u'billing_statement', 'status',
-                      self.gf('django.db.models.fields.CharField')(default='statement_pending', max_length=20),
+                      self.gf('django.db.models.fields.CharField')(default='statement_completed', max_length=20),
                       keep_default=False)
 
 
