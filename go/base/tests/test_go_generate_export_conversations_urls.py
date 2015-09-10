@@ -1,10 +1,13 @@
-from go.base.tests.helpers import (
-    GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
-from go.base.management.commands import go_generate_export_conversations_urls
-from django.core.management import call_command
+from go.vumitools.tests.helpers import djangotest_imports
 
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import (
+        GoDjangoTestCase, DjangoVumiApiHelper, CommandIO)
+    from go.base.management.commands import (
+        go_generate_export_conversations_urls)
+    from django.core.management import call_command
 
-Command = go_generate_export_conversations_urls.Command
+    Command = go_generate_export_conversations_urls.Command
 
 
 class TestGoGenExportConvUrls(GoDjangoTestCase):

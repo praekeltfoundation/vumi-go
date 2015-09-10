@@ -1,18 +1,19 @@
-import yaml
-
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
 from ConfigParser import ConfigParser
 
-from django.contrib.auth import authenticate
-from django.core.management.base import CommandError
-
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.management.commands import go_setup_env
-from go.base.utils import vumi_api_for_user
-from go.vumitools.routing_table import RoutingTable
-
 from mock import Mock
+import yaml
+
+from go.vumitools.routing_table import RoutingTable
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.contrib.auth import authenticate
+    from django.core.management.base import CommandError
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.management.commands import go_setup_env
 
 
 def tmp_yaml_file(lines):
@@ -40,6 +41,7 @@ class TestGoSetupEnv(GoDjangoTestCase):
         self.command.stderr = StringIO()
         # do whatever setup command.handle() does manually
         self.command.setup_backend(self.vumi_helper.mk_config({}))
+        self.add_cleanup(self.command.cleanup)
         self.tagpool = self.command.tagpool
         self.command.file_name_template = 'go_%(file_name)s.%(suffix)s'
         self.command.dest_dir = 'setup_env'
@@ -387,7 +389,7 @@ class TestGoSetupEnv(GoDjangoTestCase):
         self.assertEqual(user, new_user)
         self.assertTrue(user.is_active)
 
-        user_api = vumi_api_for_user(user)
+        user_api = self.command.get_user_api(user)
         self.assertEqual(
             set(user_api.tagpools().pools()), set(['pool1', 'pool2']))
         self.assertEqual(
@@ -422,7 +424,7 @@ class TestGoSetupEnv(GoDjangoTestCase):
         self.command.setup_account_objects(self.account_1_file.name)
 
         user = authenticate(username='user1@go.com', password='foo')
-        user_api = vumi_api_for_user(user)
+        user_api = self.command.get_user_api(user)
 
         def assert_keys(keys, objects):
             self.assertEqual(set(keys), set(obj.key for obj in objects))
@@ -458,7 +460,7 @@ class TestGoSetupEnv(GoDjangoTestCase):
 
         self.command.setup_channels(user, account_info['channels'])
 
-        user_api = vumi_api_for_user(user)
+        user_api = self.command.get_user_api(user)
         self.assertEqual(
             set([u'pool1:default0', u'pool1:default1']),
             set(ch.key for ch in user_api.active_channels()))
@@ -470,7 +472,7 @@ class TestGoSetupEnv(GoDjangoTestCase):
 
         self.command.setup_conversations(user, account_info['conversations'])
 
-        user_api = vumi_api_for_user(user)
+        user_api = self.command.get_user_api(user)
         [conv1, conv2] = sorted(
             user_api.active_conversations(), key=lambda c: c.key)
         self.assertEqual(conv1.key, 'conv1')
@@ -513,7 +515,7 @@ class TestGoSetupEnv(GoDjangoTestCase):
 
         self.command.setup_routers(user, account_info['routers'])
 
-        user_api = vumi_api_for_user(user)
+        user_api = self.command.get_user_api(user)
         [router1] = user_api.active_routers()
         self.assertEqual(router1.key, 'router1')
         self.assertEqual(router1.router_type, 'keyword')
@@ -551,7 +553,7 @@ class TestGoSetupEnv(GoDjangoTestCase):
 
         self.command.setup_contact_groups(user, account_info['contact_groups'])
 
-        user_api = vumi_api_for_user(user)
+        user_api = self.command.get_user_api(user)
         [group] = user_api.list_groups()
         self.assertEqual(group.key, 'group1')
         self.assertEqual(group.name, 'group1')
@@ -565,7 +567,7 @@ class TestGoSetupEnv(GoDjangoTestCase):
 
         self.command.setup_routing(user, account_info)
 
-        routing_table = vumi_api_for_user(user).get_routing_table()
+        routing_table = self.command.get_user_api(user).get_routing_table()
         self.assertEqual(routing_table, RoutingTable({
             u'TRANSPORT_TAG:pool1:default0': {
                 u'default': [u'CONVERSATION:survey:conv1', u'default'],

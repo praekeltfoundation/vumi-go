@@ -24,12 +24,6 @@ from go.contacts.parsers.base import FieldNormalizer
 from go.vumitools.contact import ContactError
 
 
-def _query_to_kwargs(query):
-    pattern = r'(?P<key>[^ :]+):[ ]*(?P<value>[^:]*[^ :])(?:(?=( [^:]+:)|$))'
-    tuples = re.findall(pattern, query)
-    return dict([(t[0], t[1]) for t in tuples])
-
-
 def _group_url(group_key):
     return reverse('contacts:group', kwargs={'group_key': group_key})
 
@@ -427,7 +421,7 @@ def _people(request):
     # production hack if we really need to count all contacts or something.
     fetch_limit = int(request.GET.get('_fetch_limit', 10000))
     if query:
-        if not ':' in query:
+        if ':' not in query:
             query = 'name:%s' % (query,)
 
         # TODO: Use pagination here.
@@ -435,7 +429,7 @@ def _people(request):
     else:
         keys = contact_store.list_contacts_page(max_results=fetch_limit)
 
-    key_count = len(list(keys))
+    key_count = len(keys)
     limit = min(int(request.GET.get('limit', 100)), key_count)
     # If we have a continuation token, it means there are more than
     # `fetch_limit` keys.
@@ -506,6 +500,7 @@ def person(request, person_key):
     return render(request, 'contacts/contact_detail.html', {
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
+        'contact_subscription_items': contact.subscription.items(),
         'form': form,
     })
 

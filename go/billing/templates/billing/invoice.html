@@ -62,7 +62,7 @@
                             <td>{% if item.description != None %}{{ item.description }}{% endif %}</th>
                             <td>{{ item.units }}</th>
                             <td>{% if item.credits != None %}{{ item.credits|format_credits }}{% endif %}</th>
-                            <td>{{ item.unit_cost|format_cents }}</th>
+                            <td>{{ item.unit_cost|format_unit_cost_cents }}</th>
                             <td>{{ item.cost|format_cents }}
                         </tr>
                     {% endfor %}

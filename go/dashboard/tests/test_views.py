@@ -1,8 +1,11 @@
 import json
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.dashboard import client
-from go.dashboard.tests.utils import FakeDiamondashApiClient
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.dashboard import client
+    from go.dashboard.tests.utils import FakeDiamondashApiClient
 
 
 class DashboardViewsTestCase(GoDjangoTestCase):

@@ -1,13 +1,11 @@
 from optparse import make_option
 import textwrap
 
-from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from vumi.persist.model import ModelMigrationError
 
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_users
+from go.base.command_utils import BaseGoCommand, get_users
 
 
 class Migration(object):
@@ -103,13 +101,19 @@ class FixBatches(Migration):
             return False
         return len(conv.batches.keys()) != 1
 
+    def _process_pages(self, index_page, batch_id, get_message, add_message):
+        while index_page is not None:
+            for key in index_page:
+                add_message(get_message(key), batch_ids=[batch_id])
+            index_page = index_page.next_page()
+
     def _copy_msgs(self, mdb, old_batch, new_batch):
-        for key in mdb.batch_outbound_keys(old_batch):
-            msg = mdb.get_outbound_message(key)
-            mdb.add_outbound_message(msg, batch_id=new_batch)
-        for key in mdb.batch_inbound_keys(old_batch):
-            msg = mdb.get_inbound_message(key)
-            mdb.add_inbound_message(msg, batch_id=new_batch)
+        self._process_pages(
+            mdb.batch_outbound_keys_page(old_batch), new_batch,
+            mdb.get_outbound_message, mdb.add_outbound_message)
+        self._process_pages(
+            mdb.batch_inbound_keys_page(old_batch), new_batch,
+            mdb.get_inbound_message, mdb.add_inbound_message)
 
     def migrate(self, user_api, conv):
         conv_batches = conv.batches.keys()
@@ -135,13 +139,19 @@ class SplitBatches(Migration):
             return True
         return False
 
+    def _process_pages(self, index_page, batch_id, get_message, add_message):
+        while index_page is not None:
+            for key in index_page:
+                add_message(get_message(key), batch_ids=[batch_id])
+            index_page = index_page.next_page()
+
     def _copy_msgs(self, mdb, old_batch, new_batch):
-        for key in mdb.batch_outbound_keys(old_batch):
-            msg = mdb.get_outbound_message(key)
-            mdb.add_outbound_message(msg, batch_id=new_batch)
-        for key in mdb.batch_inbound_keys(old_batch):
-            msg = mdb.get_inbound_message(key)
-            mdb.add_inbound_message(msg, batch_id=new_batch)
+        self._process_pages(
+            mdb.batch_outbound_keys_page(old_batch), new_batch,
+            mdb.get_outbound_message, mdb.add_outbound_message)
+        self._process_pages(
+            mdb.batch_inbound_keys_page(old_batch), new_batch,
+            mdb.get_inbound_message, mdb.add_inbound_message)
 
     def migrate(self, user_api, conv):
         old_batch = conv.batch.key
@@ -174,7 +184,7 @@ class FixJsboxEndpoint(Migration):
         conv.save()
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = """
     Find and migrate conversations for known accounts in Vumi Go.
     Allows for optional searching on the email.
@@ -200,7 +210,7 @@ class Command(BaseCommand):
 
     args = "[optional username regex]"
     encoding = 'utf-8'
-    option_list = BaseCommand.option_list + (
+    option_list = BaseGoCommand.option_list + (
         make_option('-l', '--list', action='store_true',
                     dest='list_migrations',
                     default=False, help='List available migrations.'),
@@ -239,7 +249,7 @@ class Command(BaseCommand):
         return migrator_cls(dry_run)
 
     def handle_user(self, user, migrator):
-        user_api = vumi_api_for_user(user)
+        user_api = self.user_api_for_user(user)
         all_keys = user_api.conversation_store.list_conversations()
         conversations = []
         for conv_key in all_keys:
@@ -261,7 +271,7 @@ class Command(BaseCommand):
             migrator.run(user_api, conv)
             self.outln(u' done.')
 
-    def handle(self, *usernames, **options):
+    def handle_no_command(self, *usernames, **options):
         if options['list_migrations']:
             self.handle_list()
             return

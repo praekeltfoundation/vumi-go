@@ -5,10 +5,11 @@ from optparse import make_option
 from django.core.management.base import CommandError
 from django.utils.text import slugify
 
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import BaseGoCommand, get_user_by_email
+from go.base.command_utils import BaseGoCommand
 
 
+# We don't extend BaseGoAccountCommand since the '--email' option is used
+# instead of '--email-address'
 class Command(BaseGoCommand):
 
     help = "Dump URLs for use with cURL for downloading message data."
@@ -28,7 +29,7 @@ class Command(BaseGoCommand):
             help='The template for generating the cURL.')
     )
 
-    def handle(self, *args, **kwargs):
+    def handle_no_command(self, *args, **kwargs):
         self.email = kwargs['email']
         if self.email is None:
             raise CommandError('--email is mandatory.')
@@ -38,8 +39,7 @@ class Command(BaseGoCommand):
             raise CommandError('--base-url is mandatory.')
         self.template = kwargs['template']
 
-        self.user = get_user_by_email(self.email)
-        self.user_api = vumi_api_for_user(self.user)
+        self.user, self.user_api = self.mk_user_api(self.email)
 
         conversation_store = self.user_api.conversation_store
         conversation_keys = conversation_store.list_conversations()

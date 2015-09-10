@@ -2,7 +2,6 @@ from optparse import make_option
 
 from django.core.management.base import BaseCommand
 
-from go.base.utils import vumi_api_for_user
 from go.base.command_utils import get_user_by_email
 from go.vumitools.opt_out import OptOutStore
 
@@ -25,7 +24,7 @@ class Command(BaseCommand):
         email_address = options['email-address']
 
         user = get_user_by_email(email_address)
-        user_api = vumi_api_for_user(user)
+        user_api = self.user_api_for_user(user)
 
         self.show_opt_outs(user_api, email_address)
 

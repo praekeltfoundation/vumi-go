@@ -1,3 +1,4 @@
+from contextlib import closing
 from operator import attrgetter
 
 from go.base.utils import vumi_api_for_user
@@ -32,21 +33,22 @@ def get_messages_count(conversations):
 
 
 def send_user_account_summary(user):
-    user_api = vumi_api_for_user(user)
-    contact_store = user_api.contact_store
-    conv_store = user_api.conversation_store
+    with closing(vumi_api_for_user(user)) as user_api:
+        contact_store = user_api.contact_store
+        conv_store = user_api.conversation_store
 
-    contact_keys = contact_store.list_contacts()
-    uniques = get_uniques(contact_store, contact_keys=contact_keys,
-                            plucker=attrgetter('msisdn'))
-    conversation_keys = conv_store.list_conversations()
+        contact_keys = contact_store.list_contacts()
+        uniques = get_uniques(
+            contact_store, contact_keys=contact_keys,
+            plucker=attrgetter('msisdn'))
+        conversation_keys = conv_store.list_conversations()
 
-    all_conversations = []
-    bunches = conv_store.conversations.load_all_bunches(conversation_keys)
-    for bunch in bunches:
-        all_conversations.extend([user_api.wrap_conversation(conv)
-                                    for conv in bunch])
-    all_conversations.sort(key=(lambda conv: conv.created_at), reverse=True)
+        all_conversations = []
+        bunches = conv_store.conversations.load_all_bunches(conversation_keys)
+        for bunch in bunches:
+            all_conversations.extend(
+                [user_api.wrap_conversation(conv) for conv in bunch])
+        all_conversations.sort(key=attrgetter('created_at'), reverse=True)
 
     active_conversations = {}
     known_types = configured_conversation_types()

@@ -1,13 +1,16 @@
 from decimal import Decimal, Context
 
-from django.forms.models import modelformset_factory
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing import settings as app_settings
-from go.billing.forms import (
-    MessageCostForm, cost_rounded_to_zero, BaseCreditLoadFormSet,
-    CreditLoadForm, TagPoolForm)
-from go.billing.models import TagPool, Account, Transaction
+with djangotest_imports(globals()):
+    from django.forms.models import modelformset_factory
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.billing import settings as app_settings
+    from go.billing.forms import (
+        MessageCostForm, cost_rounded_to_zero, BaseCreditLoadFormSet,
+        CreditLoadForm, TagPoolForm)
+    from go.billing.models import TagPool, Account, Transaction
 
 
 class TestBillingFormsModule(GoDjangoTestCase):

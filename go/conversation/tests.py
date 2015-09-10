@@ -5,28 +5,34 @@ from datetime import date
 from StringIO import StringIO
 from zipfile import ZipFile
 
-from django import forms
-from django.core import mail
-from django.core.urlresolvers import reverse
-from django.utils.unittest import skip
-
+import pytest
 from vumi.message import TransportUserMessage
 
-import go.base.utils
-import go.conversation.settings
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.conversation.templatetags import conversation_tags
-from go.conversation.view_definition import (
-    ConversationViewDefinitionBase, EditConversationView)
-from go.conversation.tasks import export_conversation_messages_unsorted
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 from go.vumitools.conversation.utils import ConversationWrapper
-from go.vumitools.tests.helpers import GoMessageHelper
-from go.dashboard.dashboard import DashboardLayout, DashboardParseError
-from go.dashboard import client as dashboard_client
-from go.dashboard.tests.utils import FakeDiamondashApiClient
+from go.vumitools.tests.helpers import GoMessageHelper, djangotest_imports
+
+dummy_classes = [
+    'Form', 'CharField',
+    'ConversationViewDefinitionBase', 'EditConversationView',
+]
+with djangotest_imports(globals(), dummy_classes=dummy_classes):
+    from django.forms import Form, CharField
+    from django.core import mail
+    from django.core.urlresolvers import reverse
+
+    import go.base.utils
+    import go.conversation.settings
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.conversation.templatetags import conversation_tags
+    from go.conversation.view_definition import (
+        ConversationViewDefinitionBase, EditConversationView)
+    from go.conversation.tasks import export_conversation_messages_unsorted
+    from go.dashboard.dashboard import DashboardLayout, DashboardParseError
+    from go.dashboard import client as dashboard_client
+    from go.dashboard.tests.utils import FakeDiamondashApiClient
 
 
 class EnabledAction(ConversationAction):
@@ -68,8 +74,8 @@ class EndpointConversationDefinition(ConversationDefinitionBase):
     extra_static_endpoints = (u'extra',)
 
 
-class SimpleEditForm(forms.Form):
-    simple_field = forms.CharField()
+class SimpleEditForm(Form):
+    simple_field = CharField()
 
 
 class SimpleEditView(EditConversationView):
@@ -1018,11 +1024,11 @@ class TestConversationTemplateTags(BaseConversationViewTestCase):
         # regard to the existence of the action.
         self._assert_ca_url('foo', conv, 'foo')
 
-    @skip("TODO")
+    @pytest.mark.skipif(True, reason="TODO")
     def test_get_contact_for_message(self):
         raise NotImplementedError("TODO")
 
-    @skip("TODO")
+    @pytest.mark.skipif(True, reason="TODO")
     def test_get_reply_form_for_message(self):
         raise NotImplementedError("TODO")
 
@@ -1136,8 +1142,14 @@ class TestConversationTasks(GoDjangoTestCase):
         reader = csv.DictReader(fp)
         message_ids = [row['message_id'] for row in reader]
         all_keys = set()
-        all_keys.update(conv.mdb.batch_inbound_keys(conv.batch.key))
-        all_keys.update(conv.mdb.batch_outbound_keys(conv.batch.key))
+        index_page = conv.mdb.batch_inbound_keys_page(conv.batch.key)
+        while index_page is not None:
+            all_keys.update(index_page)
+            index_page = index_page.next_page()
+        index_page = conv.mdb.batch_outbound_keys_page(conv.batch.key)
+        while index_page is not None:
+            all_keys.update(index_page)
+            index_page = index_page.next_page()
         self.assertEqual(set(message_ids), all_keys)
 
     def test_export_conversation_message_session_events(self):

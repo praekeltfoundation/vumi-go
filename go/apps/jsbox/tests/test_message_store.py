@@ -39,12 +39,12 @@ class TestMessageStoreResource(ResourceTestCaseBase):
         # store inbound
         yield self.message_store.add_inbound_message(
             self.msg_helper.make_inbound('hello'),
-            batch_id=self.conversation.batch.key)
+            batch_ids=[self.conversation.batch.key])
 
         # store outbound
         outbound_msg = self.msg_helper.make_outbound('hello')
         yield self.message_store.add_outbound_message(
-            outbound_msg, batch_id=self.conversation.batch.key)
+            outbound_msg, batch_ids=[self.conversation.batch.key])
 
         # ack outbound
         event = self.msg_helper.make_ack(outbound_msg)

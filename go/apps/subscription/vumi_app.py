@@ -3,8 +3,6 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi import log
-
 from go.vumitools.app_worker import GoApplicationWorker
 
 
@@ -13,14 +11,6 @@ class SubscriptionApplication(GoApplicationWorker):
     Application that recognises keywords and fires events.
     """
     worker_name = 'subscription_application'
-
-    @inlineCallbacks
-    def send_message(self, batch_id, to_addr, content, msg_options):
-        # TODO: Update
-        msg = yield self.send_to(
-            to_addr, content, endpoint='default', **msg_options)
-        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
-        log.info('Stored outbound %s' % (msg,))
 
     def handlers_for_content(self, conv, content):
         words = (content or '').strip().split() + ['']
@@ -55,9 +45,3 @@ class SubscriptionApplication(GoApplicationWorker):
             yield contact.save()
             if handler['reply_copy']:
                 yield self.reply_to(message, handler['reply_copy'])
-
-    def consume_ack(self, event):
-        return self.vumi_api.mdb.add_event(event)
-
-    def consume_delivery_report(self, event):
-        return self.vumi_api.mdb.add_event(event)

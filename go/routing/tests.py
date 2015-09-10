@@ -1,12 +1,14 @@
 import json
 
-from django.core.urlresolvers import reverse
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.api.go_api.tests.utils import MockRpc
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
 
-from go.api.go_api.api_types import (
-    ChannelType, ConversationType, RoutingEntryType)
+    from go.api.go_api.tests.utils import MockRpc
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.api.go_api.api_types import (
+        ChannelType, ConversationType, RoutingEntryType)
 
 
 class TestRoutingScreen(GoDjangoTestCase):

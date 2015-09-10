@@ -1,15 +1,12 @@
+from contextlib import closing
 from datetime import date, datetime
-
-from dateutil.relativedelta import relativedelta
-
 from decimal import Decimal
 
 from celery.task import task, group
-
+from dateutil.relativedelta import relativedelta
 from django.db.models import Sum, Count
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
-
 from djcelery_email.tasks import send_email
 
 from go.base.s3utils import Bucket
@@ -19,7 +16,7 @@ from go.billing.django_utils import load_account_credits
 from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
     LowCreditNotification)
-from go.billing.django_utils import TransactionSerializer
+from go.billing.django_utils import TransactionSerializer, chunked_query
 from go.base.utils import format_currency
 
 
@@ -368,7 +365,8 @@ def generate_monthly_statement(account_id, from_date, to_date):
        between the given ``from_date`` and ``to_date``.
     """
     account = Account.objects.get(id=account_id)
-    tagpools = vumi_api().known_tagpools()
+    with closing(vumi_api()) as api:
+        tagpools = api.known_tagpools()
 
     statement = Statement(
         account=account,
@@ -443,15 +441,13 @@ def archive_transactions(account_id, from_date, to_date, delete=True):
         created__lt=(to_date + relativedelta(days=1)),
     ).order_by("id")  # We order by id because chunking needs it.
 
+    bucket = Bucket('billing.archive')
+
     def generate_chunks(queryset, items_per_chunk=1000, sep="\n"):
-        # NOTE: This chunking method only works if the queryset has a well
-        #       defined order.
-        for i in xrange(0, queryset.count(), items_per_chunk):
-            data = list(queryset[i:i + items_per_chunk].iterator())
-            yield sep.join(serializer.to_json(data))
+        for items in chunked_query(queryset, items_per_chunk):
+            yield sep.join(serializer.to_json(items))
             yield sep
 
-    bucket = Bucket('billing.archive')
     chunks = generate_chunks(transaction_query)
 
     archive = TransactionArchive(
@@ -583,8 +579,9 @@ def set_developer_account_balances(balance):
     Credits all accounts with developer flags enough credits for the resulting
     balance to be ``balance``.
     """
-    account_store = vumi_api().account_store
-    for key in account_store.users.all_keys():
-        account = account_store.users.load(key)
-        if account and account.is_developer:
-            set_account_balance(key, balance)
+    with closing(vumi_api()) as api:
+        account_store = api.account_store
+        for key in account_store.users.all_keys():
+            account = account_store.users.load(key)
+            if account and account.is_developer:
+                set_account_balance(key, balance)

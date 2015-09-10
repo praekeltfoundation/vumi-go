@@ -1,23 +1,27 @@
 from optparse import make_option
 
-from django.core.management.base import CommandError
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.command_utils import BaseGoAccountCommand, make_command_option
-from go.base.tests.helpers import GoAccountCommandTestCase
+with djangotest_imports(globals(), dummy_classes=['GoAccountCommandTestCase']):
+    from django.core.management.base import CommandError
 
+    from go.base.command_utils import BaseGoAccountCommand, make_command_option
+    from go.base.tests.helpers import GoAccountCommandTestCase
 
-class DummyGoDjangoAccountCommand(BaseGoAccountCommand):
-    option_list = BaseGoAccountCommand.option_list + (
-        make_command_option('foo'),
-        make_command_option('bar'),
-        make_option('--opt', action='store', dest='opt'),
-    )
+    # We define this in here because BaseGoAccountCommand is more complex than
+    # `dummy_classes` allows.
+    class DummyGoDjangoAccountCommand(BaseGoAccountCommand):
+        option_list = BaseGoAccountCommand.option_list + (
+            make_command_option('foo'),
+            make_command_option('bar'),
+            make_option('--opt', action='store', dest='opt'),
+        )
 
-    def handle_command_foo(self, *args, **options):
-        self.stdout.write('foo\n')
+        def handle_command_foo(self, *args, **options):
+            self.stdout.write('foo\n')
 
-    def handle_command_bar(self, *args, **options):
-        self.stdout.write('bar: %s\n' % (options['opt'],))
+        def handle_command_bar(self, *args, **options):
+            self.stdout.write('bar: %s\n' % (options['opt'],))
 
 
 class TestBaseGoAccountCommand(GoAccountCommandTestCase):
@@ -28,6 +32,9 @@ class TestBaseGoAccountCommand(GoAccountCommandTestCase):
         self.assertRaisesRegexp(
             CommandError, '--email-address must be specified',
             self.command.handle)
+        self.assertRaisesRegexp(
+            CommandError, '--email-address must be specified',
+            self.command.handle, email_address=None)
 
     def test_user_account_must_exist(self):
         self.assertRaisesRegexp(

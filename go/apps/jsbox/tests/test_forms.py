@@ -1,7 +1,9 @@
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.apps.jsbox.forms import (JsboxForm, JsboxAppConfigForm,
-                                 JsboxAppConfigFormset)
-from go.base.tests.helpers import GoDjangoTestCase
+with djangotest_imports(globals()):
+    from go.apps.jsbox.forms import (
+        JsboxForm, JsboxAppConfigForm, JsboxAppConfigFormset)
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestJsboxForm(GoDjangoTestCase):

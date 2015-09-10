@@ -1,16 +1,20 @@
+from twisted.internet.defer import inlineCallbacks
+
+from vumi.tests.helpers import VumiTestCase
+
 from go.apps.subscription.definition import ConversationDefinition
 from go.apps.subscription.metrics import SubscribedMetric, UnsubscribedMetric
-from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.metrics import MessagesReceivedMetric, MessagesSentMetric
 from go.vumitools.tests.helpers import VumiApiHelper
 
 
-class TestSubscriptionConversationDefinition(GoDjangoTestCase):
+class TestSubscriptionConversationDefinition(VumiTestCase):
+    @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = self.add_helper(VumiApiHelper(is_sync=True))
-        self.user_helper = self.vumi_helper.get_or_create_user()
+        self.vumi_helper = yield self.add_helper(VumiApiHelper())
+        self.user_helper = yield self.vumi_helper.get_or_create_user()
 
-        wrapped_conv = self.user_helper.create_conversation(
+        wrapped_conv = yield self.user_helper.create_conversation(
             u'subscription', config={
                 'handlers': [
                     {'campaign_name': 'campaign-1'},

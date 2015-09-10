@@ -1,7 +1,10 @@
 from cStringIO import StringIO
 
-from go.base.management.commands import go_manage_contact_group
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.management.commands import go_manage_contact_group
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoManageContactGroupCommand(GoDjangoTestCase):
@@ -14,13 +17,9 @@ class TestGoManageContactGroupCommand(GoDjangoTestCase):
 
     def invoke_command(self, command, **kw):
         options = {
-            'email-address': self.user_helper.get_django_user().email,
-            'list': False,
-            'create': False,
-            'create-smart': False,
-            'delete': False,
+            'email_address': self.user_helper.get_django_user().email,
+            'command': [command],
         }
-        options[command] = True
         options.update(kw)
         self.command.stdout = StringIO()
         self.command.handle(**options)
@@ -57,7 +56,7 @@ class TestGoManageContactGroupCommand(GoDjangoTestCase):
     def test_create_smart_group(self):
         self.assertEqual([], self.user_helper.user_api.list_groups())
         output = self.invoke_command(
-            'create-smart', group='smart group', query='foo')
+            'create_smart', group='smart group', query='foo')
         [group] = self.user_helper.user_api.list_groups()
         self.assertEqual(group.name, u'smart group')
         self.assertEqual(group.query, u'foo')

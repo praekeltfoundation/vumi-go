@@ -1,7 +1,10 @@
 from pprint import pformat
 
-from go.base.management.commands import go_manage_router
-from go.base.tests.helpers import GoAccountCommandTestCase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals(), dummy_classes=['GoAccountCommandTestCase']):
+    from go.base.management.commands import go_manage_router
+    from go.base.tests.helpers import GoAccountCommandTestCase
 
 
 class TestGoManageRouter(GoAccountCommandTestCase):

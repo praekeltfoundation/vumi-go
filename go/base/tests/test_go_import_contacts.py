@@ -1,10 +1,13 @@
 import os.path
 from cStringIO import StringIO
 
-from django.conf import settings
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.management.commands import go_import_contacts
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+with djangotest_imports(globals()):
+    from django.conf import settings
+
+    from go.base.management.commands import go_import_contacts
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoImportContactsCommand(GoDjangoTestCase):
@@ -21,8 +24,8 @@ class TestGoImportContactsCommand(GoDjangoTestCase):
 
     def invoke_command(self, **kw):
         options = {
-            'email-address': self.user_helper.get_django_user().email,
-            'contacts-csv': os.path.join(
+            'email_address': self.user_helper.get_django_user().email,
+            'contacts_csv': os.path.join(
                 settings.PROJECT_ROOT, 'base', 'fixtures',
                 'sample-contacts-with-headers.csv'),
             'groups': [],

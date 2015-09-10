@@ -17,6 +17,7 @@ class TestContact(VumiTestCase):
         self.persistence_helper = self.add_helper(
             PersistenceHelper(use_riak=True))
         riak_manager = self.persistence_helper.get_riak_manager()
+        self.add_cleanup(riak_manager.close_manager)
         self.account_store = AccountStore(riak_manager)
         self.user = yield self.account_store.new_user(u'testuser')
 
@@ -158,6 +159,7 @@ class TestContactStore(VumiTestCase):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.get_or_create_user()
         riak_manager = self.vumi_helper.get_riak_manager()
+        self.add_cleanup(riak_manager.close_manager)
         self.contact_store = ContactStore(
             riak_manager, self.user_helper.account_key)
         # Old contact proxy for making unindexed contacts.
@@ -296,7 +298,7 @@ class TestContactStore(VumiTestCase):
             contact_keys.add(contact.key)
 
         index_page = yield store.get_static_contact_keys_for_group(group)
-        self.assertEqual(len(list(index_page)), 2)
+        self.assertEqual(len(index_page), 2)
         self.assertEqual(index_page.has_next_page(), False)
 
     @inlineCallbacks
@@ -332,7 +334,7 @@ class TestContactStore(VumiTestCase):
             contact_keys.add(contact.key)
 
         index_page = yield store.get_contact_keys_for_group(group)
-        self.assertEqual(len(list(index_page)), 2)
+        self.assertEqual(len(index_page), 2)
         self.assertEqual(index_page.has_next_page(), False)
 
     @inlineCallbacks
@@ -392,6 +394,7 @@ class TestPaginatedSearch(VumiTestCase):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.user_helper = yield self.vumi_helper.get_or_create_user()
         riak_manager = self.vumi_helper.get_riak_manager()
+        self.add_cleanup(riak_manager.close_manager)
         self.store = ContactStore(riak_manager, self.user_helper.account_key)
 
     def add_contact(self, **kw):

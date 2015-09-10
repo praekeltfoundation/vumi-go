@@ -11,9 +11,8 @@ from vumi.errors import VumiError
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
-from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 from go.vumitools.routing_table import GoConnector, RoutingTable
-from go.vumitools.tests.helpers import VumiApiHelper
+from go.vumitools.tests.helpers import VumiApiHelper, djangotest
 from go.vumitools.api import (
     VumiUserApi, VumiApiCommand, VumiApiEvent, TagpoolSet)
 
@@ -68,6 +67,7 @@ class TestTxVumiApi(VumiTestCase):
         self.assertEqual(sorted(pools.pools()), [u'pool1', u'pool2'])
 
 
+@djangotest
 class TestVumiApi(TestTxVumiApi):
     is_sync = True
 
@@ -82,10 +82,6 @@ class TestTxVumiUserApi(VumiTestCase):
         self.vumi_api = self.vumi_helper.get_vumi_api()
         self.user_helper = yield self.vumi_helper.make_user(u'Buster')
         self.user_api = self.user_helper.user_api
-
-        # Some stores for old versions to test migrations.
-        self.account_store_vnone = AccountStoreVNone(self.vumi_api.manager)
-        self.account_store_v1 = AccountStoreV1(self.vumi_api.manager)
 
     def test_create_converts_key_to_unicode(self):
         """
@@ -498,6 +494,7 @@ class TestTxVumiUserApi(VumiTestCase):
         self.assertEqual(pools.pools(), [])
 
 
+@djangotest
 class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True
 
@@ -609,6 +606,7 @@ class TestTxVumiRouterApi(VumiTestCase):
         })
 
 
+@djangotest
 class TestVumiRouterApi(TestTxVumiRouterApi):
     is_sync = True
 

@@ -85,6 +85,10 @@ class ContactMigrationWorker(Worker):
         self.vumi_api = yield VumiApi.from_config_async(self.config)
         self.WORKER_QUEUE.put(self)
 
+    @inlineCallbacks
+    def stopWorker(self):
+        yield self.vumi_api.close()
+
     def emit(self, obj, stderr=False):
         msg = '%s\n' % (obj,)
         if stderr:

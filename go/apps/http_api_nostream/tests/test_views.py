@@ -1,5 +1,10 @@
-from go.apps.tests.view_helpers import AppViewsHelper
-from go.base.tests.helpers import GoDjangoTestCase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+
+    from go.apps.tests.view_helpers import AppViewsHelper
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestHttpApiNoStreamViews(GoDjangoTestCase):
@@ -190,3 +195,55 @@ class TestHttpApiNoStreamViews(GoDjangoTestCase):
         self.assertEqual(conversation.config, {})
         response = self.client.get(conv_helper.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
+
+    def test_get_edit_view_help(self):
+        conv_helper = self.app_helper.create_conversation_helper(config={
+            'http_api_nostream': {
+                'api_tokens': ['token1234'],
+            },
+        })
+        conversation = conv_helper.get_conversation()
+        response = self.client.get(conv_helper.get_view_url('edit'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "\n".join([
+            "  $ curl -X PUT \\",
+            "       --user 'test-0-user:token1234' \\",
+            "       --data '{\"in_reply_to\": "
+            "\"59b37288d8d94e42ab804158bdbf53e5\", \\",
+            "                \"to_addr\": \"27761234567\", \\",
+            "                \"to_addr_type\": \"msisdn\", \\",
+            "                \"content\": \"This is an outgoing SMS!\"}' \\",
+            "       https://go.vumi.org/api/v1/go/http_api_nostream/%s/"
+            "messages.json \\",
+            "       -vvv",
+        ]) % conversation.key)
+        self.assertContains(response, "\n".join([
+            "  $ curl -X PUT \\",
+            "       --user 'test-0-user:token1234' \\",
+            "       --data '[[\"total_pings\", 1200, \"MAX\"]]' \\",
+            "       https://go.vumi.org/api/v1/go/http_api_nostream/%s/"
+            "metrics.json \\",
+            "       -vvv",
+        ]) % conversation.key)
+        self.assertContains(response, "\n".join([
+            "  <li>The <em>username</em> is your Vumi Go account key",
+            "    (<code>test-0-user</code>). It can be found at the",
+            "    bottom of your <a href=\"%s\">Account",
+            "    Details</a> page.",
+            "  </li>",
+        ]) % reverse('account:details'))
+        self.assertContains(response, "\n".join([
+            "  <li>The <em>password</em> is the API token you specified for"
+            " this",
+            "    conversation.",
+            "  </li>",
+        ]))
+        self.assertContains(response, "\n".join([
+            "<p>",
+            "  The URLs for sending messages and firing metrics contain",
+            "  the <em>conversation id</em> (the string of letters and digits"
+            " near",
+            "  the end of the URL). This conversation's id is",
+            "  <code>%s</code>.",
+            "</p>",
+        ]) % conversation.key)

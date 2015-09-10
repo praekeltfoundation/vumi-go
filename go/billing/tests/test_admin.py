@@ -1,14 +1,18 @@
 """ Test for billing admin. """
 
-from django.contrib.admin.sites import AdminSite
-from django.core.urlresolvers import reverse
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.utils import vumi_api_for_user
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.models import Account, Transaction
-from go.billing.admin import AccountAdmin
+with djangotest_imports(globals()):
+    from django.contrib.admin.sites import AdminSite
+    from django.core.urlresolvers import reverse
 
-from .helpers import mk_statement, mk_transaction
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.billing.models import (
+        Account, Transaction, TransactionArchive, LowCreditNotification)
+    from go.billing.admin import AccountAdmin
+
+    from go.billing.tests.helpers import (
+        mk_message_cost, mk_statement, mk_transaction, mk_transaction_archive)
 
 
 class MockRequest(object):
@@ -72,6 +76,76 @@ class TestStatementAdmin(GoDjangoTestCase):
         self.assertContains(response, "Unit cost")
         self.assertContains(response, "Cost")
 
+    def test_transaction_archive_admin_view(self):
+        mk_transaction_archive(self.account)
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_transactionarchive_changelist'))
+        self.assertContains(response, "Transaction archives")
+        self.assertContains(response, "Account")
+        self.assertContains(response, "From date")
+        self.assertContains(response, "To date")
+        self.assertContains(response, "Status")
+        self.assertContains(response, "Created")
+
+    def test_transaction_archive_search(self):
+        archive1 = mk_transaction_archive(
+            self.account,
+            status=TransactionArchive.STATUS_ARCHIVE_CREATED)
+        archive2 = mk_transaction_archive(
+            self.account,
+            status=TransactionArchive.STATUS_ARCHIVE_COMPLETED)
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_transactionarchive_changelist'),
+            {'q': 'completed'})
+        self.assertContains(response, "1 result")
+        self.assertContains(
+            response,
+            '<a href="/admin/billing/transactionarchive/%d/">' % archive2.pk)
+        self.assertNotContains(
+            response,
+            '<a href="/admin/billing/transactionarchive/%d/">' % archive1.pk)
+
+    def test_message_cost_admin_view(self):
+        mk_message_cost()
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_messagecost_changelist'))
+        self.assertContains(response, "Message costs")
+        self.assertContains(response, "Account")
+        self.assertContains(response, "Provider")
+        self.assertContains(response, "Tag pool")
+        self.assertContains(response, "Message direction")
+        self.assertContains(response, "Message cost")
+        self.assertContains(response, "Storage cost")
+        self.assertContains(response, "Session cost")
+        self.assertContains(response, "Session unit cost")
+        self.assertContains(response, "Session unit time")
+        self.assertContains(response, "Markup percent")
+        self.assertContains(response, "Message credit cost")
+        self.assertContains(response, "Storage credit cost")
+        self.assertContains(response, "Session credit cost")
+        self.assertContains(response, "Session length credit cost")
+
+    def test_low_credit_notification_admin_view(self):
+        notification = LowCreditNotification(
+            account=self.account, threshold=10, credit_balance=100)
+        notification.save()
+        client = self.vumi_helper.get_client()
+        client.login()
+        response = client.get(
+            reverse('admin:billing_lowcreditnotification_changelist'))
+        self.assertContains(response, "Low credit notifications")
+        self.assertContains(response, "Account")
+        self.assertContains(response, "Created")
+        self.assertContains(response, "Success")
+        self.assertContains(response, "Threshold")
+        self.assertContains(response, "Credit balance")
+
     def test_account_admin_view(self):
         client = self.vumi_helper.get_client()
         client.login()
@@ -88,10 +162,9 @@ class TestStatementAdmin(GoDjangoTestCase):
     def test_getting_developer_flag(self):
         admin = AccountAdmin(Account, AdminSite())
         self.assertFalse(admin.is_developer(self.account))
-        vumi_api = vumi_api_for_user(self.account.user)
-        account = vumi_api.get_user_account()
-        account.is_developer = True
-        account.save()
+        user_account = self.user_helper.get_user_account()
+        user_account.is_developer = True
+        user_account.save()
         self.assertTrue(admin.is_developer(self.account))
 
     def test_setting_developer_flag(self):

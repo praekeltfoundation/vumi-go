@@ -1,9 +1,13 @@
 from decimal import Decimal
 
 import mock
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.billing.templatetags.billing_tags import (
-    format_cents, format_credits, credit_balance)
+
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.billing.templatetags.billing_tags import (
+        format_cents, format_credits, credit_balance)
 
 
 class TestFormatCents(GoDjangoTestCase):

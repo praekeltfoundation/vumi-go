@@ -1,3 +1,5 @@
+from contextlib import closing
+
 from django.core import urlresolvers
 from django.conf.urls import patterns
 from django.http import HttpResponseRedirect
@@ -39,15 +41,15 @@ class AccountAdmin(admin.ModelAdmin):
     load_credits.short_description = "Load credits for selected accounts"
 
     def is_developer(self, obj):
-        vumi_api = vumi_api_for_user(obj.user)
-        account = vumi_api.get_user_account()
+        with closing(vumi_api_for_user(obj.user)) as user_api:
+            account = user_api.get_user_account()
         return account.is_developer
 
     def _set_developer_flag(self, user, value):
-        vumi_api = vumi_api_for_user(user)
-        account = vumi_api.get_user_account()
-        account.is_developer = value
-        account.save()
+        with closing(vumi_api_for_user(user)) as user_api:
+            account = user_api.get_user_account()
+            account.is_developer = value
+            account.save()
 
     def set_developer_flag(self, request, queryset):
         for obj in queryset:
@@ -112,16 +114,18 @@ class AccountAdmin(admin.ModelAdmin):
 
 
 class MessageCostAdmin(admin.ModelAdmin):
-    list_display = ('id', 'account', 'tag_pool', 'message_direction',
-                    'message_cost', 'storage_cost', 'session_cost',
-                    'session_unit_cost', 'session_unit_time', 'markup_percent',
-                    'message_credit_cost', 'storage_credit_cost',
-                    'session_credit_cost', 'session_length_credit_cost')
+    list_display = (
+        'id', 'account', 'provider', 'tag_pool', 'message_direction',
+        'message_cost', 'storage_cost', 'session_cost',
+        'session_unit_cost', 'session_unit_time', 'markup_percent',
+        'message_credit_cost', 'storage_credit_cost',
+        'session_credit_cost', 'session_length_credit_cost',
+    )
 
     search_fields = (
         'tag_pool__name', 'tag_pool__description', 'account__account_number',
         'account__user__email', 'account__description')
-    list_filter = ('tag_pool', 'message_direction')
+    list_filter = ('account', 'tag_pool', 'message_direction')
     form = MessageCostForm
 
 
@@ -149,6 +153,15 @@ class TransactionAdmin(admin.ModelAdmin):
         return False
 
 
+class TransactionArchiveAdmin(admin.ModelAdmin):
+    list_display = ('account', 'from_date', 'to_date', 'status', 'created')
+    search_fields = (
+        'account__account_number', 'account__user__email',
+        'from_date', 'to_date', 'status', 'created',
+    )
+    list_filter = ('account', 'status')
+
+
 class LineItemInline(admin.TabularInline):
     model = LineItem
 
@@ -173,6 +186,8 @@ class StatementAdmin(admin.ModelAdmin):
         'view_html',
     )
 
+    list_filter = ('account',)
+
     readonly_fields = (
         'account', 'title', 'type', 'from_date', 'to_date', 'created',
     )
@@ -183,10 +198,18 @@ class StatementAdmin(admin.ModelAdmin):
     view_html.short_description = "HTML"
 
 
+class LowCreditNotificationAdmin(admin.ModelAdmin):
+    list_display = (
+        'account', 'created', 'success', 'threshold', 'credit_balance',
+    )
+
+    list_filter = ('account',)
+
+
 admin.site.register(TagPool, TagPoolAdmin)
 admin.site.register(Account, AccountAdmin)
 admin.site.register(MessageCost, MessageCostAdmin)
 admin.site.register(Transaction, TransactionAdmin)
+admin.site.register(TransactionArchive, TransactionArchiveAdmin)
 admin.site.register(Statement, StatementAdmin)
-admin.site.register(LowCreditNotification)
-admin.site.register(TransactionArchive)
+admin.site.register(LowCreditNotification, LowCreditNotificationAdmin)

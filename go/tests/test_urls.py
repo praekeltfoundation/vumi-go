@@ -1,6 +1,9 @@
-from django.core.urlresolvers import reverse
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestLoginAs(GoDjangoTestCase):

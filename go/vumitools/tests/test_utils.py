@@ -4,8 +4,27 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase, MessageHelper
 
 from go.vumitools.model_object_cache import ModelObjectCache
-from go.vumitools.utils import MessageMetadataDictHelper, MessageMetadataHelper
+from go.vumitools.utils import (
+    extract_auth_from_url, MessageMetadataDictHelper, MessageMetadataHelper)
 from go.vumitools.tests.helpers import VumiApiHelper
+
+
+class TestExtractAuthFromUrl(VumiTestCase):
+
+    def test_extract_auth_from_url_no_auth(self):
+        auth, url = extract_auth_from_url('http://go.vumi.org')
+        self.assertEqual(auth, None)
+        self.assertEqual(url, 'http://go.vumi.org')
+
+    def test_extract_auth_from_url_with_auth(self):
+        auth, url = extract_auth_from_url('http://u:p@go.vumi.org')
+        self.assertEqual(auth, ('u', 'p'))
+        self.assertEqual(url, 'http://go.vumi.org')
+
+    def test_extract_auth_from_url_with_username(self):
+        auth, url = extract_auth_from_url('http://u@go.vumi.org')
+        self.assertEqual(auth, ('u', None))
+        self.assertEqual(url, 'http://go.vumi.org')
 
 
 class TestMessageMetadataDictHelper(VumiTestCase):
@@ -264,10 +283,8 @@ class TestMessageMetadataHelper(VumiTestCase):
         md.set_tag(["pool", "tag"])
         self.assertEqual(md._store_objects, {})
         md_conv = yield md.get_conversation()
-        tag_info = yield md.get_tag_info()
         self.assertEqual(md._store_objects, {
             'conversation': md_conv,
-            'tag_info': tag_info,
         })
         md.clear_object_cache()
         self.assertEqual(md._store_objects, {})
@@ -459,39 +476,10 @@ class TestMessageMetadataHelper(VumiTestCase):
         self.assertEqual({}, other_md._store_objects)
         self.assertEqual(md._go_metadata, other_md._go_metadata)
 
-    def test_get_tag_info_no_tag(self):
-        md = self.mk_md()
-        self.assertEqual(None, md.tag)
-        self.assertRaises(ValueError, md.get_tag_info)
-
     def test_get_tagpool_metadata_no_tag(self):
         md = self.mk_md()
         self.assertEqual(None, md.tag)
         self.assertRaises(ValueError, md.get_tagpool_metadata)
-
-    @inlineCallbacks
-    def test_get_tag_info(self):
-        md = self.mk_md()
-        md.set_tag(["pool", "tagname"])
-
-        tag_info = yield md.get_tag_info()
-        self.assertEqual(("pool", "tagname"), tag_info.tag)
-
-    @inlineCallbacks
-    def test_tag_info_caching(self):
-        md = self.mk_md()
-        md.set_tag(["pool", "tagname"])
-
-        self.assertEqual({}, md._store_objects)
-        tag_info = yield md.get_tag_info()
-        self.assertEqual(("pool", "tagname"), tag_info.tag)
-        self.assertEqual({'tag_info': tag_info}, md._store_objects)
-
-        # Stash a fake thing in the cache to make sure that what we get is
-        # actually the thing in the cache.
-        md._store_objects['tag_info'] = "I am the cached tag_info"
-        cached_tag_info = yield md.get_tag_info()
-        self.assertEqual(cached_tag_info, "I am the cached tag_info")
 
     @inlineCallbacks
     def test_get_tagpool_metadata(self):

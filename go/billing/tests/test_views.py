@@ -2,12 +2,15 @@
 from decimal import Decimal
 
 import mock
-from django.core.urlresolvers import reverse
 
-from go.base.tests.helpers import DjangoVumiApiHelper, GoDjangoTestCase
-from go.billing.models import Account
+from go.vumitools.tests.helpers import djangotest_imports
 
-from .helpers import mk_statement, get_line_items
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+
+    from go.base.tests.helpers import DjangoVumiApiHelper, GoDjangoTestCase
+    from go.billing.models import Account
+    from go.billing.tests.helpers import mk_statement, get_line_items
 
 
 class TestStatementView(GoDjangoTestCase):
@@ -105,7 +108,7 @@ class TestStatementView(GoDjangoTestCase):
     def test_statement_costs(self):
         statement = self.mk_statement(items=[{
             'credits': Decimal('200.0'),
-            'unit_cost': Decimal('123.456'),
+            'unit_cost': Decimal('123.45678'),
             'cost': Decimal('679.012'),
         }])
 
@@ -113,7 +116,7 @@ class TestStatementView(GoDjangoTestCase):
         response = self.get_statement(user, statement)
 
         self.assertContains(response, '>200.00<')
-        self.assertContains(response, '>1.234<')
+        self.assertContains(response, '>1.23456<')
         self.assertContains(response, '>6.790<')
 
     def test_statement_cost_nones(self):

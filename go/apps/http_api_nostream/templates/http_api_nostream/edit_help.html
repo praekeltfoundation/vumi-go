@@ -1,0 +1,86 @@
+<h1>Examples</h1>
+
+<p>
+  The examples below show how to send messages and fire metrics using
+  the <code>curl</code> command. The <em>username</em>
+  and <em>password</em> needed for authentication have been filled in
+  for you as follows:
+</p>
+
+<ul>
+  <li>The <em>username</em> is your Vumi Go account key
+    (<code>{{ conversation.user_account.key }}</code>). It can be found at the
+    bottom of your <a href="{% url 'account:details' %}">Account
+    Details</a> page.
+  </li>
+  <li>The <em>password</em> is the API token you specified for this
+    conversation.
+  </li>
+</ul>
+
+<p>
+  The URLs for sending messages and firing metrics contain
+  the <em>conversation id</em> (the string of letters and digits near
+  the end of the URL). This conversation's id is
+  <code>{{ conversation.key }}</code>.
+</p>
+
+<p class="text-warning">
+  The <em>password</em> used is the saved value of the API token. If you
+  have modified the API token, you will have to save the change before the
+  examples include the new password.
+</p>
+
+
+<h2>Example send</h2>
+
+<p>You can send messages via this conversation using an HTTP PUT request as follows:</p>
+
+<pre><code>
+  $ curl -X PUT \
+       --user '{{ conversation.user_account.key }}:{{ conversation.get_config.http_api_nostream.api_tokens | first }}' \
+       --data '{"in_reply_to": "59b37288d8d94e42ab804158bdbf53e5", \
+                "to_addr": "27761234567", \
+                "to_addr_type": "msisdn", \
+                "content": "This is an outgoing SMS!"}' \
+       https://go.vumi.org/api/v1/go/http_api_nostream/{{ conversation.key }}/messages.json \
+       -vvv
+</code></pre>
+
+<h2>Example metric firing</h2>
+
+<p>You can fire metrics via this conversation using an HTTP PUT request as follows:</p>
+
+<pre><code>
+  $ curl -X PUT \
+       --user '{{ conversation.user_account.key }}:{{ conversation.get_config.http_api_nostream.api_tokens | first }}' \
+       --data '[["total_pings", 1200, "MAX"]]' \
+       https://go.vumi.org/api/v1/go/http_api_nostream/{{ conversation.key }}/metrics.json \
+       -vvv
+</pre></code>
+
+<h1>Retrying failed requests</h1>
+
+<p>When an HTTP request to a <em>Push message URL</em> or <em>Push event URL</em>
+fails, it is scheduled for retrying after 5 minutes, 30 minutes and 1 hour.
+If all three retries fail, the HTTP request is discarded.</p>
+
+<p>If your account has more than 10 000 pending retries, failed requests will
+not be scheduled for retrying until some of the pending retries have either
+succeeded or failed their last retry.</p>
+
+<p>HTTP errors that will cause a retry to be scheduled:</p>
+
+<ul>
+    <li>a 5xx HTTP response code</li>
+    <li>a timeout completing the request</li>
+    <li>a failure to establish the HTTP connection</li>
+    <li>a failure to look up the host using DNS</li>
+</ul>
+
+<p>Errors that will not cause a retry:</p>
+
+<ul>
+    <li>a badly formatted URL</li>
+    <li>a 4xx HTTP response code</li>
+</ul>

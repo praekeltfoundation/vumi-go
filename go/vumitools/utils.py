@@ -1,8 +1,25 @@
 # -*- test-case-name: go.vumitools.tests.test_utils -*-
+from urlparse import urlparse, urlunparse
 
 from twisted.internet.defer import succeed
-
 from vumi.middleware.tagger import TaggingMiddleware
+
+
+def extract_auth_from_url(url):
+    parse_result = urlparse(url)
+    if parse_result.username:
+        auth = (parse_result.username, parse_result.password)
+        url = urlunparse(
+            (parse_result.scheme,
+             ('%s:%s' % (parse_result.hostname, parse_result.port)
+              if parse_result.port
+              else parse_result.hostname),
+             parse_result.path,
+             parse_result.params,
+             parse_result.query,
+             parse_result.fragment))
+        return auth, url
+    return None, url
 
 
 class MessageMetadataDictHelper(object):
@@ -187,13 +204,6 @@ class MessageMetadataHelper(MessageMetadataDictHelper):
     def set_tag(self, tag):
         TaggingMiddleware.add_tag_to_msg(self.message, tag)
         self.tag = TaggingMiddleware.map_msg_to_tag(self.message)
-
-    def get_tag_info(self):
-        if self.tag is None:
-            raise ValueError("No tag to look up metadata for.")
-
-        return self._get_if_not_stashed(
-            'tag_info', self.vumi_api.mdb.get_tag_info, tuple(self.tag))
 
     def get_tagpool_metadata(self):
         if self.tag is None:

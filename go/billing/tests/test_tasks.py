@@ -1,27 +1,29 @@
 from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
 from decimal import Decimal
 import gzip
 import json
 import StringIO
 
-from django.core import mail
-
+from dateutil.relativedelta import relativedelta
 import mock
 
-from go.base.s3utils import Bucket
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.tests.s3_helpers import S3Helper
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.billing.models import (
-    MessageCost, Account, Statement, Transaction, TransactionArchive,
-    LowCreditNotification)
-from go.billing import tasks
-from go.billing.django_utils import TransactionSerializer
-from go.billing.tests.helpers import (
-    this_month, mk_transaction, get_line_items,
-    get_message_credits, get_session_credits, get_storage_credits,
-    get_session_length_credits)
+with djangotest_imports(globals()):
+    from django.core import mail
+
+    from go.base.s3utils import Bucket
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.tests.s3_helpers import S3Helper
+    from go.billing.models import (
+        MessageCost, Account, Statement, Transaction, TransactionArchive,
+        LowCreditNotification)
+    from go.billing import tasks
+    from go.billing.django_utils import TransactionSerializer
+    from go.billing.tests.helpers import (
+        this_month, mk_transaction, get_line_items,
+        get_message_credits, get_session_credits, get_storage_credits,
+        get_session_length_credits)
 
 
 def gunzip(data):

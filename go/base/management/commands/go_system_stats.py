@@ -4,7 +4,6 @@ from collections import defaultdict
 from csv import DictWriter
 from optparse import make_option
 
-from go.base.utils import vumi_api_for_user
 from go.base.command_utils import BaseGoCommand, get_users, make_command_option
 
 
@@ -60,7 +59,7 @@ class Command(BaseGoCommand):
         type_stats = {}
 
         for user in get_users():
-            api = vumi_api_for_user(user)
+            api = self.user_api_for_user(user)
             for key in api.conversation_store.list_conversations():
                 conv = api.get_wrapped_conversation(key)
                 conv_types.add(conv.conversation_type)
@@ -89,7 +88,7 @@ class Command(BaseGoCommand):
         month_stats = {}
 
         for user in get_users():
-            api = vumi_api_for_user(user)
+            api = self.user_api_for_user(user)
             for key in api.conversation_store.list_conversations():
                 conv = api.get_wrapped_conversation(key)
                 conv_types.add(conv.conversation_type)
@@ -121,7 +120,7 @@ class Command(BaseGoCommand):
         month_stats = {}
 
         for user in get_users():
-            api = vumi_api_for_user(user)
+            api = self.user_api_for_user(user)
             for key in api.conversation_store.list_conversations():
                 conv = api.get_wrapped_conversation(key)
                 month = conv.created_at.date().replace(day=1)

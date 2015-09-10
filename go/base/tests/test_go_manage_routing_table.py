@@ -1,8 +1,11 @@
 from StringIO import StringIO
 
-from go.base.management.commands import go_manage_routing_table
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.routing_table import GoConnector
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.management.commands import go_manage_routing_table
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoManageRoutingTableCommand(GoDjangoTestCase):
@@ -24,7 +27,7 @@ class TestGoManageRoutingTableCommand(GoDjangoTestCase):
 
     def handle_command(self, **options):
         user_email = self.user_helper.get_django_user().email
-        options.setdefault('email-address', user_email)
+        options.setdefault('email_address', user_email)
         options.setdefault('show', False)
         options.setdefault('clear', False)
         options.setdefault('add', ())

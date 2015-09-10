@@ -1,13 +1,16 @@
-from django.core.urlresolvers import reverse
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
-from django.core.paginator import Paginator
-
-from go.base import utils
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 from go.vumitools.api import VumiApi, VumiUserApi
 from go.vumitools.conversation.definition import ConversationDefinitionBase
-from go.conversation.view_definition import ConversationViewDefinitionBase
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from django.core.urlresolvers import reverse
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.core.paginator import Paginator
+
+    from go.base import utils
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.conversation.view_definition import ConversationViewDefinitionBase
 
 
 class TestAuthentication(GoDjangoTestCase):
@@ -18,8 +21,10 @@ class TestAuthentication(GoDjangoTestCase):
 
     def test_user_account_created(self):
         """test that we have a user account"""
-        self.assertEqual('user@domain.com',
-                         self.user.userprofile.get_user_account().username)
+        api = self.vumi_helper.get_vumi_api()
+        self.assertEqual(
+            'user@domain.com',
+            self.user.userprofile.get_user_account(api).username)
 
     def test_redirect_to_login(self):
         """test the authentication mechanism"""
@@ -54,12 +59,14 @@ class TestUtils(GoDjangoTestCase):
 
     def test_vumi_api_for_user(self):
         user_api = utils.vumi_api_for_user(self.user)
+        self.add_cleanup(user_api.close)
         self.assertTrue(isinstance(user_api, VumiUserApi))
         self.assertEqual(user_api.user_account_key,
                          self.user.get_profile().user_account)
 
     def test_vumi_api(self):
         vumi_api = utils.vumi_api()
+        self.add_cleanup(vumi_api.close)
         self.assertTrue(isinstance(vumi_api, VumiApi))
 
     def test_padded_queryset(self):

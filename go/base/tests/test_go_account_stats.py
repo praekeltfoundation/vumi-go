@@ -2,9 +2,11 @@
 from StringIO import StringIO
 from datetime import datetime
 
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.base.management.commands import go_account_stats
-from go.vumitools.tests.helpers import GoMessageHelper
+from go.vumitools.tests.helpers import GoMessageHelper, djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.base.management.commands import go_account_stats
 
 
 class TestGoAccountStatsCommand(GoDjangoTestCase):

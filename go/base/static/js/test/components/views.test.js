@@ -28,10 +28,59 @@ describe("go.components.views", function() {
 
   describe(".MessageTextView", function() {
     var $div = $('<div/>');
-    var text = 'Margle. The. World.';
-    var $textarea = $('<textarea>' + text + '</textarea>');
+    var short_text = 'Margle. The. World.';
+    var long_text = [
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis',
+        ' tortor magna. Sed tristique mattis lectus sed tristique. Proin et',
+        ' diam id libero ullamcorper rhoncus. Cras bibendum aliquet faucibus.',
+        ' Maecenas nunc neque, laoreet sed bibendum eget, ullamcorper nec',
+        ' dui. Nam tortor quam, convallis dignissim auctor id, vehicula in',
+        ' nisl. Aenean accumsan, ipsum ac tristique interdum, leo quam',
+        ' pretium magna, nec sollicitudin ante ligula et sem. Aliquam a nulla',
+        ' orci. Curabitur vitae tortor nibh, id vulputate nisi. Vestibulum',
+        ' ante ipsum primis in faucibus orci luctus et ultrices posuere',
+        ' cubilia Curae;',
+    ].join("");
+    var $textarea = $('<textarea>' + short_text + '</textarea>');
     $div.append($textarea);
     var view = new go.components.views.MessageTextView({el: $textarea});
+
+    function assert_char_counts(text, non_ascii) {
+        var total_chars = text.length;
+        var chars_per_sms = non_ascii ? 70 : 160;
+        var total_smses = (Math.ceil(total_chars / chars_per_sms));
+        var non_ascii_chars = go.utils.non_ascii(text);
+        assert.equal(non_ascii, view.containsNonAscii);
+        assert.equal(total_chars, view.totalChars);
+        assert.equal(total_smses, view.totalSMS);
+        assert.equal(chars_per_sms, view.charsPerSms);
+        var p = $div.find('.textarea-char-count').first();
+        if (!non_ascii) {
+            assert.equal(p.html(), [
+                total_chars + ' characters used',
+                total_smses + ' smses (160 characters per SMS)',
+            ].join('<br>'))
+            assert.equal(p.hasClass('text-danger'), false);
+        }
+        else {
+            var warning_text = [
+                "These characters may not be understood correctly by some",
+                " USSD and SMS channels. For SMS channels, it will also",
+                " reduce the number of characters per SMS from 160 to 70",
+                " and possibly double the number of SMSes billed for. For",
+                " USSD channels, the maximum number of characters will be",
+                " similarly reduced."
+            ].join("");
+            assert.equal(p.html(), [
+                'Your message contains the following special characters: '
+                    + non_ascii_chars.join(', ') + '.',
+                warning_text,
+                total_chars + ' characters used',
+                total_smses + ' smses (70 characters per SMS)',
+            ].join('<br>'))
+            assert.equal(p.hasClass('text-danger'), true);
+        }
+    }
 
     it("should append an element `.textarea-char-count`", function() {
         $textarea.trigger('keyup');
@@ -39,16 +88,33 @@ describe("go.components.views", function() {
     });
 
     it("should update char and SMS counters on keyup.", function() {
-        $textarea.trigger('keyup');        
-        assert.equal(text.length, view.totalChars);
-        assert.equal(Math.ceil(text.length/160), view.totalSMS);
-
-        text = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis tortor magna. Sed tristique mattis lectus sed tristique. Proin et diam id libero ullamcorper rhoncus. Cras bibendum aliquet faucibus. Maecenas nunc neque, laoreet sed bibendum eget, ullamcorper nec dui. Nam tortor quam, convallis dignissim auctor id, vehicula in nisl. Aenean accumsan, ipsum ac tristique interdum, leo quam pretium magna, nec sollicitudin ante ligula et sem. Aliquam a nulla orci. Curabitur vitae tortor nibh, id vulputate nisi. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae;';
-        $textarea.val(text);
         $textarea.trigger('keyup');
-        assert.equal(text.length, view.totalChars);
-        assert.equal(Math.ceil(text.length/160), view.totalSMS);
+        assert_char_counts(short_text, false);
+
+        $textarea.val(long_text);
+        $textarea.trigger('keyup');
+        assert_char_counts(long_text, false);
     });
+
+    it("should detect non-ASCII characters", function() {
+        var non_ascii_text = short_text + "ó";
+        $textarea.val(non_ascii_text);
+        $textarea.trigger('keyup');
+        assert_char_counts(non_ascii_text, true);
+    });
+
+    it("should update text area once non-ASCII characters are removed",
+    function() {
+        var ascii_text = "o";
+        var non_ascii_text = "ó";
+        $textarea.val(non_ascii_text);
+        $textarea.trigger('keyup');
+        assert_char_counts(non_ascii_text, true);
+        $textarea.val(ascii_text);
+        $textarea.trigger('keyup');
+        assert_char_counts(ascii_text, false);
+    });
+
   });
 
   describe(".ConfirmView", function() {

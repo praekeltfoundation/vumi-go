@@ -1,7 +1,10 @@
-from django.contrib.auth import get_user_model
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.management.commands import go_create_user
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+with djangotest_imports(globals()):
+    from django.contrib.auth import get_user_model
+
+    from go.base.management.commands import go_create_user
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoCreateUserCommand(GoDjangoTestCase):
@@ -26,6 +29,7 @@ class TestGoCreateUserCommand(GoDjangoTestCase):
         self.assertEqual(user.first_name, 'Name')
         self.assertEqual(user.last_name, 'Surname')
         profile = user.get_profile()
-        riak_account = profile.get_user_account()
+        riak_account = profile.get_user_account(
+            self.vumi_helper.get_vumi_api())
         self.assertEqual(riak_account.key, profile.user_account)
         self.assertEqual(riak_account.username, user.email)

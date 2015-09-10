@@ -1,13 +1,12 @@
 from optparse import make_option
 
-from django.core.management.base import BaseCommand
 from django.db.models import Q
 
-from go.base.command_utils import get_users, user_details_as_string
-from go.base.utils import vumi_api_for_user
+from go.base.command_utils import (
+    BaseGoCommand, get_users, user_details_as_string)
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = """
     List known accounts on Vumi Go. Allows for optional searching on the
     username.
@@ -27,7 +26,7 @@ class Command(BaseCommand):
     args = "[optional username regex]"
     encoding = 'utf-8'
 
-    option_list = BaseCommand.option_list + (
+    option_list = BaseGoCommand.option_list + (
         make_option(
             '--show-pools', dest='show-pools', default=False,
             action='store_true',
@@ -38,7 +37,7 @@ class Command(BaseCommand):
             help="Show owned tags in account listing"),
     )
 
-    def handle(self, *usernames, **options):
+    def handle_no_command(self, *usernames, **options):
         users = get_users()
         if usernames:
             or_statements = [Q(email__regex=un) for un in usernames]
@@ -52,7 +51,7 @@ class Command(BaseCommand):
     def print_account(self, index, user, options):
         output = u"%s. %s\n" % (index, user_details_as_string(user))
         self.stdout.write(output.encode(self.encoding))
-        user_api = vumi_api_for_user(user)
+        user_api = self.user_api_for_user(user)
         if options.get('show-pools'):
             self.stdout.write("  Pools:\n")
             user_account = user_api.get_user_account()

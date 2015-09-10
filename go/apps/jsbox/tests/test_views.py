@@ -2,12 +2,15 @@ import json
 import logging
 
 from go.apps.jsbox.log import LogManager
-from go.apps.jsbox.view_definition import (
-    JSBoxReportsView, ConversationReportsView)
-from go.apps.tests.view_helpers import AppViewsHelper
-from go.base.utils import get_conversation_view_definition
-from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.apps.jsbox.view_definition import (
+        JSBoxReportsView, ConversationReportsView)
+    from go.apps.tests.view_helpers import AppViewsHelper
+    from go.base.utils import get_conversation_view_definition
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestJsBoxViews(GoDjangoTestCase):

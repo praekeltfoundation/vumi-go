@@ -1,8 +1,6 @@
-from django.core.management.base import BaseCommand
 from vumi.message import parse_vumi_date
 
-from go.base.utils import vumi_api_for_user
-from go.base.command_utils import get_user_by_email
+from go.base.command_utils import BaseGoCommand
 
 
 def print_dates(bucket, io):
@@ -11,7 +9,7 @@ def print_dates(bucket, io):
         io.write('%s: %s\n' % (item.strftime('%Y-%m-%d'), count))
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = """
     Generate stats for a given Vumi Go account.
 
@@ -19,7 +17,7 @@ class Command(BaseCommand):
     args = "<email-address> <command>"
     encoding = 'utf-8'
 
-    def handle(self, *args, **options):
+    def handle_no_command(self, *args, **options):
 
         if len(args) == 0:
             self.print_command_summary()
@@ -31,14 +29,10 @@ class Command(BaseCommand):
         email_address = args[0]
         command = args[1]
 
-        user = get_user_by_email(email=email_address)
-        api = self.get_api(user)
+        user, api = self.mk_user_api(email_address)
 
         handler = getattr(self, 'handle_%s' % (command,), self.unknown_command)
         handler(user, api, args[2:])
-
-    def get_api(self, user):
-        return vumi_api_for_user(user)
 
     def out(self, data):
         self.stdout.write(data.encode(self.encoding))
@@ -98,11 +92,20 @@ class Command(BaseCommand):
         self.do_batch_key(message_store, batch_key)
         self.do_batch_key_breakdown(message_store, batch_key)
 
+    def _count_results(self, index_page):
+        count = 0
+        while index_page is not None:
+            count += len(index_page)
+            index_page = index_page.next_page()
+        return count
+
     def do_batch_key(self, message_store, batch_key):
-        self.out(u'Total Received in batch %s: %s\n' % (
-            batch_key, message_store.batch_inbound_count(batch_key),))
-        self.out(u'Total Sent in batch %s: %s\n' % (
-            batch_key, message_store.batch_outbound_count(batch_key),))
+        in_count = self._count_results(
+            message_store.batch_inbound_keys_page(batch_key))
+        out_count = self._count_results(
+            message_store.batch_outbound_keys_page(batch_key))
+        self.out(u'Total Received in batch %s: %s\n' % (batch_key, in_count))
+        self.out(u'Total Sent in batch %s: %s\n' % (batch_key, out_count))
 
     def parse_timestamp_to_date(self, timestamp):
         return parse_vumi_date(timestamp).date()

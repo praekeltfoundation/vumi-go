@@ -135,6 +135,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "dialogue", "templates"),
     abspath("apps", "surveys", "templates"),
     abspath("apps", "jsbox", "templates"),
+    abspath("apps", "http_api_nostream", "templates"),
     abspath("conversation", "templates"),
     abspath("router", "templates"),
     abspath("channel", "templates"),
@@ -156,6 +157,7 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
     'south',
+    'djorm_core.postgresql',
     'gunicorn',
     'djcelery',
     'djcelery_email',
@@ -338,7 +340,7 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 
 # PIPELINES CONFIGURATION
-paths = yaml.safe_load(open(os.path.join(PROJECT_ROOT, '..', 'js_paths.yml')))
+paths = yaml.safe_load(open(abspath('js_paths.yml')))
 
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 PIPELINE_CSS = {

@@ -1,10 +1,13 @@
 import json
 
 from go.api.go_api.tests.utils import MockRpc
-from go.apps.tests.view_helpers import AppViewsHelper
-from go.base.tests.helpers import GoDjangoTestCase
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.contact.models import DELIVERY_CLASSES
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.apps.tests.view_helpers import AppViewsHelper
+    from go.base.tests.helpers import GoDjangoTestCase
 
 
 class TestDialogueViews(GoDjangoTestCase):

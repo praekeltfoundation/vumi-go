@@ -62,12 +62,6 @@ class SequentialSendApplication(GoApplicationWorker):
         # This should not receive inbound messages.
         log.msg('WARNING: Received inbound message: %s' % (message,))
 
-    def consume_ack(self, event):
-        return self.vumi_api.mdb.add_event(event)
-
-    def consume_delivery_report(self, event):
-        return self.vumi_api.mdb.add_event(event)
-
     def _get_last_poll_time(self):
         return self.redis.get('last_poll_time')
 
@@ -116,6 +110,9 @@ class SequentialSendApplication(GoApplicationWorker):
     def process_conversation_schedule(self, then, now, conv):
         schedule = self.get_config_for_conversation(conv).schedule
         if ScheduleManager(schedule).is_scheduled(then, now):
+            log.info(
+                'Sending scheduled messages for conversation %s from'
+                ' account %s' % (conv.key, conv.user_account.key))
             yield self.send_scheduled_messages(conv)
 
     @inlineCallbacks
@@ -141,19 +138,12 @@ class SequentialSendApplication(GoApplicationWorker):
                         contact.key, contact,))
                     continue
 
-                yield self.send_message(
-                    conv.batch.key, to_addr, messages[message_index],
-                    message_options)
+                yield self.send_to(
+                    to_addr, messages[message_index], endpoint='default',
+                    **message_options)
 
                 contact.extra[index_key] = u'%s' % (message_index + 1)
                 yield contact.save()
-
-    @inlineCallbacks
-    def send_message(self, batch_id, to_addr, content, msg_options):
-        msg = yield self.send_to(
-            to_addr, content, endpoint='default', **msg_options)
-        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
-        log.info('Stored outbound %s' % (msg,))
 
     @inlineCallbacks
     def process_command_start(self, cmd_id, user_account_key,

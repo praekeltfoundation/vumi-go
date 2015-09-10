@@ -16,6 +16,7 @@ class TestUserAccountMigrations(VumiTestCase):
         self.persistence_helper = self.add_helper(
             PersistenceHelper(use_riak=True))
         riak_manager = self.persistence_helper.get_riak_manager()
+        self.add_cleanup(riak_manager.close_manager)
         self.store = AccountStore(riak_manager)
 
         # Some old stores for testing migrations.
@@ -262,6 +263,7 @@ class TestFlagProperty(VumiTestCase):
         self.persistence_helper = self.add_helper(
             PersistenceHelper(use_riak=True))
         self.manager = self.persistence_helper.get_riak_manager()
+        self.add_cleanup(self.manager.close_manager)
 
     def test_getter(self):
         """

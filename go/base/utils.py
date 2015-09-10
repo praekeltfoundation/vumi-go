@@ -4,11 +4,10 @@ import csv
 import codecs
 from decimal import Decimal, ROUND_DOWN
 from StringIO import StringIO
-from urlparse import urlparse, urlunparse
 
-from django import forms
 from django.http import Http404, HttpResponse
 from django.conf import settings
+from vumi.persist.redis_manager import RedisManager
 
 from go.errors import UnknownConversationType, UnknownRouterType
 from go.config import (
@@ -47,6 +46,14 @@ def sendfile(url, buffering=True, filename=None):
     return response
 
 
+def get_redis_manager():
+    """
+    Build a Django-configured Redis manager.
+    """
+    redis_config = settings.VUMI_API_CONFIG.get('redis_manager', {})
+    return RedisManager.from_config(redis_config)
+
+
 def vumi_api():
     """Return a Vumi API instance."""
     return VumiApi.from_config_sync(settings.VUMI_API_CONFIG, connection)
@@ -54,9 +61,12 @@ def vumi_api():
 
 def vumi_api_for_user(user, api=None):
     """Return a Vumi API instance for the given user."""
+    cleanup_api = False
     if api is None:
         api = vumi_api()
-    return api.get_user_api(user.get_profile().user_account)
+        cleanup_api = True
+    return api.get_user_api(
+        user.get_profile().user_account, cleanup_api=cleanup_api)
 
 
 def padded_queryset(queryset, size=6, padding=None):
@@ -68,28 +78,6 @@ def padded_queryset(queryset, size=6, padding=None):
     results = list(queryset)
     results.extend(filler)
     return results
-
-
-def make_read_only_formset(formset):
-    for form in formset:
-        make_read_only_form(form)
-    return formset
-
-
-def make_read_only_form(form):
-    """turn all fields in a form readonly"""
-    for field_name, field in form.fields.items():
-        widget = field.widget
-        if isinstance(
-                widget, (forms.RadioSelect, forms.CheckboxSelectMultiple)):
-            widget.attrs.update({
-                'disabled': 'disabled'
-            })
-        else:
-            widget.attrs.update({
-                'readonly': 'readonly'
-            })
-    return form
 
 
 def page_range_window(page, padding):
@@ -223,23 +211,6 @@ def get_router_view_definition(router_type, router=None):
     if not hasattr(router_pkg, 'view_definition'):
         return RouterViewDefinitionBase(router_def)
     return router_pkg.view_definition.RouterViewDefinition(router_def)
-
-
-def extract_auth_from_url(url):
-    parse_result = urlparse(url)
-    if parse_result.username:
-        auth = (parse_result.username, parse_result.password)
-        url = urlunparse(
-            (parse_result.scheme,
-             ('%s:%s' % (parse_result.hostname, parse_result.port)
-              if parse_result.port
-              else parse_result.hostname),
-             parse_result.path,
-             parse_result.params,
-             parse_result.query,
-             parse_result.fragment))
-        return auth, url
-    return None, url
 
 
 def format_currency(

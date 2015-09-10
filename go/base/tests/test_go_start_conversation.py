@@ -1,9 +1,12 @@
 from StringIO import StringIO
 
-from django.core.management.base import CommandError
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.base.management.commands import go_start_conversation
-from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+with djangotest_imports(globals()):
+    from django.core.management.base import CommandError
+
+    from go.base.management.commands import go_start_conversation
+    from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
 class TestGoStartConversation(GoDjangoTestCase):
@@ -18,8 +21,9 @@ class TestGoStartConversation(GoDjangoTestCase):
         self.command.stderr = StringIO()
 
     def test_sanity_checks(self):
-        self.assertRaisesRegexp(CommandError, 'provide --email-address',
-            self.command.handle, email_address=None, conversation_key=None)
+        self.assertRaisesRegexp(CommandError,
+            '--email-address must be specified', self.command.handle,
+            email_address=None, conversation_key=None)
         self.assertRaisesRegexp(CommandError, 'provide --conversation-key',
             self.command.handle, email_address=self.user_email,
             conversation_key=None)

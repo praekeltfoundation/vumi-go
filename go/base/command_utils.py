@@ -56,12 +56,23 @@ def make_email_option():
 
 
 class BaseGoCommand(BaseCommand):
+    _vumi_api = None
+
+    @property
+    def vumi_api(self):
+        if self._vumi_api is None:
+            self._vumi_api = vumi_api()
+        return self._vumi_api
+
     def list_commands(self):
         return [opt.const for opt in self.option_list
                 if opt.action == 'append_const' and opt.dest == 'command']
 
+    def user_api_for_user(self, user):
+        return vumi_api_for_user(user, self.vumi_api)
+
     def mk_all_user_apis(self):
-        apis = [(user, vumi_api_for_user(user)) for user in get_users()]
+        apis = [(user, self.user_api_for_user(user)) for user in get_users()]
         apis.sort(key=lambda u: u[0].email)
         return apis
 
@@ -69,20 +80,21 @@ class BaseGoCommand(BaseCommand):
         if email_address is None and options is None:
             raise ValueError("email_address or options is required")
         if email_address is None:
-            if 'email_address' not in options:
+            if options.get('email_address', None) is None:
                 raise CommandError("--email-address must be specified")
             email_address = options.get('email_address')
         user = get_user_by_email(email_address)
-        user_api = vumi_api_for_user(user)
+        user_api = self.user_api_for_user(user)
         return user, user_api
-
-    def mk_vumi_api(self):
-        return vumi_api()
 
     def handle(self, *args, **options):
         self.options = options
-        self.vumi_api = self.mk_vumi_api()
-        return self.dispatch_command(*args, **options)
+        try:
+            return self.dispatch_command(*args, **options)
+        finally:
+            if self._vumi_api is not None:
+                self._vumi_api.close()
+                self._vumi_api = None
 
     def dispatch_command(self, *args, **options):
         commands = options.get('command', [])

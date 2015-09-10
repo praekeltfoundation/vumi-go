@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 
-from go.base.utils import extract_auth_from_url
+from go.vumitools.utils import extract_auth_from_url
 
 
 def todo(request):  # pragma: no cover
