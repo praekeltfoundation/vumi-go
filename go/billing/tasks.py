@@ -373,7 +373,8 @@ def generate_monthly_statement(account_id, from_date, to_date):
         title=settings.MONTHLY_STATEMENT_TITLE,
         type=Statement.TYPE_MONTHLY,
         from_date=from_date,
-        to_date=to_date)
+        to_date=to_date,
+        status=Statement.STATUS_STATEMENT_PENDING)
 
     statement.save()
 
@@ -381,6 +382,9 @@ def generate_monthly_statement(account_id, from_date, to_date):
 
     if transactions:
         generate_statement_items(statement, transactions, tagpools)
+
+    statement.status = Statement.STATUS_STATEMENT_COMPLETED
+    statement.save()
 
     return statement
 

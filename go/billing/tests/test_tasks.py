@@ -93,7 +93,25 @@ class TestMonthlyStatementTask(GoDjangoTestCase):
         statement = Statement.objects.get(
             account=self.account, type=Statement.TYPE_MONTHLY)
 
+        self.assertEqual(
+            statement.status,
+            Statement.STATUS_STATEMENT_COMPLETED)
+
         self.assertEqual(result, statement)
+
+    @mock.patch('go.billing.tasks.get_transactions',
+                new_callable=mock.MagicMock)
+    def test_generate_monthly_statement_fail(self, get_transactions):
+        get_transactions.side_effect = Exception()
+
+        self.assertRaises(
+            Exception, tasks.generate_monthly_statement,
+            self.account.id, *this_month())
+
+        statement = Statement.objects.get(
+            account=self.account, type=Statement.TYPE_MONTHLY)
+
+        self.assertEqual(statement.status, Statement.STATUS_STATEMENT_PENDING)
 
     def test_generate_monthly_statement_inbound_messages(self):
         mk_transaction(
@@ -1241,7 +1259,8 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
         self.assertEqual(timestamp, notification.success)
 
     def test_email_sent(self):
-        notification_id, res = self.mk_notification('0.701', '1234.5678', False)
+        notification_id, res = self.mk_notification(
+            '0.701', '1234.5678', False)
         notification = LowCreditNotification.objects.get(pk=notification_id)
         self.assertTrue(res.get() is not None)
         self.assertEqual(len(mail.outbox), 1)

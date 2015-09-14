@@ -400,6 +400,14 @@ class Statement(models.Model):
         (TYPE_MONTHLY, TYPE_MONTHLY),
     )
 
+    STATUS_STATEMENT_PENDING = 'statement_pending'
+    STATUS_STATEMENT_COMPLETED = 'statement_completed'
+
+    STATUS_CHOICES = (
+        (STATUS_STATEMENT_PENDING, "Statement pending"),
+        (STATUS_STATEMENT_COMPLETED, "Statement completed"),
+    )
+
     account = models.ForeignKey(
         Account,
         help_text=_("Account number the statment is for."))
@@ -424,6 +432,12 @@ class Statement(models.Model):
     created = models.DateTimeField(
         auto_now_add=True,
         help_text=_("When this statement was created."))
+
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES,
+        default=STATUS_STATEMENT_PENDING,
+        help_text=_("The status of this statement. Can either be pending or "
+                    "completed"))
 
     def __unicode__(self):
         return u"%s for %s" % (self.title, self.account)
