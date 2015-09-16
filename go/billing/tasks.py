@@ -380,7 +380,7 @@ def generate_monthly_statement(account_id, from_date, to_date):
 
     transactions = get_transactions(account, statement)
 
-    if transactions:
+    if transactions.exists():
         generate_statement_items(statement, transactions, tagpools)
 
     statement.status = Statement.STATUS_STATEMENT_COMPLETED
