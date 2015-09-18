@@ -82,11 +82,12 @@ class TestSequentialSendApplication(VumiTestCase):
             self.message_convs.append(sched_conv)
         self.app.send_scheduled_messages = send_scheduled_messages
 
-    def _patch_with_raise(self, obj, attr, err):
+    def _patch_with_raise_once(self, obj, attr, err):
         def raiser(*args, **kw):
+            patch.restore()
             raise err
         patch = self.patch(obj, attr, raiser)
-        return patch, err
+        return err
 
     def check_message_convs_and_advance(self, convs, seconds):
         self.assertEqual(convs, self.message_convs)
@@ -194,20 +195,47 @@ class TestSequentialSendApplication(VumiTestCase):
         yield self.check_message_convs_and_advance([], 70)
         self.assertEqual(self.flushLoggedErrors(), [])
 
-        patch, err = self._patch_with_raise(
+        err = self._patch_with_raise_once(
             self.app, 'get_conversations', ValueError("Failed"))
 
         yield self.check_message_convs_and_advance([], 70)
         [failure] = self.flushLoggedErrors()
         self.assertEqual(failure.value, err)
 
-        patch.restore()
-
         # no conversations processed initially because of the error
         yield self.check_message_convs_and_advance([], 3600 * 24 - 70)
         yield self.check_message_convs_and_advance([], 70)
         # now a conversation has been processed
         self.assertEqual(self.message_convs, [conv1])
+
+    @inlineCallbacks
+    def test_process_conversation_schedule_errors(self):
+        """
+        Test that errors for one conversation do not prevent other
+        conversations sending messages.
+        """
+        conv1 = yield self.app_helper.create_conversation(
+            config={'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield self.app_helper.start_conversation(conv1)
+        conv1 = yield self.app_helper.get_conversation(conv1.key)
+
+        conv2 = yield self.app_helper.create_conversation(
+            config={'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield self.app_helper.start_conversation(conv2)
+        conv2 = yield self.app_helper.get_conversation(conv2.key)
+
+        yield self._stub_out_async(conv1, conv2)
+
+        err = self._patch_with_raise_once(
+            self.app, 'send_scheduled_messages', ValueError("Failed"))
+
+        self.assertEqual(self.message_convs, [])
+
+        yield self.check_message_convs_and_advance([], 140)
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(failure.value, err)
+
+        self.assertEqual(self.message_convs, [conv2])
 
     @inlineCallbacks
     def test_get_conversations(self):

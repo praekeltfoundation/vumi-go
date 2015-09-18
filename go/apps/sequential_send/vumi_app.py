@@ -117,6 +117,7 @@ class SequentialSendApplication(GoApplicationWorker):
             if conv.active():
                 yield self.process_conversation_schedule(then, now, conv)
 
+    @catch_and_log_errors
     @inlineCallbacks
     def process_conversation_schedule(self, then, now, conv):
         schedule = self.get_config_for_conversation(conv).schedule
