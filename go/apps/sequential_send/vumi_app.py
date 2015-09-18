@@ -1,5 +1,6 @@
 # -*- test-case-name: go.apps.sequential_send.tests.test_vumi_app -*-
 
+import functools
 import json
 
 from twisted.internet.defer import inlineCallbacks, returnValue, gatherResults
@@ -10,6 +11,15 @@ from vumi.config import ConfigInt, ConfigDict, ConfigList
 from vumi.components.schedule_manager import ScheduleManager
 
 from go.vumitools.app_worker import GoApplicationWorker
+
+
+def catch_and_log_errors(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kw):
+        d = f(*args, **kw)
+        d.addErrback(log.error)
+        return d
+    return wrapper
 
 
 class SequentialSendConfig(GoApplicationWorker.CONFIG_CLASS):
@@ -94,6 +104,7 @@ class SequentialSendApplication(GoApplicationWorker):
     def _get_scheduled_conversations(self):
         return self.redis.smembers('scheduled_conversations')
 
+    @catch_and_log_errors
     @inlineCallbacks
     def poll_conversations(self):
         then, now = yield self.get_interval()

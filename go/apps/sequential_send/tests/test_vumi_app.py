@@ -32,7 +32,7 @@ class TestSequentialSendApplication(VumiTestCase):
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
         session_event = (None if continue_session
-                            else TransportUserMessage.SESSION_CLOSE)
+                         else TransportUserMessage.SESSION_CLOSE)
         reply = TransportUserMessage(
             to_addr=msg['from_addr'],
             from_addr=msg['to_addr'],
@@ -81,6 +81,12 @@ class TestSequentialSendApplication(VumiTestCase):
         def send_scheduled_messages(sched_conv):
             self.message_convs.append(sched_conv)
         self.app.send_scheduled_messages = send_scheduled_messages
+
+    def _patch_with_raise(self, obj, attr, err):
+        def raiser(*args, **kw):
+            raise err
+        patch = self.patch(obj, attr, raiser)
+        return patch, err
 
     def check_message_convs_and_advance(self, convs, seconds):
         self.assertEqual(convs, self.message_convs)
@@ -174,6 +180,34 @@ class TestSequentialSendApplication(VumiTestCase):
         yield self.check_message_convs_and_advance([conv1, conv2], 70)
         yield self.check_message_convs_and_advance([conv1, conv2, conv1], 70)
         self.assertEqual(self.message_convs, [conv1, conv2, conv1, conv2])
+
+    @inlineCallbacks
+    def test_poll_conversations_errors(self):
+        """Test that polling for conversations continues after errors."""
+        conv1 = yield self.app_helper.create_conversation(
+            config={'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield self.app_helper.start_conversation(conv1)
+        conv1 = yield self.app_helper.get_conversation(conv1.key)
+
+        yield self._stub_out_async(conv1)
+
+        yield self.check_message_convs_and_advance([], 70)
+        self.assertEqual(self.flushLoggedErrors(), [])
+
+        patch, err = self._patch_with_raise(
+            self.app, 'get_conversations', ValueError("Failed"))
+
+        yield self.check_message_convs_and_advance([], 70)
+        [failure] = self.flushLoggedErrors()
+        self.assertEqual(failure.value, err)
+
+        patch.restore()
+
+        # no conversations processed initiall because of the error
+        yield self.check_message_convs_and_advance([], 3600 * 24 - 70)
+        yield self.check_message_convs_and_advance([], 70)
+        # now a conversation has been processed
+        self.assertEqual(self.message_convs, [conv1])
 
     @inlineCallbacks
     def test_get_conversations(self):
