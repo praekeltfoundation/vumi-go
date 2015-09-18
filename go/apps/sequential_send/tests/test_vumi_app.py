@@ -203,7 +203,7 @@ class TestSequentialSendApplication(VumiTestCase):
 
         patch.restore()
 
-        # no conversations processed initiall because of the error
+        # no conversations processed initially because of the error
         yield self.check_message_convs_and_advance([], 3600 * 24 - 70)
         yield self.check_message_convs_and_advance([], 70)
         # now a conversation has been processed
