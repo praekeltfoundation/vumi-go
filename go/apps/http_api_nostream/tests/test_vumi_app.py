@@ -1073,7 +1073,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             yield msg_d
 
         self.assertEqual(lc.messages(), [
-            'Unsupported scheme for URL: %s' % self.get_message_url(),
+            'SchemeNotSupported pushing message to %s (SchemeNotSupported())'
+            % self.get_message_url(),
         ])
         self.assertEqual(retry_calls.pending, [])
 
@@ -1154,7 +1155,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         yield self.conversation.save()
 
         self._patch_http_request_full(SchemeNotSupported)
-        with LogCatcher(message='Unsupported') as lc:
+        with LogCatcher(message='SchemeNotSupported') as lc:
             yield self.app_helper.make_dispatch_inbound(
                 'in 1', message_id='1', conv=self.conversation)
             [unsupported_scheme_log] = lc.messages()
@@ -1174,7 +1175,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
     def test_post_inbound_message_dns_lookup_error(self):
         yield self.start_app_worker()
         self._patch_http_request_full(DNSLookupError)
-        with LogCatcher(message='DNS lookup error') as lc:
+        with LogCatcher(message='DNSLookupError') as lc:
             yield self.app_helper.make_dispatch_inbound(
                 'in 1', message_id='1', conv=self.conversation)
             [dns_log] = lc.messages()
@@ -1184,17 +1185,17 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
     def test_post_inbound_message_connection_refused_error(self):
         yield self.start_app_worker()
         self._patch_http_request_full(ConnectionRefusedError)
-        with LogCatcher(message='Connection refused') as lc:
+        with LogCatcher(message='ConnectionRefusedError') as lc:
             yield self.app_helper.make_dispatch_inbound(
                 'in 1', message_id='1', conv=self.conversation)
-            [dns_log] = lc.messages()
-        self.assertTrue(self.mock_push_server.url in dns_log)
+            [conn_refused_log] = lc.messages()
+        self.assertTrue(self.mock_push_server.url in conn_refused_log)
 
     @inlineCallbacks
     def test_post_inbound_message_response_failed_error(self):
         yield self.start_app_worker()
         self._patch_http_request_full(lambda: ResponseFailed(reasons=[]))
-        with LogCatcher(message='Response failed') as lc:
+        with LogCatcher(message='ResponseFailed') as lc:
             yield self.app_helper.make_dispatch_inbound(
                 'in 1', message_id='1', conv=self.conversation)
             [msg_log] = lc.messages()
@@ -1291,11 +1292,11 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             self.conversation, 'out 1', message_id='1')
 
         self._patch_http_request_full(HttpTimeoutError)
-        with LogCatcher(message='Timeout') as lc:
+        with LogCatcher(message='HttpTimeoutError') as lc:
             yield self.app_helper.make_dispatch_ack(
                 msg1, conv=self.conversation)
             [timeout_log] = lc.messages()
-        self.assertTrue(timeout_log.endswith(self.mock_push_server.url))
+        self.assertTrue(self.mock_push_server.url in timeout_log)
 
     @inlineCallbacks
     def test_post_inbound_event_dns_lookup_error(self):
@@ -1304,7 +1305,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             self.conversation, 'out 1', message_id='1')
 
         self._patch_http_request_full(DNSLookupError)
-        with LogCatcher(message='DNS lookup error') as lc:
+        with LogCatcher(message='DNSLookupError') as lc:
             yield self.app_helper.make_dispatch_ack(
                 msg1, conv=self.conversation)
             [dns_log] = lc.messages()
@@ -1317,7 +1318,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             self.conversation, 'out 1', message_id='1')
 
         self._patch_http_request_full(ConnectionRefusedError)
-        with LogCatcher(message='Connection refused') as lc:
+        with LogCatcher(message='ConnectionRefusedError') as lc:
             yield self.app_helper.make_dispatch_ack(
                 msg1, conv=self.conversation)
             [dns_log] = lc.messages()
@@ -1330,7 +1331,7 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
             self.conversation, 'out 1', message_id='1')
 
         self._patch_http_request_full(lambda: ResponseFailed(reasons=[]))
-        with LogCatcher(message='Response failed') as lc:
+        with LogCatcher(message='ResponseFailed') as lc:
             yield self.app_helper.make_dispatch_ack(
                 msg1, conv=self.conversation)
             [msg_log] = lc.messages()
