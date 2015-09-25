@@ -116,7 +116,40 @@
         <div class="modal-content">
             <div class="modal-header">
                 <a class="close" data-dismiss="modal">×</a>
-                <h3>Download</h3>
+                <h3>Download messages for {{ conversation.name }}</h3>
+            </div>
+
+            <div class="modal-body">
+              <form>
+
+                <div class="form-group">
+                  <label>Format</label>
+                  <br/>
+
+                  <div id='message-direction' class="btn-group" data-toggle="buttons">
+                    <label class="btn btn-default active">
+                      <input class="form-control" type="radio" autocomplete="off" checked>CSV
+                    </label>
+                    <label class="btn btn-default">
+                      <input class="form-control" type="radio" autocomplete="off">JSON
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Message direction</label>
+                  <br/>
+
+                  <div id='message-direction' class="btn-group" data-toggle="buttons">
+                    <label class="btn btn-default active">
+                      <input type="radio" autocomplete="off" checked>Received messages
+                    </label>
+                    <label class="btn btn-default">
+                      <input type="radio" autocomplete="off">Sent messages
+                    </label>
+                  </div>
+                </div>
+              </form>
             </div>
         </div>
     </div>
