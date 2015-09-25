@@ -4,11 +4,7 @@
 {% block content_extraclass %}conversations{% endblock %}
 
 {% block content_title %}
-  {% if message_direction == "inbound" %}
-    Messages from {{ inbound_uniques_count }} unique people
-  {% else %}
-    Messages to {{ outbound_uniques_count }} unique people
-  {% endif %}
+  Messages for {{ conversation.name }}
 {% endblock %}
 
 {% block content_actions_left %}
