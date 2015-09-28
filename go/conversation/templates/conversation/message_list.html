@@ -166,7 +166,13 @@
                   </div>
 
                   <div class="panel panel-default collapse" style="margin-top: -18px;" id="collapseExample">
-                    <div class="panel-body"></div>
+                    <div class="panel-body">
+                      <div class="input-daterange input-group" data-provide="datepicker" data-date-format="dd/mm/yyyy">
+                      <input type="text" class="input-sm form-control" name="start">
+                      <span class="input-group-addon">to</span>
+                      <input type="text" class="input-sm form-control" name="end">
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -200,5 +206,5 @@
       $(this).addClass('active');
   });
 
-  $('#download-modal').modal('show');
+$('#download-modal').modal('show');
 {% endblock %}
