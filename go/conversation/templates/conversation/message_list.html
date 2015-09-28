@@ -154,24 +154,24 @@
                   <label>Date range</label>
                   <br/>
 
-                  <div class="list-group list-group-select">
+                  <div class="list-group list-group-select date-range-presets">
                     <a class="list-group-item active" href="#">All messages</a>
                     <a class="list-group-item" href="#">Today</a>
                     <a class="list-group-item" href="#">Last 7 days</a>
                     <a class="list-group-item" href="#">Last 30 days</a>
-                    <a class="list-group-item" data-toggle="collapse" href="#collapseExample">
-                      Custom range
-                      <span class="pull-right glyphicon glyphicon-chevron-down"></span>
-                    </a>
+                    <div class="list-group-item hidden"></div>
                   </div>
 
-                  <div class="panel panel-default collapse" style="margin-top: -18px;" id="collapseExample">
-                    <div class="panel-body">
-                      <div class="input-daterange input-group" data-provide="datepicker" data-date-format="dd/mm/yyyy">
+                  <a class="list-group-item date-range-custom-toggle" data-toggle="collapse" href="#date-range-custom-picker" style="margin-top:-20px; border-top: none; border-radius: 4px;">
+                    Custom range
+                    <span class="pull-right glyphicon glyphicon-chevron-down"></span>
+                  </a>
+
+                  <div class="well collapse" id="date-range-custom-picker">
+                    <div class="input-daterange input-group" data-provide="datepicker" data-date-format="dd/mm/yyyy">
                       <input type="text" class="input-sm form-control" name="start">
                       <span class="input-group-addon">to</span>
                       <input type="text" class="input-sm form-control" name="end">
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -184,27 +184,40 @@
 {% endblock %}
 
 {% block ondomready %}
-  $('.list-group-select .list-group-item').click(function() {
-      $(this)
-        .parent()
-        .find('.list-group-item')
-        .removeClass('active');
+$('.date-range-presets .list-group-item').click(function() {
+  $('.date-range-presets')
+    .find('.list-group-item')
+    .removeClass('active');
 
-      ($(this)
-        .find('.glyphicon-chevron-down')
-        .removeClass('glyphicon-chevron-down')
-        .addClass('glyphicon-chevron-up')
-        .length
+  $(this).addClass('active');
 
-      ||
+  if ($('#date-range-custom-picker.in').length) {
+    $('#date-range-custom-picker').collapse('hide');
 
-       $(this)
-        .find('.glyphicon-chevron-up')
-        .removeClass('glyphicon-chevron-up')
-        .addClass('glyphicon-chevron-down'));
+    $('.date-range-custom-toggle')
+      .find('.glyphicon')
+      .toggleClass('glyphicon-chevron-down')
+      .toggleClass('glyphicon-chevron-up');
+  }
 
-      $(this).addClass('active');
-  });
+  $('.date-range-custom-toggle').removeClass('active').css('border-radius', '4px');
+});
+
+$('.date-range-custom-toggle').click(function() {
+  $('.date-range-custom-toggle')
+    .toggleClass('active')
+    .css('border-radius', 0);
+
+  $('.date-range-custom-toggle')
+    .find('.glyphicon')
+    .toggleClass('glyphicon-chevron-down')
+    .toggleClass('glyphicon-chevron-up');
+
+  if ('.date-range-custom-toggle.active')
+    $('.date-range-presets')
+      .find('.list-group-item')
+      .removeClass('active');
+});
 
 $('#download-modal').modal('show');
 {% endblock %}
