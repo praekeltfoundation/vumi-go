@@ -26,13 +26,6 @@
         <div class="col-md-9">
 
             {% include "base/includes/messages.html" %}
-
-                <p>
-                    Averaging {{conversation.get_inbound_throughput}} messages
-                    per minute inbound and {{conversation.get_outbound_throughput}} messages
-                    per minute outbound.
-                </p>
-
                 <ul class="nav nav-tabs">
                     <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
                         <a href="?direction=inbound">
@@ -48,6 +41,7 @@
                         <a data-toggle="tab" href="#outbound-msg-stats">Statistics</a>
                     </li>
                 </ul>
+
                 <div class="tab-content" id="message-page">
                     <div class="tab-pane active">
                       <form class="table-form-view" method="post" action="">
@@ -59,53 +53,90 @@
                       </form>
                     </div>
                     <div class="tab-pane" id="outbound-msg-stats">
-                    {% with conversation.get_progress_status as status %}
-                      <div class="well">
-                        <table class="table table-condensed">
-                        <caption>
-                          <h3>Outbound message statistics</h3>
-                          <p>Sorry, we're having trouble tracking message statistics at the moment, but we are working on it.<br />That means the <strong>statistics might be out of date.</strong></p>
-                        </caption>
-                        <thead>
-                          <th></th><th>Count</th><th>Percentage</th>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <th>Total&nbsp;sent</th><td colspan="2">{{ status.sent }}</td>
-                          </tr>
-                          <tr class="info">
-                            <td colspan="3">Accepted by aggregator, MNO or other third-party for sending:</td>
-                          </tr>
-                          <tr>
-                            <th>Accepted</th><td>{{ status.ack }}</td>
-                            <td>{% percentage status.ack status.sent %}%</td>
-                          </tr>
-                          <tr>
-                            <th>Rejected</th><td>{{ status.nack}}</td>
-                            <td>{% percentage status.nack status.sent %}%</td>
-                          </tr>
-                          <tr class="info">
-                            <td colspan="3">Delivery reports:</td>
-                          </tr>
-                          <tr>
-                            <th>Delivered</th><td>{{ status.delivery_report_delivered }}</td>
-                            <td>{% percentage status.delivery_report_delivered status.sent %}%</td>
-                          </tr>
-                          <tr>
-                            <th>Pending</th><td>{{ status.delivery_report_pending }}</td>
-                            <td>{% percentage status.delivery_report_pending status.sent %}%</td>
-                          </tr>
-                          <tr>
-                            <th>Failed</th><td>{{ status.delivery_report_failed }}</td>
-                            <td>{% percentage status.delivery_report_failed status.sent %}%</td>
-                          </tr>
-                        </tbody>
-                        </table>
-                        <p>Note: not all channels support delivery reports.</p>
-                      </div>
-                    {% endwith %}
+                    <br/>
+
+                    <div class="row">
+                      <div class="col-md-offset-2 col-md-8">
+                        <div class="alert alert-warning">Sorry, we're having trouble tracking message statistics at the moment, but we are working on it. That means the <strong>statistics might be out of date.</strong></div>
+
+                          {% with conversation.get_progress_status as status %}
+
+                          <div class="well">
+                            <table class="table table-condensed">
+                              <caption>
+                                <h3>General statistics</h3>
+                              </caption>
+
+                              <tr>
+                                <td>Number of contacts messages were received from</td>
+                                <td>{{ inbound_uniques_count }}</td>
+                              </tr>
+
+                              <tr>
+                                <td>Number of contacts messages were sent to</td>
+                                <td>{{ outbound_uniques_count }}</td>
+                              </tr>
+
+                              <tr>
+                                <td>Average messages received per minute</td>
+                                <td>{{ conversation.get_inbound_throughput }}</td>
+                              </tr>
+
+                              <tr>
+                                <td>Average messages sent per minute</td>
+                                <td>{{ conversation.get_outbound_throughput }}</td>
+                              </tr>
+                            </table>
+                          </div>
+
+                          <div class="well">
+                            <table class="table table-condensed">
+                            <caption>
+                              <h3>Send statistics</h3>
+                            </caption>
+                            <thead>
+                              <th></th><th>Count</th><th>Percentage</th>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <th>Total&nbsp;sent</th><td colspan="2">{{ status.sent }}</td>
+                              </tr>
+                              <tr class="info">
+                                <td colspan="3">Accepted by aggregator, MNO or other third-party for sending:</td>
+                              </tr>
+                              <tr>
+                                <th>Accepted</th><td>{{ status.ack }}</td>
+                                <td>{% percentage status.ack status.sent %}%</td>
+                              </tr>
+                              <tr>
+                                <th>Rejected</th><td>{{ status.nack}}</td>
+                                <td>{% percentage status.nack status.sent %}%</td>
+                              </tr>
+                              <tr class="info">
+                                <td colspan="3">Delivery reports:</td>
+                              </tr>
+                              <tr>
+                                <th>Delivered</th><td>{{ status.delivery_report_delivered }}</td>
+                                <td>{% percentage status.delivery_report_delivered status.sent %}%</td>
+                              </tr>
+                              <tr>
+                                <th>Pending</th><td>{{ status.delivery_report_pending }}</td>
+                                <td>{% percentage status.delivery_report_pending status.sent %}%</td>
+                              </tr>
+                              <tr>
+                                <th>Failed</th><td>{{ status.delivery_report_failed }}</td>
+                                <td>{% percentage status.delivery_report_failed status.sent %}%</td>
+                              </tr>
+                            </tbody>
+                            </table>
+                            <p>Note: not all channels support delivery reports.</p>
+                          </div>
+                        </div>
+                      {% endwith %}
                     </div>
+
                 </div>
+              </div>
         </div>
     </div>
 {% endblock %}
