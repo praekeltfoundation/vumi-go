@@ -23,6 +23,67 @@ class TransactionSerializer(object):
                 for t in simplifier.serialize(transactions))
 
 
+class Summaries(object):
+    def __init__(self, select_fields, total_fields):
+        self.select_fields = select_fields
+        self.total_fields = total_fields
+        self.items = {}
+
+    def incr(self, model):
+        select_values = tuple(pick_attrs(model, self.select_fields))
+        summary = self.ensure(select_values)
+        summary.incr(model)
+        return summary
+
+    def ensure(self, select_values):
+        summary = self.items.get(select_values)
+
+        if summary is None:
+            summary = self.create(select_values)
+            self.items[select_values] = summary
+
+        return summary
+
+    def create(self, select_values):
+        return Summary(
+            selects=dict(zip(self.select_fields, select_values)),
+            totals=dict((field, None) for field in self.total_fields))
+
+    def serialize(self):
+        return [
+            self.items[name].serialize()
+            for name in sorted(self.items.iterkeys())]
+
+
+class Summary(object):
+    def __init__(self, selects, totals):
+        self.count = 0
+        self.selects = selects
+        self.totals = totals
+
+    def incr(self, model):
+        self.count = self.count + 1
+
+        for field in self.totals.iterkeys():
+            self.incr_total(field, getattr(model, field))
+
+    def incr_total(self, field, value):
+        if value is not None:
+            current = self.totals[field]
+            self.totals[field] = value + (current if current is not None else 0)
+
+    def serialize(self):
+        result = {'count': self.count}
+
+        result.update(self.selects)
+
+        result.update(dict(
+            ("total_%s" % (name,), value)
+            for name, value in self.totals.iteritems()))
+
+        return result
+
+
 def chunked_query(queryset, items_per_chunk=1000):
     """Iterate over a queryset using server-side cursors (if possible)
     and return lists of objects in chunks.
@@ -71,58 +132,3 @@ def summarize(models, select_fields, total_fields):
 
 def pick_attrs(obj, names):
     return (getattr(obj, name) for name in names)
-
-
-class Summaries(object):
-    def __init__(self, select_fields, total_fields):
-        self.select_fields = select_fields
-        self.total_fields = total_fields
-        self.items = {}
-
-    def incr(self, model):
-        select_values = tuple(pick_attrs(model, self.select_fields))
-        summary = self.ensure(select_values)
-        summary.incr(model)
-        return summary
-
-    def ensure(self, select_values):
-        summary = self.items.get(select_values)
-
-        if summary is None:
-            summary = self.create(select_values)
-            self.items[select_values] = summary
-
-        return summary
-
-    def create(self, select_values):
-        return Summary(
-            selects=dict(zip(self.select_fields, select_values)),
-            totals=dict((field, 0) for field in self.total_fields))
-
-    def serialize(self):
-        return (
-            self.items[name].serialize()
-            for name in sorted(self.items.iterkeys()))
-
-
-class Summary(object):
-    def __init__(self, selects, totals):
-        self.count = 0
-        self.selects = selects
-        self.totals = totals
-
-    def incr(self, model):
-        self.count = self.count + 1
-        for name, value in self.totals.iteritems():
-            self.totals[name] = getattr(model, name) + value
-
-    def serialize(self):
-        result = {'count': self.count}
-
-        result.update(self.selects)
-
-        result.update(dict(
-            ("total_%s" % (name,), value)
-            for name, value in self.totals.iteritems()))
-
-        return result

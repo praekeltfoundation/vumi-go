@@ -167,7 +167,7 @@ class TestSummarize(GoDjangoTestCase):
             ('tag_name', 'message_cost'),
             ('message_cost', 'session_cost'))
 
-        self.assertEqual(list(result), [{
+        self.assertEqual(result, [{
             'tag_name': 'a',
             'count': 2,
             'message_cost': Decimal('1.0'),
@@ -191,4 +191,59 @@ class TestSummarize(GoDjangoTestCase):
             'message_cost': Decimal('5.0'),
             'total_message_cost': Decimal('5.0'),
             'total_session_cost': Decimal('50.0')
+        }])
+
+    def test_summarize_all_nones(self):
+        account = self.account
+
+        t1 = mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=None)
+
+        t2 = mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=None)
+
+        result = summarize(
+            [t1, t2],
+            ('tag_name', 'message_cost'),
+            ('message_cost',))
+
+        self.assertEqual(result, [{
+            'tag_name': 'a',
+            'count': 2,
+            'message_cost': None,
+            'total_message_cost': None,
+        }])
+
+    def test_summarize_some_nones(self):
+        account = self.account
+
+        t1 = mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=None)
+
+        t2 = mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=Decimal('23.0'))
+
+        result = summarize(
+            [t1, t2],
+            ('tag_name', 'message_cost'),
+            ('message_cost',))
+
+        self.assertEqual(result, [{
+            'tag_name': 'a',
+            'count': 1,
+            'message_cost': None,
+            'total_message_cost': None,
+        }, {
+            'tag_name': 'a',
+            'count': 1,
+            'message_cost': Decimal('23.0'),
+            'total_message_cost': Decimal('23.0'),
         }])
