@@ -12,7 +12,8 @@ with djangotest_imports(globals()):
         mk_transaction, get_message_credits, get_storage_credits,
         get_session_credits, get_session_length_credits)
     from go.billing.django_utils import (
-        TransactionSerializer, chunked_query, load_account_credits)
+        TransactionSerializer, chunked_query, load_account_credits,
+        summarize)
 
 
 class TestTransactionSerializer(GoDjangoTestCase):
@@ -119,3 +120,75 @@ class TestLoadAccountCredits(GoDjangoTestCase):
         self.assertEqual(
             transaction.transaction_type,
             Transaction.TRANSACTION_TYPE_TOPUP)
+
+
+class TestSummarize(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.account = Account.objects.get(
+            user=self.user_helper.get_django_user())
+
+    def test_summarize(self):
+        account = self.account
+
+        t1 = mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=Decimal('1.0'),
+            session_cost=Decimal('10.0'))
+
+        t2 = mk_transaction(
+            account,
+            tag_name='b',
+            message_cost=Decimal('3.0'),
+            session_cost=Decimal('30.0'))
+
+        t3 = mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=Decimal('1.0'),
+            session_cost=Decimal('10.0'))
+
+        t4 = mk_transaction(
+            account,
+            tag_name='b',
+            message_cost=Decimal('4.0'),
+            session_cost=Decimal('40.0'))
+
+        t5 = mk_transaction(
+            account,
+            tag_name='c',
+            message_cost=Decimal('5.0'),
+            session_cost=Decimal('50.0'))
+
+        result = summarize(
+            [t1, t2, t3, t4, t5],
+            ('tag_name', 'message_cost'),
+            ('message_cost', 'session_cost'))
+
+        self.assertEqual(list(result), [{
+            'tag_name': 'a',
+            'count': 2,
+            'message_cost': Decimal('1.0'),
+            'total_message_cost': Decimal('2.0'),
+            'total_session_cost': Decimal('20.0')
+        }, {
+            'tag_name': 'b',
+            'count': 1,
+            'message_cost': Decimal('3.0'),
+            'total_message_cost': Decimal('3.0'),
+            'total_session_cost': Decimal('30.0')
+        }, {
+            'tag_name': 'b',
+            'count': 1,
+            'message_cost': Decimal('4.0'),
+            'total_message_cost': Decimal('4.0'),
+            'total_session_cost': Decimal('40.0')
+        }, {
+            'tag_name': 'c',
+            'count': 1,
+            'message_cost': Decimal('5.0'),
+            'total_message_cost': Decimal('5.0'),
+            'total_session_cost': Decimal('50.0')
+        }])
