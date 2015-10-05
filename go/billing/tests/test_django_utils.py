@@ -3,6 +3,8 @@
 import json
 from decimal import Decimal
 
+import mock
+
 from go.vumitools.tests.helpers import djangotest_imports
 
 with djangotest_imports(globals()):
@@ -247,3 +249,22 @@ class TestSummarize(GoDjangoTestCase):
             'message_cost': Decimal('23.0'),
             'total_message_cost': Decimal('23.0'),
         }])
+
+    @mock.patch('go.billing.django_utils.chunked_query',
+                new_callable=mock.MagicMock)
+    def test_summarize_chunks(self, chunked_query):
+        account = self.account
+
+        mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=None)
+
+        transactions = Transaction.objects.all()
+        summarize(
+            transactions,
+            ('tag_name', 'message_cost'),
+            ('message_cost',),
+            items_per_chunk=3)
+
+        chunked_query.assert_called_with(transactions, 3)

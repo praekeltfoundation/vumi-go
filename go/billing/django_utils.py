@@ -121,8 +121,8 @@ def load_account_credits(account, credit_amount):
     transaction.save()
 
 
-def summarize(queryset, select_fields, total_fields, chunk_size=1000):
-    models = chain.from_iterable(chunked_query(queryset, chunk_size))
+def summarize(queryset, select_fields, total_fields, items_per_chunk=1000):
+    models = chain.from_iterable(chunked_query(queryset, items_per_chunk))
     summaries = Summaries(select_fields, total_fields)
 
     for model in models:
