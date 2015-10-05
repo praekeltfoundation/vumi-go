@@ -158,4 +158,89 @@
         </div>
     </div>
 </div><!--/expContactFrm-->
+
+<div class="modal fade" id="download-modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a class="close" aria-label="Close" data-dismiss="modal">×</a>
+                <h3>Download messages for {{ conversation.name }}</h3>
+            </div>
+
+            <div class="modal-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label id="label-format">Format</label>
+
+                        <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-format">
+                            <label class="btn btn-default active">
+                                <input class="form-control" type="radio" autocomplete="off" name="format" value="csv" checked>CSV
+                            </label>
+                            <label class="btn btn-default">
+                                <input class="form-control" type="radio" autocomplete="off" name="format" value="json">JSON
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="label-message-direction">Message direction</label>
+
+                        <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-message-direction">
+                            <label class="btn btn-default active">
+                                <input type="radio" autocomplete="off" name="direction" value="inbound" checked>Received messages
+                            </label>
+                            <label class="btn btn-default">
+                                <input type="radio" autocomplete="off" name="direction" value="outbound">Sent messages
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="label-date-range">Date range</label>
+
+                        <div class="list-group date-range" aria-labelledby="label-date-range">
+                            <label class="list-group-item date-preset active">
+                                <input type="radio" autocomplete="off" name="date-preset" value="all" checked>All messages
+                            </label>
+
+                            <label class="list-group-item date-preset">
+                                <input type="radio" autocomplete="off" name="date-preset" value="1d">Today
+                            </label>
+
+                            <label class="list-group-item date-preset">
+                                <input type="radio" autocomplete="off" name="date-preset" value="7d">Last 7 days
+                            </label>
+
+                            <label class="list-group-item date-preset">
+                                <input type="radio" autocomplete="off" name="date-preset" value="30d">Last 30 days
+                            </label>
+
+                            <div class="list-group-item date-custom-toggle">
+                                Custom range
+                                <span class="pull-right glyphicon glyphicon-chevron-down" data-down="glyphicon-chevron-down" data-up="glyphicon-chevron-up"></span>
+                            </div>
+
+                            <div class="well collapse date-custom-container">
+                                <div class="input-daterange input-group" data-provide="datepicker" data-date-format="dd/mm/yyyy">
+                                    <input type="text" class="input-sm form-control" value="{% now "d/m/Y" %}" name="data-from">
+                                    <span class="input-group-addon">to</span>
+                                    <input type="text" class="input-sm form-control" value="{% now "d/m/Y" %}" name="date-to">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" type="submit">Download</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block ondomready %}
+new go.components.dates.DateRangeView({el: '.date-range'});
 {% endblock %}

@@ -41,6 +41,7 @@ client:
       - 'go/base/static/vendor/d3/js/d3.js'
       - 'go/base/static/vendor/backbone.babysitter/js/backbone.babysitter.js'
       - 'go/base/static/vendor/diamondash/js/diamondash.js'
+      - 'go/base/static/vendor/bootstrap-datepicker/js/bootstrap-datepicker.js'
     go:
       - 'go/base/static/js/src/go.js'
       - 'go/base/static/js/src/utils.js'
@@ -48,6 +49,7 @@ client:
       - 'go/base/static/js/src/errors.js'
       - 'go/base/static/js/src/components/components.js'
       - 'go/base/static/js/src/components/structures.js'
+      - 'go/base/static/js/src/components/dates.js'
       - 'go/base/static/js/src/components/grid.js'
       - 'go/base/static/js/src/components/rpc.js'
       - 'go/base/static/js/src/components/models.js'
@@ -105,6 +107,7 @@ client:
     vendor:
       - 'go/base/static/vendor/bootstrap/css/bootstrap.css'
       - 'go/base/static/vendor/diamondash/css/diamondash.css'
+      - 'go/base/static/vendor/bootstrap-datepicker/css/bootstrap-datepicker3.css'
     go:
       - 'go/base/static/css/vumigo.css'
     invoice:
@@ -136,6 +139,7 @@ tests:
       - 'go/base/static/js/test/components/rpc.test.js'
       - 'go/base/static/js/test/components/models.test.js'
       - 'go/base/static/js/test/components/structures.test.js'
+      - 'go/base/static/js/test/components/dates.test.js'
       - 'go/base/static/js/test/components/grid.test.js'
       - 'go/base/static/js/test/components/views.test.js'
       - 'go/base/static/js/test/components/actions.test.js'
