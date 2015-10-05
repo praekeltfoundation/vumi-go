@@ -1,7 +1,7 @@
 """ Billing utils that require Django. """
 
 import json
-import itertools
+from itertools import islice, chain
 
 from django.core import serializers
 
@@ -98,7 +98,7 @@ def chunked_query(queryset, items_per_chunk=1000):
     with server_side_cursors(itersize=items_per_chunk):
         iterator = queryset.iterator()
         while True:
-            items = list(itertools.islice(iterator, items_per_chunk))
+            items = list(islice(iterator, items_per_chunk))
             if not items:
                 break
             yield items
@@ -121,7 +121,8 @@ def load_account_credits(account, credit_amount):
     transaction.save()
 
 
-def summarize(models, select_fields, total_fields):
+def summarize(queryset, select_fields, total_fields, chunk_size=1000):
+    models = chain.from_iterable(chunked_query(queryset, chunk_size))
     summaries = Summaries(select_fields, total_fields)
 
     for model in models:

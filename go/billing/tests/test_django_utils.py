@@ -132,38 +132,38 @@ class TestSummarize(GoDjangoTestCase):
     def test_summarize(self):
         account = self.account
 
-        t1 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='a',
             message_cost=Decimal('1.0'),
             session_cost=Decimal('10.0'))
 
-        t2 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='b',
             message_cost=Decimal('3.0'),
             session_cost=Decimal('30.0'))
 
-        t3 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='a',
             message_cost=Decimal('1.0'),
             session_cost=Decimal('10.0'))
 
-        t4 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='b',
             message_cost=Decimal('4.0'),
             session_cost=Decimal('40.0'))
 
-        t5 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='c',
             message_cost=Decimal('5.0'),
             session_cost=Decimal('50.0'))
 
         result = summarize(
-            [t1, t2, t3, t4, t5],
+            Transaction.objects.all(),
             ('tag_name', 'message_cost'),
             ('message_cost', 'session_cost'))
 
@@ -196,18 +196,18 @@ class TestSummarize(GoDjangoTestCase):
     def test_summarize_all_nones(self):
         account = self.account
 
-        t1 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='a',
             message_cost=None)
 
-        t2 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='a',
             message_cost=None)
 
         result = summarize(
-            [t1, t2],
+            Transaction.objects.all(),
             ('tag_name', 'message_cost'),
             ('message_cost',))
 
@@ -221,18 +221,18 @@ class TestSummarize(GoDjangoTestCase):
     def test_summarize_some_nones(self):
         account = self.account
 
-        t1 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='a',
             message_cost=None)
 
-        t2 = mk_transaction(
+        mk_transaction(
             account,
             tag_name='a',
             message_cost=Decimal('23.0'))
 
         result = summarize(
-            [t1, t2],
+            Transaction.objects.all(),
             ('tag_name', 'message_cost'),
             ('message_cost',))
 
