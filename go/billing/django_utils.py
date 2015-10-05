@@ -70,7 +70,8 @@ class Summary(object):
     def incr_total(self, field, value):
         if value is not None:
             current = self.totals[field]
-            self.totals[field] = value + (current if current is not None else 0)
+            current = current if current is not None else 0
+            self.totals[field] = value + current
 
     def serialize(self):
         result = {'count': self.count}

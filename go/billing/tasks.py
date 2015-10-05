@@ -4,7 +4,6 @@ from decimal import Decimal
 
 from celery.task import task, group
 from dateutil.relativedelta import relativedelta
-from django.db.models import Sum, Count
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from djcelery_email.tasks import send_email
