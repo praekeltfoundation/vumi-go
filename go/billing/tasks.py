@@ -4,7 +4,6 @@ from decimal import Decimal
 
 from celery.task import task, group
 from dateutil.relativedelta import relativedelta
-from django.db.models import Sum, Count
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from djcelery_email.tasks import send_email
@@ -16,7 +15,8 @@ from go.billing.django_utils import load_account_credits
 from go.billing.models import (
     Account, MessageCost, Transaction, Statement, LineItem, TransactionArchive,
     LowCreditNotification)
-from go.billing.django_utils import TransactionSerializer, chunked_query
+from go.billing.django_utils import (
+    TransactionSerializer, chunked_query, summarize)
 from go.base.utils import format_currency
 
 
@@ -50,37 +50,33 @@ def get_message_transactions(transactions):
     transactions = transactions.filter(
         transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
-    transactions = transactions.values(
-        'tag_pool_name',
-        'tag_name',
-        'provider',
-        'message_direction',
-        'message_cost',
-        'message_credits',
-        'markup_percent')
-
-    transactions = transactions.annotate(
-        count=Count('id'),
-        total_message_cost=Sum('message_cost'),
-        total_message_credits=Sum('message_credits'))
-
-    return transactions
+    return summarize(
+        transactions,
+        select_fields=(
+            'tag_pool_name',
+            'tag_name',
+            'provider',
+            'message_direction',
+            'message_cost',
+            'message_credits',
+            'markup_percent'),
+        total_fields=(
+            'message_cost',
+            'message_credits'))
 
 
 def get_storage_transactions(transactions):
     transactions = transactions.filter(
         transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
-    transactions = transactions.values(
-        'storage_cost',
-        'storage_credits')
-
-    transactions = transactions.annotate(
-        count=Count('id'),
-        total_storage_cost=Sum('storage_cost'),
-        total_storage_credits=Sum('storage_credits'))
-
-    return transactions
+    return summarize(
+        transactions,
+        select_fields=(
+            'storage_cost',
+            'storage_credits'),
+        total_fields=(
+            'storage_cost',
+            'storage_credits'))
 
 
 def get_session_transactions(transactions):
@@ -88,20 +84,18 @@ def get_session_transactions(transactions):
         session_created=True,
         transaction_type=Transaction.TRANSACTION_TYPE_MESSAGE)
 
-    transactions = transactions.values(
-        'tag_pool_name',
-        'tag_name',
-        'provider',
-        'session_cost',
-        'session_credits',
-        'markup_percent')
-
-    transactions = transactions.annotate(
-        count=Count('id'),
-        total_session_cost=Sum('session_cost'),
-        total_session_credits=Sum('session_credits'))
-
-    return transactions
+    return summarize(
+        transactions,
+        select_fields=(
+            'tag_pool_name',
+            'tag_name',
+            'provider',
+            'session_cost',
+            'session_credits',
+            'markup_percent'),
+        total_fields=(
+            'session_cost',
+            'session_credits'))
 
 
 def get_session_length_transactions(transactions):
@@ -112,20 +106,18 @@ def get_session_length_transactions(transactions):
     transactions = transactions.exclude(session_length=None)
     transactions = transactions.exclude(session_length_cost=0)
 
-    transactions = transactions.values(
-        'tag_pool_name',
-        'tag_name',
-        'provider',
-        'session_unit_time',
-        'session_unit_cost',
-        'markup_percent')
-
-    transactions = transactions.annotate(
-        count=Count('id'),
-        total_session_length_cost=Sum('session_length_cost'),
-        total_session_length_credits=Sum('session_length_credits'))
-
-    return transactions
+    return summarize(
+        transactions,
+        select_fields=(
+            'tag_pool_name',
+            'tag_name',
+            'provider',
+            'session_unit_time',
+            'session_unit_cost',
+            'markup_percent'),
+        total_fields=(
+            'session_length_cost',
+            'session_length_credits'))
 
 
 def get_tagpool_name(transaction, tagpools):
