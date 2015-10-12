@@ -786,11 +786,12 @@ class TestConversationViews(BaseConversationViewTestCase):
             response, '<tr><th>Failed</th><td>4</td><td>40%</td></tr>',
             html=True)
 
-    def test_message_list_inbound_uniques_display(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        self.msg_helper.add_inbound_to_conv(conv, 10)
+    def test_message_list_title_display(self):
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'Foo', started=True)
         response = self.client.get(self.get_view_url(conv, 'message_list'))
-        self.assertContains(response, 'Messages from 10 unique people')
+        print response
+        self.assertContains(response, 'Messages for Foo')
 
     def test_message_list_inbound_download_links_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -803,16 +804,6 @@ class TestConversationViews(BaseConversationViewTestCase):
                            self.get_view_url(conv, 'export_messages'))
         self.assertContains(response, 'href="%s"' % inbound_csv_url)
         self.assertContains(response, "Download received messages as CSV")
-
-    def test_message_list_outbound_uniques_display(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
-        self.msg_helper.add_replies_to_conv(conv, msgs)
-        response = self.client.get(
-            self.get_view_url(conv, 'message_list'), {
-                'direction': 'outbound'
-            })
-        self.assertContains(response, 'Messages to 10 unique people')
 
     def test_message_list_outbound_download_links_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -857,6 +848,29 @@ class TestConversationViews(BaseConversationViewTestCase):
         assert_messages(1)
         make_stored_msgs({'sensitive': False})
         assert_messages(2)
+
+    def test_message_list_uniques_display(self):
+        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        self.msg_helper.add_inbound_to_conv(conv, 21)
+        self.msg_helper.add_outbound_to_conv(conv, 23)
+
+        response = self.client.get(self.get_view_url(conv, 'message_list'))
+
+        self.assertContains(
+            response,
+            '<tr>'
+                '<td>Number of contacts messages were received from</td>'
+                '<td>21</td>'
+            '</tr>',
+            html=True)
+
+        self.assertContains(
+            response,
+            '<tr>'
+                '<td>Number of contacts messages were sent to</td>'
+                '<td>23</td>'
+            '</tr>',
+            html=True)
 
     def test_message_list_outbound_statuses_disabled(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
