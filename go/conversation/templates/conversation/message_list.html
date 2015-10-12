@@ -11,28 +11,8 @@
   {% endif %}
 {% endblock %}
 
-{% block content_actions_right %}
-    <div class="pull-left">
-        <span class="table-form-view-buttons">
-            <!-- TODO:
-            <button class="btn btn-default" disabled="disabled">Delete</button>
-            -->
-        </span>
-
-        &nbsp; With message:
-        <!-- These exist in the previous template, but not the new design.
-        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound">Download Received Stats</a>
-        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
-        -->
-        <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export CSV via email</a>
-        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}&format=json">
-          Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as JSON
-        </a>
-        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}&format=csv">
-          Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as CSV
-        </a>
-    </div>
-
+{% block content_actions_left %}
+  <button class="btn btn-primary" data-toggle="modal" data-target="#download-modal">Download</button>
 {% endblock %}
 
 {% block content_main %}
