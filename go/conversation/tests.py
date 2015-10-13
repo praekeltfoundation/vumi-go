@@ -446,7 +446,6 @@ class TestConversationViews(BaseConversationViewTestCase):
                 'conversation_key': conv.key, 'path_suffix': 'edit_detail/',
             }))
 
-        print response
         self.assertContains(response, "Edit test-name details")
         self.assertContains(response, "Save")
         self.assertContains(response, "Conversation name")
@@ -790,7 +789,6 @@ class TestConversationViews(BaseConversationViewTestCase):
         conv = self.user_helper.create_conversation(
             u'dummy', name=u'Foo', started=True)
         response = self.client.get(self.get_view_url(conv, 'message_list'))
-        print response
         self.assertContains(response, 'Messages for Foo')
 
     def test_message_list_inbound_download_links_display(self):
