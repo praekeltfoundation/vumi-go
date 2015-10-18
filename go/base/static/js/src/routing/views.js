@@ -104,7 +104,12 @@
       this.$el
         .css('position', 'relative')
         .append(this.$name);
-      
+
+      var status = this.model.get('status');
+      if(typeof status !== 'undefined' && status !== 'running') {
+        this.$el.addClas('state-not-running');
+      }
+
       if(this.tooManyEndpoints()) {
         this.$el.height(this.stretchedHeight());
       }
