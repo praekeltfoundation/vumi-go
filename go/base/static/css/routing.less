@@ -3,6 +3,7 @@
   @color-hover: #b41e31;
   @secondary-opacity: 0.75;
   @color-unconnected: #d9534f;
+  @color-not-running: #d48f8c;
 
   #diagram {
     .column-container {
@@ -47,6 +48,10 @@
         .name {
           margin:10px;
         }
+      }
+
+      .state-not-running {
+        background: @color-not-running;
       }
 
       .state:hover {
