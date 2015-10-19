@@ -341,7 +341,7 @@ class TestGoApiServer(VumiTestCase):
             (('foo', 'bar'), ('TRANSPORT_TAG:pool:tag1', 'default')),
         ])
         d = self.proxy.callRemote(
-                "update_routing_table", self.campaign_key, routing_table)
+            "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
             d, 400, "Unknown source endpoint {u'uuid': u'foo::bar'}")
 
@@ -352,7 +352,7 @@ class TestGoApiServer(VumiTestCase):
             (('TRANSPORT_TAG:pool:tag1', 'default'), ('bar', 'baz')),
         ])
         d = self.proxy.callRemote(
-                "update_routing_table", self.campaign_key, routing_table)
+            "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
             d, 400, u"Source outbound-receiving endpoint {u'uuid':"
             " u'TRANSPORT_TAG:pool:tag1::default'}"
@@ -368,7 +368,7 @@ class TestGoApiServer(VumiTestCase):
             (source, source),
         ])
         d = self.proxy.callRemote(
-                "update_routing_table", self.campaign_key, routing_table)
+            "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
             d, 400, u"Source outbound-receiving endpoint"
             " {u'uuid': %r} should link"
@@ -386,7 +386,7 @@ class TestGoApiServer(VumiTestCase):
             (source, source),
         ])
         d = self.proxy.callRemote(
-                "update_routing_table", self.campaign_key, routing_table)
+            "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
             d, 400, u"Source inbound-receiving endpoint"
             " {u'uuid': %r} should link"
