@@ -46,7 +46,7 @@
     "url": "git://github.com/praekelt/vumi-go"
   },
   "author": "Praekelt Foundation",
-  "license": "BSD",
+  "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/praekelt/vumi-go/issues"
   }
