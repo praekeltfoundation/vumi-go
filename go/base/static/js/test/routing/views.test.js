@@ -223,6 +223,26 @@ describe("go.routing (views)", function() {
           $('[data-uuid="router3"] a.name').text(),
           'keyword-router');
       });
+
+      it("should not set state-not-running if their is no status", function() {
+        assert(!state.$el.hasClass('state-not-running'));
+        state.render();
+        assert(!state.$el.hasClass('state-not-running'));
+      });
+
+      it("should not set state-not-running if it is running", function() {
+        state.model.set('status', 'running');
+        assert(!state.$el.hasClass('state-not-running'));
+        state.render();
+        assert(!state.$el.hasClass('state-not-running'));
+      });
+
+      it("should set state-not-running if it is not running", function() {
+        state.model.set('status', 'stopping');
+        assert(!state.$el.hasClass('state-not-running'));
+        state.render();
+        assert(state.$el.hasClass('state-not-running'));
+      });
     });
   });
 

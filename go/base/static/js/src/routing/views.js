@@ -107,7 +107,7 @@
 
       var status = this.model.get('status');
       if(typeof status !== 'undefined' && status !== 'running') {
-        this.$el.addClas('state-not-running');
+        this.$el.addClass('state-not-running');
       }
 
       if(this.tooManyEndpoints()) {
