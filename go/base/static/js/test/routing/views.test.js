@@ -226,22 +226,31 @@ describe("go.routing (views)", function() {
 
       it("should not set state-not-running if their is no status", function() {
         assert(!state.$el.hasClass('state-not-running'));
+        assert(noElExists('[data-uuid="router3"] span.label-danger'));
         state.render();
         assert(!state.$el.hasClass('state-not-running'));
+        assert(noElExists('[data-uuid="router3"] span.label-danger'));
       });
 
       it("should not set state-not-running if it is running", function() {
         state.model.set('status', 'running');
         assert(!state.$el.hasClass('state-not-running'));
+        assert(noElExists('[data-uuid="router3"] span.label-danger'));
         state.render();
         assert(!state.$el.hasClass('state-not-running'));
+        assert(noElExists('[data-uuid="router3"] span.label-danger'));
       });
 
       it("should set state-not-running if it is not running", function() {
         state.model.set('status', 'stopping');
         assert(!state.$el.hasClass('state-not-running'));
+        assert(noElExists('[data-uuid="router3"] span.label-danger'));
         state.render();
         assert(state.$el.hasClass('state-not-running'));
+        assert(oneElExists('[data-uuid="router3"] span.label-danger'));
+        assert.equal(
+          $('[data-uuid="router3"] span.label-danger').text(),
+          'not running');
       });
     });
   });

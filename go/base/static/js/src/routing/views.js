@@ -77,6 +77,8 @@
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
       this.$name = $('<a class="name" href=""></a>');
+      this.$notrunning = $(
+        '<p><span class="label label-danger">not running</span></p>');
     },
 
     endpointsForSide: function(side){
@@ -108,6 +110,7 @@
       var status = this.model.get('status');
       if(typeof status !== 'undefined' && status !== 'running') {
         this.$el.addClass('state-not-running');
+        this.$el.append(this.$notrunning);
       }
 
       if(this.tooManyEndpoints()) {
