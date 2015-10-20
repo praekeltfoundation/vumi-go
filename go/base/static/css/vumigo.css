@@ -703,6 +703,9 @@ button {
 .routing #diagram .column-container .state .name {
   margin: 10px;
 }
+.routing #diagram .column-container .state-not-running {
+  border: 3px solid #d9534f;
+}
 .routing #diagram .column-container .state:hover {
   cursor: move;
 }
