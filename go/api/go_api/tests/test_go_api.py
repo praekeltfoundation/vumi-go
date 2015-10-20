@@ -61,6 +61,7 @@ class TestGoApiServer(VumiTestCase):
                 'uuid': conv.key,
                 'type': conv.conversation_type,
                 'name': conv.name,
+                'status': conv.status,
                 'description': conv.description,
                 'endpoints': [
                     {
@@ -83,6 +84,7 @@ class TestGoApiServer(VumiTestCase):
                 'uuid': conv.key,
                 'type': conv.conversation_type,
                 'name': conv.name,
+                'status': conv.status,
                 'description': conv.description,
                 'endpoints': [
                     {
@@ -155,6 +157,7 @@ class TestGoApiServer(VumiTestCase):
                 'uuid': router.key,
                 'type': router.router_type,
                 'name': router.name,
+                'status': router.status,
                 'description': router.description,
                 'channel_endpoints': [
                     self._router_endpoint(router, 'INBOUND::default'),
@@ -177,6 +180,7 @@ class TestGoApiServer(VumiTestCase):
                 'uuid': router.key,
                 'type': router.router_type,
                 'name': router.name,
+                'status': router.status,
                 'description': router.description,
                 'channel_endpoints': [
                     self._router_endpoint(router, 'INBOUND::default'),
@@ -275,6 +279,7 @@ class TestGoApiServer(VumiTestCase):
                     u'uuid': conv.key,
                     u'type': conv.conversation_type,
                     u'name': conv.name,
+                    u'status': conv.status,
                     u'description': conv.description,
                     u'endpoints': [
                         {
@@ -290,6 +295,7 @@ class TestGoApiServer(VumiTestCase):
                     'uuid': router.key,
                     'type': router.router_type,
                     'name': router.name,
+                    'status': router.status,
                     'description': router.description,
                     'channel_endpoints': [
                         self._router_endpoint(router, 'INBOUND::default'),
@@ -341,7 +347,7 @@ class TestGoApiServer(VumiTestCase):
             (('foo', 'bar'), ('TRANSPORT_TAG:pool:tag1', 'default')),
         ])
         d = self.proxy.callRemote(
-                "update_routing_table", self.campaign_key, routing_table)
+            "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
             d, 400, "Unknown source endpoint {u'uuid': u'foo::bar'}")
 
@@ -352,7 +358,7 @@ class TestGoApiServer(VumiTestCase):
             (('TRANSPORT_TAG:pool:tag1', 'default'), ('bar', 'baz')),
         ])
         d = self.proxy.callRemote(
-                "update_routing_table", self.campaign_key, routing_table)
+            "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
             d, 400, u"Source outbound-receiving endpoint {u'uuid':"
             " u'TRANSPORT_TAG:pool:tag1::default'}"
@@ -368,7 +374,7 @@ class TestGoApiServer(VumiTestCase):
             (source, source),
         ])
         d = self.proxy.callRemote(
-                "update_routing_table", self.campaign_key, routing_table)
+            "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
             d, 400, u"Source outbound-receiving endpoint"
             " {u'uuid': %r} should link"
@@ -386,7 +392,7 @@ class TestGoApiServer(VumiTestCase):
             (source, source),
         ])
         d = self.proxy.callRemote(
-                "update_routing_table", self.campaign_key, routing_table)
+            "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
             d, 400, u"Source inbound-receiving endpoint"
             " {u'uuid': %r} should link"
