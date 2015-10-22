@@ -22,7 +22,7 @@ class TestCommandDispatcher(VumiTestCase):
         self.worker_helper = self.vumi_helper.get_worker_helper()
         self.api = yield self.worker_helper.get_worker(
             CommandDispatcher, self.vumi_helper.mk_config({
-                'transport_name': 'this should not be an ApplicationWorker',
+                'transport_name': 'this should not be an application worker',
                 'worker_names': ['worker_1', 'worker_2'],
             }))
 
@@ -77,7 +77,7 @@ class TestEventDispatcher(VumiTestCase):
         self.worker_helper = self.vumi_helper.get_worker_helper()
         self.ed = yield self.worker_helper.get_worker(
             EventDispatcher, self.vumi_helper.mk_config({
-                'transport_name': 'this should not be an ApplicationWorker',
+                'transport_name': 'this should not be an application worker',
                 'event_handlers': {
                     'handler1': '%s.ToyHandler' % __name__,
                     'handler2': '%s.ToyHandler' % __name__,
@@ -145,7 +145,7 @@ class TestSendingEventDispatcher(VumiTestCase):
         self.worker_helper = self.vumi_helper.get_worker_helper()
         self.ed = yield self.worker_helper.get_worker(
             EventDispatcher, self.vumi_helper.mk_config({
-                'transport_name': 'this should not be an ApplicationWorker',
+                'transport_name': 'this should not be an application worker',
                 'event_handlers': {
                     'handler1': "%s.%s" % (
                         SendMessageCommandHandler.__module__,
