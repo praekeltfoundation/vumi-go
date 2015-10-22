@@ -36,3 +36,4 @@ mochacov.lcov
 /coverage/
 /go/static
 /build/
+/.cache/
