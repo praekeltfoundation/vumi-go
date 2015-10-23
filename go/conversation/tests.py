@@ -349,7 +349,7 @@ class TestNewConversationView(BaseConversationViewTestCase):
             'conversation_type': 'dummy',
         }
 
-        response = self.client.post(
+        self.client.post(
             reverse('conversations:new_conversation'),
             conv_data)
 
@@ -854,16 +854,16 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(
             response,
             '<tr>'
-                '<td>Number of contacts messages were received from</td>'
-                '<td>21</td>'
+            '<td>Number of contacts messages were received from</td>'
+            '<td>21</td>'
             '</tr>',
             html=True)
 
         self.assertContains(
             response,
             '<tr>'
-                '<td>Number of contacts messages were sent to</td>'
-                '<td>23</td>'
+            '<td>Number of contacts messages were sent to</td>'
+            '<td>23</td>'
             '</tr>',
             html=True)
 
