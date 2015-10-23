@@ -1,8 +1,11 @@
 import csv
+import datetime
 import json
 import logging
 import functools
+import re
 import sys
+import urllib
 from StringIO import StringIO
 from collections import defaultdict
 
@@ -14,6 +17,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.utils import timezone
 from vumi.message import parse_vumi_date
 
 from go.base.utils import page_range_window, sendfile
@@ -197,8 +201,76 @@ class ExportMessageView(ConversationApiView):
     view_name = 'export_messages'
     path_suffix = 'export_messages/'
 
+    PRESET_DAYS_RE = re.compile("^[0-9]+d$")
+    CUSTOM_DATE_RE = re.compile("^[0-9]+/[0-9]+/[0-9]+")
+
+    def _check_option(self, opt, values):
+        if opt not in values:
+            raise Http404()
+        return opt
+
+    def _parse_preset(self, preset):
+        if preset == "all":
+            return None, None
+        if self.PRESET_DAYS_RE.match(preset):
+            days = int(preset[:-1])
+            start_time = (
+                datetime.datetime.utcnow() - datetime.timedelta(days=days))
+            return start_time, None
+        raise Http404()
+
+    def _parse_custom_date(self, custom_date):
+        if custom_date is None:
+            return None
+        if self.CUSTOM_DATE_RE.match(custom_date):
+            day, month, year = [int(part) for part in custom_date.split("/")]
+            return datetime.datetime(year, month, day, tzinfo=timezone.utc)
+        raise Http404()
+
+    def _format_custom_date_part(self, date, default):
+        if date is None:
+            return default
+        return date.strftime('%Y%m%d')
+
+    def _format_custom_date_filename(self, start_date, end_date):
+        return "-".join([
+            self._format_custom_date_part(start_date, 'until'),
+            self._format_custom_date_part(end_date, 'now'),
+        ])
+
     def post(self, request, conversation):
-        raise NotImplementedError("Time ranged message not available yet.")
+        export_format = self._check_option(
+            request.POST.get('format'), ['csv', 'json'])
+
+        direction = self._check_option(
+            request.POST.get('direction'), ['inbound', 'outbound'])
+
+        date_preset = self._check_option(
+            request.POST.get('date-preset'),
+            ['all', '1d', '7d', '30d', None])
+
+        if date_preset is not None:
+            start_date, end_date = self._parse_preset(date_preset)
+            filename_date = date_preset
+        else:
+            start_date = self._parse_custom_date(request.POST.get('date-from'))
+            end_date = self._parse_custom_date(request.POST.get('date-to'))
+            filename_date = self._format_custom_date_filename(
+                start_date, end_date)
+
+        url_params = {}
+        if start_date is not None:
+            url_params['start'] = start_date.isoformat()
+        if end_date is not None:
+            url_params['end'] = end_date.isoformat()
+
+        url = '/message_store_exporter/%s/%s.%s' % (
+            conversation.batch.key, direction, export_format)
+        if url_params:
+            url += '?' + urllib.urlencode(url_params)
+
+        return sendfile(url, buffering=False, filename='%s-%s-%s.%s' % (
+            conversation.key, direction, filename_date, export_format))
 
 
 class MessageListView(ConversationTemplateView):
