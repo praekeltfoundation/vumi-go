@@ -68,8 +68,6 @@ class Command(BaseGoAccountCommand):
             "Group created:\n * %s\n" % (self.format_group(group),))
 
     def handle_command_delete(self, *args, **options):
-        # NOTE: Copied from go.conversation.tasks and expanded.
-        #
         # NOTE: There is a small chance that this can break when running in
         #       production if the load is high and the queues have backed up.
         #       What could happen is that while contacts are being removed from

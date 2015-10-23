@@ -21,7 +21,6 @@ from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
                                    ConversationDetailForm)
-from go.conversation.tasks import export_conversation_messages_unsorted
 from go.conversation.utils import PagedMessageCache
 from go.dashboard.dashboard import Dashboard, ConversationReportsLayout
 
@@ -198,29 +197,8 @@ class ExportMessageView(ConversationApiView):
     view_name = 'export_messages'
     path_suffix = 'export_messages/'
 
-    def get(self, request, conversation):
-        direction = request.GET.get('direction', 'inbound')
-        if direction not in ['inbound', 'outbound']:
-            raise Http404()
-
-        export_format = request.GET.get('format', 'json')
-        if export_format not in ['csv', 'json']:
-            raise Http404()
-
-        url = '/message_store_exporter/%s/%s.%s' % (
-            conversation.batch.key, direction, export_format)
-        return sendfile(url, buffering=False, filename='%s-%s.%s' % (
-            conversation.key, direction, export_format))
-
     def post(self, request, conversation):
-        export_conversation_messages_unsorted.delay(
-            request.user_api.user_account_key, conversation.key)
-        messages.info(
-            request,
-            'Conversation messages CSV file export scheduled. CSV file should'
-            ' arrive in your mailbox shortly.')
-        return self.redirect_to(
-            'message_list', conversation_key=conversation.key)
+        raise NotImplementedError("Time ranged message not available yet.")
 
 
 class MessageListView(ConversationTemplateView):
