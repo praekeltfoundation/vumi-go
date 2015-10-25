@@ -301,6 +301,8 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
         # We use vumi's MessageHelper here rather than our own GoMessageHelper
         # because we want to handle all the Go metadata stuff ourselves.
         self.msg_helper = self.add_helper(MessageHelper())
+        vumi_api = self.vumi_helper.get_vumi_api()
+        self.opms = vumi_api.get_operational_message_store()
 
     def get_routing_table(self):
         return RoutingTable({
@@ -405,7 +407,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
     def mk_msg_reply(self, **kw):
         "Create and store an outbound message, then create a reply for it."
         msg = self.with_md(self.msg_helper.make_inbound("foo"), **kw)
-        yield self.vumi_helper.get_vumi_api().mdb.add_inbound_message(msg)
+        yield self.opms.add_inbound_message(msg)
         reply = msg.reply(content="Reply")
         returnValue((msg, reply))
 
@@ -413,7 +415,7 @@ class RoutingTableDispatcherTestCase(VumiTestCase):
     def mk_msg_ack(self, **kw):
         "Create and store an outbound message, then create an ack for it."
         msg = self.with_md(self.msg_helper.make_outbound("foo"), **kw)
-        yield self.vumi_helper.get_vumi_api().mdb.add_outbound_message(msg)
+        yield self.opms.add_outbound_message(msg)
         ack = self.msg_helper.make_ack(msg)
         returnValue((msg, ack))
 
@@ -796,8 +798,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         msg = self.with_md(
             self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
 
-        mdb = self.vumi_helper.get_vumi_api().mdb
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
         yield self.dispatch_outbound(msg, 'app1')
@@ -808,7 +809,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, msg)
 
     @inlineCallbacks
@@ -821,8 +822,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         msg = self.with_md(
             self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
 
-        mdb = self.vumi_helper.get_vumi_api().mdb
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
         yield self.dispatch_outbound(msg, 'app1')
@@ -833,7 +833,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
         ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
     @inlineCallbacks
@@ -846,8 +846,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'),
             endpoint="router")
 
-        mdb = self.vumi_helper.get_vumi_api().mdb
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
         yield self.dispatch_outbound(msg, 'app1')
@@ -859,7 +858,7 @@ class TestRoutingTableDispatcher(RoutingTableDispatcherTestCase):
             ])
         self.assertEqual([msg], self.get_dispatched_outbound('router_ro'))
 
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
 
@@ -1121,8 +1120,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             self.msg_helper.make_outbound("foo"), tag=("pool1", "1234"),
             conv=('app1', 'conv1'), is_paid=True)
 
-        mdb = self.vumi_helper.get_vumi_api().mdb
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
         yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
@@ -1136,7 +1134,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         self.with_md(msg, hops=hops)
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, msg)
 
     @inlineCallbacks
@@ -1150,8 +1148,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
             self.msg_helper.make_outbound("foo"), tag=("pool1", "1234"),
             conv=('app1', 'conv1'), is_paid=True)
 
-        mdb = self.vumi_helper.get_vumi_api().mdb
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
         yield self.dispatch_outbound(msg, 'billing_dispatcher_ri')
@@ -1165,7 +1162,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         self.with_md(msg, hops=hops)
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
     @inlineCallbacks
@@ -1177,8 +1174,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         msg = self.with_md(
             self.msg_helper.make_outbound("foo"), conv=('app1', 'conv1'))
 
-        mdb = self.vumi_helper.get_vumi_api().mdb
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
         yield self.dispatch_outbound(msg, 'app1')
@@ -1193,7 +1189,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
         self.assertEqual(
             [msg], self.get_dispatched_outbound('billing_dispatcher_ro'))
 
-        stored_msg = yield mdb.get_outbound_message(msg["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(msg["message_id"])
         self.assertEqual(stored_msg, None)
 
 
@@ -1398,6 +1394,5 @@ class TestUnroutableSessionResponse(RoutingTableDispatcherTestCase):
             optout={'optout': False})
 
         [reply] = self.get_dispatched_outbound('sphex')
-        mdb = self.vumi_helper.get_vumi_api().mdb
-        stored_msg = yield mdb.get_outbound_message(reply["message_id"])
+        stored_msg = yield self.opms.get_outbound_message(reply["message_id"])
         self.assertEqual(stored_msg, reply)

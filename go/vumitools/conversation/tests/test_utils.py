@@ -36,7 +36,7 @@ class TestConversationWrapper(VumiTestCase):
         for message in messages:
             event_maker = getattr(self.msg_helper, 'make_%s' % (event_type,))
             event = event_maker(message, **kwargs)
-            yield self.msg_helper.store_event(event)
+            yield self.msg_helper.store_event(self.conv, event)
             events.append(event)
         returnValue(events)
 
@@ -94,9 +94,10 @@ class TestConversationWrapper(VumiTestCase):
     def test_collect_messages(self):
         yield self.conv.start()
         created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        qms = self.vumi_helper.get_vumi_api().get_query_message_store()
         collected_msgs = yield self.conv.collect_messages(
             [msg['message_id'] for msg in created_msgs],
-            self.conv.mdb.get_inbound_message,
+            qms.get_inbound_message,
             include_sensitive=False, scrubber=lambda msg: msg)
         self.assertEqual(
             [msg['message_id'] for msg in collected_msgs],
@@ -106,9 +107,10 @@ class TestConversationWrapper(VumiTestCase):
     def test_collect_messages_with_unknown_key(self):
         yield self.conv.start()
         created_msgs = yield self.msg_helper.add_inbound_to_conv(self.conv, 5)
+        qms = self.vumi_helper.get_vumi_api().get_query_message_store()
         collected_msgs = yield self.conv.collect_messages(
             [msg['message_id'] for msg in created_msgs] + [u'unknown-key'],
-            self.conv.mdb.get_inbound_message,
+            qms.get_inbound_message,
             include_sensitive=False, scrubber=lambda msg: msg)
         self.assertEqual(
             [msg['message_id'] for msg in collected_msgs],
@@ -391,7 +393,7 @@ class TestConversationWrapper(VumiTestCase):
     def test_get_inbound_throughput(self):
         yield self.conv.start()
         yield self.msg_helper.add_inbound_to_conv(
-            self.conv, 20, time_multiplier=0)
+            self.conv, 20, time_multiplier=0, start_date=datetime.utcnow())
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_inbound_throughput()), 4)
@@ -403,7 +405,7 @@ class TestConversationWrapper(VumiTestCase):
     def test_get_outbound_throughput(self):
         yield self.conv.start()
         yield self.msg_helper.add_outbound_to_conv(
-            self.conv, 20, time_multiplier=0)
+            self.conv, 20, time_multiplier=0, start_date=datetime.utcnow())
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_outbound_throughput()), 4)

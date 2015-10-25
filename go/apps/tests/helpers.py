@@ -103,7 +103,8 @@ class AppWorkerHelper(object):
         self.vumi_helper = vumi_helper
         self._app_helper = ApplicationHelper(
             self._conversation_type(), self.vumi_helper)
-        self.msg_helper = GoMessageHelper(**msg_helper_args)
+        self.msg_helper = GoMessageHelper(
+            vumi_helper=vumi_helper, **msg_helper_args)
         self.transport_name = self.msg_helper.transport_name
         self.worker_helper = self.vumi_helper.get_worker_helper(
             self.transport_name)
@@ -141,7 +142,6 @@ class AppWorkerHelper(object):
         # Set up our other bits of helper.
         if not extra_worker:
             self.vumi_helper.set_vumi_api(worker.vumi_api)
-            self.msg_helper.mdb = worker.vumi_api.mdb
         returnValue(worker)
 
     @inlineCallbacks

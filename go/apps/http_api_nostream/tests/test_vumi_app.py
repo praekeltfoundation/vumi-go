@@ -680,7 +680,8 @@ class TestNoStreamingHTTPWorker(TestNoStreamingHTTPWorkerBase):
         # create a message with no (None) conversation
         inbound_msg = self.app_helper.make_inbound('in 1', message_id='msg-1')
         vumi_api = self.app_helper.vumi_helper.get_vumi_api()
-        yield vumi_api.mdb.add_inbound_message(inbound_msg)
+        opms = vumi_api.get_operational_message_store()
+        yield opms.add_inbound_message(inbound_msg)
 
         msg = {
             'content': 'foo',

@@ -6,12 +6,12 @@ import time
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vumi import log
 from vumi.config import (
     ConfigBool, ConfigDict, ConfigFloat, ConfigInt, ConfigList, ConfigRiak,
     ConfigText)
+from vumi.message import TransportUserMessage
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
-from vumi.middleware.message_storing import (
-    StoringMiddleware, StoringMiddlewareConfig)
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.utils import normalize_msisdn
 from vumi.blinkenlights.metrics import (
@@ -603,27 +603,64 @@ class MetricsMiddleware(BaseMiddleware):
         return failure
 
 
-class GoStoringMiddlewareConfig(StoringMiddlewareConfig):
+class GoStoringMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
     """
     GoStoringMiddleware configuration options.
     """
-
+    redis_manager = ConfigDict(
+        "Redis configuration parameters", default={}, static=True)
+    riak_manager = ConfigRiak(
+        "Riak configuration parameters. Must contain at least a bucket_prefix"
+        " key", required=True, static=True)
+    store_on_consume = ConfigBool(
+        "``True`` to store consumed messages as well as published ones, "
+        "``False`` to store only published messages.", default=True,
+        static=True)
     conversation_cache_ttl = ConfigInt(
         "Time in seconds to cache conversations for.",
         default=5, static=True)
 
 
-class GoStoringMiddleware(StoringMiddleware):
+class GoStoringMiddleware(BaseMiddleware):
+    """
+    Middleware for storing inbound and outbound messages and events.
+
+    Failures are not stored currently because these are typically
+    stored by :class:`vumi.transports.FailureWorker` instances.
+
+    Messages are always stored. However, in order for messages to be associated
+    with a particular batch_id a batch needs to be created in the message store
+    (typically by an application worker that initiates sending outbound
+    messages) and messages need to be tagged with a tag associated with the
+    batch (typically by an application worker or middleware such as
+    :class:`vumi.middleware.TaggingMiddleware`).
+
+    Configuration options:
+
+    :param string store_prefix:
+        Prefix for message store keys in key-value store.
+        Default is 'message_store'.
+    :param dict redis_manager:
+        Redis configuration parameters.
+    :param dict riak_manager:
+        Riak configuration parameters. Must contain at least
+        a bucket_prefix key.
+    :param bool store_on_consume:
+        ``True`` to store consumed messages as well as published ones,
+        ``False`` to store only published messages.
+        Default is ``True``.
+    """
 
     CONFIG_CLASS = GoStoringMiddlewareConfig
 
     @inlineCallbacks
     def setup_middleware(self):
-        yield super(GoStoringMiddleware, self).setup_middleware()
         self.vumi_api = yield VumiApi.from_config_async({
             "riak_manager": self.config.riak_manager,
             "redis_manager": self.config.redis_manager,
         })
+        self.opms = self.vumi_api.get_operational_message_store()
+        self.store_on_consume = self.config.store_on_consume
         # We don't have access to our worker's conversation cache (if any), so
         # we use our own here to avoid duplicate lookups between messages for
         # the same conversation.
@@ -634,22 +671,107 @@ class GoStoringMiddleware(StoringMiddleware):
     def teardown_middleware(self):
         yield self._conversation_cache.cleanup()
         yield self.vumi_api.close()
-        yield super(GoStoringMiddleware, self).teardown_middleware()
 
     def get_batch_id(self, msg):
         raise NotImplementedError("Sub-classes should implement .get_batch_id")
 
+    def handle_consume_inbound(self, message, connector_name):
+        if not self.store_on_consume:
+            return message
+        return self.handle_inbound(message, connector_name)
+
+    def handle_consume_outbound(self, message, connector_name):
+        if not self.store_on_consume:
+            return message
+        return self.handle_outbound(message, connector_name)
+
+    def handle_consume_event(self, event, connector_name):
+        if not self.store_on_consume:
+            return event
+        return self.handle_event(event, connector_name)
+
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
         batch_id = yield self.get_batch_id(message)
-        yield self.store.add_inbound_message(message, batch_ids=[batch_id])
+        yield self.opms.add_inbound_message(message, batch_ids=[batch_id])
         returnValue(message)
 
     @inlineCallbacks
     def handle_outbound(self, message, connector_name):
         batch_id = yield self.get_batch_id(message)
-        yield self.store.add_outbound_message(message, batch_ids=[batch_id])
+        yield self.opms.add_outbound_message(message, batch_ids=[batch_id])
         returnValue(message)
+
+    @inlineCallbacks
+    def handle_event(self, event, connector_name):
+        outbound = yield self.find_message_for_event(event)
+        batch_id = yield self.get_batch_id(outbound)
+
+        transport_metadata = event.get('transport_metadata', {})
+        # FIXME: The SMPP transport writes a 'datetime' object
+        #        in the 'date' of the transport_metadata.
+        #        json.dumps() that RiakObject uses is unhappy with that.
+        if 'date' in transport_metadata:
+            date = transport_metadata['date']
+            if not isinstance(date, basestring):
+                transport_metadata['date'] = date.isoformat()
+        yield self.opms.add_event(event, batch_ids=[batch_id])
+        returnValue(event)
+
+    @inlineCallbacks
+    def _find_outboundmessage_for_event(self, event):
+        user_message_id = event.get('user_message_id')
+        if user_message_id is None:
+            log.error('Received event without user_message_id: %s' % (event,))
+            return
+
+        msg = yield self.opms.get_outbound_message(user_message_id)
+        if msg is None:
+            log.error('Unable to find message for event: %s' % (event,))
+
+        returnValue(msg)
+
+    _EVENT_OUTBOUND_CACHE_KEY = "outbound_message_json"
+
+    def _get_outbound_from_event_cache(self, event):
+        """
+        Retrieve outbound message from the cache on an event.
+        """
+        if self._EVENT_OUTBOUND_CACHE_KEY not in event.cache:
+            return False, None
+        outbound_json = event.cache[self._EVENT_OUTBOUND_CACHE_KEY]
+        if outbound_json is None:
+            return True, None
+        return True, TransportUserMessage.from_json(outbound_json)
+
+    def _store_outbound_in_event_cache(self, event, outbound):
+        """
+        Store an outbound message in the cache on an event.
+        """
+        if outbound is None:
+            event.cache[self._EVENT_OUTBOUND_CACHE_KEY] = None
+        else:
+            event.cache[self._EVENT_OUTBOUND_CACHE_KEY] = outbound.to_json()
+
+    @inlineCallbacks
+    def find_message_for_event(self, event):
+        hit, outbound_msg = self._get_outbound_from_event_cache(event)
+        if hit:
+            returnValue(outbound_msg)
+
+        outbound_msg = yield self._find_outboundmessage_for_event(event)
+        self._store_outbound_in_event_cache(event, outbound_msg)
+        returnValue(outbound_msg)
+
+
+class TransportStoringMiddleware(GoStoringMiddleware):
+    @inlineCallbacks
+    def get_batch_id(self, msg):
+        mdh = MessageMetadataHelper(self.vumi_api, msg)
+        if mdh.tag is None:
+            returnValue(None)
+        tag_info = yield self.opms.get_tag_info(mdh.tag)
+        returnValue(tag_info.current_batch.key)
 
 
 class ConversationStoringMiddleware(GoStoringMiddleware):

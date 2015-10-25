@@ -31,24 +31,24 @@ class TestMessageStoreResource(ResourceTestCaseBase):
         self.user_helper = yield self.vumi_helper.make_user(u"user")
         self.app_worker.user_api = self.user_helper.user_api
 
-        self.message_store = self.vumi_helper.get_vumi_api().mdb
+        opms = self.vumi_helper.get_vumi_api().get_operational_message_store()
 
         self.conversation = yield self.user_helper.create_conversation(
             u'jsbox', started=True)
 
         # store inbound
-        yield self.message_store.add_inbound_message(
+        yield opms.add_inbound_message(
             self.msg_helper.make_inbound('hello'),
             batch_ids=[self.conversation.batch.key])
 
         # store outbound
         outbound_msg = self.msg_helper.make_outbound('hello')
-        yield self.message_store.add_outbound_message(
+        yield opms.add_outbound_message(
             outbound_msg, batch_ids=[self.conversation.batch.key])
 
         # ack outbound
         event = self.msg_helper.make_ack(outbound_msg)
-        yield self.message_store.add_event(event)
+        yield opms.add_event(event, batch_ids=[self.conversation.batch.key])
 
         # monkey patch for when no conversation_key is provided
         self.app_worker.conversation_for_api = lambda *a: self.conversation

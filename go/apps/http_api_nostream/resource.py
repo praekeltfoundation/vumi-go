@@ -214,7 +214,8 @@ class MessageResource(BaseResource):
         user_account = request.getUser()
         conversation = yield self.get_conversation(user_account)
 
-        reply_to = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
+        opms = self.vumi_api.get_operational_message_store()
+        reply_to = yield opms.get_inbound_message(in_reply_to)
         if reply_to is None:
             self.client_error_response(request, 'Invalid in_reply_to value')
             return

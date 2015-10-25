@@ -160,13 +160,14 @@ class TestTxVumiUserApi(VumiTestCase):
 
     @inlineCallbacks
     def test_declare_acquire_and_release_tags(self):
+        batch_manager = self.vumi_api.get_batch_manager()
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
         yield self.vumi_api.tpm.declare_tags([tag1, tag2])
         yield self.user_helper.add_tagpool_permission(u"poolA")
         yield self.user_helper.add_tagpool_permission(u"poolB")
 
         yield self.assert_account_tags([])
-        tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
+        tag2_info = yield batch_manager.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'], None)
         self.assertEqual(tag2_info.current_batch.key, None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag1)
@@ -174,14 +175,14 @@ class TestTxVumiUserApi(VumiTestCase):
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolB")), None)
         yield self.assert_account_tags([list(tag1), list(tag2)])
-        tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
+        tag2_info = yield batch_manager.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'],
                          self.user_api.user_account_key)
         self.assertNotEqual(tag2_info.current_batch.key, None)
 
         yield self.user_api.release_tag(tag2)
         yield self.assert_account_tags([list(tag1)])
-        tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
+        tag2_info = yield batch_manager.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'], None)
         self.assertEqual(tag2_info.current_batch.key, None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
@@ -194,7 +195,7 @@ class TestTxVumiUserApi(VumiTestCase):
         yield self.user_helper.add_tagpool_permission(u"pool1")
         yield self.user_api.acquire_specific_tag(tag)
 
-        tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
+        tag_info = yield self.vumi_api.get_batch_manager().get_tag_info(tag)
         del tag_info.metadata['user_account']
         yield tag_info.save()
 
@@ -207,7 +208,7 @@ class TestTxVumiUserApi(VumiTestCase):
         [tag] = yield self.vumi_helper.setup_tagpool(u"poolA", [u"tag1"])
         yield self.user_helper.add_tagpool_permission(u"poolA")
         yield self.user_api.acquire_specific_tag(tag)
-        tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
+        tag_info = yield self.vumi_api.get_batch_manager().get_tag_info(tag)
         self.assertNotEqual(tag_info.current_batch.key, None)
 
     def _set_routing_table(self, user, entries):

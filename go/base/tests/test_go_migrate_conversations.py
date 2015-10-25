@@ -14,11 +14,11 @@ with djangotest_imports(globals()):
     from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
-def collect_all_results(index_page, results=None):
+def collect_all_keys(index_page, results=None):
     if results is None:
         results = set()
     while index_page is not None:
-        results.update(index_page)
+        results.update(result[0] for result in index_page)
         index_page = index_page.next_page()
     return results
 
@@ -70,7 +70,8 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
         conversation = self.old_conv_model(conversation_id, **conv_fields)
 
         if create_batch:
-            conversation.batches.add_key(self.user_api.api.mdb.batch_start())
+            batch_manager = self.user_api.api.get_batch_manager()
+            conversation.batches.add_key(batch_manager.batch_start())
 
         for group in groups:
             conversation.add_group(group)
@@ -135,9 +136,11 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
             self.assertEqual(conv.name, loaded_conv.name)
 
     def setup_fix_batches(self, tags=(), num_batches=1):
-        mdb = self.user_api.api.mdb
-        msg_helper = GoMessageHelper()  # We can't use .store_*(), so no mdb.
-        batches = [mdb.batch_start(tags=tags) for i in range(num_batches)]
+        batch_manager = self.user_api.api.get_batch_manager()
+        opms = self.user_api.api.get_operational_message_store()
+        msg_helper = self.add_helper(GoMessageHelper())
+        batches = [batch_manager.batch_start(tags=tags)
+                   for i in range(num_batches)]
 
         conv = self.mkoldconv(
             create_batch=False, conversation_type=u'dummy_type',
@@ -147,29 +150,30 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
         for i, batch_id in enumerate(batches):
             conv.batches.add_key(batch_id)
             msg1 = msg_helper.make_inbound("in", message_id=u"msg-%d" % i)
-            mdb.add_inbound_message(msg1, batch_ids=[batch_id])
+            opms.add_inbound_message(msg1, batch_ids=[batch_id])
             msg2 = msg_helper.make_outbound("out", message_id=u"msg-%d" % i)
-            mdb.add_outbound_message(msg2, batch_ids=[batch_id])
+            opms.add_outbound_message(msg2, batch_ids=[batch_id])
 
         conv.save()
 
         return conv
 
     def assert_batches_fixed(self, old_conv):
+        # This assumes we only have one index page of results in each query.
+        qms = self.user_api.api.get_query_message_store()
         old_batches = old_conv.batches.keys()
         new_conv = self.user_api.conversation_store.get_conversation_by_key(
             old_conv.key)
         new_batch = new_conv.batch.key
         self.assertTrue(new_batch not in old_batches)
 
-        mdb = self.user_api.api.mdb
         old_out, old_in = set(), set()
         for batch in old_batches:
-            collect_all_results(mdb.batch_outbound_keys_page(batch), old_out)
-            collect_all_results(mdb.batch_inbound_keys_page(batch), old_in)
+            collect_all_keys(qms.list_batch_outbound_messages(batch), old_out)
+            collect_all_keys(qms.list_batch_inbound_messages(batch), old_in)
 
-        new_out = collect_all_results(mdb.batch_outbound_keys_page(new_batch))
-        new_in = collect_all_results(mdb.batch_inbound_keys_page(new_batch))
+        new_out = collect_all_keys(qms.list_batch_outbound_messages(new_batch))
+        new_in = collect_all_keys(qms.list_batch_inbound_messages(new_batch))
         self.assertEqual(new_out, old_out)
         self.assertEqual(new_in, old_in)
 
@@ -217,8 +221,8 @@ class TestGoMigrateConversationsCommand(GoDjangoTestCase):
         self.check_split_batches(tags=(), num_batches=1, migrated=False)
 
     def test_split_batches_on_conv_with_batch_with_tag(self):
-        self.check_split_batches(tags=[(u"pool", u"tag")],
-                               num_batches=1, migrated=True)
+        self.check_split_batches(
+            tags=[(u"pool", u"tag")], num_batches=1, migrated=True)
 
     def test_fix_jsbox_endpoints(self):
         app_config = {

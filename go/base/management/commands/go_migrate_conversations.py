@@ -12,8 +12,9 @@ class Migration(object):
     """Base class for migrations."""
     name = None
 
-    def __init__(self, dry_run):
+    def __init__(self, dry_run, vumi_api):
         self._dry_run = dry_run
+        self.vumi_api = vumi_api
 
     @classmethod
     def migrator_classes(cls):
@@ -103,23 +104,25 @@ class FixBatches(Migration):
 
     def _process_pages(self, index_page, batch_id, get_message, add_message):
         while index_page is not None:
-            for key in index_page:
+            for key, _timestamp, _addr in index_page:
                 add_message(get_message(key), batch_ids=[batch_id])
             index_page = index_page.next_page()
 
-    def _copy_msgs(self, mdb, old_batch, new_batch):
+    def _copy_msgs(self, old_batch, new_batch):
+        qms = self.vumi_api.get_query_message_store()
+        opms = self.vumi_api.get_operational_message_store()
         self._process_pages(
-            mdb.batch_outbound_keys_page(old_batch), new_batch,
-            mdb.get_outbound_message, mdb.add_outbound_message)
+            qms.list_batch_outbound_messages(old_batch), new_batch,
+            opms.get_outbound_message, opms.add_outbound_message)
         self._process_pages(
-            mdb.batch_inbound_keys_page(old_batch), new_batch,
-            mdb.get_inbound_message, mdb.add_inbound_message)
+            qms.list_batch_inbound_messages(old_batch), new_batch,
+            opms.get_inbound_message, opms.add_inbound_message)
 
     def migrate(self, user_api, conv):
         conv_batches = conv.batches.keys()
-        new_batch = user_api.api.mdb.batch_start()
+        new_batch = user_api.api.get_batch_manager().batch_start()
         for batch in conv_batches:
-            self._copy_msgs(user_api.api.mdb, batch, new_batch)
+            self._copy_msgs(batch, new_batch)
         conv.batches.clear()
         conv.batches.add_key(new_batch)
         conv.save()
@@ -133,30 +136,31 @@ class SplitBatches(Migration):
         " conversation batches to the new batch.")
 
     def applies_to(self, user_api, conv):
-        mdb = user_api.api.mdb
-        tag_keys = mdb.current_tags.index_keys('current_batch', conv.batch.key)
-        if tag_keys:
-            return True
-        return False
+        batch_manager = user_api.api.get_batch_manager()
+        batch = batch_manager.get_batch(conv.batch.key)
+        current_tags = [batch_manager.get_tag_info(tag) for tag in batch.tags]
+        return any(ct.current_batch.key == batch.key for ct in current_tags)
 
     def _process_pages(self, index_page, batch_id, get_message, add_message):
         while index_page is not None:
-            for key in index_page:
+            for key, _timestamp, _addr in index_page:
                 add_message(get_message(key), batch_ids=[batch_id])
             index_page = index_page.next_page()
 
-    def _copy_msgs(self, mdb, old_batch, new_batch):
+    def _copy_msgs(self, old_batch, new_batch):
+        qms = self.vumi_api.get_query_message_store()
+        opms = self.vumi_api.get_operational_message_store()
         self._process_pages(
-            mdb.batch_outbound_keys_page(old_batch), new_batch,
-            mdb.get_outbound_message, mdb.add_outbound_message)
+            qms.list_batch_outbound_messages(old_batch), new_batch,
+            opms.get_outbound_message, opms.add_outbound_message)
         self._process_pages(
-            mdb.batch_inbound_keys_page(old_batch), new_batch,
-            mdb.get_inbound_message, mdb.add_inbound_message)
+            qms.list_batch_inbound_messages(old_batch), new_batch,
+            opms.get_inbound_message, opms.add_inbound_message)
 
     def migrate(self, user_api, conv):
         old_batch = conv.batch.key
-        new_batch = user_api.api.mdb.batch_start()
-        self._copy_msgs(user_api.api.mdb, old_batch, new_batch)
+        new_batch = user_api.api.get_batch_manager().batch_start()
+        self._copy_msgs(old_batch, new_batch)
         conv.batch.key = new_batch
         conv.save()
 
@@ -246,7 +250,7 @@ class Command(BaseGoCommand):
         migrator_cls = Migration.migrator_class(migration_name)
         if migrator_cls is None:
             return None
-        return migrator_cls(dry_run)
+        return migrator_cls(dry_run, self.vumi_api)
 
     def handle_user(self, user, migrator):
         user_api = self.user_api_for_user(user)

@@ -18,20 +18,19 @@ class TestGoManageMessageCache(GoCommandTestCase):
 
     def setUp(self):
         self.setup_command(go_manage_message_cache.Command)
+        self.qms = self.vumi_helper.get_vumi_api().get_query_message_store()
 
     def clear_batches(self, batches):
         """
         Clear the message cache so that all batches need reconciliation.
         """
-        vumi_api = self.vumi_helper.get_vumi_api()
         for batch_id in batches:
-            vumi_api.mdb.cache.clear_batch(batch_id)
+            self.qms.batch_info_cache.clear_batch(batch_id)
         self.assert_batches_cleared(batches)
 
     def assert_batches_cleared(self, batches):
-        vumi_api = self.vumi_helper.get_vumi_api()
         for batch_id in batches:
-            self.assertFalse(vumi_api.mdb.cache.batch_exists(batch_id))
+            self.assertFalse(self.qms.batch_info_cache.batch_exists(batch_id))
 
     def count_results(self, index_page):
         count = 0
@@ -48,17 +47,15 @@ class TestGoManageMessageCache(GoCommandTestCase):
             What an acceptable delta is for the cached values. Defaults to 0.01
             If the cached values are off by the delta then this returns True.
         """
-        vumi_api = self.vumi_helper.get_vumi_api()
-
         inbound = float(self.count_results(
-            vumi_api.mdb.batch_inbound_keys_page(batch_id)))
-        cached_inbound = vumi_api.mdb.cache.inbound_message_count(batch_id)
+            self.qms.list_batch_inbound_messages(batch_id)))
+        cached_inbound = self.qms.get_batch_inbound_count(batch_id)
         if inbound and (abs(cached_inbound - inbound) / inbound) > delta:
             return True
 
         outbound = float(self.count_results(
-            vumi_api.mdb.batch_outbound_keys_page(batch_id)))
-        cached_outbound = vumi_api.mdb.cache.outbound_message_count(batch_id)
+            self.qms.list_batch_outbound_messages(batch_id)))
+        cached_outbound = self.qms.get_batch_outbound_count(batch_id)
         if outbound and (abs(cached_outbound - outbound) / outbound) > delta:
             return True
 

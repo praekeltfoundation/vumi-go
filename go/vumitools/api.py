@@ -12,7 +12,6 @@ from vumi.blinkenlights.metrics import MetricManager
 from vumi.errors import VumiError
 from vumi.message import Message
 from vumi.components.tagpool import TagpoolManager
-from vumi.components.message_store import MessageStore
 from vumi.persist.model import Manager
 from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
@@ -150,7 +149,7 @@ class VumiUserApi(object):
     @Manager.calls_manager
     def get_channel(self, tag):
         tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
-        tag_info = yield self.api.mdb.get_tag_info(tag)
+        tag_info = yield self.api.get_batch_manager().get_tag_info(tag)
         channel = yield self.channel_store.get_channel_by_tag(
             tag, tagpool_meta, tag_info.current_batch.key)
         returnValue(channel)
@@ -275,7 +274,7 @@ class VumiUserApi(object):
     def new_conversation(self, conversation_type, name, description, config,
                          batch_id=None, **fields):
         if not batch_id:
-            batch_id = yield self.api.mdb.batch_start(
+            batch_id = yield self.api.get_batch_manager().batch_start(
                 tags=[], user_account=self.user_account_key)
         conv = yield self.conversation_store.new_conversation(
             conversation_type, name, description, config, batch_id, **fields)
@@ -285,7 +284,7 @@ class VumiUserApi(object):
     def new_router(self, router_type, name, description, config,
                    batch_id=None, **fields):
         if not batch_id:
-            batch_id = yield self.api.mdb.batch_start(
+            batch_id = yield self.api.get_batch_manager().batch_start(
                 tags=[], user_account=self.user_account_key)
         router = yield self.router_store.new_router(
             router_type, name, description, config, batch_id, **fields)
@@ -352,9 +351,10 @@ class VumiUserApi(object):
         # The batch we create here gets added to the tag_info and we can fish
         # it out later. When we replace this with proper channel objects we can
         # stash it there like we do with conversations and routers.
-        yield self.api.mdb.batch_start([tag], user_account=user_account.key)
+        batch_manager = self.api.get_batch_manager()
+        yield batch_manager.batch_start([tag], user_account=user_account.key)
         user_account.tags.append(tag)
-        tag_info = yield self.api.mdb.get_tag_info(tag)
+        tag_info = yield batch_manager.get_tag_info(tag)
         tag_info.metadata['user_account'] = user_account.key.decode('utf-8')
         yield tag_info.save()
         yield user_account.save()
@@ -422,7 +422,8 @@ class VumiUserApi(object):
         except ValueError, e:
             log.error("Tag not allocated to account: %s" % (tag,), e)
         else:
-            tag_info = yield self.api.mdb.get_tag_info(tag)
+            batch_manager = self.api.get_batch_manager()
+            tag_info = yield batch_manager.get_tag_info(tag)
             if 'user_account' in tag_info.metadata:
                 del tag_info.metadata['user_account']
             yield tag_info.save()
@@ -430,7 +431,7 @@ class VumiUserApi(object):
             #       We should probably refactor the message store to make this
             #       less clumsy.
             if tag_info.current_batch.key:
-                yield self.api.mdb.batch_done(tag_info.current_batch.key)
+                yield batch_manager.batch_done(tag_info.current_batch.key)
 
             # Clean up routing table entries.
             routing_table = yield self.get_routing_table(user_account)
@@ -533,8 +534,6 @@ class VumiApi(object):
         self.redis = redis
 
         self.tpm = TagpoolManager(self.redis.sub_manager('tagpool_store'))
-        self.mdb = MessageStore(
-            self.manager, self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
         self.token_manager = TokenManager(
             self.redis.sub_manager('token_manager'))
@@ -582,6 +581,21 @@ class VumiApi(object):
         redis = yield TxRedisManager.from_config(redis_config)
         sender = AsyncMessageSender(command_publisher)
         returnValue(cls(manager, redis, sender, metric_publisher))
+
+    def get_batch_manager(self):
+        from vumi_message_store.message_store import MessageStoreBatchManager
+        return MessageStoreBatchManager(
+            self.manager, self.redis.sub_manager('message_store'))
+
+    def get_operational_message_store(self):
+        from vumi_message_store.message_store import OperationalMessageStore
+        return OperationalMessageStore(
+            self.manager, self.redis.sub_manager('message_store'))
+
+    def get_query_message_store(self):
+        from vumi_message_store.message_store import QueryMessageStore
+        return QueryMessageStore(
+            self.manager, self.redis.sub_manager('message_store'))
 
     @Manager.calls_manager
     def user_exists(self, user_account_key):

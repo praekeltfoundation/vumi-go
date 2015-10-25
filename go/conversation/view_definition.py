@@ -252,13 +252,14 @@ class MessageListView(ConversationTemplateView):
                 msg.event_status = "-"
                 return msg
             msg.event_status = u"Sending"
-            get_event_info = conversation.mdb.message_event_keys_with_statuses
+            qms = conversation.qms
+            get_event_info = qms.list_message_events
             for event_id, _, event_type in get_event_info(msg["message_id"]):
                 if event_type == u"ack":
                     msg.event_status = u"Accepted"
                     break
                 if event_type == u"nack":
-                    event = conversation.mdb.get_event(event_id)
+                    event = qms.get_event(event_id)
                     msg.event_status = u"Rejected: %s" % (
                         event["nack_reason"],)
                     break
@@ -268,13 +269,15 @@ class MessageListView(ConversationTemplateView):
             return [add_event_status(m)
                     for m in conversation.sent_messages_in_cache(start, stop)]
 
+        # FIXME: This is horrible and inefficient.
+        #        https://github.com/praekelt/vumi-go/issues/1321
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(PagedMessageCache(
-            conversation.count_inbound_messages(),
+            min(conversation.count_inbound_messages(), 2000),
             lambda start, stop: conversation.received_messages_in_cache(
                 start, stop)), 20)
         outbound_message_paginator = Paginator(PagedMessageCache(
-            conversation.count_outbound_messages(),
+            min(conversation.count_outbound_messages(), 2000),
             lambda start, stop: get_sent_messages(start, stop)), 20)
 
         tag_context = {
@@ -307,7 +310,8 @@ class MessageListView(ConversationTemplateView):
 
     @staticmethod
     def send_one_off_reply(user_api, conversation, in_reply_to, content):
-        inbound_message = user_api.api.mdb.get_inbound_message(in_reply_to)
+        qms = user_api.api.get_query_message_store()
+        inbound_message = qms.get_inbound_message(in_reply_to)
         if inbound_message is None:
             logger.info('Replying to an unknown message: %s' % (in_reply_to,))
 
@@ -602,14 +606,14 @@ class AggregatesConversationView(ConversationTemplateView):
         Get aggregated total count of messages handled bucketed per day.
         """
         message_callback = {
-            'inbound': conv.mdb.batch_inbound_keys_with_timestamps,
-            'outbound': conv.mdb.batch_outbound_keys_with_timestamps,
-        }.get(direction, conv.mdb.batch_inbound_keys_with_timestamps)
+            'inbound': conv.qms.list_batch_inbound_messages,
+            'outbound': conv.qms.list_batch_outbound_messages,
+        }.get(direction, conv.qms.list_batch_inbound_messages)
 
         aggregates = defaultdict(int)
         index_page = message_callback(conv.batch.key)
         while index_page is not None:
-            for key, timestamp in index_page:
+            for key, timestamp, _addr in index_page:
                 timestamp = parse_vumi_date(timestamp)
                 aggregates[timestamp.date()] += 1
             index_page = index_page.next_page()

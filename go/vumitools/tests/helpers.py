@@ -90,15 +90,17 @@ class GoMessageHelper(object):
         self._msg_helper = MessageHelper(**kw)
         self.transport_name = self._msg_helper.transport_name
         self._vumi_helper = vumi_helper
-        self.mdb = None
-        if self._vumi_helper is not None:
-            self.mdb = self._vumi_helper.get_vumi_api().mdb
 
     def setup(self):
         pass
 
     def cleanup(self):
         return self._msg_helper.cleanup()
+
+    def _get_opms(self):
+        if self._vumi_helper is None:
+            raise ValueError("No message store provided.")
+        return self._vumi_helper.get_vumi_api().get_operational_message_store()
 
     @proxyable
     def add_router_metadata(self, msg, router):
@@ -113,6 +115,12 @@ class GoMessageHelper(object):
         md = MessageMetadataHelper(None, msg)
         md.set_conversation_info(conv.conversation_type, conv.key)
         md.set_user_account(conv.user_account.key)
+
+    @proxyable
+    def add_tag_metadata(self, msg, tag):
+        msg.payload.setdefault('helper_metadata', {})
+        md = MessageMetadataHelper(None, msg)
+        md.set_tag(tag)
 
     @proxyable
     def _add_go_metadata(self, msg, conv, router):
@@ -131,18 +139,22 @@ class GoMessageHelper(object):
 
     @proxyable
     def make_inbound(self, content, conv=None, router=None,
-                     hops=None, outbound_hops=None, **kw):
+                     hops=None, outbound_hops=None, tag=None, **kw):
         msg = self._msg_helper.make_inbound(content, **kw)
         self._add_go_metadata(msg, conv, router)
         self._add_go_routing_metadata(msg, hops, outbound_hops)
+        if tag is not None:
+            self.add_tag_metadata(msg, tag)
         return msg
 
     @proxyable
     def make_outbound(self, content, conv=None, router=None,
-                      hops=None, outbound_hops=None, **kw):
+                      hops=None, outbound_hops=None, tag=None, **kw):
         msg = self._msg_helper.make_outbound(content, **kw)
         self._add_go_metadata(msg, conv, router)
         self._add_go_routing_metadata(msg, hops, outbound_hops)
+        if tag is not None:
+            self.add_tag_metadata(msg, tag)
         return msg
 
     @proxyable
@@ -175,21 +187,17 @@ class GoMessageHelper(object):
 
     @proxyable
     def store_inbound(self, conv, msg):
-        if self.mdb is None:
-            raise ValueError("No message store provided.")
-        return self.mdb.add_inbound_message(msg, batch_ids=[conv.batch.key])
+        return self._get_opms().add_inbound_message(
+            msg, batch_ids=[conv.batch.key])
 
     @proxyable
     def store_outbound(self, conv, msg):
-        if self.mdb is None:
-            raise ValueError("No message store provided.")
-        return self.mdb.add_outbound_message(msg, batch_ids=[conv.batch.key])
+        return self._get_opms().add_outbound_message(
+            msg, batch_ids=[conv.batch.key])
 
     @proxyable
-    def store_event(self, event):
-        if self.mdb is None:
-            raise ValueError("No message store provided.")
-        return self.mdb.add_event(event)
+    def store_event(self, conv, event):
+        return self._get_opms().add_event(event, batch_ids=[conv.batch.key])
 
     @proxyable
     def make_stored_inbound(self, conv, content, **kw):
@@ -204,17 +212,17 @@ class GoMessageHelper(object):
     @proxyable
     def make_stored_ack(self, conv, msg, **kw):
         event = self.make_ack(msg, conv=conv, **kw)
-        return maybe_async_return(event, self.store_event(event))
+        return maybe_async_return(event, self.store_event(conv, event))
 
     @proxyable
     def make_stored_nack(self, conv, msg, **kw):
         event = self.make_nack(msg, conv=conv, **kw)
-        return maybe_async_return(event, self.store_event(event))
+        return maybe_async_return(event, self.store_event(conv, event))
 
     @proxyable
     def make_stored_delivery_report(self, conv, msg, **kw):
         event = self.make_delivery_report(msg, conv=conv, **kw)
-        return maybe_async_return(event, self.store_event(event))
+        return maybe_async_return(event, self.store_event(conv, event))
 
     @proxyable
     def add_inbound_to_conv(self, conv, count, start_date=None,

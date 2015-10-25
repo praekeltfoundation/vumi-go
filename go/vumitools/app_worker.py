@@ -203,7 +203,8 @@ class GoWorkerMixin(object):
             log.error('Received event without user_message_id: %s' % (event,))
             return
 
-        msg = yield self.vumi_api.mdb.outbound_messages.load(user_message_id)
+        opms = self.vumi_api.get_operational_message_store()
+        msg = yield opms.get_outbound_message(user_message_id)
         if msg is None:
             log.error('Unable to find message for event: %s' % (event,))
 
@@ -211,53 +212,25 @@ class GoWorkerMixin(object):
 
     _EVENT_OUTBOUND_CACHE_KEY = "outbound_message_json"
 
-    def _get_outbound_from_event_cache(
-            self, event, key=_EVENT_OUTBOUND_CACHE_KEY):
-        """ Retrieve outbound message from the cache on an event.
-
-        :type event:
-            TransportEvent
-        :param event:
-            Event to look up the outbound message on.
-        :param str key:
-            Cache key to look up the message under. Defaults to
-            _EVENT_OUTBOUND_CACHE_KEY.
-
-        :returns:
-            A tuple ``(hit, outbound_message)``. ``hit`` is ``True`` if
-            the message was found in the cache and ``False`` if there was
-            a cache miss.
+    def _get_outbound_from_event_cache(self, event):
         """
-        if key not in event.cache:
+        Retrieve outbound message from the cache on an event.
+        """
+        if self._EVENT_OUTBOUND_CACHE_KEY not in event.cache:
             return False, None
-        outbound_json = event.cache[key]
+        outbound_json = event.cache[self._EVENT_OUTBOUND_CACHE_KEY]
         if outbound_json is None:
             return True, None
         return True, TransportUserMessage.from_json(outbound_json)
 
-    def _store_outbound_in_event_cache(
-            self, event, outbound, key=_EVENT_OUTBOUND_CACHE_KEY):
-        """ Store an outbound message in the cache on an event.
-
-        :type event:
-            TransportEvent
-        :param event:
-            Event to look store the outbound message on.
-        :type outbound:
-            TransportUserMessage
-        :param outbound:
-            Outbound message to cache.
-        :param str key:
-            Cache key to store the message under. Defaults to
-            _EVENT_OUTBOUND_CACHE_KEY.
-
-        :returns:
-            None
+    def _store_outbound_in_event_cache(self, event, outbound):
+        """
+        Store an outbound message in the cache on an event.
         """
         if outbound is None:
-            event.cache[key] = None
+            event.cache[self._EVENT_OUTBOUND_CACHE_KEY] = None
         else:
-            event.cache[key] = outbound.to_json()
+            event.cache[self._EVENT_OUTBOUND_CACHE_KEY] = outbound.to_json()
 
     @inlineCallbacks
     def find_message_for_event(self, event):
@@ -265,29 +238,23 @@ class GoWorkerMixin(object):
         if hit:
             returnValue(outbound_msg)
 
-        outbound = yield self._find_outboundmessage_for_event(event)
-        outbound_msg = outbound.msg if outbound is not None else None
+        outbound_msg = yield self._find_outboundmessage_for_event(event)
         self._store_outbound_in_event_cache(event, outbound_msg)
         returnValue(outbound_msg)
 
     @inlineCallbacks
-    def _find_inboundmessage_for_reply(self, reply):
+    def find_message_for_reply(self, reply):
         user_message_id = reply.get('in_reply_to')
         if user_message_id is None:
             log.error('Received reply without in_reply_to: %s' % (reply,))
             return
 
-        msg = yield self.vumi_api.mdb.inbound_messages.load(user_message_id)
+        opms = self.vumi_api.get_operational_message_store()
+        msg = yield opms.get_inbound_message(user_message_id)
         if msg is None:
             log.error('Unable to find message for reply: %s' % (reply,))
 
         returnValue(msg)
-
-    @inlineCallbacks
-    def find_message_for_reply(self, reply):
-        inbound_message = yield self._find_inboundmessage_for_reply(reply)
-        if inbound_message:
-            returnValue(inbound_message.msg)
 
     def event_for_message(self, message, event_type, content):
         msg_mdh = self.get_metadata_helper(message)
@@ -423,7 +390,8 @@ class GoApplicationMixin(GoWorkerMixin):
         in_reply_to = msg_options.pop('in_reply_to', None)
         self.add_conv_to_msg_options(conv, msg_options)
         if in_reply_to:
-            msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
+            opms = self.vumi_api.get_operational_message_store()
+            msg = yield opms.get_inbound_message(in_reply_to)
             if msg:
                 yield self.reply_to(
                     msg, content,

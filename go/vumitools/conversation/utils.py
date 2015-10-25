@@ -1,10 +1,10 @@
 # -*- test-case-name: go.vumitools.conversation.tests.test_utils -*-
 # -*- coding: utf-8 -*-
 
-import warnings
+from datetime import datetime, timedelta
 
 from twisted.internet.defer import returnValue
-
+from vumi.message import format_vumi_date
 from vumi.persist.model import Manager
 
 from go.vumitools.opt_out import OptOutStore
@@ -20,7 +20,7 @@ class ConversationWrapper(object):
         self.c = conversation
         self.user_api = user_api
         self.api = user_api.api
-        self.mdb = self.api.mdb
+        self.qms = self.api.get_query_message_store()
         self.manager = self.c.manager
         self.base_manager = self.api.manager
         self._channels = None
@@ -115,7 +115,7 @@ class ConversationWrapper(object):
                          'delivery_report_delivered', 'delivery_report_failed',
                          'delivery_report_pending'))
 
-        batch_status = yield self.mdb.batch_status(self.batch.key)
+        batch_status = yield self.qms.get_batch_info_status(self.batch.key)
         for k, v in batch_status.items():
             k = k.replace('.', '_')
             statuses[k] += v
@@ -188,28 +188,28 @@ class ConversationWrapper(object):
         Count the total number of replies received.
         This is pulled from the cache.
         """
-        return self.mdb.cache.count_inbound_message_keys(self.batch.key)
+        return self.qms.get_batch_inbound_count(self.batch.key)
 
     def count_outbound_messages(self):
         """
         Count the total number of messages sent.
         This is pulled from the cache.
         """
-        return self.mdb.cache.count_outbound_message_keys(self.batch.key)
+        return self.qms.get_batch_outbound_count(self.batch.key)
 
     def count_inbound_uniques(self):
         """
         Count the total unique `from_addr` values seen for the batch_key.
         Pulled from the cache.
         """
-        return self.mdb.cache.count_from_addrs(self.batch.key)
+        return self.qms.get_batch_from_addr_count(self.batch.key)
 
     def count_outbound_uniques(self):
         """
         Count the total unique `to_addr` values seen for the batch_key.
         Pulled from the cache.
         """
-        return self.mdb.cache.count_to_addrs(self.batch.key)
+        return self.qms.get_batch_to_addr_count(self.batch.key)
 
     @Manager.calls_manager
     def collect_messages(self, keys, get_msg, include_sensitive, scrubber):
@@ -258,20 +258,15 @@ class ConversationWrapper(object):
                     collection.append(scrubbed_msg)
         return collection
 
-    def received_messages(self, start=0, limit=100, include_sensitive=False,
-                          scrubber=None):
-        warnings.warn('received_messages() is deprecated. Please use '
-                      'received_messages_in_cache() instead.',
-                      category=DeprecationWarning)
-        return self.received_messages_in_cache(start, limit, include_sensitive,
-                                               scrubber)
-
     @Manager.calls_manager
     def received_messages_in_cache(self, start=0, limit=100,
                                    include_sensitive=False, scrubber=None):
         """
         Get a list of replies from the message store. The keys come from
         the message store's cache.
+
+        FIXME: The name of this method and many of its parameters are lies.
+               See https://github.com/praekelt/vumi-go/issues/1321
 
         :param int start:
             Where to start in the result set.
@@ -287,27 +282,24 @@ class ConversationWrapper(object):
             content of the message to be scrubbed. By default it is a noop
             which leaves the content unchanged.
         """
+        # FIXME: limit actually means end, apparently.
         scrubber = scrubber or (lambda msg: msg)
 
-        # Redis counts from zero, so we - 1 on the limit.
-        keys = yield self.mdb.cache.get_inbound_message_keys(
-            self.batch.key, start, limit - 1)
+        # If we're not actually being asked for anything, return nothing.
+        if limit <= 0:
+            returnValue([])
+
+        page = yield self.qms.list_batch_inbound_messages(
+            self.batch.key, page_size=limit)
+        keys = [key for key, _timestamp, _addr in list(page)[start:limit]]
 
         replies = yield self.collect_messages(
-            keys, self.mdb.get_inbound_message, include_sensitive, scrubber)
+            keys, self.qms.get_inbound_message, include_sensitive, scrubber)
 
         # Preserve order
         returnValue(
             sorted(replies, key=lambda msg: msg['timestamp'],
                    reverse=True))
-
-    def sent_messages(self, start=0, limit=100, include_sensitive=False,
-                      scrubber=None):
-        warnings.warn('sent_messages() is deprecated. Please use '
-                      'sent_messages_in_cache() instead.',
-                      category=DeprecationWarning)
-        return self.sent_messages_in_cache(start, limit, include_sensitive,
-                                           scrubber)
 
     @Manager.calls_manager
     def sent_messages_in_cache(self, start=0, limit=100,
@@ -315,6 +307,9 @@ class ConversationWrapper(object):
         """
         Get a list of sent_messages from the message store. The keys come from
         the message store's cache.
+
+        FIXME: The name of this method and many of its parameters are lies.
+               See https://github.com/praekelt/vumi-go/issues/1321
 
         :param int start:
             Where to start
@@ -330,13 +325,19 @@ class ConversationWrapper(object):
             content of the message to be scrubbed. By default it is a noop
             which leaves the content unchanged.
         """
+        # FIXME: limit actually means end, apparently.
         scrubber = scrubber or (lambda msg: msg)
 
-        keys = yield self.mdb.cache.get_outbound_message_keys(
-            self.batch.key, start, limit - 1)
+        # If we're not actually being asked for anything, return nothing.
+        if limit <= 0:
+            returnValue([])
+
+        page = yield self.qms.list_batch_outbound_messages(
+            self.batch.key, page_size=limit)
+        keys = [key for key, _timestamp, _addr in list(page)[start:limit]]
 
         sent_messages = yield self.collect_messages(
-            keys, self.mdb.get_outbound_message, include_sensitive, scrubber)
+            keys, self.qms.get_outbound_message, include_sensitive, scrubber)
 
         # Preserve order
         returnValue(
@@ -381,28 +382,30 @@ class ConversationWrapper(object):
         """
         Calculate how many inbound messages per minute we've been doing on
         average.
+
+        NOTE: This will underestimate if there are more messages within the
+              sample time than will fit in an index page, currently 1000.
         """
-        inbounds = yield self.mdb.cache.get_inbound_message_keys(
-            self.batch.key, with_timestamp=True)
-        if not inbounds:
-            returnValue(0.0)
-        threshold = inbounds[0][1] - sample_time
-        count = sum(1 for _, timestamp in inbounds if timestamp >= threshold)
-        returnValue(count / (sample_time / 60.0))
+        start = format_vumi_date(
+            datetime.utcnow() - timedelta(seconds=sample_time))
+        inbounds = yield self.qms.list_batch_inbound_messages(
+            self.batch.key, start=start)
+        returnValue(len(inbounds) / (sample_time / 60.0))
 
     @Manager.calls_manager
     def get_outbound_throughput(self, sample_time=300):
         """
         Calculate how many outbound messages per minute we've been doing on
         average.
+
+        NOTE: This will underestimate if there are more messages within the
+              sample time than will fit in an index page, currently 1000.
         """
-        outbounds = yield self.mdb.cache.get_outbound_message_keys(
-            self.batch.key, with_timestamp=True)
-        if not outbounds:
-            returnValue(0.0)
-        threshold = outbounds[0][1] - sample_time
-        count = sum(1 for _, timestamp in outbounds if timestamp >= threshold)
-        returnValue(count / (sample_time / 60.0))
+        start = format_vumi_date(
+            datetime.utcnow() - timedelta(seconds=(sample_time)))
+        outbounds = yield self.qms.list_batch_outbound_messages(
+            self.batch.key, start=start)
+        returnValue(len(outbounds) / (sample_time / 60.0))
 
     @Manager.calls_manager
     def get_opted_in_contact_address(self, contact, delivery_class):
