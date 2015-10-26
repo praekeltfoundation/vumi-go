@@ -18,7 +18,6 @@ dummy_classes = [
 ]
 with djangotest_imports(globals(), dummy_classes=dummy_classes):
     from django.forms import Form, CharField
-    from django.core import mail
     from django.core.urlresolvers import reverse
 
     import go.base.utils
@@ -638,83 +637,72 @@ class TestConversationViews(BaseConversationViewTestCase):
             '',  # csv ends with a blank line
             ]))
 
-    def test_export_csv_messages(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        msgs = self.msg_helper.add_inbound_to_conv(
-            conv, 5, start_date=date(2012, 1, 1), time_multiplier=12)
-        self.msg_helper.add_replies_to_conv(conv, msgs)
-        response = self.client.post(self.get_view_url(conv, 'export_messages'))
-        self.assertRedirects(response, self.get_view_url(conv, 'message_list'))
-        [email] = mail.outbox
-        self.assertEqual(
-            email.recipients(), [self.user_helper.get_django_user().email])
-        self.assertTrue(conv.name in email.subject)
-        self.assertTrue(conv.name in email.body)
-        [(file_name, zipcontent, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.zip')
-        zipfile = ZipFile(StringIO(zipcontent), 'r')
-        content = zipfile.open('messages-export.csv', 'r').read()
-        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
-        self.assertEqual(12, len(content.split('\n')))
-        self.assertEqual(mime_type, 'application/zip')
-
     def test_download_json_messages_inbound(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get(self.get_view_url(conv, 'export_messages'))
+        response = self.client.post(
+            self.get_view_url(conv, 'export_messages'),
+            {'format': 'json', 'direction': 'inbound'})
         self.assertEqual(
             response['X-Accel-Redirect'],
             '/message_store_exporter/%s/inbound.json' % (conv.batch.key,))
         self.assertEqual(
             response['Content-Disposition'],
-            'attachment; filename=%s-inbound.json' % (conv.key,))
+            'attachment; filename=%s-inbound-all.json' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_download_csv_messages_inbound(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get("%s?format=csv" % (
-            self.get_view_url(conv, 'export_messages')))
+        response = self.client.post(
+            self.get_view_url(conv, 'export_messages'),
+            {'format': 'csv', 'direction': 'inbound'})
         self.assertEqual(
             response['X-Accel-Redirect'],
             '/message_store_exporter/%s/inbound.csv' % (conv.batch.key,))
         self.assertEqual(
             response['Content-Disposition'],
-            'attachment; filename=%s-inbound.csv' % (conv.key,))
+            'attachment; filename=%s-inbound-all.csv' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_download_json_messages_outbound(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get('%s?direction=outbound' % (
-            self.get_view_url(conv, 'export_messages'),))
+        response = self.client.post(
+            self.get_view_url(conv, 'export_messages'),
+            {'format': 'json', 'direction': 'outbound'})
         self.assertEqual(
             response['X-Accel-Redirect'],
-            '/message_store_exporter/%s/outbound.json' % (conv.batch.key,))
+            '/message_store_exporter/%s/outbound.json'
+            % (conv.batch.key,))
         self.assertEqual(
             response['Content-Disposition'],
-            'attachment; filename=%s-outbound.json' % (conv.key,))
+            'attachment; filename=%s-outbound-all.json' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_download_csv_messages_outbound(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get('%s?direction=outbound&format=csv' % (
-            self.get_view_url(conv, 'export_messages'),))
+        response = self.client.post(
+            self.get_view_url(conv, 'export_messages'),
+            {'format': 'csv', 'direction': 'outbound'})
         self.assertEqual(
             response['X-Accel-Redirect'],
-            '/message_store_exporter/%s/outbound.csv' % (conv.batch.key,))
+            '/message_store_exporter/%s/outbound.csv'
+            % (conv.batch.key,))
         self.assertEqual(
             response['Content-Disposition'],
-            'attachment; filename=%s-outbound.csv' % (conv.key,))
+            'attachment; filename=%s-outbound-all.csv' % (conv.key,))
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
     def test_download_messages_unknown_direction_404(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get('%s?direction=unknown&format=json' % (
-            self.get_view_url(conv, 'export_messages'),))
+        response = self.client.post(
+            self.get_view_url(conv, 'export_messages'),
+            {'format': 'json', 'direction': 'unknown'})
         self.assertEqual(response.status_code, 404)
 
     def test_download_messages_unknown_format_404(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get('%s?direction=outbound&format=unknown' % (
-            self.get_view_url(conv, 'export_messages'),))
+        response = self.client.post(
+            self.get_view_url(conv, 'export_messages'),
+            {'format': 'unknown', 'direction': 'inbound'})
         self.assertEqual(response.status_code, 404)
 
     def test_message_list_pagination(self):
