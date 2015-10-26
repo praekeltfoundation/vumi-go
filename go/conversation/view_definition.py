@@ -221,14 +221,14 @@ class ExportMessageView(ConversationApiView):
             return start_time, None
         raise SuspiciousOperation("Invalid date-preset: '%s'." % (preset,))
 
-    def _parse_custom_date(self, custom_date):
+    def _parse_custom_date(self, field, custom_date):
         if custom_date is None:
             return None
         if self.CUSTOM_DATE_RE.match(custom_date):
             day, month, year = [int(part) for part in custom_date.split("/")]
             return datetime.datetime(year, month, day, tzinfo=timezone.utc)
         raise SuspiciousOperation(
-            "Invalid custom-date: '%s'." % (custom_date,))
+            "Invalid %s: '%s'." % (field, custom_date))
 
     def _format_custom_date_part(self, date, default):
         if date is None:
@@ -262,8 +262,10 @@ class ExportMessageView(ConversationApiView):
             start_date, end_date = self._parse_date_preset(date_preset)
             filename_date = date_preset
         else:
-            start_date = self._parse_custom_date(request.POST.get('date-from'))
-            end_date = self._parse_custom_date(request.POST.get('date-to'))
+            start_date = self._parse_custom_date(
+                'date-from', request.POST.get('date-from'))
+            end_date = self._parse_custom_date(
+                'date-to', request.POST.get('date-to'))
             filename_date = self._format_custom_date_filename(
                 start_date, end_date)
 
