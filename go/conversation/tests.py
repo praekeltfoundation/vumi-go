@@ -746,28 +746,28 @@ class TestConversationViews(BaseConversationViewTestCase):
             status_code=400,
             error_msg="Invalid date-preset: &#39;unknown&#39;")
 
-    def test_download_messages_unknown_date_from(self):
+    def test_download_messages_unknown_date_from_400(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-from': 'unknown'},
             status_code=400,
             error_msg="Invalid date-from: &#39;unknown&#39;")
 
-    def test_download_messages_unknown_date_to(self):
+    def test_download_messages_unknown_date_to_400(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-to': 'unknown'},
             status_code=400,
             error_msg="Invalid date-to: &#39;unknown&#39;")
 
-    def test_download_messages_invalid_date_from(self):
+    def test_download_messages_invalid_date_from_400(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-from': '2015/01/37'},
             status_code=400,
             error_msg="Invalid date-from: &#39;2015/01/37&#39;")
 
-    def test_download_messages_invalid_date_to(self):
+    def test_download_messages_invalid_date_to_400(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-to': '2015/01/37'},
