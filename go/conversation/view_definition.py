@@ -226,7 +226,10 @@ class ExportMessageView(ConversationApiView):
             return None
         if self.CUSTOM_DATE_RE.match(custom_date):
             day, month, year = [int(part) for part in custom_date.split("/")]
-            return datetime.datetime(year, month, day, tzinfo=timezone.utc)
+            try:
+                return datetime.datetime(year, month, day, tzinfo=timezone.utc)
+            except ValueError:
+                pass  # year, month or day out of range
         raise SuspiciousOperation(
             "Invalid %s: '%s'." % (field, custom_date))
 

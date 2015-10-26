@@ -760,6 +760,20 @@ class TestConversationViews(BaseConversationViewTestCase):
             status_code=400,
             error_msg="Invalid date-to: &#39;unknown&#39;")
 
+    def test_download_messages_invalid_date_from(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date-from': '2015/01/37'},
+            status_code=400,
+            error_msg="Invalid date-from: &#39;2015/01/37&#39;")
+
+    def test_download_messages_invalid_date_to(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date-to': '2015/01/37'},
+            status_code=400,
+            error_msg="Invalid date-to: &#39;2015/01/37&#39;")
+
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         # Create 21 inbound messages, since we have 20 messages per page it
