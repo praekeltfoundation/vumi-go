@@ -12,7 +12,6 @@ from collections import defaultdict
 from django.views.generic import View, TemplateView
 from django import forms
 from django.shortcuts import redirect, Http404
-from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.http import HttpResponse
@@ -199,6 +198,12 @@ class ShowConversationView(ConversationTemplateView):
         return self.render_to_response(params)
 
 
+class MessageExportUsageError(Exception):
+    """Raised by the ExportMessageView when unexpected post parameters are
+    encountered.
+    """
+
+
 class ExportMessageView(ConversationApiView):
     view_name = 'export_messages'
     path_suffix = 'export_messages/'
@@ -208,7 +213,7 @@ class ExportMessageView(ConversationApiView):
 
     def _check_option(self, field, opt, values):
         if opt not in values:
-            raise SuspiciousOperation("Invalid %s: '%s'." % (field, opt))
+            raise MessageExportUsageError("Invalid %s: '%s'." % (field, opt))
         return opt
 
     def _parse_date_preset(self, preset):
@@ -219,7 +224,7 @@ class ExportMessageView(ConversationApiView):
             start_time = (
                 datetime.datetime.utcnow() - datetime.timedelta(days=days))
             return start_time, None
-        raise SuspiciousOperation("Invalid date-preset: '%s'." % (preset,))
+        raise MessageExportUsageError("Invalid date-preset: '%s'." % (preset,))
 
     def _parse_custom_date(self, field, custom_date):
         if custom_date is None:
@@ -230,7 +235,7 @@ class ExportMessageView(ConversationApiView):
                 return datetime.datetime(year, month, day, tzinfo=timezone.utc)
             except ValueError:
                 pass  # year, month or day out of range
-        raise SuspiciousOperation(
+        raise MessageExportUsageError(
             "Invalid %s: '%s'." % (field, custom_date))
 
     def _format_custom_date_part(self, date, default):
@@ -247,7 +252,7 @@ class ExportMessageView(ConversationApiView):
         ])
 
     @render_exception(
-        SuspiciousOperation, 400,
+        MessageExportUsageError, 400,
         "Oops. Something didn't look right with your message export request.")
     def post(self, request, conversation):
         export_format = self._check_option(
