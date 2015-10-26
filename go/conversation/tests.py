@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import date
+from datetime import date, datetime
 from StringIO import StringIO
 from zipfile import ZipFile
 
@@ -19,6 +19,9 @@ dummy_classes = [
 with djangotest_imports(globals(), dummy_classes=dummy_classes):
     from django.forms import Form, CharField
     from django.core.urlresolvers import reverse
+    from django.utils import timezone
+
+    import mock
 
     import go.base.utils
     import go.conversation.settings
@@ -148,6 +151,14 @@ class FakeConversationPackage(object):
         def_cls, vdef_cls = DUMMY_CONVERSATION_DEFS[conversation_type]
         self.ConversationDefinition = def_cls
         self.ConversationViewDefinition = vdef_cls
+
+
+class Summer1969(datetime):
+    """For patching datetime.utcnow.
+    """
+    @staticmethod
+    def utcnow():
+        return datetime(1969, 12, 1, 12, 0, tzinfo=timezone.utc)
 
 
 class BaseConversationViewTestCase(GoDjangoTestCase):
@@ -678,6 +689,33 @@ class TestConversationViews(BaseConversationViewTestCase):
             {'format': 'csv', 'direction': 'outbound', 'date-preset': 'all'},
             '/message_store_exporter/%(batch)s/outbound.csv',
             '%(conv)s-outbound-all.csv')
+
+    @mock.patch('go.conversation.view_definition.datetime.datetime',
+                Summer1969)
+    def test_download_messages_date_preset_1d(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound', 'date-preset': '1d'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'start=1969-11-30T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-1d.csv')
+
+    @mock.patch('go.conversation.view_definition.datetime.datetime',
+                Summer1969)
+    def test_download_messages_date_preset_7d(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound', 'date-preset': '7d'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'start=1969-11-24T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-7d.csv')
+
+    @mock.patch('go.conversation.view_definition.datetime.datetime',
+                Summer1969)
+    def test_download_messages_date_preset_30d(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound', 'date-preset': '30d'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'start=1969-11-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-30d.csv')
 
     def test_download_messages_unknown_direction_404(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
