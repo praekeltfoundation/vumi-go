@@ -717,19 +717,48 @@ class TestConversationViews(BaseConversationViewTestCase):
             'start=1969-11-01T12%%3A00%%3A00%%2B00%%3A00',
             '%(conv)s-outbound-30d.csv')
 
-    def test_download_messages_unknown_direction_404(self):
+    def check_download_messages_error(self, post_args, status_code, error_msg):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         response = self.client.post(
-            self.get_view_url(conv, 'export_messages'),
-            {'format': 'json', 'direction': 'unknown'})
-        self.assertEqual(response.status_code, 404)
+            self.get_view_url(conv, 'export_messages'), post_args)
+        self.assertEqual(response.status_code, status_code)
+        self.assertContains(response, (
+            "Oops. Something didn&#39;t look right with your message export"
+            " request."), status_code=status_code)
+        self.assertContains(response, error_msg, status_code=status_code)
 
-    def test_download_messages_unknown_format_404(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.post(
-            self.get_view_url(conv, 'export_messages'),
-            {'format': 'unknown', 'direction': 'inbound'})
-        self.assertEqual(response.status_code, 404)
+    def test_download_messages_unknown_direction_400(self):
+        self.check_download_messages_error(
+            {'format': 'json', 'direction': 'unknown'},
+            status_code=400,
+            error_msg="Invalid direction: &#39;unknown&#39;")
+
+    def test_download_messages_unknown_format_400(self):
+        self.check_download_messages_error(
+            {'format': 'unknown', 'direction': 'inbound'},
+            status_code=400,
+            error_msg="Invalid format: &#39;unknown&#39;")
+
+    def test_download_messages_unknown_date_preset_400(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date-preset': 'unknown'},
+            status_code=400,
+            error_msg="Invalid date-preset: &#39;unknown&#39;")
+
+    def test_download_messages_unknown_date_from(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date-from': 'unknown'},
+            status_code=400,
+            error_msg="Invalid date-from: &#39;unknown&#39;")
+
+    def test_download_messages_unknown_date_to(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date-to': 'unknown'},
+            status_code=400,
+            error_msg="Invalid date-to: &#39;unknown&#39;")
 
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)

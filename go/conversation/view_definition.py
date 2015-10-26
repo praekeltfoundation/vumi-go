@@ -12,6 +12,7 @@ from collections import defaultdict
 from django.views.generic import View, TemplateView
 from django import forms
 from django.shortcuts import redirect, Http404
+from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.http import HttpResponse
@@ -21,6 +22,7 @@ from django.utils import timezone
 from vumi.message import parse_vumi_date
 
 from go.base.utils import page_range_window, sendfile
+from go.base.decorators import render_exception
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
@@ -204,12 +206,12 @@ class ExportMessageView(ConversationApiView):
     PRESET_DAYS_RE = re.compile("^[0-9]+d$")
     CUSTOM_DATE_RE = re.compile("^[0-9]+/[0-9]+/[0-9]+")
 
-    def _check_option(self, opt, values):
+    def _check_option(self, field, opt, values):
         if opt not in values:
-            raise Http404()
+            raise SuspiciousOperation("Invalid %s: '%s'." % (field, opt))
         return opt
 
-    def _parse_preset(self, preset):
+    def _parse_date_preset(self, preset):
         if preset == "all":
             return None, None
         if self.PRESET_DAYS_RE.match(preset):
@@ -217,7 +219,7 @@ class ExportMessageView(ConversationApiView):
             start_time = (
                 datetime.datetime.utcnow() - datetime.timedelta(days=days))
             return start_time, None
-        raise Http404()
+        raise SuspiciousOperation("Invalid date-preset: '%s'." % (preset,))
 
     def _parse_custom_date(self, custom_date):
         if custom_date is None:
@@ -225,7 +227,8 @@ class ExportMessageView(ConversationApiView):
         if self.CUSTOM_DATE_RE.match(custom_date):
             day, month, year = [int(part) for part in custom_date.split("/")]
             return datetime.datetime(year, month, day, tzinfo=timezone.utc)
-        raise Http404()
+        raise SuspiciousOperation(
+            "Invalid custom-date: '%s'." % (custom_date,))
 
     def _format_custom_date_part(self, date, default):
         if date is None:
@@ -240,19 +243,23 @@ class ExportMessageView(ConversationApiView):
             self._format_custom_date_part(end_date, 'now'),
         ])
 
+    @render_exception(
+        SuspiciousOperation, 400,
+        "Oops. Something didn't look right with your message export request.")
     def post(self, request, conversation):
         export_format = self._check_option(
-            request.POST.get('format'), ['csv', 'json'])
+            'format', request.POST.get('format'), ['csv', 'json'])
 
         direction = self._check_option(
+            'direction',
             request.POST.get('direction'), ['inbound', 'outbound'])
 
         date_preset = self._check_option(
-            request.POST.get('date-preset'),
+            'date-preset', request.POST.get('date-preset'),
             ['all', '1d', '7d', '30d', None])
 
         if date_preset is not None:
-            start_date, end_date = self._parse_preset(date_preset)
+            start_date, end_date = self._parse_date_preset(date_preset)
             filename_date = date_preset
         else:
             start_date = self._parse_custom_date(request.POST.get('date-from'))
