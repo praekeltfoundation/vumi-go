@@ -233,6 +233,8 @@ class ExportMessageView(ConversationApiView):
         return date.strftime('%Y%m%d')
 
     def _format_custom_date_filename(self, start_date, end_date):
+        if start_date is None and end_date is None:
+            return "all"
         return "-".join([
             self._format_custom_date_part(start_date, 'until'),
             self._format_custom_date_part(end_date, 'now'),
