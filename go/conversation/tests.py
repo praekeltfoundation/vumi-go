@@ -4,6 +4,7 @@ from datetime import date, datetime
 from StringIO import StringIO
 from zipfile import ZipFile
 
+import mock
 import pytest
 
 from go.vumitools.api import VumiApiCommand
@@ -20,8 +21,6 @@ with djangotest_imports(globals(), dummy_classes=dummy_classes):
     from django.forms import Form, CharField
     from django.core.urlresolvers import reverse
     from django.utils import timezone
-
-    import mock
 
     import go.base.utils
     import go.conversation.settings
