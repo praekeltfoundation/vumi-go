@@ -845,32 +845,15 @@ class TestConversationViews(BaseConversationViewTestCase):
         response = self.client.get(self.get_view_url(conv, 'message_list'))
         self.assertContains(response, 'Messages for Foo')
 
-    def test_message_list_inbound_download_links_display(self):
+    def test_message_list_outbound_uniques_display(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get(self.get_view_url(conv, 'message_list'))
-        inbound_json_url = ('%s?direction=inbound&format=json' %
-                            self.get_view_url(conv, 'export_messages'))
-        self.assertContains(response, 'href="%s"' % inbound_json_url)
-        self.assertContains(response, "Download received messages as JSON")
-        inbound_csv_url = ('%s?direction=inbound&format=csv' %
-                           self.get_view_url(conv, 'export_messages'))
-        self.assertContains(response, 'href="%s"' % inbound_csv_url)
-        self.assertContains(response, "Download received messages as CSV")
-
-    def test_message_list_outbound_download_links_display(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
+        msgs = self.msg_helper.add_inbound_to_conv(conv, 10)
+        self.msg_helper.add_replies_to_conv(conv, msgs)
         response = self.client.get(
             self.get_view_url(conv, 'message_list'), {
                 'direction': 'outbound'
             })
-        outbound_json_url = ('%s?direction=outbound&format=json' %
-                             self.get_view_url(conv, 'export_messages'))
-        self.assertContains(response, 'href="%s"' % outbound_json_url)
-        self.assertContains(response, "Download sent messages as JSON")
-        outbound_csv_url = ('%s?direction=outbound&format=csv' %
-                            self.get_view_url(conv, 'export_messages'))
-        self.assertContains(response, 'href="%s"' % outbound_csv_url)
-        self.assertContains(response, "Download sent messages as CSV")
+        self.assertContains(response, 'Messages to 10 unique people')
 
     def test_message_list_no_sensitive_msgs(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
