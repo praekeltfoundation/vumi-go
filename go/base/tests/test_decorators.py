@@ -7,21 +7,18 @@ with djangotest_imports(globals()):
     from go.base.decorators import render_exception
     from django.template.response import TemplateResponse
 
+    class CatchableDummyError(Exception):
+        """Error that will be caught by DummyView.post."""
 
-class CatchableDummyError(Exception):
-    """Error that will be caught by DummyView.post."""
+    class UncatchableDummyError(Exception):
+        """Error that will not be caught by DummyView.post."""
 
-
-class UncatchableDummyError(Exception):
-    """Error that will not be caught by DummyView.post."""
-
-
-class DummyView(object):
-    @render_exception(CatchableDummyError, 400, "Meep.")
-    def post(self, request, err=None):
-        if err is None:
-            return "Success"
-        raise err
+    class DummyView(object):
+        @render_exception(CatchableDummyError, 400, "Meep.")
+        def post(self, request, err=None):
+            if err is None:
+                return "Success"
+            raise err
 
 
 class TestRenderException(GoDjangoTestCase):
