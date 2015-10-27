@@ -26,6 +26,7 @@ with djangotest_imports(globals(), dummy_classes=dummy_classes):
     import go.base.utils
     import go.conversation.settings
     from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.conversation.forms import MessageDownloadForm
     from go.conversation.templatetags import conversation_tags
     from go.conversation.view_definition import (
         ConversationViewDefinitionBase, EditConversationView)
@@ -159,6 +160,82 @@ class Summer1969(datetime):
     @staticmethod
     def utcnow():
         return datetime(1969, 12, 1, 12, 0, tzinfo=timezone.utc)
+
+
+class TestMessageDownloadForm(GoDjangoTestCase):
+    def assert_field_valid(self, field, value):
+        data = {field: value} if value is not None else {}
+        f = MessageDownloadForm(data)
+        self.assertTrue(field not in f.errors)
+
+    def assert_field_invalid(self, field, value, error):
+        data = {field: value} if value is not None else {}
+        f = MessageDownloadForm(data)
+        self.assertEqual(f.errors[field], [error])
+
+    def test_format_validation(self):
+        self.assert_field_valid('format', 'csv')
+        self.assert_field_valid('format', 'json')
+        self.assert_field_invalid('format', None, 'This field is required.')
+        self.assert_field_invalid(
+            'format', 'moop',
+            'Select a valid choice. moop is not one of the available choices.')
+
+    def test_direction_validation(self):
+        self.assert_field_valid('direction', 'inbound')
+        self.assert_field_valid('direction', 'outbound')
+        self.assert_field_invalid('direction', None, 'This field is required.')
+        self.assert_field_invalid(
+            'direction', 'meep',
+            'Select a valid choice. meep is not one of the available choices.')
+
+    def test_date_preset_validation(self):
+        self.assert_field_valid('date-preset', 'all')
+        self.assert_field_valid('date-preset', '1d')
+        self.assert_field_valid('date-preset', '7d')
+        self.assert_field_valid('date-preset', '30d')
+        self.assert_field_valid('date-preset', None)
+        self.assert_field_invalid(
+            'date-preset', 'weak',
+            'Select a valid choice. weak is not one of the available choices.')
+
+    def test_date_to_validation(self):
+        self.assert_field_valid('date-to', None)
+        self.assert_field_valid('date-to', '2015/12/01')
+        self.assert_field_invalid(
+            'date-to', '2015/13/01', 'Enter a valid date.')
+        self.assert_field_invalid(
+            'date-to', 'january', 'Enter a valid date.')
+
+    def test_date_from_validation(self):
+        self.assert_field_valid('date-from', None)
+        self.assert_field_valid('date-from', '2015/12/01')
+        self.assert_field_invalid(
+            'date-from', '2015/13/01', 'Enter a valid date.')
+        self.assert_field_invalid(
+            'date-from', 'january', 'Enter a valid date.')
+
+    def test_complete_validation(self):
+        f = MessageDownloadForm({
+            'format': 'json',
+            'direction': 'outbound',
+            'date-preset': '1d',
+            'date-to': '2015/12/01',
+            'date-from': '2015/12/01'
+        })
+        self.assertEqual(f.errors, {})
+        self.assertTrue(f.is_valid())
+
+    def assert_initial(self, field, initial):
+        f = MessageDownloadForm()
+        self.assertEqual(f.fields[field].initial, initial)
+
+    def test_defaults(self):
+        self.assert_initial('format', 'csv')
+        self.assert_initial('direction', 'inbound')
+        self.assert_initial('date-preset', 'all')
+        self.assert_initial('date-to', None)
+        self.assert_initial('date-from', None)
 
 
 class BaseConversationViewTestCase(GoDjangoTestCase):

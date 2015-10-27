@@ -54,3 +54,35 @@ class ReplyToMessageForm(forms.Form):
         label='Reply Message',
         required=True,
         widget=forms.Textarea)
+
+
+class MessageDownloadForm(forms.Form):
+
+    CUSTOM_DATE_FORMAT = '%Y/%m/%d'
+    _LOCALS = locals()
+
+    format = forms.ChoiceField(
+        required=True, initial='csv',
+        choices=[
+            ('csv', 'csv'), ('json', 'json'),
+        ])
+
+    direction = forms.ChoiceField(
+        required=True, initial='inbound',
+        choices=[
+            ('inbound', 'inbound'), ('outbound', 'outbound'),
+        ])
+
+    _LOCALS['date-preset'] = forms.ChoiceField(
+        required=False, initial='all',
+        choices=[
+            ('all', 'all'), ('1d', '1d'), ('7d', '7d'), ('30d', '30d'),
+        ])
+
+    _LOCALS['date-from'] = forms.DateField(
+        required=False,
+        input_formats=[CUSTOM_DATE_FORMAT])
+
+    _LOCALS['date-to'] = forms.DateField(
+        required=False,
+        input_formats=[CUSTOM_DATE_FORMAT])
