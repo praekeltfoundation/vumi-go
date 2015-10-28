@@ -165,10 +165,10 @@
 
                         <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-format">
                             <label class="btn btn-default active">
-                                <input class="form-control" type="radio" autocomplete="off" name="format" value="csv" checked>CSV
+                                <input class="form-control" type="radio" autocomplete="off" name="format" value="csv" {{ form.format|checked:'csv'}}>CSV
                             </label>
                             <label class="btn btn-default">
-                                <input class="form-control" type="radio" autocomplete="off" name="format" value="json">JSON
+                                <input class="form-control" type="radio" autocomplete="off" name="format" value="json" {{ form.format|checked:'json'}}>JSON
                             </label>
                         </div>
                     </div>
@@ -182,10 +182,10 @@
 
                         <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-message-direction">
                             <label class="btn btn-default active">
-                                <input type="radio" autocomplete="off" name="direction" value="inbound" checked>Received messages
+                                <input type="radio" autocomplete="off" name="direction" value="inbound" {{ form.direction|checked:'inbound'}}>Received messages
                             </label>
                             <label class="btn btn-default">
-                                <input type="radio" autocomplete="off" name="direction" value="outbound">Sent messages
+                                <input type="radio" autocomplete="off" name="direction" value="outbound" {{ form.direction|checked:'outbound'}}>Sent messages
                             </label>
                         </div>
                     </div>
@@ -199,19 +199,19 @@
 
                         <div class="list-group date-range" aria-labelledby="label-date-range">
                             <label class="list-group-item date-preset active">
-                                <input type="radio" autocomplete="off" name="date_preset" value="all" checked>All messages
+                                <input type="radio" autocomplete="off" name="date_preset" value="all" {{ form.date_preset|checked:'all'}}>All messages
                             </label>
 
                             <label class="list-group-item date-preset">
-                                <input type="radio" autocomplete="off" name="date_preset" value="1d">Today
+                                <input type="radio" autocomplete="off" name="date_preset" value="1d" {{ form.date_preset|checked:'1d'}}>Today
                             </label>
 
                             <label class="list-group-item date-preset">
-                                <input type="radio" autocomplete="off" name="date_preset" value="7d">Last 7 days
+                                <input type="radio" autocomplete="off" name="date_preset" value="7d" {{ form.date_preset|checked:'7d'}}>Last 7 days
                             </label>
 
                             <label class="list-group-item date-preset">
-                                <input type="radio" autocomplete="off" name="date_preset" value="30d">Last 30 days
+                                <input type="radio" autocomplete="off" name="date_preset" value="30d" {{ form.date_preset|checked:'30d'}}>Last 30 days
                             </label>
 
                             <div class="list-group-item date-custom-toggle">

@@ -936,6 +936,19 @@ class TestConversationViews(BaseConversationViewTestCase):
         response = self.client.get(self.get_view_url(conv, 'message_list'))
         self.assertContains(response, 'Messages for Foo')
 
+    def test_message_list_download_modal_defaults(self):
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'Foo', started=True)
+        response = self.client.get(self.get_view_url(conv, 'message_list'))
+        self.assertContains(response, 'checked>CSV')
+        self.assertNotContains(response, 'checked>JSON')
+        self.assertContains(response, 'checked>Received messages')
+        self.assertNotContains(response, 'checked>Sent messages')
+        self.assertContains(response, 'checked>All messages')
+        self.assertNotContains(response, 'checked>Today')
+        self.assertNotContains(response, 'checked>Last 7 days')
+        self.assertNotContains(response, 'checked>Last 30 days')
+
     def test_message_list_no_sensitive_msgs(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
 
