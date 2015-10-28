@@ -189,38 +189,38 @@ class TestMessageDownloadForm(GoDjangoTestCase):
             'Select a valid choice. meep is not one of the available choices.')
 
     def test_date_preset_validation(self):
-        self.assert_field_valid('date-preset', 'all')
-        self.assert_field_valid('date-preset', '1d')
-        self.assert_field_valid('date-preset', '7d')
-        self.assert_field_valid('date-preset', '30d')
-        self.assert_field_valid('date-preset', None)
+        self.assert_field_valid('date_preset', 'all')
+        self.assert_field_valid('date_preset', '1d')
+        self.assert_field_valid('date_preset', '7d')
+        self.assert_field_valid('date_preset', '30d')
+        self.assert_field_valid('date_preset', None)
         self.assert_field_invalid(
-            'date-preset', 'weak',
+            'date_preset', 'weak',
             'Select a valid choice. weak is not one of the available choices.')
 
     def test_date_to_validation(self):
-        self.assert_field_valid('date-to', None)
-        self.assert_field_valid('date-to', '2015/12/01')
+        self.assert_field_valid('date_to', None)
+        self.assert_field_valid('date_to', '2015/12/01')
         self.assert_field_invalid(
-            'date-to', '2015/13/01', 'Enter a valid date.')
+            'date_to', '2015/13/01', 'Enter a valid date.')
         self.assert_field_invalid(
-            'date-to', 'january', 'Enter a valid date.')
+            'date_to', 'january', 'Enter a valid date.')
 
     def test_date_from_validation(self):
-        self.assert_field_valid('date-from', None)
-        self.assert_field_valid('date-from', '2015/12/01')
+        self.assert_field_valid('date_from', None)
+        self.assert_field_valid('date_from', '2015/12/01')
         self.assert_field_invalid(
-            'date-from', '2015/13/01', 'Enter a valid date.')
+            'date_from', '2015/13/01', 'Enter a valid date.')
         self.assert_field_invalid(
-            'date-from', 'january', 'Enter a valid date.')
+            'date_from', 'january', 'Enter a valid date.')
 
     def test_complete_validation(self):
         f = MessageDownloadForm({
             'format': 'json',
             'direction': 'outbound',
-            'date-preset': '1d',
-            'date-to': '2015/12/01',
-            'date-from': '2015/12/01'
+            'date_preset': '1d',
+            'date_to': '2015/12/01',
+            'date_from': '2015/12/01'
         })
         self.assertEqual(f.errors, {})
         self.assertTrue(f.is_valid())
@@ -232,9 +232,9 @@ class TestMessageDownloadForm(GoDjangoTestCase):
     def test_defaults(self):
         self.assert_initial('format', 'csv')
         self.assert_initial('direction', 'inbound')
-        self.assert_initial('date-preset', 'all')
-        self.assert_initial('date-to', None)
-        self.assert_initial('date-from', None)
+        self.assert_initial('date_preset', 'all')
+        self.assert_initial('date_to', None)
+        self.assert_initial('date_from', None)
 
 
 class BaseConversationViewTestCase(GoDjangoTestCase):
@@ -762,7 +762,7 @@ class TestConversationViews(BaseConversationViewTestCase):
 
     def test_download_messages_date_preset_all(self):
         self.check_download_messages(
-            {'format': 'csv', 'direction': 'outbound', 'date-preset': 'all'},
+            {'format': 'csv', 'direction': 'outbound', 'date_preset': 'all'},
             '/message_store_exporter/%(batch)s/outbound.csv',
             '%(conv)s-outbound-all.csv')
 
@@ -770,7 +770,7 @@ class TestConversationViews(BaseConversationViewTestCase):
                 Summer1969)
     def test_download_messages_date_preset_1d(self):
         self.check_download_messages(
-            {'format': 'csv', 'direction': 'outbound', 'date-preset': '1d'},
+            {'format': 'csv', 'direction': 'outbound', 'date_preset': '1d'},
             '/message_store_exporter/%(batch)s/outbound.csv?'
             'start=1969-11-30T12%%3A00%%3A00%%2B00%%3A00',
             '%(conv)s-outbound-1d.csv')
@@ -779,7 +779,7 @@ class TestConversationViews(BaseConversationViewTestCase):
                 Summer1969)
     def test_download_messages_date_preset_7d(self):
         self.check_download_messages(
-            {'format': 'csv', 'direction': 'outbound', 'date-preset': '7d'},
+            {'format': 'csv', 'direction': 'outbound', 'date_preset': '7d'},
             '/message_store_exporter/%(batch)s/outbound.csv?'
             'start=1969-11-24T12%%3A00%%3A00%%2B00%%3A00',
             '%(conv)s-outbound-7d.csv')
@@ -788,18 +788,24 @@ class TestConversationViews(BaseConversationViewTestCase):
                 Summer1969)
     def test_download_messages_date_preset_30d(self):
         self.check_download_messages(
-            {'format': 'csv', 'direction': 'outbound', 'date-preset': '30d'},
+            {'format': 'csv', 'direction': 'outbound', 'date_preset': '30d'},
             '/message_store_exporter/%(batch)s/outbound.csv?'
             'start=1969-11-01T12%%3A00%%3A00%%2B00%%3A00',
             '%(conv)s-outbound-30d.csv')
 
-    def check_download_messages_error(self, post_args, error_field, error_msg):
+    def check_download_messages_error(self, post_args, error_field, error_msg,
+                                      lead=''):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.post(
-            self.get_view_url(conv, 'export_messages'), post_args)
+        response = self.client.post((
+            self.get_view_url(conv, 'export_messages')), post_args)
         self.assertEqual(response.status_code, 200)
         form = response.context['message_download_form']
         self.assertEqual(form.errors[error_field], [error_msg])
+        self.assertContains(response, (
+            '<div class="alert alert-danger" role="alert">'
+            '%(lead)s'
+            '<ul class="errorlist"><li>%(error)s</li></ul>'
+            '</div>' % {'lead': lead, 'error': error_msg}), html=True)
 
     def test_download_messages_unknown_direction(self):
         self.check_download_messages_error(
@@ -820,8 +826,8 @@ class TestConversationViews(BaseConversationViewTestCase):
     def test_download_messages_unknown_date_preset(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
-             'date-preset': 'unknown'},
-            error_field='date-preset',
+             'date_preset': 'unknown'},
+            error_field='date_preset',
             error_msg=(
                 "Select a valid choice. unknown is not one of the"
                 " available choices."))
@@ -829,30 +835,34 @@ class TestConversationViews(BaseConversationViewTestCase):
     def test_download_messages_unknown_date_from(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
-             'date-from': 'unknown'},
-            error_field='date-from',
-            error_msg="Enter a valid date.")
+             'date_from': 'unknown'},
+            error_field='date_from',
+            error_msg="Enter a valid date.",
+            lead='<p class="lead">Start date errors:</p>')
 
     def test_download_messages_unknown_date_to(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
-             'date-to': 'unknown'},
-            error_field='date-to',
-            error_msg="Enter a valid date.")
+             'date_to': 'unknown'},
+            error_field='date_to',
+            error_msg="Enter a valid date.",
+            lead='<p class="lead">End date errors:</p>')
 
     def test_download_messages_invalid_date_from(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
-             'date-from': '2015/01/37'},
-            error_field='date-from',
-            error_msg="Enter a valid date.")
+             'date_from': '2015/01/37'},
+            error_field='date_from',
+            error_msg="Enter a valid date.",
+            lead='<p class="lead">Start date errors:</p>')
 
     def test_download_messages_invalid_date_to(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
-             'date-to': '2015/01/37'},
-            error_field='date-to',
-            error_msg="Enter a valid date.")
+             'date_to': '2015/01/37'},
+            error_field='date_to',
+            error_msg="Enter a valid date.",
+            lead='<p class="lead">End date errors:</p>')
 
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
