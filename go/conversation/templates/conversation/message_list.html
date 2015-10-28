@@ -255,4 +255,7 @@
 
 {% block ondomready %}
 new go.components.dates.DateRangeView({el: '.date-range'});
+{% if message_download_form.is_bound %}
+  $("#download-modal").modal("show");
+{% endif %}
 {% endblock %}

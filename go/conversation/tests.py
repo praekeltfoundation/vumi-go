@@ -806,6 +806,7 @@ class TestConversationViews(BaseConversationViewTestCase):
             '%(lead)s'
             '<ul class="errorlist"><li>%(error)s</li></ul>'
             '</div>' % {'lead': lead, 'error': error_msg}), html=True)
+        self.assertContains(response, '$("#download-modal").modal("show");')
 
     def test_download_messages_unknown_direction(self):
         self.check_download_messages_error(
