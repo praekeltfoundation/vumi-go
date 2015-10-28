@@ -1,9 +1,7 @@
 import csv
-import datetime
 import json
 import logging
 import functools
-import re
 import sys
 import urllib
 from StringIO import StringIO
@@ -17,15 +15,13 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.utils import timezone
 from vumi.message import parse_vumi_date
 
 from go.base.utils import page_range_window, sendfile
-from go.base.decorators import render_exception
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
-                                   ConversationDetailForm)
+                                   ConversationDetailForm, MessageDownloadForm)
 from go.conversation.utils import PagedMessageCache
 from go.dashboard.dashboard import Dashboard, ConversationReportsLayout
 
@@ -198,84 +194,21 @@ class ShowConversationView(ConversationTemplateView):
         return self.render_to_response(params)
 
 
-class MessageExportUsageError(Exception):
-    """Raised by the ExportMessageView when unexpected post parameters are
-    encountered.
-    """
-
-
 class ExportMessageView(ConversationApiView):
     view_name = 'export_messages'
     path_suffix = 'export_messages/'
 
-    PRESET_DAYS_RE = re.compile("^[0-9]+d$")
-    CUSTOM_DATE_RE = re.compile("^[0-9]+/[0-9]+/[0-9]+")
-
-    def _check_option(self, field, opt, values):
-        if opt not in values:
-            raise MessageExportUsageError("Invalid %s: '%s'." % (field, opt))
-        return opt
-
-    def _parse_date_preset(self, preset):
-        if preset == "all":
-            return None, None
-        if self.PRESET_DAYS_RE.match(preset):
-            days = int(preset[:-1])
-            start_time = (
-                datetime.datetime.utcnow() - datetime.timedelta(days=days))
-            return start_time, None
-        raise MessageExportUsageError("Invalid date-preset: '%s'." % (preset,))
-
-    def _parse_custom_date(self, field, custom_date):
-        if custom_date is None:
-            return None
-        if self.CUSTOM_DATE_RE.match(custom_date):
-            day, month, year = [int(part) for part in custom_date.split("/")]
-            try:
-                return datetime.datetime(year, month, day, tzinfo=timezone.utc)
-            except ValueError:
-                pass  # year, month or day out of range
-        raise MessageExportUsageError(
-            "Invalid %s: '%s'." % (field, custom_date))
-
-    def _format_custom_date_part(self, date, default):
-        if date is None:
-            return default
-        return date.strftime('%Y%m%d')
-
-    def _format_custom_date_filename(self, start_date, end_date):
-        if start_date is None and end_date is None:
-            return "all"
-        return "-".join([
-            self._format_custom_date_part(start_date, 'until'),
-            self._format_custom_date_part(end_date, 'now'),
-        ])
-
-    @render_exception(
-        MessageExportUsageError, 400,
-        "Oops. Something didn't look right with your message export request.")
     def post(self, request, conversation):
-        export_format = self._check_option(
-            'format', request.POST.get('format'), ['csv', 'json'])
+        form = MessageDownloadForm(request.POST)
+        if not form.is_valid():
+            v = self.view_def.get_view(
+                'message_list/', message_download_form=form)
+            # import pdb; pdb.set_trace()
+            return v(request, conversation)
 
-        direction = self._check_option(
-            'direction',
-            request.POST.get('direction'), ['inbound', 'outbound'])
-
-        date_preset = self._check_option(
-            'date-preset', request.POST.get('date-preset'),
-            ['all', '1d', '7d', '30d', None])
-
-        if date_preset is not None:
-            start_date, end_date = self._parse_date_preset(date_preset)
-            filename_date = date_preset
-        else:
-            start_date = self._parse_custom_date(
-                'date-from', request.POST.get('date-from'))
-            end_date = self._parse_custom_date(
-                'date-to', request.POST.get('date-to'))
-            filename_date = self._format_custom_date_filename(
-                start_date, end_date)
+        start_date, end_date, filename_date = form.date_range()
+        export_format = form.cleaned_data['format']
+        direction = form.cleaned_data['direction']
 
         url_params = {}
         if start_date is not None:
@@ -296,6 +229,9 @@ class MessageListView(ConversationTemplateView):
     view_name = 'message_list'
     path_suffix = 'message_list/'
 
+    # This is set in the constructor, but the attribute must exist already.
+    message_download_form = None
+
     def get(self, request, conversation):
         """
         Render the messages sent & received for this conversation.
@@ -310,11 +246,17 @@ class MessageListView(ConversationTemplateView):
             The query string to search messages for in the batch's inbound
             messages.
             NOTE: This is currently unused.
+
+        This is also called by :class:`ExportMessageView` if a message export
+        recieves an invalid download form. The invalid form is passed in so
+        that form errors can be displayed.
         """
         direction = request.GET.get('direction', 'inbound')
         page = request.GET.get('p', 1)
-
         batch_id = conversation.batch.key
+        form = self.message_download_form
+        if form is None:
+            form = MessageDownloadForm()
 
         def add_event_status(msg):
             if not conversation_settings.ENABLE_EVENT_STATUSES_IN_MESSAGE_LIST:
@@ -371,6 +313,7 @@ class MessageListView(ConversationTemplateView):
         tag_context.update({
             'message_page': message_page,
             'message_page_range': page_range_window(message_page, 5),
+            'message_download_form': form,
         })
         return self.render_to_response(tag_context)
 
@@ -392,6 +335,8 @@ class MessageListView(ConversationTemplateView):
         )
 
     def post(self, request, conversation):
+        if self.message_download_form is not None:
+            return self.get(request, conversation)
         if '_send_one_off_reply' in request.POST:
             form = ReplyToMessageForm(request.POST)
             if form.is_valid():
@@ -896,11 +841,11 @@ class ConversationViewDefinitionBase(object):
         kwargs['path_suffix'] = self._view_mapping[view_name].path_suffix
         return reverse('conversations:conversation', kwargs=kwargs)
 
-    def get_view(self, path_suffix):
+    def get_view(self, path_suffix, **kwargs):
         if path_suffix not in self._path_suffix_mapping:
             raise Http404
         view_cls = self._path_suffix_mapping[path_suffix]
-        view = view_cls.as_view(view_def=self)
+        view = view_cls.as_view(view_def=self, **kwargs)
         if view_cls.csrf_exempt:
             view = csrf_exempt(view)
         return view

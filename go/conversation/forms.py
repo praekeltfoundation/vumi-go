@@ -1,4 +1,7 @@
+import datetime
+
 from django import forms
+from django.utils import timezone
 
 
 class ConversationDetailForm(forms.Form):
@@ -59,6 +62,7 @@ class ReplyToMessageForm(forms.Form):
 class MessageDownloadForm(forms.Form):
 
     CUSTOM_DATE_FORMAT = '%Y/%m/%d'
+
     _LOCALS = locals()
 
     format = forms.ChoiceField(
@@ -86,3 +90,48 @@ class MessageDownloadForm(forms.Form):
     _LOCALS['date-to'] = forms.DateField(
         required=False,
         input_formats=[CUSTOM_DATE_FORMAT])
+
+    def _parse_date_preset(self, preset):
+        if preset == "all":
+            return None, None
+        days = int(preset[:-1])
+        start_time = (
+            datetime.datetime.utcnow() - datetime.timedelta(days=days))
+        return start_time, None
+
+    def _date_to_utc(self, custom_date):
+        if custom_date is None:
+            return None
+        return datetime.datetime(
+            custom_date.year, custom_date.month, custom_date.day,
+            tzinfo=timezone.utc)
+
+    def _format_custom_date_part(self, date, default):
+        if date is None:
+            return default
+        return date.strftime('%Y%m%d')
+
+    def _format_custom_date_filename(self, start_date, end_date):
+        if start_date is None and end_date is None:
+            return "all"
+        return "-".join([
+            self._format_custom_date_part(start_date, 'until'),
+            self._format_custom_date_part(end_date, 'now'),
+        ])
+
+    def date_range(self):
+        """Return the date range.
+
+        :returns:
+            A tuple of `start_date`, `end_date`, `filename_date`.
+        """
+        date_preset = self.cleaned_data.get('date-preset')
+        if date_preset:
+            start_date, end_date = self._parse_date_preset(date_preset)
+            filename_date = date_preset
+        else:
+            start_date = self._date_to_utc(self.cleaned_data.get('date-from'))
+            end_date = self._date_to_utc(self.cleaned_data.get('date-to'))
+            filename_date = self._format_custom_date_filename(
+                start_date, end_date)
+        return start_date, end_date, filename_date

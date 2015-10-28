@@ -766,7 +766,7 @@ class TestConversationViews(BaseConversationViewTestCase):
             '/message_store_exporter/%(batch)s/outbound.csv',
             '%(conv)s-outbound-all.csv')
 
-    @mock.patch('go.conversation.view_definition.datetime.datetime',
+    @mock.patch('go.conversation.forms.datetime.datetime',
                 Summer1969)
     def test_download_messages_date_preset_1d(self):
         self.check_download_messages(
@@ -775,7 +775,7 @@ class TestConversationViews(BaseConversationViewTestCase):
             'start=1969-11-30T12%%3A00%%3A00%%2B00%%3A00',
             '%(conv)s-outbound-1d.csv')
 
-    @mock.patch('go.conversation.view_definition.datetime.datetime',
+    @mock.patch('go.conversation.forms.datetime.datetime',
                 Summer1969)
     def test_download_messages_date_preset_7d(self):
         self.check_download_messages(
@@ -784,7 +784,7 @@ class TestConversationViews(BaseConversationViewTestCase):
             'start=1969-11-24T12%%3A00%%3A00%%2B00%%3A00',
             '%(conv)s-outbound-7d.csv')
 
-    @mock.patch('go.conversation.view_definition.datetime.datetime',
+    @mock.patch('go.conversation.forms.datetime.datetime',
                 Summer1969)
     def test_download_messages_date_preset_30d(self):
         self.check_download_messages(
@@ -793,62 +793,66 @@ class TestConversationViews(BaseConversationViewTestCase):
             'start=1969-11-01T12%%3A00%%3A00%%2B00%%3A00',
             '%(conv)s-outbound-30d.csv')
 
-    def check_download_messages_error(self, post_args, status_code, error_msg):
+    def check_download_messages_error(self, post_args, error_field, error_msg):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
         response = self.client.post(
             self.get_view_url(conv, 'export_messages'), post_args)
-        self.assertEqual(response.status_code, status_code)
-        self.assertContains(response, (
-            "Oops. Something didn&#39;t look right with your message export"
-            " request."), status_code=status_code)
-        self.assertContains(response, error_msg, status_code=status_code)
+        self.assertEqual(response.status_code, 200)
+        form = response.context['message_download_form']
+        self.assertEqual(form.errors[error_field], [error_msg])
 
-    def test_download_messages_unknown_direction_400(self):
+    def test_download_messages_unknown_direction(self):
         self.check_download_messages_error(
             {'format': 'json', 'direction': 'unknown'},
-            status_code=400,
-            error_msg="Invalid direction: &#39;unknown&#39;")
+            error_field='direction',
+            error_msg=(
+                "Select a valid choice. unknown is not one of the"
+                " available choices."))
 
-    def test_download_messages_unknown_format_400(self):
+    def test_download_messages_unknown_format(self):
         self.check_download_messages_error(
             {'format': 'unknown', 'direction': 'inbound'},
-            status_code=400,
-            error_msg="Invalid format: &#39;unknown&#39;")
+            error_field='format',
+            error_msg=(
+                "Select a valid choice. unknown is not one of the"
+                " available choices."))
 
-    def test_download_messages_unknown_date_preset_400(self):
+    def test_download_messages_unknown_date_preset(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-preset': 'unknown'},
-            status_code=400,
-            error_msg="Invalid date-preset: &#39;unknown&#39;")
+            error_field='date-preset',
+            error_msg=(
+                "Select a valid choice. unknown is not one of the"
+                " available choices."))
 
-    def test_download_messages_unknown_date_from_400(self):
+    def test_download_messages_unknown_date_from(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-from': 'unknown'},
-            status_code=400,
-            error_msg="Invalid date-from: &#39;unknown&#39;")
+            error_field='date-from',
+            error_msg="Enter a valid date.")
 
-    def test_download_messages_unknown_date_to_400(self):
+    def test_download_messages_unknown_date_to(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-to': 'unknown'},
-            status_code=400,
-            error_msg="Invalid date-to: &#39;unknown&#39;")
+            error_field='date-to',
+            error_msg="Enter a valid date.")
 
-    def test_download_messages_invalid_date_from_400(self):
+    def test_download_messages_invalid_date_from(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-from': '2015/01/37'},
-            status_code=400,
-            error_msg="Invalid date-from: &#39;2015/01/37&#39;")
+            error_field='date-from',
+            error_msg="Enter a valid date.")
 
-    def test_download_messages_invalid_date_to_400(self):
+    def test_download_messages_invalid_date_to(self):
         self.check_download_messages_error(
             {'format': 'csv', 'direction': 'inbound',
              'date-to': '2015/01/37'},
-            status_code=400,
-            error_msg="Invalid date-to: &#39;2015/01/37&#39;")
+            error_field='date-to',
+            error_msg="Enter a valid date.")
 
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
