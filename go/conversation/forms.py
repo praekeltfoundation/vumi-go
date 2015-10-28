@@ -63,8 +63,6 @@ class MessageDownloadForm(forms.Form):
 
     CUSTOM_DATE_FORMAT = '%Y/%m/%d'
 
-    _LOCALS = locals()
-
     format = forms.ChoiceField(
         required=True, initial='csv',
         choices=[
@@ -77,17 +75,17 @@ class MessageDownloadForm(forms.Form):
             ('inbound', 'inbound'), ('outbound', 'outbound'),
         ])
 
-    _LOCALS['date-preset'] = forms.ChoiceField(
+    date_preset = forms.ChoiceField(
         required=False, initial='all',
         choices=[
             ('all', 'all'), ('1d', '1d'), ('7d', '7d'), ('30d', '30d'),
         ])
 
-    _LOCALS['date-from'] = forms.DateField(
+    date_from = forms.DateField(
         required=False,
         input_formats=[CUSTOM_DATE_FORMAT])
 
-    _LOCALS['date-to'] = forms.DateField(
+    date_to = forms.DateField(
         required=False,
         input_formats=[CUSTOM_DATE_FORMAT])
 
@@ -125,13 +123,13 @@ class MessageDownloadForm(forms.Form):
         :returns:
             A tuple of `start_date`, `end_date`, `filename_date`.
         """
-        date_preset = self.cleaned_data.get('date-preset')
+        date_preset = self.cleaned_data.get('date_preset')
         if date_preset:
             start_date, end_date = self._parse_date_preset(date_preset)
             filename_date = date_preset
         else:
-            start_date = self._date_to_utc(self.cleaned_data.get('date-from'))
-            end_date = self._date_to_utc(self.cleaned_data.get('date-to'))
+            start_date = self._date_to_utc(self.cleaned_data.get('date_from'))
+            end_date = self._date_to_utc(self.cleaned_data.get('date_to'))
             filename_date = self._format_custom_date_filename(
                 start_date, end_date)
         return start_date, end_date, filename_date
