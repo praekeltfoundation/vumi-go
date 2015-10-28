@@ -936,6 +936,8 @@ class TestConversationViews(BaseConversationViewTestCase):
         response = self.client.get(self.get_view_url(conv, 'message_list'))
         self.assertContains(response, 'Messages for Foo')
 
+    @mock.patch('go.conversation.view_definition.datetime.datetime',
+                Summer1969)
     def test_message_list_download_modal_defaults(self):
         conv = self.user_helper.create_conversation(
             u'dummy', name=u'Foo', started=True)
@@ -948,6 +950,8 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertNotContains(response, 'checked>Today')
         self.assertNotContains(response, 'checked>Last 7 days')
         self.assertNotContains(response, 'checked>Last 30 days')
+        self.assertContains(response, 'value="01/12/1969" name="date_from"')
+        self.assertContains(response, 'value="01/12/1969" name="date_to"')
 
     def test_message_list_no_sensitive_msgs(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)

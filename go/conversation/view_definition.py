@@ -1,4 +1,5 @@
 import csv
+import datetime
 import json
 import logging
 import functools
@@ -256,7 +257,10 @@ class MessageListView(ConversationTemplateView):
         batch_id = conversation.batch.key
         form = self.message_download_form
         if form is None:
-            form = MessageDownloadForm()
+            form = MessageDownloadForm(initial={
+                'date_to': datetime.datetime.utcnow(),
+                'date_from': datetime.datetime.utcnow(),
+            })
 
         def add_event_status(msg):
             if not conversation_settings.ENABLE_EVENT_STATUSES_IN_MESSAGE_LIST:

@@ -235,9 +235,9 @@
 
                             <div class="well collapse date-custom-container">
                                 <div class="input-daterange input-group" data-provide="datepicker" data-date-format="dd/mm/yyyy">
-                                    <input type="text" class="input-sm form-control" value="{% now "d/m/Y" %}" name="date_from">
+                                    <input type="text" class="input-sm form-control" value="{{ form.date_from.value|date:"d/m/Y" }}" name="date_from">
                                     <span class="input-group-addon">to</span>
-                                    <input type="text" class="input-sm form-control" value="{% now "d/m/Y" %}" name="date_to">
+                                    <input type="text" class="input-sm form-control" value="{{ form.date_to.value|date:"d/m/Y" }}" name="date_to">
                                 </div>
                             </div>
                         </div>
