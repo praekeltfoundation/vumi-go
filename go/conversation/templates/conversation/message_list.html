@@ -147,9 +147,21 @@
             <div class="modal-body">
                 <form method="post">
                     {% csrf_token %}
+                    {% with message_download_form as form %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                      <p class="lead">We couldn't perform your message download:</p>
+                      {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
 
                     <div class="form-group">
                         <label id="label-format">Format</label>
+
+                        {% if form.format.errors %}
+                        <div class="alert alert-danger" role="alert">{{ form.format.errors }}</div>
+                        {% endif %}
 
                         <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-format">
                             <label class="btn btn-default active">
@@ -164,6 +176,10 @@
                     <div class="form-group">
                         <label id="label-message-direction">Message direction</label>
 
+                        {% if form.direction.errors %}
+                        <div class="alert alert-danger" role="alert">{{ form.direction.errors }}</div>
+                        {% endif %}
+
                         <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-message-direction">
                             <label class="btn btn-default active">
                                 <input type="radio" autocomplete="off" name="direction" value="inbound" checked>Received messages
@@ -177,21 +193,25 @@
                     <div class="form-group">
                         <label id="label-date-range">Date range</label>
 
+                        {% if form.date_preset.errors %}
+                        <div class="alert alert-danger" role="alert">{{ form.date_preset.errors }}</div>
+                        {% endif %}
+
                         <div class="list-group date-range" aria-labelledby="label-date-range">
                             <label class="list-group-item date-preset active">
-                                <input type="radio" autocomplete="off" name="date-preset" value="all" checked>All messages
+                                <input type="radio" autocomplete="off" name="date_preset" value="all" checked>All messages
                             </label>
 
                             <label class="list-group-item date-preset">
-                                <input type="radio" autocomplete="off" name="date-preset" value="1d">Today
+                                <input type="radio" autocomplete="off" name="date_preset" value="1d">Today
                             </label>
 
                             <label class="list-group-item date-preset">
-                                <input type="radio" autocomplete="off" name="date-preset" value="7d">Last 7 days
+                                <input type="radio" autocomplete="off" name="date_preset" value="7d">Last 7 days
                             </label>
 
                             <label class="list-group-item date-preset">
-                                <input type="radio" autocomplete="off" name="date-preset" value="30d">Last 30 days
+                                <input type="radio" autocomplete="off" name="date_preset" value="30d">Last 30 days
                             </label>
 
                             <div class="list-group-item date-custom-toggle">
@@ -199,17 +219,32 @@
                                 <span class="pull-right glyphicon glyphicon-chevron-down" data-down="glyphicon-chevron-down" data-up="glyphicon-chevron-up"></span>
                             </div>
 
+                            {% if form.date_from.errors %}
+                            <div class="alert alert-danger" role="alert">
+                              <p class="lead">Start date errors:</p>
+                              {{ form.date_from.errors }}
+                            </div>
+                            {% endif %}
+
+                            {% if form.date_to.errors %}
+                            <div class="alert alert-danger" role="alert">
+                              <p class="lead">End date errors:</p>
+                              {{ form.date_to.errors }}
+                            </div>
+                            {% endif %}
+
                             <div class="well collapse date-custom-container">
                                 <div class="input-daterange input-group" data-provide="datepicker" data-date-format="dd/mm/yyyy">
-                                    <input type="text" class="input-sm form-control" value="{% now "d/m/Y" %}" name="date-from">
+                                    <input type="text" class="input-sm form-control" value="{% now "d/m/Y" %}" name="date_from">
                                     <span class="input-group-addon">to</span>
-                                    <input type="text" class="input-sm form-control" value="{% now "d/m/Y" %}" name="date-to">
+                                    <input type="text" class="input-sm form-control" value="{% now "d/m/Y" %}" name="date_to">
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <button class="btn btn-primary" type="submit">Download</button>
+                    {% endwith %}
                 </form>
             </div>
         </div>
