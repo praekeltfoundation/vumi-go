@@ -89,32 +89,40 @@ class MessageDownloadForm(forms.Form):
         required=False,
         input_formats=[CUSTOM_DATE_FORMAT])
 
-    def _parse_date_preset(self, preset):
-        if preset == "all":
-            return None, None
-        days = int(preset[:-1])
-        start_time = (
-            datetime.datetime.utcnow() - datetime.timedelta(days=days))
-        return start_time, None
-
-    def _date_to_utc(self, custom_date):
-        if custom_date is None:
+    def _start_of_day(self, dt=None):
+        if dt is None:
             return None
         return datetime.datetime(
-            custom_date.year, custom_date.month, custom_date.day,
-            tzinfo=timezone.utc)
+            dt.year, dt.month, dt.day, tzinfo=timezone.utc)
 
-    def _format_custom_date_part(self, date, default):
+    def _end_of_day(self, dt=None):
+        if dt is None:
+            return None
+        return self._start_of_day(dt) + datetime.timedelta(days=1)
+
+    def _parse_date_preset(self, preset):
+        end_time = datetime.datetime.utcnow()
+        if preset == "all":
+            return None, end_time
+        days = int(preset[:-1])
+        start_time = (
+            end_time - datetime.timedelta(days=days))
+        return start_time, end_time
+
+    def _format_custom_date_part(self, date, default, end=False):
         if date is None:
             return default
-        return date.strftime('%Y%m%d')
+        if end and (date == date.replace(
+                hour=0, minute=0, second=0, microsecond=0)):
+            date -= datetime.timedelta(minutes=1)
+        return date.strftime('%Y%m%dT%H%M')
 
-    def _format_custom_date_filename(self, start_date, end_date):
+    def _format_filename_date(self, start_date, end_date):
         if start_date is None and end_date is None:
-            return "all"
+            return "everything"
         return "-".join([
             self._format_custom_date_part(start_date, 'until'),
-            self._format_custom_date_part(end_date, 'now'),
+            self._format_custom_date_part(end_date, 'now', end=True),
         ])
 
     def date_range(self):
@@ -126,10 +134,8 @@ class MessageDownloadForm(forms.Form):
         date_preset = self.cleaned_data.get('date_preset')
         if date_preset:
             start_date, end_date = self._parse_date_preset(date_preset)
-            filename_date = date_preset
         else:
-            start_date = self._date_to_utc(self.cleaned_data.get('date_from'))
-            end_date = self._date_to_utc(self.cleaned_data.get('date_to'))
-            filename_date = self._format_custom_date_filename(
-                start_date, end_date)
+            start_date = self._start_of_day(self.cleaned_data.get('date_from'))
+            end_date = self._end_of_day(self.cleaned_data.get('date_to'))
+        filename_date = self._format_filename_date(start_date, end_date)
         return start_date, end_date, filename_date

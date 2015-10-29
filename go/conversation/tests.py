@@ -747,35 +747,46 @@ class TestConversationViews(BaseConversationViewTestCase):
             'attachment; filename=' + filename_tmpl % {'conv': conv.key})
         self.assertEqual(response['X-Accel-Buffering'], 'no')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_json_messages_inbound(self):
         self.check_download_messages(
             {'format': 'json', 'direction': 'inbound'},
             '/message_store_exporter/%(batch)s/inbound.json',
-            '%(conv)s-inbound-all.json')
+            '%(conv)s-inbound-everything.json')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_csv_messages_inbound(self):
         self.check_download_messages(
             {'format': 'csv', 'direction': 'inbound'},
             '/message_store_exporter/%(batch)s/inbound.csv',
-            '%(conv)s-inbound-all.csv')
+            '%(conv)s-inbound-everything.csv')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_json_messages_outbound(self):
         self.check_download_messages(
             {'format': 'json', 'direction': 'outbound'},
             '/message_store_exporter/%(batch)s/outbound.json',
-            '%(conv)s-outbound-all.json')
+            '%(conv)s-outbound-everything.json')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_csv_messages_outbound(self):
         self.check_download_messages(
             {'format': 'csv', 'direction': 'outbound'},
             '/message_store_exporter/%(batch)s/outbound.csv',
-            '%(conv)s-outbound-all.csv')
+            '%(conv)s-outbound-everything.csv')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_messages_date_preset_all(self):
         self.check_download_messages(
             {'format': 'csv', 'direction': 'outbound', 'date_preset': 'all'},
-            '/message_store_exporter/%(batch)s/outbound.csv',
-            '%(conv)s-outbound-all.csv')
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'end=1969-12-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-until-19691201T1200.csv')
 
     @mock.patch('go.conversation.forms.datetime.datetime',
                 Summer1969)
@@ -783,8 +794,9 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.check_download_messages(
             {'format': 'csv', 'direction': 'outbound', 'date_preset': '1d'},
             '/message_store_exporter/%(batch)s/outbound.csv?'
-            'start=1969-11-30T12%%3A00%%3A00%%2B00%%3A00',
-            '%(conv)s-outbound-1d.csv')
+            'start=1969-11-30T12%%3A00%%3A00%%2B00%%3A00'
+            '&end=1969-12-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-19691130T1200-19691201T1200.csv')
 
     @mock.patch('go.conversation.forms.datetime.datetime',
                 Summer1969)
@@ -792,8 +804,9 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.check_download_messages(
             {'format': 'csv', 'direction': 'outbound', 'date_preset': '7d'},
             '/message_store_exporter/%(batch)s/outbound.csv?'
-            'start=1969-11-24T12%%3A00%%3A00%%2B00%%3A00',
-            '%(conv)s-outbound-7d.csv')
+            'start=1969-11-24T12%%3A00%%3A00%%2B00%%3A00'
+            '&end=1969-12-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-19691124T1200-19691201T1200.csv')
 
     @mock.patch('go.conversation.forms.datetime.datetime',
                 Summer1969)
@@ -801,8 +814,18 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.check_download_messages(
             {'format': 'csv', 'direction': 'outbound', 'date_preset': '30d'},
             '/message_store_exporter/%(batch)s/outbound.csv?'
-            'start=1969-11-01T12%%3A00%%3A00%%2B00%%3A00',
-            '%(conv)s-outbound-30d.csv')
+            'start=1969-11-01T12%%3A00%%3A00%%2B00%%3A00'
+            '&end=1969-12-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-19691101T1200-19691201T1200.csv')
+
+    def test_download_messages_custom_dates(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound',
+             'date_from': '1969/11/05', 'date_to': '1985/09/04'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'start=1969-11-05T00%%3A00%%3A00%%2B00%%3A00'
+            '&end=1985-09-05T00%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-19691105T0000-19850904T2359.csv')
 
     def check_download_messages_error(self, post_args, error_field, error_msg,
                                       lead=''):
