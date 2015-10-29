@@ -60,7 +60,6 @@ def get_reply_form_for_message(message):
 
 @register.filter
 def checked(field, value):
-    #import pdb; pdb.set_trace()
     if field.value() == value:
         return "checked"
     return ""
