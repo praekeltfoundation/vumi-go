@@ -202,10 +202,14 @@ class ExportMessageView(ConversationApiView):
     def post(self, request, conversation):
         form = MessageDownloadForm(request.POST)
         if not form.is_valid():
-            v = self.view_def.get_view(
+            extra = {
+                'download_form_errors': str(form.errors),
+                'download_form_post': request.POST,
+            }
+            logger.error("Message download form contains errors.", extra=extra)
+            view = self.view_def.get_view(
                 'message_list/', message_download_form=form)
-            # import pdb; pdb.set_trace()
-            return v(request, conversation)
+            return view(request, conversation)
 
         start_date, end_date, filename_date = form.date_range()
         export_format = form.cleaned_data['format']

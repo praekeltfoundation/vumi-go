@@ -449,6 +449,17 @@ class TestConversationViews(BaseConversationViewTestCase):
         super(TestConversationViews, self).setUp()
         self.msg_helper = self.add_helper(
             GoMessageHelper(vumi_helper=self.vumi_helper))
+        self.error_logs = self.capture_error_logs()
+
+    def capture_error_logs(self):
+        error_log = []
+        logger = logging.getLogger('go.conversation.view_definition')
+
+        def log_error(msg, *args, **kw):
+            error_log.append((msg, args, kw))
+
+        self.monkey_patch(logger, 'error', log_error)
+        return error_log
 
     def enable_event_statuses(self):
         self.monkey_patch(
@@ -801,12 +812,28 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(response.status_code, 200)
         form = response.context['message_download_form']
         self.assertEqual(form.errors[error_field], [error_msg])
-        self.assertContains(response, (
-            '<div class="alert alert-danger" role="alert">'
-            '%(lead)s'
-            '<ul class="errorlist"><li>%(error)s</li></ul>'
-            '</div>' % {'lead': lead, 'error': error_msg}), html=True)
+        self.assertContains(
+            response,
+            '<div class="alert alert-danger">'
+            'We seem to be having an issue on our side processing'
+            ' your message download. We\'ve been notified of the'
+            ' problem, please try again later, and let us know if the'
+            ' problem continues.'
+            '</div>', html=True)
         self.assertContains(response, '$("#download-modal").modal("show");')
+        self.assertEqual(self.error_logs, [
+            ('Message download form contains errors.', (), {
+                'extra': {
+                    'download_form_errors': (
+                        '<ul class="errorlist"><li>%(field)s'
+                        '<ul class="errorlist"><li>%(msg)s</li></ul>'
+                        '</li></ul>' % {
+                            'field': error_field, 'msg': error_msg}),
+                    'download_form_post':
+                        dict((k, [v]) for k, v in post_args.items()),
+                }
+            }),
+        ])
 
     def test_download_messages_unknown_direction(self):
         self.check_download_messages_error(

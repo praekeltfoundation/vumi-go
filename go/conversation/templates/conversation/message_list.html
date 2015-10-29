@@ -149,19 +149,17 @@
                     {% csrf_token %}
                     {% with message_download_form as form %}
 
-                    {% if form.non_field_errors %}
-                    <div class="alert alert-danger" role="alert">
-                      <p class="lead">We couldn't perform your message download:</p>
-                      {{ form.non_field_errors }}
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        We seem to be having an issue on our side processing
+                        your message download. We've been notified of the
+                        problem, please try again later, and let us know if the
+                        problem continues.
                     </div>
                     {% endif %}
 
                     <div class="form-group">
                         <label id="label-format">Format</label>
-
-                        {% if form.format.errors %}
-                        <div class="alert alert-danger" role="alert">{{ form.format.errors }}</div>
-                        {% endif %}
 
                         <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-format">
                             <label class="btn btn-default active">
@@ -176,10 +174,6 @@
                     <div class="form-group">
                         <label id="label-message-direction">Message direction</label>
 
-                        {% if form.direction.errors %}
-                        <div class="alert alert-danger" role="alert">{{ form.direction.errors }}</div>
-                        {% endif %}
-
                         <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-message-direction">
                             <label class="btn btn-default active">
                                 <input type="radio" autocomplete="off" name="direction" value="inbound" {{ form.direction|checked:'inbound'}}>Received messages
@@ -192,10 +186,6 @@
 
                     <div class="form-group">
                         <label id="label-date-range">Date range</label>
-
-                        {% if form.date_preset.errors %}
-                        <div class="alert alert-danger" role="alert">{{ form.date_preset.errors }}</div>
-                        {% endif %}
 
                         <div class="list-group date-range" aria-labelledby="label-date-range">
                             <label class="list-group-item date-preset active">
@@ -218,20 +208,6 @@
                                 Custom range
                                 <span class="pull-right glyphicon glyphicon-chevron-down" data-down="glyphicon-chevron-down" data-up="glyphicon-chevron-up"></span>
                             </div>
-
-                            {% if form.date_from.errors %}
-                            <div class="alert alert-danger" role="alert">
-                              <p class="lead">Start date errors:</p>
-                              {{ form.date_from.errors }}
-                            </div>
-                            {% endif %}
-
-                            {% if form.date_to.errors %}
-                            <div class="alert alert-danger" role="alert">
-                              <p class="lead">End date errors:</p>
-                              {{ form.date_to.errors }}
-                            </div>
-                            {% endif %}
 
                             <div class="well collapse date-custom-container">
                                 <div class="input-daterange input-group" data-provide="datepicker" data-date-format="dd/mm/yyyy">
