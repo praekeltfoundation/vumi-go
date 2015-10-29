@@ -61,7 +61,7 @@ class ReplyToMessageForm(forms.Form):
 
 class MessageDownloadForm(forms.Form):
 
-    CUSTOM_DATE_FORMAT = '%Y/%m/%d'
+    CUSTOM_DATE_FORMAT = '%d/%m/%Y'
 
     format = forms.ChoiceField(
         required=True, initial='csv',
