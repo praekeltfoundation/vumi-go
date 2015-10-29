@@ -1003,6 +1003,15 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(response, 'value="01/12/1969" name="date_from"')
         self.assertContains(response, 'value="01/12/1969" name="date_to"')
 
+    def test_message_list_download_model_form_action(self):
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'Foo', started=True)
+        response = self.client.get(self.get_view_url(conv, 'message_list'))
+        self.assertContains(
+            response,
+            '<form method="post" action="%s">'
+            % self.get_view_url(conv, 'export_messages'))
+
     def test_message_list_no_sensitive_msgs(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
 
