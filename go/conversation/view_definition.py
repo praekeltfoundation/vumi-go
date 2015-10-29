@@ -1,8 +1,10 @@
 import csv
+import datetime
 import json
 import logging
 import functools
 import sys
+import urllib
 from StringIO import StringIO
 from collections import defaultdict
 
@@ -20,8 +22,7 @@ from go.base.utils import page_range_window, sendfile
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
-                                   ConversationDetailForm)
-from go.conversation.tasks import export_conversation_messages_unsorted
+                                   ConversationDetailForm, MessageDownloadForm)
 from go.conversation.utils import PagedMessageCache
 from go.dashboard.dashboard import Dashboard, ConversationReportsLayout
 
@@ -198,34 +199,43 @@ class ExportMessageView(ConversationApiView):
     view_name = 'export_messages'
     path_suffix = 'export_messages/'
 
-    def get(self, request, conversation):
-        direction = request.GET.get('direction', 'inbound')
-        if direction not in ['inbound', 'outbound']:
-            raise Http404()
+    def post(self, request, conversation):
+        form = MessageDownloadForm(request.POST)
+        if not form.is_valid():
+            extra = {
+                'download_form_errors': str(form.errors),
+                'download_form_post': request.POST,
+            }
+            logger.error("Message download form contains errors.", extra=extra)
+            view = self.view_def.get_view(
+                'message_list/', message_download_form=form)
+            return view(request, conversation)
 
-        export_format = request.GET.get('format', 'json')
-        if export_format not in ['csv', 'json']:
-            raise Http404()
+        start_date, end_date, filename_date = form.date_range()
+        export_format = form.cleaned_data['format']
+        direction = form.cleaned_data['direction']
+
+        url_params = {}
+        if start_date is not None:
+            url_params['start'] = start_date.isoformat()
+        if end_date is not None:
+            url_params['end'] = end_date.isoformat()
 
         url = '/message_store_exporter/%s/%s.%s' % (
             conversation.batch.key, direction, export_format)
-        return sendfile(url, buffering=False, filename='%s-%s.%s' % (
-            conversation.key, direction, export_format))
+        if url_params:
+            url += '?' + urllib.urlencode(url_params)
 
-    def post(self, request, conversation):
-        export_conversation_messages_unsorted.delay(
-            request.user_api.user_account_key, conversation.key)
-        messages.info(
-            request,
-            'Conversation messages CSV file export scheduled. CSV file should'
-            ' arrive in your mailbox shortly.')
-        return self.redirect_to(
-            'message_list', conversation_key=conversation.key)
+        return sendfile(url, buffering=False, filename='%s-%s-%s.%s' % (
+            conversation.key, direction, filename_date, export_format))
 
 
 class MessageListView(ConversationTemplateView):
     view_name = 'message_list'
     path_suffix = 'message_list/'
+
+    # This is set in the constructor, but the attribute must exist already.
+    message_download_form = None
 
     def get(self, request, conversation):
         """
@@ -241,11 +251,20 @@ class MessageListView(ConversationTemplateView):
             The query string to search messages for in the batch's inbound
             messages.
             NOTE: This is currently unused.
+
+        This is also called by :class:`ExportMessageView` if a message export
+        recieves an invalid download form. The invalid form is passed in so
+        that form errors can be displayed.
         """
         direction = request.GET.get('direction', 'inbound')
         page = request.GET.get('p', 1)
-
         batch_id = conversation.batch.key
+        form = self.message_download_form
+        if form is None:
+            form = MessageDownloadForm(initial={
+                'date_to': datetime.datetime.utcnow(),
+                'date_from': datetime.datetime.utcnow(),
+            })
 
         def add_event_status(msg):
             if not conversation_settings.ENABLE_EVENT_STATUSES_IN_MESSAGE_LIST:
@@ -302,6 +321,7 @@ class MessageListView(ConversationTemplateView):
         tag_context.update({
             'message_page': message_page,
             'message_page_range': page_range_window(message_page, 5),
+            'message_download_form': form,
         })
         return self.render_to_response(tag_context)
 
@@ -323,6 +343,8 @@ class MessageListView(ConversationTemplateView):
         )
 
     def post(self, request, conversation):
+        if self.message_download_form is not None:
+            return self.get(request, conversation)
         if '_send_one_off_reply' in request.POST:
             form = ReplyToMessageForm(request.POST)
             if form.is_valid():
@@ -827,11 +849,11 @@ class ConversationViewDefinitionBase(object):
         kwargs['path_suffix'] = self._view_mapping[view_name].path_suffix
         return reverse('conversations:conversation', kwargs=kwargs)
 
-    def get_view(self, path_suffix):
+    def get_view(self, path_suffix, **kwargs):
         if path_suffix not in self._path_suffix_mapping:
             raise Http404
         view_cls = self._path_suffix_mapping[path_suffix]
-        view = view_cls.as_view(view_def=self)
+        view = view_cls.as_view(view_def=self, **kwargs)
         if view_cls.csrf_exempt:
             view = csrf_exempt(view)
         return view

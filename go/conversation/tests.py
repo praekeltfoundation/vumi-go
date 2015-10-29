@@ -1,12 +1,11 @@
 import json
 import logging
-import csv
-from datetime import date
+from datetime import date, datetime
 from StringIO import StringIO
 from zipfile import ZipFile
 
+import mock
 import pytest
-from vumi.message import TransportUserMessage
 
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
@@ -20,16 +19,16 @@ dummy_classes = [
 ]
 with djangotest_imports(globals(), dummy_classes=dummy_classes):
     from django.forms import Form, CharField
-    from django.core import mail
     from django.core.urlresolvers import reverse
+    from django.utils import timezone
 
     import go.base.utils
     import go.conversation.settings
     from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.conversation.forms import MessageDownloadForm
     from go.conversation.templatetags import conversation_tags
     from go.conversation.view_definition import (
         ConversationViewDefinitionBase, EditConversationView)
-    from go.conversation.tasks import export_conversation_messages_unsorted
     from go.dashboard.dashboard import DashboardLayout, DashboardParseError
     from go.dashboard import client as dashboard_client
     from go.dashboard.tests.utils import FakeDiamondashApiClient
@@ -152,6 +151,90 @@ class FakeConversationPackage(object):
         def_cls, vdef_cls = DUMMY_CONVERSATION_DEFS[conversation_type]
         self.ConversationDefinition = def_cls
         self.ConversationViewDefinition = vdef_cls
+
+
+class Summer1969(datetime):
+    """For patching datetime.utcnow.
+    """
+    @staticmethod
+    def utcnow():
+        return datetime(1969, 12, 1, 12, 0, tzinfo=timezone.utc)
+
+
+class TestMessageDownloadForm(GoDjangoTestCase):
+    def assert_field_valid(self, field, value):
+        data = {field: value} if value is not None else {}
+        f = MessageDownloadForm(data)
+        self.assertTrue(field not in f.errors)
+
+    def assert_field_invalid(self, field, value, error):
+        data = {field: value} if value is not None else {}
+        f = MessageDownloadForm(data)
+        self.assertEqual(f.errors[field], [error])
+
+    def test_format_validation(self):
+        self.assert_field_valid('format', 'csv')
+        self.assert_field_valid('format', 'json')
+        self.assert_field_invalid('format', None, 'This field is required.')
+        self.assert_field_invalid(
+            'format', 'moop',
+            'Select a valid choice. moop is not one of the available choices.')
+
+    def test_direction_validation(self):
+        self.assert_field_valid('direction', 'inbound')
+        self.assert_field_valid('direction', 'outbound')
+        self.assert_field_invalid('direction', None, 'This field is required.')
+        self.assert_field_invalid(
+            'direction', 'meep',
+            'Select a valid choice. meep is not one of the available choices.')
+
+    def test_date_preset_validation(self):
+        self.assert_field_valid('date_preset', 'all')
+        self.assert_field_valid('date_preset', '1d')
+        self.assert_field_valid('date_preset', '7d')
+        self.assert_field_valid('date_preset', '30d')
+        self.assert_field_valid('date_preset', None)
+        self.assert_field_invalid(
+            'date_preset', 'weak',
+            'Select a valid choice. weak is not one of the available choices.')
+
+    def test_date_to_validation(self):
+        self.assert_field_valid('date_to', None)
+        self.assert_field_valid('date_to', '01/12/2015')
+        self.assert_field_invalid(
+            'date_to', '01/13/2015', 'Enter a valid date.')
+        self.assert_field_invalid(
+            'date_to', 'january', 'Enter a valid date.')
+
+    def test_date_from_validation(self):
+        self.assert_field_valid('date_from', None)
+        self.assert_field_valid('date_from', '01/12/2015')
+        self.assert_field_invalid(
+            'date_from', '01/13/2015', 'Enter a valid date.')
+        self.assert_field_invalid(
+            'date_from', 'january', 'Enter a valid date.')
+
+    def test_complete_validation(self):
+        f = MessageDownloadForm({
+            'format': 'json',
+            'direction': 'outbound',
+            'date_preset': '1d',
+            'date_to': '01/12/2015',
+            'date_from': '01/12/2015'
+        })
+        self.assertEqual(f.errors, {})
+        self.assertTrue(f.is_valid())
+
+    def assert_initial(self, field, initial):
+        f = MessageDownloadForm()
+        self.assertEqual(f.fields[field].initial, initial)
+
+    def test_defaults(self):
+        self.assert_initial('format', 'csv')
+        self.assert_initial('direction', 'inbound')
+        self.assert_initial('date_preset', 'all')
+        self.assert_initial('date_to', None)
+        self.assert_initial('date_from', None)
 
 
 class BaseConversationViewTestCase(GoDjangoTestCase):
@@ -352,7 +435,7 @@ class TestNewConversationView(BaseConversationViewTestCase):
             'conversation_type': 'dummy',
         }
 
-        response = self.client.post(
+        self.client.post(
             reverse('conversations:new_conversation'),
             conv_data)
 
@@ -366,6 +449,17 @@ class TestConversationViews(BaseConversationViewTestCase):
         super(TestConversationViews, self).setUp()
         self.msg_helper = self.add_helper(
             GoMessageHelper(vumi_helper=self.vumi_helper))
+        self.error_logs = self.capture_error_logs()
+
+    def capture_error_logs(self):
+        error_log = []
+        logger = logging.getLogger('go.conversation.view_definition')
+
+        def log_error(msg, *args, **kw):
+            error_log.append((msg, args, kw))
+
+        self.monkey_patch(logger, 'error', log_error)
+        return error_log
 
     def enable_event_statuses(self):
         self.monkey_patch(
@@ -641,84 +735,185 @@ class TestConversationViews(BaseConversationViewTestCase):
             '',  # csv ends with a blank line
             ]))
 
-    def test_export_csv_messages(self):
+    def check_download_messages(self, post_args, url_tmpl, filename_tmpl):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        msgs = self.msg_helper.add_inbound_to_conv(
-            conv, 5, start_date=date(2012, 1, 1), time_multiplier=12)
-        self.msg_helper.add_replies_to_conv(conv, msgs)
-        response = self.client.post(self.get_view_url(conv, 'export_messages'))
-        self.assertRedirects(response, self.get_view_url(conv, 'message_list'))
-        [email] = mail.outbox
+        response = self.client.post(
+            self.get_view_url(conv, 'export_messages'), post_args)
         self.assertEqual(
-            email.recipients(), [self.user_helper.get_django_user().email])
-        self.assertTrue(conv.name in email.subject)
-        self.assertTrue(conv.name in email.body)
-        [(file_name, zipcontent, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.zip')
-        zipfile = ZipFile(StringIO(zipcontent), 'r')
-        content = zipfile.open('messages-export.csv', 'r').read()
-        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
-        self.assertEqual(12, len(content.split('\n')))
-        self.assertEqual(mime_type, 'application/zip')
+            response['X-Accel-Redirect'],
+            url_tmpl % {'batch': conv.batch.key})
+        self.assertEqual(
+            response['Content-Disposition'],
+            'attachment; filename=' + filename_tmpl % {'conv': conv.key})
+        self.assertEqual(response['X-Accel-Buffering'], 'no')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_json_messages_inbound(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get(self.get_view_url(conv, 'export_messages'))
-        self.assertEqual(
-            response['X-Accel-Redirect'],
-            '/message_store_exporter/%s/inbound.json' % (conv.batch.key,))
-        self.assertEqual(
-            response['Content-Disposition'],
-            'attachment; filename=%s-inbound.json' % (conv.key,))
-        self.assertEqual(response['X-Accel-Buffering'], 'no')
+        self.check_download_messages(
+            {'format': 'json', 'direction': 'inbound'},
+            '/message_store_exporter/%(batch)s/inbound.json',
+            '%(conv)s-inbound-everything.json')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_csv_messages_inbound(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get("%s?format=csv" % (
-            self.get_view_url(conv, 'export_messages')))
-        self.assertEqual(
-            response['X-Accel-Redirect'],
-            '/message_store_exporter/%s/inbound.csv' % (conv.batch.key,))
-        self.assertEqual(
-            response['Content-Disposition'],
-            'attachment; filename=%s-inbound.csv' % (conv.key,))
-        self.assertEqual(response['X-Accel-Buffering'], 'no')
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'inbound'},
+            '/message_store_exporter/%(batch)s/inbound.csv',
+            '%(conv)s-inbound-everything.csv')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_json_messages_outbound(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get('%s?direction=outbound' % (
-            self.get_view_url(conv, 'export_messages'),))
-        self.assertEqual(
-            response['X-Accel-Redirect'],
-            '/message_store_exporter/%s/outbound.json' % (conv.batch.key,))
-        self.assertEqual(
-            response['Content-Disposition'],
-            'attachment; filename=%s-outbound.json' % (conv.key,))
-        self.assertEqual(response['X-Accel-Buffering'], 'no')
+        self.check_download_messages(
+            {'format': 'json', 'direction': 'outbound'},
+            '/message_store_exporter/%(batch)s/outbound.json',
+            '%(conv)s-outbound-everything.json')
 
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_csv_messages_outbound(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get('%s?direction=outbound&format=csv' % (
-            self.get_view_url(conv, 'export_messages'),))
-        self.assertEqual(
-            response['X-Accel-Redirect'],
-            '/message_store_exporter/%s/outbound.csv' % (conv.batch.key,))
-        self.assertEqual(
-            response['Content-Disposition'],
-            'attachment; filename=%s-outbound.csv' % (conv.key,))
-        self.assertEqual(response['X-Accel-Buffering'], 'no')
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound'},
+            '/message_store_exporter/%(batch)s/outbound.csv',
+            '%(conv)s-outbound-everything.csv')
 
-    def test_download_messages_unknown_direction_404(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get('%s?direction=unknown&format=json' % (
-            self.get_view_url(conv, 'export_messages'),))
-        self.assertEqual(response.status_code, 404)
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
+    def test_download_messages_date_preset_all(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound', 'date_preset': 'all'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'end=1969-12-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-until-19691201T1200.csv')
 
-    def test_download_messages_unknown_format_404(self):
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
+    def test_download_messages_date_preset_1d(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound', 'date_preset': '1d'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'start=1969-11-30T12%%3A00%%3A00%%2B00%%3A00'
+            '&end=1969-12-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-19691130T1200-19691201T1200.csv')
+
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
+    def test_download_messages_date_preset_7d(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound', 'date_preset': '7d'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'start=1969-11-24T12%%3A00%%3A00%%2B00%%3A00'
+            '&end=1969-12-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-19691124T1200-19691201T1200.csv')
+
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
+    def test_download_messages_date_preset_30d(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound', 'date_preset': '30d'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'start=1969-11-01T12%%3A00%%3A00%%2B00%%3A00'
+            '&end=1969-12-01T12%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-19691101T1200-19691201T1200.csv')
+
+    def test_download_messages_custom_dates(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'outbound',
+             'date_from': '05/11/1969', 'date_to': '04/09/1985'},
+            '/message_store_exporter/%(batch)s/outbound.csv?'
+            'start=1969-11-05T00%%3A00%%3A00%%2B00%%3A00'
+            '&end=1985-09-05T00%%3A00%%3A00%%2B00%%3A00',
+            '%(conv)s-outbound-19691105T0000-19850904T2359.csv')
+
+    def check_download_messages_error(self, post_args, error_field, error_msg,
+                                      lead=''):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get('%s?direction=outbound&format=unknown' % (
-            self.get_view_url(conv, 'export_messages'),))
-        self.assertEqual(response.status_code, 404)
+        response = self.client.post((
+            self.get_view_url(conv, 'export_messages')), post_args)
+        self.assertEqual(response.status_code, 200)
+        form = response.context['message_download_form']
+        self.assertEqual(form.errors[error_field], [error_msg])
+        self.assertContains(
+            response,
+            '<div class="alert alert-danger">'
+            'We seem to be having an issue on our side processing'
+            ' your message download. We\'ve been notified of the'
+            ' problem, please try again later, and let us know if the'
+            ' problem continues.'
+            '</div>', html=True)
+        self.assertContains(response, '$("#download-modal").modal("show");')
+        self.assertEqual(self.error_logs, [
+            ('Message download form contains errors.', (), {
+                'extra': {
+                    'download_form_errors': (
+                        '<ul class="errorlist"><li>%(field)s'
+                        '<ul class="errorlist"><li>%(msg)s</li></ul>'
+                        '</li></ul>' % {
+                            'field': error_field, 'msg': error_msg}),
+                    'download_form_post':
+                        dict((k, [v]) for k, v in post_args.items()),
+                }
+            }),
+        ])
+
+    def test_download_messages_unknown_direction(self):
+        self.check_download_messages_error(
+            {'format': 'json', 'direction': 'unknown'},
+            error_field='direction',
+            error_msg=(
+                "Select a valid choice. unknown is not one of the"
+                " available choices."))
+
+    def test_download_messages_unknown_format(self):
+        self.check_download_messages_error(
+            {'format': 'unknown', 'direction': 'inbound'},
+            error_field='format',
+            error_msg=(
+                "Select a valid choice. unknown is not one of the"
+                " available choices."))
+
+    def test_download_messages_unknown_date_preset(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date_preset': 'unknown'},
+            error_field='date_preset',
+            error_msg=(
+                "Select a valid choice. unknown is not one of the"
+                " available choices."))
+
+    def test_download_messages_unknown_date_from(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date_from': 'unknown'},
+            error_field='date_from',
+            error_msg="Enter a valid date.",
+            lead='<p class="lead">Start date errors:</p>')
+
+    def test_download_messages_unknown_date_to(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date_to': 'unknown'},
+            error_field='date_to',
+            error_msg="Enter a valid date.",
+            lead='<p class="lead">End date errors:</p>')
+
+    def test_download_messages_invalid_date_from(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date_from': '37/01/2015'},
+            error_field='date_from',
+            error_msg="Enter a valid date.",
+            lead='<p class="lead">Start date errors:</p>')
+
+    def test_download_messages_invalid_date_to(self):
+        self.check_download_messages_error(
+            {'format': 'csv', 'direction': 'inbound',
+             'date_to': '37/01/2015'},
+            error_field='date_to',
+            error_msg="Enter a valid date.",
+            lead='<p class="lead">End date errors:</p>')
 
     def test_message_list_pagination(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -791,32 +986,22 @@ class TestConversationViews(BaseConversationViewTestCase):
         response = self.client.get(self.get_view_url(conv, 'message_list'))
         self.assertContains(response, 'Messages for Foo')
 
-    def test_message_list_inbound_download_links_display(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
+    @mock.patch('go.conversation.view_definition.datetime.datetime',
+                Summer1969)
+    def test_message_list_download_modal_defaults(self):
+        conv = self.user_helper.create_conversation(
+            u'dummy', name=u'Foo', started=True)
         response = self.client.get(self.get_view_url(conv, 'message_list'))
-        inbound_json_url = ('%s?direction=inbound&format=json' %
-                            self.get_view_url(conv, 'export_messages'))
-        self.assertContains(response, 'href="%s"' % inbound_json_url)
-        self.assertContains(response, "Download received messages as JSON")
-        inbound_csv_url = ('%s?direction=inbound&format=csv' %
-                           self.get_view_url(conv, 'export_messages'))
-        self.assertContains(response, 'href="%s"' % inbound_csv_url)
-        self.assertContains(response, "Download received messages as CSV")
-
-    def test_message_list_outbound_download_links_display(self):
-        conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.get(
-            self.get_view_url(conv, 'message_list'), {
-                'direction': 'outbound'
-            })
-        outbound_json_url = ('%s?direction=outbound&format=json' %
-                             self.get_view_url(conv, 'export_messages'))
-        self.assertContains(response, 'href="%s"' % outbound_json_url)
-        self.assertContains(response, "Download sent messages as JSON")
-        outbound_csv_url = ('%s?direction=outbound&format=csv' %
-                            self.get_view_url(conv, 'export_messages'))
-        self.assertContains(response, 'href="%s"' % outbound_csv_url)
-        self.assertContains(response, "Download sent messages as CSV")
+        self.assertContains(response, 'checked>CSV')
+        self.assertNotContains(response, 'checked>JSON')
+        self.assertContains(response, 'checked>Received messages')
+        self.assertNotContains(response, 'checked>Sent messages')
+        self.assertContains(response, 'checked>All messages')
+        self.assertNotContains(response, 'checked>Today')
+        self.assertNotContains(response, 'checked>Last 7 days')
+        self.assertNotContains(response, 'checked>Last 30 days')
+        self.assertContains(response, 'value="01/12/1969" name="date_from"')
+        self.assertContains(response, 'value="01/12/1969" name="date_to"')
 
     def test_message_list_no_sensitive_msgs(self):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
@@ -857,16 +1042,16 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertContains(
             response,
             '<tr>'
-                '<td>Number of contacts messages were received from</td>'
-                '<td>21</td>'
+            '<td>Number of contacts messages were received from</td>'
+            '<td>21</td>'
             '</tr>',
             html=True)
 
         self.assertContains(
             response,
             '<tr>'
-                '<td>Number of contacts messages were sent to</td>'
-                '<td>23</td>'
+            '<td>Number of contacts messages were sent to</td>'
+            '<td>23</td>'
             '</tr>',
             html=True)
 
@@ -1140,149 +1325,3 @@ class TestConversationTasks(GoDjangoTestCase):
         attachment = self.get_attachment(email, attachment_file_name)
         zipfile = ZipFile(attachment, 'r')
         return zipfile.open(zipfile_file_name, 'r')
-
-    def test_export_conversation_messages_unsorted(self):
-        conv = self.create_conversation()
-        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-        self.assertEqual(
-            email.recipients(), [self.user_helper.get_django_user().email])
-        self.assertTrue(conv.name in email.subject)
-        self.assertTrue(conv.name in email.body)
-        fp = self.get_zipfile_attachment(
-            email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.DictReader(fp)
-        message_ids = [row['message_id'] for row in reader]
-        all_keys = set()
-        index_page = conv.mdb.batch_inbound_keys_page(conv.batch.key)
-        while index_page is not None:
-            all_keys.update(index_page)
-            index_page = index_page.next_page()
-        index_page = conv.mdb.batch_outbound_keys_page(conv.batch.key)
-        while index_page is not None:
-            all_keys.update(index_page)
-            index_page = index_page.next_page()
-        self.assertEqual(set(message_ids), all_keys)
-
-    def test_export_conversation_message_session_events(self):
-        conv = self.create_conversation(reply_count=0)
-        msg = self.msg_helper.make_stored_inbound(
-            conv, "inbound", from_addr='from-1',
-            session_event=TransportUserMessage.SESSION_NEW)
-
-        reply = self.msg_helper.make_reply(
-            msg, "reply", session_event=TransportUserMessage.SESSION_CLOSE)
-
-        self.msg_helper.store_outbound(conv, reply)
-
-        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-        fp = self.get_zipfile_attachment(
-            email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.DictReader(fp)
-        events = [row['session_event'] for row in reader]
-        self.assertEqual(
-            set(events),
-            set([TransportUserMessage.SESSION_NEW,
-                 TransportUserMessage.SESSION_CLOSE]))
-
-    def test_export_conversation_message_transport_types(self):
-        conv = self.create_conversation(reply_count=0)
-        # SMS message
-        self.msg_helper.make_stored_inbound(
-            conv, "inbound", from_addr='from-1', transport_type='sms')
-        # USSD message
-        self.msg_helper.make_stored_inbound(
-            conv, "inbound", from_addr='from-1', transport_type='ussd')
-
-        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-        fp = self.get_zipfile_attachment(
-            email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.DictReader(fp)
-        events = [row['transport_type'] for row in reader]
-        self.assertEqual(
-            set(events),
-            set(['sms', 'ussd']))
-
-    def test_export_conversation_message_directions(self):
-        conv = self.create_conversation()
-        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-        fp = self.get_zipfile_attachment(
-            email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.DictReader(fp)
-        directions = [row['direction'] for row in reader]
-        self.assertEqual(
-            set(directions),
-            set(['inbound', 'outbound']))
-
-    def test_export_conversation_delivery_status(self):
-        conv = self.create_conversation(reply_count=0)
-
-        msg = self.msg_helper.make_stored_outbound(
-            conv, "outbound", to_addr='from-1')
-        self.msg_helper.make_stored_delivery_report(msg=msg, conv=conv)
-
-        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-        fp = self.get_zipfile_attachment(
-            email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.DictReader(fp)
-        delivery_statuses = [row['delivery_status'] for row in reader]
-        self.assertEqual(set(delivery_statuses), set(['delivered']))
-
-    def test_export_conversation_ack(self):
-        conv = self.create_conversation(reply_count=0)
-
-        msg = self.msg_helper.make_stored_outbound(
-            conv, "outbound", to_addr='from-1')
-        self.msg_helper.make_stored_ack(msg=msg, conv=conv)
-
-        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-        fp = self.get_zipfile_attachment(
-            email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.DictReader(fp)
-        [row] = list(reader)
-        self.assertEqual(row['network_handover_status'], 'ack')
-
-    def test_export_conversation_nack(self):
-        conv = self.create_conversation(reply_count=0)
-
-        msg = self.msg_helper.make_stored_outbound(
-            conv, "outbound", to_addr='from-1')
-        self.msg_helper.make_stored_nack(msg=msg, conv=conv, nack_reason='foo')
-
-        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-        fp = self.get_zipfile_attachment(
-            email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.DictReader(fp)
-        [row] = list(reader)
-        self.assertEqual(row['network_handover_status'], 'nack')
-        self.assertEqual(row['network_handover_reason'], 'foo')
-
-    def test_export_conversation_endpoints(self):
-        conv = self.create_conversation(reply_count=0)
-
-        msg = self.msg_helper.make_outbound(
-            "outbound", conv=conv, to_addr='from-1')
-        msg.set_routing_endpoint('foo')
-        self.msg_helper.store_outbound(conv, msg)
-
-        msg = self.msg_helper.make_outbound(
-            "inbound", conv=conv, from_addr='from-1')
-        msg.set_routing_endpoint('bar')
-        self.msg_helper.store_inbound(conv, msg)
-
-        export_conversation_messages_unsorted(conv.user_account.key, conv.key)
-        [email] = mail.outbox
-        fp = self.get_zipfile_attachment(
-            email, 'messages-export.zip', 'messages-export.csv')
-        reader = csv.DictReader(fp)
-        [row1, row2] = list(reader)
-        self.assertEqual(row1['direction'], 'inbound')
-        self.assertEqual(row1['endpoint'], 'bar')
-        self.assertEqual(row2['direction'], 'outbound')
-        self.assertEqual(row2['endpoint'], 'foo')
