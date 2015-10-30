@@ -737,7 +737,7 @@ class TestConversationViews(BaseConversationViewTestCase):
 
     def check_download_messages(self, post_args, url_tmpl, filename_tmpl):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.post(
+        response = self.client.get(
             self.get_view_url(conv, 'export_messages'), post_args)
         self.assertEqual(
             response['X-Accel-Redirect'],
@@ -827,11 +827,11 @@ class TestConversationViews(BaseConversationViewTestCase):
             '&end=1985-09-05T00%%3A00%%3A00%%2B00%%3A00',
             '%(conv)s-outbound-19691105T0000-19850904T2359.csv')
 
-    def check_download_messages_error(self, post_args, error_field, error_msg,
+    def check_download_messages_error(self, get_args, error_field, error_msg,
                                       lead=''):
         conv = self.user_helper.create_conversation(u'dummy', started=True)
-        response = self.client.post((
-            self.get_view_url(conv, 'export_messages')), post_args)
+        response = self.client.get((
+            self.get_view_url(conv, 'export_messages')), get_args)
         self.assertEqual(response.status_code, 200)
         form = response.context['message_download_form']
         self.assertEqual(form.errors[error_field], [error_msg])
@@ -852,8 +852,8 @@ class TestConversationViews(BaseConversationViewTestCase):
                         '<ul class="errorlist"><li>%(msg)s</li></ul>'
                         '</li></ul>' % {
                             'field': error_field, 'msg': error_msg}),
-                    'download_form_post':
-                        dict((k, [v]) for k, v in post_args.items()),
+                    'download_form_data':
+                        dict((k, [v]) for k, v in get_args.items()),
                 }
             }),
         ])
@@ -1009,7 +1009,7 @@ class TestConversationViews(BaseConversationViewTestCase):
         response = self.client.get(self.get_view_url(conv, 'message_list'))
         self.assertContains(
             response,
-            '<form method="post" action="%s">'
+            '<form method="get" action="%s">'
             % self.get_view_url(conv, 'export_messages'))
 
     def test_message_list_no_sensitive_msgs(self):

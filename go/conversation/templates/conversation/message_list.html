@@ -145,7 +145,7 @@
             </div>
 
             <div class="modal-body">
-                <form method="post" action="{% conversation_screen conversation 'export_messages' %}">
+                <form method="get" action="{% conversation_screen conversation 'export_messages' %}">
                     {% csrf_token %}
                     {% with message_download_form as form %}
 

@@ -199,12 +199,12 @@ class ExportMessageView(ConversationApiView):
     view_name = 'export_messages'
     path_suffix = 'export_messages/'
 
-    def post(self, request, conversation):
-        form = MessageDownloadForm(request.POST)
+    def get(self, request, conversation):
+        form = MessageDownloadForm(request.GET)
         if not form.is_valid():
             extra = {
                 'download_form_errors': str(form.errors),
-                'download_form_post': request.POST,
+                'download_form_data': request.GET,
             }
             logger.error("Message download form contains errors.", extra=extra)
             view = self.view_def.get_view(
@@ -343,8 +343,6 @@ class MessageListView(ConversationTemplateView):
         )
 
     def post(self, request, conversation):
-        if self.message_download_form is not None:
-            return self.get(request, conversation)
         if '_send_one_off_reply' in request.POST:
             form = ReplyToMessageForm(request.POST)
             if form.is_valid():
