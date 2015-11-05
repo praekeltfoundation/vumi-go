@@ -21,8 +21,18 @@ class PendingTask(models.Model):
             self.task.label, self.task.task_type, self.task.account_id)
 
 
+class TaskManager(models.Manager):
+    def create(self, **kw):
+        task = super(TaskManager, self).create(**kw)
+        PendingTask.objects.create(
+            task=task, scheduled_for=task.scheduled_for)
+        return task
+
+
 class Task(models.Model):
     """ Record of a scheduled task. """
+
+    objects = TaskManager()
 
     STATUS_PENDING = 'pending'
     STATUS_COMPLETED = 'completed'
