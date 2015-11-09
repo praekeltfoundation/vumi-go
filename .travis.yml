@@ -26,7 +26,6 @@ cache:
   directories:
     - $HOME/.cache/pip
     - $HOME/downloads
-    - $HOME/.pyenv
 services:
   - postgresql
   - redis-server
