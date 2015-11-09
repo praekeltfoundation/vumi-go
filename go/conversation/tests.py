@@ -845,18 +845,19 @@ class TestConversationViews(BaseConversationViewTestCase):
             '</div>', html=True)
         self.assertContains(response, '$("#download-modal").modal("show");')
         self.assertEqual(self.error_logs, [
-            ('Message download form contains errors.', (), {
-                'extra': {
-                    'download_form_errors': (
-                        '<ul class="errorlist"><li>%(field)s'
-                        '<ul class="errorlist"><li>%(msg)s</li></ul>'
-                        '</li></ul>' % {
-                            'field': error_field, 'msg': error_msg}),
-                    'download_form_data':
-                        dict((k, [v]) for k, v in get_args.items()),
-                }
-            }),
+            ('Message download form contains errors: %s [GET: %r]',
+                (
+                    '<ul class="errorlist"><li>%(field)s'
+                    '<ul class="errorlist"><li>%(msg)s</li></ul>'
+                    '</li></ul>' % {
+                        'field': error_field, 'msg': error_msg},
+                    dict((unicode(k), [unicode(v)])
+                         for k, v in get_args.items()),
+                ),
+                {}),
         ])
+        # check that logs can be formatted
+        [log[0] % log[1] for log in self.error_logs]
 
     def test_download_messages_unknown_direction(self):
         self.check_download_messages_error(
