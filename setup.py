@@ -28,7 +28,6 @@ django_requires = [
     'django-debug-toolbar==0.9.4',
     'kombu>=2.5.14,<3.0',
     'librabbitmq==1.5.1',
-    'hiredis==0.1.4',
     'django-pipeline==1.3.6',
     'django-crispy-forms==1.4.0',
     'django-loginas==0.1.3',
