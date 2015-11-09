@@ -4,12 +4,10 @@ import json
 
 from twisted.internet.defer import (
     inlineCallbacks, returnValue, Deferred, succeed)
-from twisted.internet.error import DNSLookupError, ConnectionRefusedError
 from twisted.web.error import SchemeNotSupported
-from twisted.web.client import ResponseFailed
 
 from vumi.config import ConfigInt, ConfigText, ConfigList
-from vumi.utils import http_request_full, HttpTimeoutError
+from vumi.utils import http_request_full
 from vumi.transports.httprpc import httprpc
 from vumi import log
 
@@ -370,25 +368,20 @@ class NoStreamingHTTPWorker(GoApplicationWorker):
             resp = yield http_request_full(
                 url, data=data, headers=headers,
                 timeout=self.http_request_timeout)
-            if not (200 <= resp.code < 300):
-                # We didn't get a 2xx response.
+        except Exception as err:
+            log.warning('%s pushing message to %s (%r)'
+                        % (err.__class__.__name__, url, err))
+            if isinstance(err, SchemeNotSupported):
+                # retrying bad URLs won't help
+                retry_required = False
+        else:
+            if 200 <= resp.code < 300:
+                retry_required = False
+            else:
                 log.warning('Got unexpected response code %s from %s' % (
-                    resp.code, url))
+                            resp.code, url))
                 if not (500 <= resp.code < 600):
                     retry_required = False
-            else:
-                retry_required = False
-        except SchemeNotSupported:
-            retry_required = False  # retrying bad URLs won't help
-            log.warning('Unsupported scheme for URL: %s' % (url,))
-        except HttpTimeoutError:
-            log.warning("Timeout pushing message to %s" % (url,))
-        except DNSLookupError:
-            log.warning("DNS lookup error pushing message to %s" % (url,))
-        except ConnectionRefusedError:
-            log.warning("Connection refused pushing message to %s" % (url,))
-        except ResponseFailed:
-            log.warning("Response failed pushing message to %s" % (url,))
         if retry_required:
             yield self.schedule_push_retry(
                 user_account_key, url=url, method='POST', data=data,

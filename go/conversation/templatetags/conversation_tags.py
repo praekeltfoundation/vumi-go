@@ -56,3 +56,10 @@ def get_reply_form_for_message(message):
         })
     form.fields['to_addr'].widget.attrs['readonly'] = True
     return form
+
+
+@register.filter
+def checked(field, value):
+    if field.value() == value:
+        return "checked"
+    return ""

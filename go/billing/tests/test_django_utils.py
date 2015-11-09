@@ -3,6 +3,8 @@
 import json
 from decimal import Decimal
 
+import mock
+
 from go.vumitools.tests.helpers import djangotest_imports
 
 with djangotest_imports(globals()):
@@ -12,7 +14,8 @@ with djangotest_imports(globals()):
         mk_transaction, get_message_credits, get_storage_credits,
         get_session_credits, get_session_length_credits)
     from go.billing.django_utils import (
-        TransactionSerializer, chunked_query, load_account_credits)
+        TransactionSerializer, chunked_query, load_account_credits,
+        summarize)
 
 
 class TestTransactionSerializer(GoDjangoTestCase):
@@ -119,3 +122,149 @@ class TestLoadAccountCredits(GoDjangoTestCase):
         self.assertEqual(
             transaction.transaction_type,
             Transaction.TRANSACTION_TYPE_TOPUP)
+
+
+class TestSummarize(GoDjangoTestCase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.account = Account.objects.get(
+            user=self.user_helper.get_django_user())
+
+    def test_summarize(self):
+        account = self.account
+
+        mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=Decimal('1.0'),
+            session_cost=Decimal('10.0'))
+
+        mk_transaction(
+            account,
+            tag_name='b',
+            message_cost=Decimal('3.0'),
+            session_cost=Decimal('30.0'))
+
+        mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=Decimal('1.0'),
+            session_cost=Decimal('10.0'))
+
+        mk_transaction(
+            account,
+            tag_name='b',
+            message_cost=Decimal('4.0'),
+            session_cost=Decimal('40.0'))
+
+        mk_transaction(
+            account,
+            tag_name='c',
+            message_cost=Decimal('5.0'),
+            session_cost=Decimal('50.0'))
+
+        result = summarize(
+            Transaction.objects.all(),
+            ('tag_name', 'message_cost'),
+            ('message_cost', 'session_cost'))
+
+        self.assertEqual(result, [{
+            'tag_name': 'a',
+            'count': 2,
+            'message_cost': Decimal('1.0'),
+            'total_message_cost': Decimal('2.0'),
+            'total_session_cost': Decimal('20.0')
+        }, {
+            'tag_name': 'b',
+            'count': 1,
+            'message_cost': Decimal('3.0'),
+            'total_message_cost': Decimal('3.0'),
+            'total_session_cost': Decimal('30.0')
+        }, {
+            'tag_name': 'b',
+            'count': 1,
+            'message_cost': Decimal('4.0'),
+            'total_message_cost': Decimal('4.0'),
+            'total_session_cost': Decimal('40.0')
+        }, {
+            'tag_name': 'c',
+            'count': 1,
+            'message_cost': Decimal('5.0'),
+            'total_message_cost': Decimal('5.0'),
+            'total_session_cost': Decimal('50.0')
+        }])
+
+    def test_summarize_all_nones(self):
+        account = self.account
+
+        mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=None)
+
+        mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=None)
+
+        result = summarize(
+            Transaction.objects.all(),
+            ('tag_name', 'message_cost'),
+            ('message_cost',))
+
+        self.assertEqual(result, [{
+            'tag_name': 'a',
+            'count': 2,
+            'message_cost': None,
+            'total_message_cost': None,
+        }])
+
+    def test_summarize_some_nones(self):
+        account = self.account
+
+        mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=None)
+
+        mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=Decimal('23.0'))
+
+        result = summarize(
+            Transaction.objects.all(),
+            ('tag_name', 'message_cost'),
+            ('message_cost',))
+
+        self.assertEqual(result, [{
+            'tag_name': 'a',
+            'count': 1,
+            'message_cost': None,
+            'total_message_cost': None,
+        }, {
+            'tag_name': 'a',
+            'count': 1,
+            'message_cost': Decimal('23.0'),
+            'total_message_cost': Decimal('23.0'),
+        }])
+
+    @mock.patch('go.billing.django_utils.chunked_query',
+                new_callable=mock.MagicMock)
+    def test_summarize_chunks(self, chunked_query):
+        account = self.account
+
+        mk_transaction(
+            account,
+            tag_name='a',
+            message_cost=None)
+
+        transactions = Transaction.objects.all()
+        summarize(
+            transactions,
+            ('tag_name', 'message_cost'),
+            ('message_cost',),
+            items_per_chunk=3)
+
+        chunked_query.assert_called_with(transactions, 3)

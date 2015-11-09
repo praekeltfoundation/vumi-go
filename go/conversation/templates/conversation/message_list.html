@@ -4,158 +4,238 @@
 {% block content_extraclass %}conversations{% endblock %}
 
 {% block content_title %}
-  {% if message_direction == "inbound" %}
-    Messages from {{ inbound_uniques_count }} unique people
-  {% else %}
-    Messages to {{ outbound_uniques_count }} unique people
-  {% endif %}
+  Messages for {{ conversation.name }}
 {% endblock %}
 
-{% block content_actions_right %}
-    <div class="pull-left">
-        <span class="table-form-view-buttons">
-            <!-- TODO:
-            <button class="btn btn-default" disabled="disabled">Delete</button>
-            -->
-        </span>
-
-        &nbsp; With message:
-        <!-- These exist in the previous template, but not the new design.
-        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound">Download Received Stats</a>
-        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
-        -->
-        <a class="btn btn-default" data-toggle="modal" href="#expMessagesFrm">Export CSV via email</a>
-        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}&format=json">
-          Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as JSON
-        </a>
-        <a class="btn btn-default" href="{% conversation_screen conversation "export_messages" %}?direction={{message_direction}}&format=csv">
-          Download {% if message_direction == 'inbound' %}received{% else %}sent{% endif %} messages as CSV
-        </a>
-    </div>
-
+{% block content_actions_left %}
+  <button class="btn btn-primary" data-toggle="modal" data-target="#download-modal">Download</button>
 {% endblock %}
 
 {% block content_main %}
 
     <div class="row">
         <div class="col-md-3 sidebar" role="navigation">
-
             <ul class="nav nav-list">
                 <li>
-                    <a href="{% conversation_screen conversation 'message_list' %}" class="active">All messages</a>
+                <a href="{% conversation_screen conversation 'message_list' %}" class="active">All messages</a>
                 </li>
             </ul>
-
         </div>
+
         <div class="col-md-9">
 
             {% include "base/includes/messages.html" %}
-
-                <p>
-                    Averaging {{conversation.get_inbound_throughput}} messages
-                    per minute inbound and {{conversation.get_outbound_throughput}} messages
-                    per minute outbound.
-                </p>
-
-                <ul class="nav nav-tabs">
-                    <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
-                        <a href="?direction=inbound">
-                            {{inbound_message_paginator.count}} Received
-                        </a>
-                    </li>
-                    <li {% ifequal message_direction 'outbound' %}class="active"{% endifequal %}>
-                        <a href="?direction=outbound">
-                            {{outbound_message_paginator.count}} Sent
-                        </a>
-                    </li>
-                    <li>
-                        <a data-toggle="tab" href="#outbound-msg-stats">Statistics</a>
-                    </li>
-                </ul>
-                <div class="tab-content" id="message-page">
-                    <div class="tab-pane active">
-                      <form class="table-form-view" method="post" action="">
+            <ul class="nav nav-tabs">
+                <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
+                <a href="?direction=inbound">
+                    {{inbound_message_paginator.count}} Received
+                </a>
+                </li>
+                <li {% ifequal message_direction 'outbound' %}class="active"{% endifequal %}>
+                <a href="?direction=outbound">
+                    {{outbound_message_paginator.count}} Sent
+                </a>
+                </li>
+                <li>
+                <a data-toggle="tab" href="#outbound-msg-stats">Statistics</a>
+                </li>
+            </ul>
+            <div class="tab-content" id="message-page">
+                <div class="tab-pane active">
+                    <form class="table-form-view" method="post" action="">
                         {% if message_page.paginator.num_pages %}
-                          {% include "conversation/message_list_table.html" %}
+                        {% include "conversation/message_list_table.html" %}
                         {% else %}
-                          {% include "conversation/message_list_table_load.html" %}
+                        {% include "conversation/message_list_table_load.html" %}
                         {% endif %}
-                      </form>
-                    </div>
-                    <div class="tab-pane" id="outbound-msg-stats">
-                    {% with conversation.get_progress_status as status %}
-                      <div class="well">
-                        <table class="table table-condensed">
-                        <caption>
-                          <h3>Outbound message statistics</h3>
-                          <p>Sorry, we're having trouble tracking message statistics at the moment, but we are working on it.<br />That means the <strong>statistics might be out of date.</strong></p>
-                        </caption>
-                        <thead>
-                          <th></th><th>Count</th><th>Percentage</th>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <th>Total&nbsp;sent</th><td colspan="2">{{ status.sent }}</td>
-                          </tr>
-                          <tr class="info">
-                            <td colspan="3">Accepted by aggregator, MNO or other third-party for sending:</td>
-                          </tr>
-                          <tr>
-                            <th>Accepted</th><td>{{ status.ack }}</td>
-                            <td>{% percentage status.ack status.sent %}%</td>
-                          </tr>
-                          <tr>
-                            <th>Rejected</th><td>{{ status.nack}}</td>
-                            <td>{% percentage status.nack status.sent %}%</td>
-                          </tr>
-                          <tr class="info">
-                            <td colspan="3">Delivery reports:</td>
-                          </tr>
-                          <tr>
-                            <th>Delivered</th><td>{{ status.delivery_report_delivered }}</td>
-                            <td>{% percentage status.delivery_report_delivered status.sent %}%</td>
-                          </tr>
-                          <tr>
-                            <th>Pending</th><td>{{ status.delivery_report_pending }}</td>
-                            <td>{% percentage status.delivery_report_pending status.sent %}%</td>
-                          </tr>
-                          <tr>
-                            <th>Failed</th><td>{{ status.delivery_report_failed }}</td>
-                            <td>{% percentage status.delivery_report_failed status.sent %}%</td>
-                          </tr>
-                        </tbody>
-                        </table>
-                        <p>Note: not all channels support delivery reports.</p>
-                      </div>
-                    {% endwith %}
+                    </form>
+                </div>
+
+                <div class="tab-pane" id="outbound-msg-stats">
+                    <br/>
+
+                    <div class="row">
+                        <div class="col-md-offset-2 col-md-8">
+                            {% with conversation.get_progress_status as status %}
+                                <div class="well">
+                                    <h3 class="text-center">General statistics</h3>
+
+                                    <table class="table table-condensed">
+                                        <tr>
+                                            <td>Number of contacts messages were received from</td>
+                                            <td>{{ inbound_uniques_count }}</td>
+                                        </tr>
+
+                                        <tr>
+                                            <td>Number of contacts messages were sent to</td>
+                                            <td>{{ outbound_uniques_count }}</td>
+                                        </tr>
+
+                                        <tr>
+                                            <td>Average messages received per minute</td>
+                                            <td>{{ conversation.get_inbound_throughput }}</td>
+                                        </tr>
+
+                                        <tr>
+                                            <td>Average messages sent per minute</td>
+                                            <td>{{ conversation.get_outbound_throughput }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+
+                                <div class="well">
+                                    <table class="table table-condensed">
+                                        <h3 class="text-center">Send statistics</h3>
+
+                                        <thead>
+                                            <tr>
+                                                <th></th><th>Count</th><th>Percentage</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr>
+                                            <th>Total&nbsp;sent</th><td colspan="2">{{ status.sent }}</td>
+                                        </tr>
+                                        <tr class="info">
+                                            <td colspan="3">Accepted by aggregator, MNO or other third-party for sending:</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Accepted</th><td>{{ status.ack }}</td>
+                                            <td>{% percentage status.ack status.sent %}%</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Rejected</th><td>{{ status.nack}}</td>
+                                            <td>{% percentage status.nack status.sent %}%</td>
+                                        </tr>
+                                        <tr class="info">
+                                            <td colspan="3">Delivery reports:</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Delivered</th><td>{{ status.delivery_report_delivered }}</td>
+                                            <td>{% percentage status.delivery_report_delivered status.sent %}%</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Pending</th><td>{{ status.delivery_report_pending }}</td>
+                                            <td>{% percentage status.delivery_report_pending status.sent %}%</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Failed</th><td>{{ status.delivery_report_failed }}</td>
+                                            <td>{% percentage status.delivery_report_failed status.sent %}%</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                    <p>Note: not all channels support delivery reports.</p>
+                                </div>
+                            {% endwith %}
+                        </div>
                     </div>
                 </div>
+            </div>
         </div>
     </div>
 {% endblock %}
 
 {% block modals %}
-<div class="modal fade" id="expMessagesFrm">
+<div class="modal fade" id="download-modal">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <a class="close" data-dismiss="modal">×</a>
-                <h3>Schedule CSV Export of Messages</h3>
+                <a class="close" aria-label="Close" data-dismiss="modal">×</a>
+                <h3>Download messages for {{ conversation.name }}</h3>
             </div>
-            <form method="post" action="{% conversation_screen conversation "export_messages" %}" class="form-horizontal">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <p><span class="help-block">
-                      The file is potentially quite large and as a result the export
-                      will be done in the background. When completed the results will
-                      be sent to you as a CSV file attached to an email.
-                    </span><br/></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Schedule Export</button>
-                </div>
-            </form>
+
+            <div class="modal-body">
+                <form method="get" action="{% conversation_screen conversation 'export_messages' %}">
+                    {% csrf_token %}
+                    {% with message_download_form as form %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        We seem to be having an issue on our side processing
+                        your message download. We've been notified of the
+                        problem, please try again later, and let us know if the
+                        problem continues.
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label id="label-format">Format</label>
+
+                        <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-format">
+                            <label class="btn btn-default active">
+                                <input class="form-control" type="radio" autocomplete="off" name="format" value="csv" {{ form.format|checked:'csv'}}>CSV
+                            </label>
+                            <label class="btn btn-default">
+                                <input class="form-control" type="radio" autocomplete="off" name="format" value="json" {{ form.format|checked:'json'}}>JSON
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="label-message-direction">Message direction</label>
+
+                        <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-message-direction">
+                            <label class="btn btn-default active">
+                                <input type="radio" autocomplete="off" name="direction" value="inbound" {{ form.direction|checked:'inbound'}}>Received messages
+                            </label>
+                            <label class="btn btn-default">
+                                <input type="radio" autocomplete="off" name="direction" value="outbound" {{ form.direction|checked:'outbound'}}>Sent messages
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="label-date-range">Date range</label>
+
+                        <div class="list-group date-range" aria-labelledby="label-date-range">
+                            <label class="list-group-item date-preset active">
+                                <input type="radio" autocomplete="off" name="date_preset" value="all" {{ form.date_preset|checked:'all'}}>All messages
+                            </label>
+
+                            <label class="list-group-item date-preset">
+                                <input type="radio" autocomplete="off" name="date_preset" value="1d" {{ form.date_preset|checked:'1d'}}>Last 24 hours
+                            </label>
+
+                            <label class="list-group-item date-preset">
+                                <input type="radio" autocomplete="off" name="date_preset" value="7d" {{ form.date_preset|checked:'7d'}}>Last 7 days
+                            </label>
+
+                            <label class="list-group-item date-preset">
+                                <input type="radio" autocomplete="off" name="date_preset" value="30d" {{ form.date_preset|checked:'30d'}}>Last 30 days
+                            </label>
+
+                            <div class="list-group-item date-custom-toggle">
+                                Custom range
+                                <span class="pull-right glyphicon glyphicon-chevron-down" data-down="glyphicon-chevron-down" data-up="glyphicon-chevron-up"></span>
+                            </div>
+
+                            <div class="well collapse date-custom-container">
+                                <!--
+                                There appears to be a bug in the date picker causing orientation="top ..." to place the picker on
+                                the bottom and orientation="bottom ..." on top. We want it on top, so we are choosing 'bottom' here.
+                                !-->
+                                <div class="input-daterange input-group" data-provide="datepicker" data-date-format="dd/mm/yyyy" data-date-orientation="bottom left">
+                                    <input type="text" class="input-sm form-control" value="{{ form.date_from.value|date:"d/m/Y" }}" name="date_from">
+                                    <span class="input-group-addon">to</span>
+                                    <input type="text" class="input-sm form-control" value="{{ form.date_to.value|date:"d/m/Y" }}" name="date_to">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" type="submit">Download</button>
+                    {% endwith %}
+                </form>
+            </div>
         </div>
     </div>
-</div><!--/expContactFrm-->
+</div>
+{% endblock %}
+
+
+{% block ondomready %}
+new go.components.dates.DateRangeView({el: '.date-range'});
+{% if message_download_form.is_bound %}
+  $("#download-modal").modal("show");
+{% endif %}
 {% endblock %}

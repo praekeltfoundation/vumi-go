@@ -86,6 +86,7 @@ class ConversationType(Dict):
             'uuid': conv.key,
             'type': conv.conversation_type,
             'name': conv.name,
+            'status': conv.status,
             'description': conv.description,
             'endpoints': [
                 EndpointType.format_endpoint(
@@ -176,6 +177,7 @@ class RouterType(Dict):
             'uuid': router.key,
             'type': router.router_type,
             'name': router.name,
+            'status': router.status,
             'description': router.description,
             'channel_endpoints': [
                 EndpointType.format_endpoint(

@@ -19,7 +19,8 @@
     "backbone-relational": "0.8.6",
     "bootstrap": "3.0.0",
     "bootbox": "~4.0.0",
-    "diamondash": "~0.4"
+    "diamondash": "~0.4",
+    "bootstrap-datepicker": "~1.4.1"
   },
   "devDependencies": {
     "chai": "~1.7.2",
@@ -31,6 +32,10 @@
       "js": "dist/js/*",
       "css": "dist/css/*",
       "fonts": "dist/fonts/*"
+    },
+    "bootstrap-datepicker": {
+      "js": "dist/js/*",
+      "css": "dist/css/*"
     },
     "jquery-simulate": {
       "js": "jquery.simulate.js"
