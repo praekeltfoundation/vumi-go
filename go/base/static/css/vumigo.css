@@ -15,6 +15,7 @@ button {
 }
 .main-container {
   width: auto;
+  min-width: 650px;
   padding: 5px 25px;
 }
 .footer {
