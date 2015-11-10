@@ -49,7 +49,6 @@ class TestJsBoxApplication(VumiTestCase):
             'executable': nodejs_executable,
             'args': [sandboxer_js],
             'timeout': 10,
-            'rlimits': {"RLIMIT_AS": [256 * 1024 * 1024] * 2},
         })
 
     def setup_conversation(self, config=None, **kw):
