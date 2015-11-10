@@ -14,8 +14,7 @@ button {
   pointer-events: auto;
 }
 .main-container {
-  min-width: 650px;
-  max-width: none;
+  width: auto;
   padding: 5px 25px;
 }
 .footer {
