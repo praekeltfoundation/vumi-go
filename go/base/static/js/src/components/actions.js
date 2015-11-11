@@ -3,8 +3,6 @@
 // Reusable components for UI actions
 
 (function(exports) {
-  var Eventable = go.components.structures.Eventable;
-
   var PopoverView = go.components.views.PopoverView;
 
   var capitalise = go.utils.capitalise,
