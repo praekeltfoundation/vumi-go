@@ -20,7 +20,7 @@
     "bootbox": "~4.0.0",
     "diamondash": "~0.4",
     "bootstrap-datepicker": "~1.4.1",
-    "bootstrap": "3.3.5"
+    "bootstrap": "3.0.1"
   },
   "devDependencies": {
     "chai": "~1.7.2",

@@ -361,6 +361,8 @@ PIPELINE_TEMPLATE_FUNC = '_.template'
 PIPELINE_TEMPLATE_NAMESPACE = 'window.JST'
 PIPELINE_TEMPLATE_EXT = '.jst'
 
+PIPELINE_JS_COMPRESSOR = 'pipeline.compressors.uglifyjs.UglifyJSCompressor'
+
 PIPELINE_JS = {
     'vendor': {
         'source_filenames': static_paths(paths['client']['scripts']['vendor']),
