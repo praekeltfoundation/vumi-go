@@ -11,7 +11,7 @@ from twisted.internet.defer import inlineCallbacks, DeferredList
 from txjsonrpc.jsonrpc import addIntrospection
 from txjsonrpc.web.jsonrpc import JSONRPC
 
-from vumi.config import ConfigDict, ConfigText, ConfigServerEndpoint
+from vumi.config import ConfigDict, ConfigText, ConfigUrl, ConfigServerEndpoint
 from vumi.rpc import signature, Unicode, List
 from vumi.transports.httprpc import httprpc
 from vumi.utils import build_web_site
@@ -253,6 +253,9 @@ class GoApiWorker(BaseWorker):
         health_path = ConfigText(
             "The path to server the health resource on.", default='/health/',
             static=True)
+        auth_bouncer_url = ConfigUrl(
+            "The URL of authentication bouncer service.", required=False,
+            default=None, static=True)
         redis_manager = ConfigDict(
             "Redis client configuration.", default={}, static=True)
         riak_manager = ConfigDict(
@@ -278,7 +281,7 @@ class GoApiWorker(BaseWorker):
         self.realm = GoUserRealm(self._rpc_resource_for_user)
         site = build_web_site({
             config.web_path: GoUserAuthSessionWrapper(
-                self.realm, self.vumi_api),
+                self.realm, self.vumi_api, config.auth_bouncer_url),
             config.health_path: httprpc.HttpRpcHealthResource(self),
         })
         self._web_service = StreamServerEndpointService(

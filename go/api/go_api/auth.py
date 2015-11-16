@@ -7,6 +7,7 @@ from twisted.cred import portal, checkers, credentials, error
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.web import resource
 from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
+from twisted.web.iweb import ICredentialFactory
 
 
 class GoUserRealm(object):
@@ -47,11 +48,63 @@ class GoUserSessionAccessChecker(object):
         raise error.UnauthorizedLogin()
 
 
+class GoAuthBouncerCredentialFactory(BasicCredentialFactory):
+    implements(ICredentialFactory)
+
+    scheme = 'bearer'
+
+    def decode(self, response, request):
+        return GoAuthBouncerCredentials(request)
+
+
+class IGoAuthBouncerCredentials(credentials.ICredentials):
+    def get_request():
+        """ Return the request to be authenticated. """
+
+
+class GoAuthBouncerCredentials(object):
+    implements(IGoAuthBouncerCredentials)
+
+    def __init__(self, request):
+        self._request = request
+
+    def get_request(self):
+        return self._request
+
+
+class GoAuthBouncerAccessChecker(object):
+    """Checks that a username and password matches some constant (usually
+    "session") and a Go session id.
+    """
+
+    implements(checkers.ICredentialsChecker)
+    credentialInterfaces = (IGoAuthBouncerCredentials,)
+
+    def __init__(self, auth_bouncer_url):
+        self.auth_bouncer_url = auth_bouncer_url
+
+    @inlineCallbacks
+    def requestAvatarId(self, credentials):
+        request = credentials.get_request()
+        auth = request.getHeader('authorization')
+        if not auth:
+            # past-path for requests with no authorization header
+            raise error.UnauthorizedLogin()
+        # todo: bounce request to auth_bouncer_url
+        raise error.UnauthorizedLogin()
+
+
 class GoUserAuthSessionWrapper(HTTPAuthSessionWrapper):
-    def __init__(self, realm, vumi_api):
-        checkers = [
-            GoUserSessionAccessChecker(vumi_api.session_manager),
-        ]
+
+    AUTHENTICATION_REALM = "Vumi Go API"
+
+    def __init__(self, realm, vumi_api, auth_bouncer_url=None):
+        checkers = [GoUserSessionAccessChecker(vumi_api.session_manager)]
+        factories = [BasicCredentialFactory(self.AUTHENTICATION_REALM)]
+        if auth_bouncer_url:
+            checkers.append(GoAuthBouncerAccessChecker(auth_bouncer_url))
+            factories.append(
+                GoAuthBouncerCredentialFactory(self.AUTHENTICATION_REALM))
+
         p = portal.Portal(realm, checkers)
-        factory = BasicCredentialFactory("Vumi Go API")
-        super(GoUserAuthSessionWrapper, self).__init__(p, [factory])
+        super(GoUserAuthSessionWrapper, self).__init__(p, factories)
