@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 # -*- test-case-name: go.api.go_api.tests.test_auth -*-
 
+import urlparse
+
 from zope.interface import implements
+
+import treq
 
 from twisted.cred import portal, checkers, credentials, error
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -81,16 +85,29 @@ class GoAuthBouncerAccessChecker(object):
     credentialInterfaces = (IGoAuthBouncerCredentials,)
 
     def __init__(self, auth_bouncer_url):
-        self.auth_bouncer_url = auth_bouncer_url
+        self._auth_bouncer_url = auth_bouncer_url
+
+    @inlineCallbacks
+    def _auth_request(self, request):
+        auth = request.getHeader('Authorization')
+        if not auth:
+            returnValue(None)
+        auth_headers = {'Authorization': auth}
+        uri = urlparse.urljoin(self._auth_bouncer_url, request.path)
+        resp = yield treq.get(uri, headers=auth_headers, persistent=False)
+        if resp.code >= 400:
+            returnValue(None)
+        x_owner_id = resp.headers.getRawHeaders('X-Owner-Id')
+        if x_owner_id is None or len(x_owner_id) != 1:
+            returnValue(None)
+        returnValue(x_owner_id[0])
 
     @inlineCallbacks
     def requestAvatarId(self, credentials):
         request = credentials.get_request()
-        auth = request.getHeader('authorization')
-        if not auth:
-            # past-path for requests with no authorization header
-            raise error.UnauthorizedLogin()
-        # todo: bounce request to auth_bouncer_url
+        user_account_key = yield self._auth_request(request)
+        if user_account_key:
+            returnValue(user_account_key)
         raise error.UnauthorizedLogin()
 
 
