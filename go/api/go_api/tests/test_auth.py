@@ -13,7 +13,8 @@ from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 
 from go.api.go_api.auth import (
     GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper,
-    GoAuthBouncerCredentialFactory, IGoAuthBouncerCredentials)
+    GoAuthBouncerCredentialFactory, IGoAuthBouncerCredentials,
+    GoAuthBouncerCredentials)
 from go.api.go_api.session_manager import SessionManager
 from go.vumitools.tests.helpers import VumiApiHelper
 
@@ -100,6 +101,18 @@ class TestGoAuthBouncerCredentialFactory(VumiTestCase):
         response, request = object(), object()
         creds = factory.decode(response, request)
         self.assertTrue(IGoAuthBouncerCredentials.providedBy(creds))
+        self.assertEqual(creds.get_request(), request)
+
+
+class TestGoAuthBouncerCredentials(VumiTestCase):
+    def test_implements_IGoAuthBouncerCredentials(self):
+        request = object()
+        creds = GoAuthBouncerCredentials(request)
+        self.assertTrue(IGoAuthBouncerCredentials.providedBy(creds))
+
+    def test_get_request(self):
+        request = object()
+        creds = GoAuthBouncerCredentials(request)
         self.assertEqual(creds.get_request(), request)
 
 
