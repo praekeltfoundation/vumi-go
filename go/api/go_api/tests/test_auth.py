@@ -10,7 +10,6 @@ from twisted.web.test.test_web import DummyRequest
 from twisted.web.iweb import ICredentialFactory
 
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
-from vumi.tests.utils import MockHttpServer
 
 from go.api.go_api.auth import (
     GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper,
@@ -18,6 +17,7 @@ from go.api.go_api.auth import (
     GoAuthBouncerCredentials, GoAuthBouncerAccessChecker)
 from go.api.go_api.session_manager import SessionManager
 from go.vumitools.tests.helpers import VumiApiHelper
+from .utils import MockAuthServer
 
 import mock
 
@@ -115,26 +115,6 @@ class TestGoAuthBouncerCredentials(VumiTestCase):
         request = object()
         creds = GoAuthBouncerCredentials(request)
         self.assertEqual(creds.get_request(), request)
-
-
-class MockAuthServer(MockHttpServer):
-    def __init__(self):
-        self.responses = []
-        self.requests = []
-        super(MockAuthServer, self).__init__(self.handle_request)
-
-    def handle_request(self, request):
-        self.requests.append(request)
-        response = self.responses.pop(0)
-        for header, value in response['headers'].items():
-            request.setHeader(header, value)
-        request.setResponseCode(response['code'])
-        return response['body']
-
-    def add_response(self, code=200, body='', headers=None):
-        self.responses.append({
-            'code': code, 'body': body, 'headers': headers or {},
-        })
 
 
 class TestGoAuthBouncerAccessChecker(VumiTestCase):
