@@ -7,11 +7,13 @@ from twisted.cred.credentials import UsernamePassword
 from twisted.internet.defer import inlineCallbacks
 from twisted.web import resource
 from twisted.web.test.test_web import DummyRequest
+from twisted.web.iweb import ICredentialFactory
 
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 
 from go.api.go_api.auth import (
-    GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper)
+    GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper,
+    GoAuthBouncerCredentialFactory, IGoAuthBouncerCredentials)
 from go.api.go_api.session_manager import SessionManager
 from go.vumitools.tests.helpers import VumiApiHelper
 
@@ -82,6 +84,23 @@ class TestGoUserSessionAccessChecker(VumiTestCase):
         except error.UnauthorizedLogin:
             errored = True
         self.assertTrue(errored)
+
+
+class TestGoAuthBouncerCredentialFactory(VumiTestCase):
+    def test_implements_ICredentialsFactory(self):
+        factory = GoAuthBouncerCredentialFactory("Test Realm")
+        self.assertTrue(ICredentialFactory.providedBy(factory))
+
+    def test_scheme(self):
+        factory = GoAuthBouncerCredentialFactory("Test Realm")
+        self.assertEqual(factory.scheme, 'bearer')
+
+    def test_decode(self):
+        factory = GoAuthBouncerCredentialFactory("Test Realm")
+        response, request = object(), object()
+        creds = factory.decode(response, request)
+        self.assertTrue(IGoAuthBouncerCredentials.providedBy(creds))
+        self.assertEqual(creds.get_request(), request)
 
 
 class TestGoUserAuthSessionWrapper(VumiTestCase):
