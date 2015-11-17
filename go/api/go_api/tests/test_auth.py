@@ -10,11 +10,12 @@ from twisted.web.test.test_web import DummyRequest
 from twisted.web.iweb import ICredentialFactory
 
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
+from vumi.tests.utils import MockHttpServer
 
 from go.api.go_api.auth import (
     GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper,
     GoAuthBouncerCredentialFactory, IGoAuthBouncerCredentials,
-    GoAuthBouncerCredentials)
+    GoAuthBouncerCredentials, GoAuthBouncerAccessChecker)
 from go.api.go_api.session_manager import SessionManager
 from go.vumitools.tests.helpers import VumiApiHelper
 
@@ -114,6 +115,68 @@ class TestGoAuthBouncerCredentials(VumiTestCase):
         request = object()
         creds = GoAuthBouncerCredentials(request)
         self.assertEqual(creds.get_request(), request)
+
+
+class TestGoAuthBouncerAccessChecker(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        self.auth_responses = []
+        self.auth_requests = []
+        self.auth_server = MockHttpServer(self.handle_auth_request)
+        self.add_cleanup(self.auth_server.stop)
+        yield self.auth_server.start()
+        self.checker = GoAuthBouncerAccessChecker(self.auth_server.url)
+
+    def handle_auth_request(self, request):
+        self.auth_requests.append(request)
+        response = self.auth_responses.pop(0)
+        for header, value in response.get('headers', ()):
+            request.setHeader(header, value)
+        request.setResponseCode(response.get('code', 200))
+        return response.get('body', 'None')
+
+    def add_auth_response(self, **kw):
+        self.auth_responses.append(kw)
+
+    def mk_request(self, path='', token=None):
+        request = DummyRequest(path.split('/'))
+        request.path = path
+        if token is not None:
+            request.headers["authorization"] = "Bearer %s" % (token,)
+        return request
+
+    @inlineCallbacks
+    def test_request_avatar_id_no_auth_header(self):
+        request = self.mk_request()
+        creds = GoAuthBouncerCredentials(request)
+        yield self.assertFailure(
+            self.checker.requestAvatarId(creds), error.UnauthorizedLogin)
+
+    @inlineCallbacks
+    def test_request_avatar_id_unauthorized_response(self):
+        self.add_auth_response(code=401, body="Unauthorized")
+        request = self.mk_request(token="eeep==")
+        creds = GoAuthBouncerCredentials(request)
+        yield self.assertFailure(
+            self.checker.requestAvatarId(creds), error.UnauthorizedLogin)
+
+    @inlineCallbacks
+    def test_request_avatar_id_no_owner_id(self):
+        self.add_auth_response(code=200, body="No owner id")
+        request = self.mk_request(token="eeep==")
+        creds = GoAuthBouncerCredentials(request)
+        yield self.assertFailure(
+            self.checker.requestAvatarId(creds), error.UnauthorizedLogin)
+
+    @inlineCallbacks
+    def test_request_avatar_id_authorized(self):
+        self.add_auth_response(
+            code=200, body="Just right",
+            headers=[("X-Owner-ID", "owner-1")])
+        request = self.mk_request(token="eeep==")
+        creds = GoAuthBouncerCredentials(request)
+        owner = yield self.checker.requestAvatarId(creds)
+        self.assertEqual(owner, "owner-1")
 
 
 class TestGoUserAuthSessionWrapper(VumiTestCase):
