@@ -279,9 +279,11 @@ class GoApiWorker(BaseWorker):
             'riak_manager': config.riak_manager,
         })
         self.realm = GoUserRealm(self._rpc_resource_for_user)
+        auth_bouncer_url = (
+            config.auth_bouncer_url and config.auth_bouncer_url.geturl())
         site = build_web_site({
             config.web_path: GoUserAuthSessionWrapper(
-                self.realm, self.vumi_api, config.auth_bouncer_url),
+                self.realm, self.vumi_api, auth_bouncer_url),
             config.health_path: httprpc.HttpRpcHealthResource(self),
         })
         self._web_service = StreamServerEndpointService(
