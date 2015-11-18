@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 base_requires = [
     'vumi>=0.5.21',
-    'vxsandbox>=0.5.0',
+    'vxsandbox>=0.6.0',
     'vxpolls',
     'vumi-wikipedia>=0.2.1',
     'mock==1.0.1',
@@ -14,7 +14,7 @@ django_requires = [
     'Django==1.5.8',
     'gunicorn==0.15.0',
     'South==0.8.2',
-    'psycopg2==2.4.6',
+    'psycopg2cffi',
     'djorm-ext-core',
     'celery==3.0.23',
     'django-celery==3.0.23',
@@ -28,7 +28,6 @@ django_requires = [
     'django-debug-toolbar==0.9.4',
     'kombu>=2.5.14,<3.0',
     'librabbitmq==1.5.1',
-    'hiredis==0.1.4',
     'django-pipeline==1.3.6',
     'django-crispy-forms==1.4.0',
     'django-loginas==0.1.3',

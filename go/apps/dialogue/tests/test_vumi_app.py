@@ -47,6 +47,7 @@ class TestDialogueApplication(VumiTestCase):
             'executable': nodejs_executable,
             'args': [sandboxer_js],
             'timeout': 10,
+            'rlimits': {"RLIMIT_AS": [256 * 1024 * 1024] * 2},
             'app_context': (
                 "{require: function(m) {"
                 " if (['moment', 'url', 'querystring', 'crypto', 'lodash',"
