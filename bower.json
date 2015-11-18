@@ -17,10 +17,10 @@
     "jsplumb": "~1.7.5",
     "lodash": "~2.0.0",
     "backbone-relational": "0.8.6",
-    "bootstrap": "3.0.0",
     "bootbox": "~4.0.0",
     "diamondash": "~0.4",
-    "bootstrap-datepicker": "~1.4.1"
+    "bootstrap-datepicker": "~1.4.1",
+    "bootstrap": "3.3.5"
   },
   "devDependencies": {
     "chai": "~1.7.2",

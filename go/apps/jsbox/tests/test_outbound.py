@@ -8,7 +8,8 @@ from vxsandbox.tests.utils import DummyAppWorker
 from vxsandbox.resources.tests.utils import ResourceTestCaseBase
 
 from vumi.message import TransportUserMessage
-from vumi.tests.utils import LogCatcher, VumiTestCase
+from vumi.tests.helpers import VumiTestCase
+from vumi.tests.utils import LogCatcher
 
 from go.apps.jsbox.outbound import (
     GoOutboundResource, mk_inbound_push_trigger, is_inbound_push_trigger,
