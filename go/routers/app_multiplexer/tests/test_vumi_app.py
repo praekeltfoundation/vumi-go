@@ -49,8 +49,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         session = yield session_manager.load_session(user_id)
         if 'created_at' in session:
             del session['created_at']
-        self.assertEqual(session, expected_session,
-                         msg="Unexpected session data")
+        self.assertEqual(session, expected_session)
 
     @inlineCallbacks
     def test_start(self):
