@@ -248,6 +248,7 @@ SOUTH_TESTS_MIGRATE = False
 SOUTH_MIGRATION_MODULES = {
     'auth': 'go.base.auth_migrations',
     'registration': 'go.base.registration_migrations',
+    'djcelery': 'djcelery.south_migrations',
 }
 
 BROKER_HOST = "localhost"
