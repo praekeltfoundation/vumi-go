@@ -209,6 +209,10 @@ class TestStreamingHTTPWorker(VumiTestCase):
 
         receiver.disconnect()
 
+        # Sometimes messages arrive out of order if we're hitting real redis.
+        if ra1['event_id'] != ack1['event_id']:
+            ra1, ra2 = ra2, ra1
+
         self.assertEqual(ack1['event_id'], ra1['event_id'])
         self.assertEqual(ack2['event_id'], ra2['event_id'])
         self.assertEqual(errors.size, None)
