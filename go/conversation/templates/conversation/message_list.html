@@ -172,7 +172,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label id="label-message-direction">Message direction</label>
+                        <label id="label-message-direction">Message type</label>
+                        <button type="button" class="btn btn-xs btn-default" data-toggle="collapse" data-target="#download-modal-type-help" aria-expanded="false" aria-controls="collapse"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></button>
 
                         <div class="input-group btn-group" data-toggle="buttons" aria-labelledby="label-message-direction">
                             <label class="btn btn-default active">
@@ -184,6 +185,25 @@
                             <label class="btn btn-default">
                                 <input type="radio" autocomplete="off" name="direction" value="events" {{ form.direction|checked:'events'}}>Events
                             </label>
+                        </div>
+
+                        <div class="collapse alert alert-info alert-dismissible" role="alert" id="download-modal-type-help" data-toggle="collapse" data-target="#download-modal-type-help" aria-expanded="false">
+                          <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                          <p>
+                            Events are a special type of message showing the state of a message sent by a conversation.
+                          </p>
+
+                          <p>
+                            An <i>ack</i> message means the message has reached the side we are sending the message to (e.g. the network or aggregator).
+                          </p>
+
+                          <p>
+                            A <i>nack</i> means the message failed to reach the other side
+                          </p>
+
+                          <p>
+                            A <i>delivery report (DR)</i> message shows whether the message has been <i>delivered</i> to the end user, whether delivery is <i>pending</i>, or if delivery has <i>failed</i>.
+                          </p>
                         </div>
                     </div>
 
