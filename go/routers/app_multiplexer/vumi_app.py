@@ -119,23 +119,21 @@ class ApplicationMultiplexer(GoRouterWorker):
             state = session['state']
 
         try:
-            handler = self.handlers[state]
-            next_state, session_update, inbound, outbound = yield handler(
-                config, session, msg)
-            if next_state is None:
+            state_resp = yield self.handlers[state](config, session, msg)
+            if state_resp.next_state is None:
                 # Session terminated (right now, just in the case of a
                 # administrator-initiated configuration change
                 yield session_manager.clear_session(user_id)
             else:
-                session['state'] = next_state
-                session.update(session_update)
-                if state != next_state:
+                session['state'] = state_resp.next_state
+                session.update(state_resp.session_update)
+                if state != state_resp.next_state:
                     log.msg("State transition for user %s: %s => %s" %
-                            (user_id, state, next_state))
+                            (user_id, state, state_resp.next_state))
                 yield session_manager.save_session(user_id, session)
-            for msg, endpoint in inbound:
+            for msg, endpoint in state_resp.inbound:
                 yield self.publish_inbound(msg, endpoint)
-            for msg in outbound:
+            for msg in state_resp.outbound:
                 yield self.publish_outbound(msg)
         except:
             log.err()
@@ -153,28 +151,30 @@ class ApplicationMultiplexer(GoRouterWorker):
         endpoints = json.dumps(
             [entry['endpoint'] for entry in config.entries]
         )
-        return succeed((
-            self.STATE_SELECT, {'endpoints': endpoints}, [], [reply_msg]))
+        return succeed(StateResponse(
+            self.STATE_SELECT, {'endpoints': endpoints}, outbound=[reply_msg]))
 
     def handle_state_select(self, config, session, msg):
         endpoint = self.get_endpoint_for_choice(msg, session)
         if endpoint is None:
             reply_msg = msg.reply(config.invalid_input_message)
-            return succeed((self.STATE_BAD_INPUT, {}, [], [reply_msg]))
+            return succeed(StateResponse(
+                self.STATE_BAD_INPUT, outbound=[reply_msg]))
 
         if endpoint not in self.target_endpoints(config):
             log.msg(("Router configuration change forced session "
                      "termination for user %s" % msg['from_addr']))
             error_reply_msg = self.make_error_reply(msg, config)
-            return succeed((None, {}, [], [error_reply_msg]))
+            return succeed(StateResponse(None, outbound=[error_reply_msg]))
 
         forwarded_msg = self.forwarded_message(
             msg, content=None,
             session_event=TransportUserMessage.SESSION_NEW)
         log.msg("Switched to endpoint '%s' for user %s" %
                 (endpoint, msg['from_addr']))
-        return succeed((self.STATE_SELECTED, {'active_endpoint': endpoint},
-                        [(forwarded_msg, endpoint)], []))
+        return succeed(StateResponse(
+            self.STATE_SELECTED, {'active_endpoint': endpoint},
+            inbound=[(forwarded_msg, endpoint)]))
 
     def handle_state_selected(self, config, session, msg):
         active_endpoint = session['active_endpoint']
@@ -182,16 +182,17 @@ class ApplicationMultiplexer(GoRouterWorker):
             log.msg(("Router configuration change forced session "
                      "termination for user %s" % msg['from_addr']))
             error_reply_msg = self.make_error_reply(msg, config)
-            return succeed((None, {}, [], [error_reply_msg]))
+            return succeed(StateResponse(None, outbound=[error_reply_msg]))
         else:
-            return succeed(
-                (self.STATE_SELECTED, {}, [(msg, active_endpoint)], []))
+            return succeed(StateResponse(
+                self.STATE_SELECTED, inbound=[(msg, active_endpoint)]))
 
     def handle_state_bad_input(self, config, session, msg):
         choice = self.get_menu_choice(msg, (1, 1))
         if choice is None:
             reply_msg = msg.reply(config.invalid_input_message)
-            return succeed((self.STATE_BAD_INPUT, {}, [], [reply_msg]))
+            return succeed(StateResponse(
+                self.STATE_BAD_INPUT, outbound=[reply_msg]))
         else:
             return self.handle_state_start(config, session, msg)
 
@@ -254,3 +255,11 @@ class ApplicationMultiplexer(GoRouterWorker):
     def create_menu(self, config):
         labels = [entry['label'] for entry in config.entries]
         return (config.menu_title['content'] + "\n" + mkmenu(labels))
+
+
+class StateResponse(object):
+    def __init__(self, state, session_update=None, inbound=(), outbound=()):
+        self.next_state = state
+        self.session_update = session_update or {}
+        self.inbound = inbound
+        self.outbound = outbound
