@@ -20,7 +20,7 @@ matrix:
     # Test on pypy. We need to install our own because 2.5.1 is too old.
     # Also, we hit an obscure GC bug in pypy<=2.6.0 so we need at least 2.6.1.
     - python: "pypy"
-      env: PYPY_VERSION="4.0.0" VUMIGO_TEST_DB=postgres NO_COVERAGE=1
+      env: PYPY_VERSION="4.0.1" VUMIGO_TEST_DB=postgres NO_COVERAGE=1
 
 cache:
   directories:
