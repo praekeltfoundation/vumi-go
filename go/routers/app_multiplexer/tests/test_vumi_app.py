@@ -498,7 +498,7 @@ class TestApplicationMultiplexerRouter(VumiTestCase):
         unpause_handler_d.callback(None)
 
         # assert that the user received a response
-        [msg] = self.router_helper.ri.get_dispatched_outbound()
+        [msg] = yield self.router_helper.ri.wait_for_dispatched_outbound()
         self.assertEqual(msg['content'],
                          'Please select a choice.\n1) Flappy Bird')
         # assert that session data updated correctly
