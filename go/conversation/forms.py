@@ -73,6 +73,7 @@ class MessageDownloadForm(forms.Form):
         required=True, initial='inbound',
         choices=[
             ('inbound', 'inbound'), ('outbound', 'outbound'),
+            ('events', 'events'),
         ])
 
     date_preset = forms.ChoiceField(

@@ -183,6 +183,7 @@ class TestMessageDownloadForm(GoDjangoTestCase):
     def test_direction_validation(self):
         self.assert_field_valid('direction', 'inbound')
         self.assert_field_valid('direction', 'outbound')
+        self.assert_field_valid('direction', 'events')
         self.assert_field_invalid('direction', None, 'This field is required.')
         self.assert_field_invalid(
             'direction', 'meep',
@@ -781,6 +782,22 @@ class TestConversationViews(BaseConversationViewTestCase):
 
     @mock.patch('go.conversation.forms.datetime.datetime',
                 Summer1969)
+    def test_download_json_events(self):
+        self.check_download_messages(
+            {'format': 'json', 'direction': 'events'},
+            '/message_store_exporter/%(batch)s/events.json',
+            '%(conv)s-events-everything.json')
+
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
+    def test_download_csv_events(self):
+        self.check_download_messages(
+            {'format': 'csv', 'direction': 'events'},
+            '/message_store_exporter/%(batch)s/events.csv',
+            '%(conv)s-events-everything.csv')
+
+    @mock.patch('go.conversation.forms.datetime.datetime',
+                Summer1969)
     def test_download_messages_date_preset_all(self):
         self.check_download_messages(
             {'format': 'csv', 'direction': 'outbound', 'date_preset': 'all'},
@@ -987,20 +1004,23 @@ class TestConversationViews(BaseConversationViewTestCase):
         response = self.client.get(self.get_view_url(conv, 'message_list'))
         self.assertContains(response, 'Messages for Foo')
 
+    def assert_radio_checked(self, response, checked, other):
+        self.assertContains(response, 'checked>%s' % checked)
+        for item in other:
+            self.assertNotContains(response, 'checked>%s' % item)
+            self.assertContains(response, '>%s' % item)
+
     @mock.patch('go.conversation.view_definition.datetime.datetime',
                 Summer1969)
     def test_message_list_download_modal_defaults(self):
         conv = self.user_helper.create_conversation(
             u'dummy', name=u'Foo', started=True)
         response = self.client.get(self.get_view_url(conv, 'message_list'))
-        self.assertContains(response, 'checked>CSV')
-        self.assertNotContains(response, 'checked>JSON')
-        self.assertContains(response, 'checked>Received messages')
-        self.assertNotContains(response, 'checked>Sent messages')
-        self.assertContains(response, 'checked>All messages')
-        self.assertNotContains(response, 'checked>Today')
-        self.assertNotContains(response, 'checked>Last 7 days')
-        self.assertNotContains(response, 'checked>Last 30 days')
+        self.assert_radio_checked(response, 'CSV', ['JSON'])
+        self.assert_radio_checked(response, 'Received messages', [
+            'Sent messages', 'Events'])
+        self.assert_radio_checked(response, 'All messages', [
+            'Last 24 hours', 'Last 7 days', 'Last 30 days'])
         self.assertContains(response, 'value="01/12/1969" name="date_from"')
         self.assertContains(response, 'value="01/12/1969" name="date_to"')
 
