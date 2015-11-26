@@ -3,7 +3,7 @@
 
 import urlparse
 
-from zope.interface import implements
+from zope.interface import implementer
 
 import treq
 
@@ -14,8 +14,8 @@ from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
 from twisted.web.iweb import ICredentialFactory
 
 
+@implementer(portal.IRealm)
 class GoUserRealm(object):
-    implements(portal.IRealm)
 
     def __init__(self, resource_for_user):
         self._resource_for_user = resource_for_user
@@ -27,12 +27,12 @@ class GoUserRealm(object):
         raise NotImplementedError()
 
 
+@implementer(checkers.ICredentialsChecker)
 class GoUserSessionAccessChecker(object):
     """Checks that a username and password matches some constant (usually
     "session") and a Go session id.
     """
 
-    implements(checkers.ICredentialsChecker)
     credentialInterfaces = (credentials.IUsernamePassword,)
 
     EXPECTED_USERNAME = "session_id"
@@ -52,8 +52,8 @@ class GoUserSessionAccessChecker(object):
         raise error.UnauthorizedLogin()
 
 
+@implementer(ICredentialFactory)
 class GoAuthBouncerCredentialFactory(BasicCredentialFactory):
-    implements(ICredentialFactory)
 
     scheme = 'bearer'
 
@@ -66,8 +66,8 @@ class IGoAuthBouncerCredentials(credentials.ICredentials):
         """ Return the request to be authenticated. """
 
 
+@implementer(IGoAuthBouncerCredentials)
 class GoAuthBouncerCredentials(object):
-    implements(IGoAuthBouncerCredentials)
 
     def __init__(self, request):
         self._request = request
@@ -76,12 +76,12 @@ class GoAuthBouncerCredentials(object):
         return self._request
 
 
+@implementer(checkers.ICredentialsChecker)
 class GoAuthBouncerAccessChecker(object):
     """Checks that a username and password matches some constant (usually
     "session") and a Go session id.
     """
 
-    implements(checkers.ICredentialsChecker)
     credentialInterfaces = (IGoAuthBouncerCredentials,)
 
     def __init__(self, auth_bouncer_url):
