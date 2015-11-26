@@ -508,6 +508,9 @@ class TestGoApiWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_invalid_auth(self):
+        """ When no authentication is provided, a request should be rejected
+            with a 401 Unauthorized response.
+        """
         worker, proxy = yield self.get_api_worker(auth=False)
         try:
             yield proxy.callRemote('system.listMethods')
@@ -518,12 +521,18 @@ class TestGoApiWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_valid_session_auth(self):
+        """ When correct session information is provided via basic
+            authentication, a request should succeed.
+        """
         worker, proxy = yield self.get_api_worker(auth="session")
         yield proxy.callRemote('system.listMethods')
         # if we reach here the proxy call didn't throw an authentication error
 
     @inlineCallbacks
     def test_valid_bearer_auth(self):
+        """ When a correct token is provided via bearer authentication, a
+            request should succeed.
+        """
         worker, proxy = yield self.get_api_worker(auth="bearer")
         yield proxy.callRemote('system.listMethods')
         # if we reach here the proxy call didn't throw an authentication error
