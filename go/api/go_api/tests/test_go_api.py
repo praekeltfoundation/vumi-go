@@ -508,8 +508,9 @@ class TestGoApiWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_invalid_auth(self):
-        """ When no authentication is provided, a request should be rejected
-            with a 401 Unauthorized response.
+        """
+        When no authentication is provided, a request should be rejected with a
+        401 Unauthorized response.
         """
         worker, proxy = yield self.get_api_worker(auth=False)
         try:
@@ -521,8 +522,9 @@ class TestGoApiWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_valid_session_auth(self):
-        """ When correct session information is provided via basic
-            authentication, a request should succeed.
+        """
+        When correct session information is provided via basic authentication,
+        a request should succeed.
         """
         worker, proxy = yield self.get_api_worker(auth="session")
         yield proxy.callRemote('system.listMethods')
@@ -530,8 +532,9 @@ class TestGoApiWorker(VumiTestCase):
 
     @inlineCallbacks
     def test_valid_bearer_auth(self):
-        """ When a correct token is provided via bearer authentication, a
-            request should succeed.
+        """
+        When a correct token is provided via bearer authentication, a request
+        should succeed.
         """
         worker, proxy = yield self.get_api_worker(auth="bearer")
         yield proxy.callRemote('system.listMethods')

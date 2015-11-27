@@ -90,19 +90,23 @@ class TestGoUserSessionAccessChecker(VumiTestCase):
 
 class TestGoAuthBouncerCredentialFactory(VumiTestCase):
     def test_implements_ICredentialsFactory(self):
-        """ Instances should provide the ICredentialFactory interface. """
+        """
+        Instances should provide the ICredentialFactory interface.
+        """
         factory = GoAuthBouncerCredentialFactory("Test Realm")
         self.assertTrue(ICredentialFactory.providedBy(factory))
 
     def test_scheme(self):
-        """ Instances should have the scheme 'bearer'. """
+        """
+        Instances should have the scheme 'bearer'.
+        """
         factory = GoAuthBouncerCredentialFactory("Test Realm")
         self.assertEqual(factory.scheme, 'bearer')
 
     def test_decode(self):
-        """ .decode() should return credentials that provide the
-            IGoAuthBouncerCredentials interface and contain the original
-            request.
+        """
+        .decode() should return credentials that provide the
+        IGoAuthBouncerCredentials interface and contain the original request.
         """
         factory = GoAuthBouncerCredentialFactory("Test Realm")
         response, request = object(), object()
@@ -113,15 +117,17 @@ class TestGoAuthBouncerCredentialFactory(VumiTestCase):
 
 class TestGoAuthBouncerCredentials(VumiTestCase):
     def test_implements_IGoAuthBouncerCredentials(self):
-        """ Instances should provide the IGoAuthBouncerCredentials interface.
+        """
+        Instances should provide the IGoAuthBouncerCredentials interface.
         """
         request = object()
         creds = GoAuthBouncerCredentials(request)
         self.assertTrue(IGoAuthBouncerCredentials.providedBy(creds))
 
     def test_get_request(self):
-        """ .get_request() should return the request object given to the
-            credential constructor.
+        """
+        .get_request() should return the request object given to the credential
+        constructor.
         """
         request = object()
         creds = GoAuthBouncerCredentials(request)
@@ -145,8 +151,8 @@ class TestGoAuthBouncerAccessChecker(VumiTestCase):
 
     @inlineCallbacks
     def test_request_avatar_id_no_auth_header(self):
-        """ When no authentication header is present, authentication should
-            fail.
+        """
+        When no authentication header is present, authentication should fail.
         """
         request = self.mk_request()
         creds = GoAuthBouncerCredentials(request)
@@ -155,8 +161,9 @@ class TestGoAuthBouncerAccessChecker(VumiTestCase):
 
     @inlineCallbacks
     def test_request_avatar_id_unauthorized_response(self):
-        """ When the authentication server returns a 401 response,
-            authentication should fail.
+        """
+        When the authentication server returns a 401 response, authentication
+        should fail.
         """
         self.auth.add_response(code=401, body="Unauthorized")
         request = self.mk_request(token="eeep==")
@@ -166,8 +173,9 @@ class TestGoAuthBouncerAccessChecker(VumiTestCase):
 
     @inlineCallbacks
     def test_request_avatar_id_no_owner_id(self):
-        """ When the authentication server does not return an X-Owner-ID
-            header, authentication should fail.
+        """
+        When the authentication server does not return an X-Owner-ID header,
+        authentication should fail.
         """
         self.auth.add_response(code=200, body="No owner id")
         request = self.mk_request(token="eeep==")
@@ -177,9 +185,10 @@ class TestGoAuthBouncerAccessChecker(VumiTestCase):
 
     @inlineCallbacks
     def test_request_avatar_id_authorized(self):
-        """ When the authentication server returns an X-Owner-ID,
-            authorization should succeed and the user returned should be the
-            owner specified in the header.
+        """
+        When the authentication server returns an X-Owner-ID, authorization
+        should succeed and the user returned should be the owner specified in
+        the header.
         """
         self.auth.add_response(
             code=200, body="Just right", headers={"X-Owner-ID": "owner-1"})
@@ -240,8 +249,9 @@ class TestGoUserAuthSessionWrapper(VumiTestCase):
 
     @inlineCallbacks
     def test_auth_basic_success(self):
-        """ When correct session information is provided via basic
-            authentication, a request should succeed.
+        """
+        When correct session information is provided via basic authentication,
+        a request should succeed.
         """
         session = {}
         self.vumi_api.session_manager.set_user_account_key(session, u"user-1")
@@ -253,8 +263,9 @@ class TestGoUserAuthSessionWrapper(VumiTestCase):
 
     @inlineCallbacks
     def test_auth_bearer_success(self):
-        """ When a correct token is provided via bearer authentication, a
-            request should succeed.
+        """
+        When a correct token is provided via bearer authentication, a request
+        should succeed.
         """
         self.auth.add_response(code=200, headers={'X-Owner-ID': 'user-1'})
         wrapper = self.mk_wrapper("FOO", bouncer=True)
@@ -263,8 +274,9 @@ class TestGoUserAuthSessionWrapper(VumiTestCase):
 
     @inlineCallbacks
     def test_auth_failure(self):
-        """ When no authentication is provided, a request should be rejected
-            with a 401 Unauthorized response.
+        """
+        When no authentication is provided, a request should be rejected with a
+        401 Unauthorized response.
         """
         wrapper = self.mk_wrapper("FOO")
         request = self.mk_request()
