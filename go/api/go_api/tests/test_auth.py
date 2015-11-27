@@ -142,9 +142,9 @@ class TestGoAuthBouncerAccessChecker(VumiTestCase):
         yield self.auth.start()
         self.checker = GoAuthBouncerAccessChecker(self.auth.url)
 
-    def mk_request(self, path='', token=None):
-        request = DummyRequest(path.split('/'))
-        request.path = path
+    def mk_request(self, token=None):
+        request = DummyRequest([''])
+        request.path = ''
         if token is not None:
             request.headers["authorization"] = "Bearer %s" % (token,)
         return request
