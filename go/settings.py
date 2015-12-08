@@ -1,9 +1,11 @@
-
 # Django settings for go project.
 import os
 import djcelery
 import yaml
 
+# Tell psycopg2cffi to impersonate psycopg2
+from psycopg2cffi import compat
+compat.register()
 
 djcelery.setup_loader()
 
@@ -247,6 +249,7 @@ SOUTH_TESTS_MIGRATE = False
 SOUTH_MIGRATION_MODULES = {
     'auth': 'go.base.auth_migrations',
     'registration': 'go.base.registration_migrations',
+    'djcelery': 'djcelery.south_migrations',
 }
 
 BROKER_HOST = "localhost"
@@ -365,6 +368,8 @@ PIPELINE_CSS = {
 PIPELINE_TEMPLATE_FUNC = '_.template'
 PIPELINE_TEMPLATE_NAMESPACE = 'window.JST'
 PIPELINE_TEMPLATE_EXT = '.jst'
+
+PIPELINE_JS_COMPRESSOR = 'pipeline.compressors.uglifyjs.UglifyJSCompressor'
 
 PIPELINE_JS = {
     'vendor': {

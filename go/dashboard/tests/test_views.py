@@ -41,8 +41,8 @@ class DashboardViewsTestCase(GoDjangoTestCase):
             'method': 'GET',
         }])
 
-        self.assertEqual(resp.content, json.dumps({
+        self.assertEqual(json.loads(resp.content), {
             "message": "Bad horse",
             "success": False,
-        }))
+        })
         self.assertEqual(resp.status_code, 404)

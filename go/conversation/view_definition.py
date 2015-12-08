@@ -202,11 +202,9 @@ class ExportMessageView(ConversationApiView):
     def get(self, request, conversation):
         form = MessageDownloadForm(request.GET)
         if not form.is_valid():
-            extra = {
-                'download_form_errors': str(form.errors),
-                'download_form_data': request.GET,
-            }
-            logger.error("Message download form contains errors.", extra=extra)
+            logger.error(
+                "Message download form contains errors: %s [GET: %r]",
+                str(form.errors), dict(request.GET))
             view = self.view_def.get_view(
                 'message_list/', message_download_form=form)
             return view(request, conversation)

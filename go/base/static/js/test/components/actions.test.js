@@ -18,6 +18,8 @@ describe("go.components.actions", function() {
 
     beforeEach(function() {
       action = new ActionView({name: 'Crimp'});
+      action.$el.appendTo($('body'));
+
       notifier = new PopoverNotifierView({
         delay: 0,
         busyWait: 0,

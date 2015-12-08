@@ -2,22 +2,24 @@ sudo: false # We want container builds.
 
 language: python
 python:
-  - "2.6"
   - "2.7"
 node_js:
   - "0.10"
 env:
-  - RIAK_VERSION="1.4.12" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+  - VUMIGO_TEST_DB=postgres
 matrix:
+  # Some separate matrix inclusions to avoid spawning unnecessary builds.
   include:
     # Test against Riak 2.1.1.
-    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
     - python: "2.7"
-      env: RIAK_VERSION="2.1.1" VUMITEST_REDIS_DB=1 VUMIGO_TEST_DB=postgres VUMI_TEST_TIMEOUT=10
+      env: RIAK_VERSION="2.1.1" VUMIGO_TEST_DB=postgres
     # Test without Django.
-    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
     - python: "2.7"
-      env: RIAK_VERSION="1.4.12" VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10 VUMIGO_SKIP_DJANGO=1
+      env: VUMIGO_SKIP_DJANGO=1 NO_COVERAGE=1
+    # Test on pypy. We need to install our own because 2.5.1 is too old.
+    # Also, we hit an obscure GC bug in pypy<=2.6.0 so we need at least 2.6.1.
+    - python: "pypy"
+      env: PYPY_VERSION="4.0.1" VUMIGO_TEST_DB=postgres NO_COVERAGE=1
 
 cache:
   directories:
@@ -28,7 +30,11 @@ services:
   - redis-server
 
 before_install:
+  # If necessary, set up an appropriate version of pypy.
+  - if [ ! -z "$PYPY_VERSION" ]; then source utils/setup-pypy-travis.sh; fi
+  - if [ ! -z "$PYPY_VERSION" ]; then python --version 2>&1 | fgrep "PyPy $PYPY_VERSION"; fi
   # Set up an appropriate version of Riak.
+  - export RIAK_VERSION="${RIAK_VERSION-1.4.12}"
   - utils/setup_travis_riak.sh "${RIAK_VERSION}"
 install:
   # Travis seems to have pip 6.x, which doesn't build and cache wheels.
@@ -46,8 +52,9 @@ before_script:
   - $HOME/riak/bin/riak version
   - $HOME/riak/bin/riak-admin member-status
 script:
+  - export VUMITEST_REDIS_DB=1 VUMI_TEST_TIMEOUT=10
   - ./run-tests.sh
   - grunt test
 
 after_success:
-  - "if [ ! $VUMIGO_SKIP_DJANGO ]; then overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info; fi"
+  - "[ -z $NO_COVERAGE ] && overalls --py --lcov mochacov.lcov --lcov coverage/*/lcov.info"

@@ -189,8 +189,8 @@ class TestContactsResource(ResourceTestCaseBase):
             reply,
             created=True,
             contact={'msisdn': u'+27831234567'})
-        self.check_contact_fields(reply['contact']['key'],
-                                  msisdn=u'+27831234567')
+        yield self.check_contact_fields(reply['contact']['key'],
+                                        msisdn=u'+27831234567')
 
     @inlineCallbacks
     def test_handle_get_or_create_for_overriden_delivery_class(self):
@@ -234,7 +234,7 @@ class TestContactsResource(ResourceTestCaseBase):
             'groups': [u'group-a', u'group-b', u'group-c'],
         }
         self.check_reply(reply, contact=expected_contact_fields)
-        self.check_contact_fields(**expected_contact_fields)
+        yield self.check_contact_fields(**expected_contact_fields)
 
     @inlineCallbacks
     def test_handle_update_parsing(self):
@@ -264,7 +264,7 @@ class TestContactsResource(ResourceTestCaseBase):
             'msisdn': u'+27831234567',
         }
         self.check_reply(reply, contact=expected_contact_fields)
-        self.check_contact_fields(**expected_contact_fields)
+        yield self.check_contact_fields(**expected_contact_fields)
 
     def test_handle_update_for_nonexistent_contacts(self):
         return self.assert_bad_command('update', key='213123', fields={})
@@ -289,7 +289,7 @@ class TestContactsResource(ResourceTestCaseBase):
             'extras-d': u'four',
         }
         self.check_reply(reply, contact=expected_contact_fields)
-        self.check_contact_fields(**expected_contact_fields)
+        yield self.check_contact_fields(**expected_contact_fields)
 
     @inlineCallbacks
     def test_handle_update_extras_parsing(self):
@@ -322,7 +322,7 @@ class TestContactsResource(ResourceTestCaseBase):
             'extras-lorem': u'ipsum',
         }
         self.check_reply(reply, contact=expected_contact_fields)
-        self.check_contact_fields(**expected_contact_fields)
+        yield self.check_contact_fields(**expected_contact_fields)
 
     def test_handle_update_extras_for_nonexistent_contacts(self):
         return self.assert_bad_command(
@@ -350,7 +350,7 @@ class TestContactsResource(ResourceTestCaseBase):
             'subscription-d': u'four',
         }
         self.check_reply(reply, contact=expected_contact_fields)
-        self.check_contact_fields(**expected_contact_fields)
+        yield self.check_contact_fields(**expected_contact_fields)
 
     @inlineCallbacks
     def test_handle_update_subscriptions_parsing(self):
@@ -383,7 +383,7 @@ class TestContactsResource(ResourceTestCaseBase):
             'subscription-lorem': u'ipsum',
         }
         self.check_reply(reply, contact=expected_contact_fields)
-        self.check_contact_fields(**expected_contact_fields)
+        yield self.check_contact_fields(**expected_contact_fields)
 
     def test_handle_update_subscriptions_for_nonexistent_contacts(self):
         return self.assert_bad_command(
@@ -442,7 +442,7 @@ class TestContactsResource(ResourceTestCaseBase):
             'extras-baz': u'qux',
         }
         self.check_reply(reply, contact=expected_contact_fields)
-        self.check_contact_fields(**expected_contact_fields)
+        yield self.check_contact_fields(**expected_contact_fields)
 
     @inlineCallbacks
     def test_handle_save_parsing(self):
@@ -472,7 +472,7 @@ class TestContactsResource(ResourceTestCaseBase):
         reply = yield self.dispatch_command('save', contact=new_contact_fields)
 
         self.check_reply(reply, contact=new_contact_fields)
-        self.check_contact_fields(**new_contact_fields)
+        yield self.check_contact_fields(**new_contact_fields)
 
     def test_handle_save_for_nonexistent_contacts(self):
         return self.assert_bad_command('save', contact={'key': u'213123'})
@@ -704,7 +704,7 @@ class TestGroupsResource(ResourceTestCaseBase):
         yield self.new_group(group_name)
         yield self.new_group(group_name)
         reply = yield self.dispatch_command('get_or_create_by_name',
-            name=group_name)
+                                            name=group_name)
         self.assertFalse(reply['success'])
         self.assertTrue('Multiple groups found' in reply['reason'])
 
@@ -739,6 +739,6 @@ class TestGroupsResource(ResourceTestCaseBase):
         reply = yield self.dispatch_command('list')
         self.assertTrue(reply['success'])
         self.assertEqual(set(['group 1', 'group 2']),
-            set([gr['name'] for gr in reply['groups']]))
+                         set([gr['name'] for gr in reply['groups']]))
         self.assertEqual(set([gr1.key, gr2.key]),
-            set([gr['key'] for gr in reply['groups']]))
+                         set([gr['key'] for gr in reply['groups']]))

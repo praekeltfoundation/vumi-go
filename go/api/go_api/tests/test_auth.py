@@ -7,13 +7,17 @@ from twisted.cred.credentials import UsernamePassword
 from twisted.internet.defer import inlineCallbacks
 from twisted.web import resource
 from twisted.web.test.test_web import DummyRequest
+from twisted.web.iweb import ICredentialFactory
 
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
 
 from go.api.go_api.auth import (
-    GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper)
+    GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper,
+    GoAuthBouncerCredentialFactory, IGoAuthBouncerCredentials,
+    GoAuthBouncerCredentials, GoAuthBouncerAccessChecker)
 from go.api.go_api.session_manager import SessionManager
 from go.vumitools.tests.helpers import VumiApiHelper
+from .utils import MockAuthServer
 
 import mock
 
@@ -84,22 +88,138 @@ class TestGoUserSessionAccessChecker(VumiTestCase):
         self.assertTrue(errored)
 
 
+class TestGoAuthBouncerCredentialFactory(VumiTestCase):
+    def test_implements_ICredentialsFactory(self):
+        """
+        Instances should provide the ICredentialFactory interface.
+        """
+        factory = GoAuthBouncerCredentialFactory("Test Realm")
+        self.assertTrue(ICredentialFactory.providedBy(factory))
+
+    def test_scheme(self):
+        """
+        Instances should have the scheme 'bearer'.
+        """
+        factory = GoAuthBouncerCredentialFactory("Test Realm")
+        self.assertEqual(factory.scheme, 'bearer')
+
+    def test_decode(self):
+        """
+        .decode() should return credentials that provide the
+        IGoAuthBouncerCredentials interface and contain the original request.
+        """
+        factory = GoAuthBouncerCredentialFactory("Test Realm")
+        response, request = object(), object()
+        creds = factory.decode(response, request)
+        self.assertTrue(IGoAuthBouncerCredentials.providedBy(creds))
+        self.assertEqual(creds.get_request(), request)
+
+
+class TestGoAuthBouncerCredentials(VumiTestCase):
+    def test_implements_IGoAuthBouncerCredentials(self):
+        """
+        Instances should provide the IGoAuthBouncerCredentials interface.
+        """
+        request = object()
+        creds = GoAuthBouncerCredentials(request)
+        self.assertTrue(IGoAuthBouncerCredentials.providedBy(creds))
+
+    def test_get_request(self):
+        """
+        .get_request() should return the request object given to the credential
+        constructor.
+        """
+        request = object()
+        creds = GoAuthBouncerCredentials(request)
+        self.assertEqual(creds.get_request(), request)
+
+
+class TestGoAuthBouncerAccessChecker(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        self.auth = MockAuthServer()
+        self.add_cleanup(self.auth.stop)
+        yield self.auth.start()
+        self.checker = GoAuthBouncerAccessChecker(self.auth.url)
+
+    def mk_request(self, token=None):
+        request = DummyRequest([''])
+        request.path = ''
+        if token is not None:
+            request.headers["authorization"] = "Bearer %s" % (token,)
+        return request
+
+    @inlineCallbacks
+    def test_request_avatar_id_no_auth_header(self):
+        """
+        When no authentication header is present, authentication should fail.
+        """
+        request = self.mk_request()
+        creds = GoAuthBouncerCredentials(request)
+        yield self.assertFailure(
+            self.checker.requestAvatarId(creds), error.UnauthorizedLogin)
+
+    @inlineCallbacks
+    def test_request_avatar_id_unauthorized_response(self):
+        """
+        When the authentication server returns a 401 response, authentication
+        should fail.
+        """
+        self.auth.add_response(code=401, body="Unauthorized")
+        request = self.mk_request(token="eeep==")
+        creds = GoAuthBouncerCredentials(request)
+        yield self.assertFailure(
+            self.checker.requestAvatarId(creds), error.UnauthorizedLogin)
+
+    @inlineCallbacks
+    def test_request_avatar_id_no_owner_id(self):
+        """
+        When the authentication server does not return an X-Owner-ID header,
+        authentication should fail.
+        """
+        self.auth.add_response(code=200, body="No owner id")
+        request = self.mk_request(token="eeep==")
+        creds = GoAuthBouncerCredentials(request)
+        yield self.assertFailure(
+            self.checker.requestAvatarId(creds), error.UnauthorizedLogin)
+
+    @inlineCallbacks
+    def test_request_avatar_id_authorized(self):
+        """
+        When the authentication server returns an X-Owner-ID, authorization
+        should succeed and the user returned should be the owner specified in
+        the header.
+        """
+        self.auth.add_response(
+            code=200, body="Just right", headers={"X-Owner-ID": "owner-1"})
+        request = self.mk_request(token="eeep==")
+        creds = GoAuthBouncerCredentials(request)
+        owner = yield self.checker.requestAvatarId(creds)
+        self.assertEqual(owner, "owner-1")
+
+
 class TestGoUserAuthSessionWrapper(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
         self.vumi_helper = yield self.add_helper(VumiApiHelper())
         self.vumi_api = yield self.vumi_helper.get_vumi_api()
+        self.auth = MockAuthServer()
+        self.add_cleanup(self.auth.stop)
+        yield self.auth.start()
 
-    def mk_request(self, user=None, password=None):
+    def mk_request(self, user=None, password=None, bearer=None):
         request = DummyRequest([''])
+        request.path = ''
         if user is not None:
             request.headers["authorization"] = (
                 "Basic %s" % base64.b64encode("%s:%s" % (user, password))
             )
+        elif bearer is not None:
+            request.headers["authorization"] = "Bearer %s" % (bearer,)
         return request
 
-    def mk_wrapper(self, text):
+    def mk_wrapper(self, text, bouncer=False):
         class TestResource(resource.Resource):
             isLeaf = True
 
@@ -111,7 +231,11 @@ class TestGoUserAuthSessionWrapper(VumiTestCase):
                 return "%s: %s" % (text, self.user.encode("utf-8"))
 
         realm = GoUserRealm(lambda user: TestResource(user))
-        wrapper = GoUserAuthSessionWrapper(realm, self.vumi_api)
+        if not bouncer:
+            wrapper = GoUserAuthSessionWrapper(realm, self.vumi_api)
+        else:
+            wrapper = GoUserAuthSessionWrapper(
+                realm, self.vumi_api, self.auth.url)
         return wrapper
 
     @inlineCallbacks
@@ -124,17 +248,36 @@ class TestGoUserAuthSessionWrapper(VumiTestCase):
         self.assertEqual("".join(request.written), expected_body)
 
     @inlineCallbacks
-    def test_auth_success(self):
+    def test_auth_basic_success(self):
+        """
+        When correct session information is provided via basic authentication,
+        a request should succeed.
+        """
         session = {}
         self.vumi_api.session_manager.set_user_account_key(session, u"user-1")
         yield self.vumi_api.session_manager.save_session(
             u"session-1", session, 10)
         wrapper = self.mk_wrapper("FOO")
-        request = self.mk_request(u"session_id", u"session-1")
+        request = self.mk_request(user=u"session_id", password=u"session-1")
+        yield self.check_request(wrapper, request, 200, "FOO: user-1")
+
+    @inlineCallbacks
+    def test_auth_bearer_success(self):
+        """
+        When a correct token is provided via bearer authentication, a request
+        should succeed.
+        """
+        self.auth.add_response(code=200, headers={'X-Owner-ID': 'user-1'})
+        wrapper = self.mk_wrapper("FOO", bouncer=True)
+        request = self.mk_request(bearer="token-1")
         yield self.check_request(wrapper, request, 200, "FOO: user-1")
 
     @inlineCallbacks
     def test_auth_failure(self):
+        """
+        When no authentication is provided, a request should be rejected with a
+        401 Unauthorized response.
+        """
         wrapper = self.mk_wrapper("FOO")
         request = self.mk_request()
         yield self.check_request(wrapper, request, 401, "Unauthorized")

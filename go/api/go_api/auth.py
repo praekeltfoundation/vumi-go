@@ -1,16 +1,21 @@
 # -*- coding: utf-8 -*-
 # -*- test-case-name: go.api.go_api.tests.test_auth -*-
 
-from zope.interface import implements
+import urlparse
+
+from zope.interface import implementer
+
+import treq
 
 from twisted.cred import portal, checkers, credentials, error
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.web import resource
 from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
+from twisted.web.iweb import ICredentialFactory
 
 
+@implementer(portal.IRealm)
 class GoUserRealm(object):
-    implements(portal.IRealm)
 
     def __init__(self, resource_for_user):
         self._resource_for_user = resource_for_user
@@ -22,12 +27,12 @@ class GoUserRealm(object):
         raise NotImplementedError()
 
 
+@implementer(checkers.ICredentialsChecker)
 class GoUserSessionAccessChecker(object):
     """Checks that a username and password matches some constant (usually
     "session") and a Go session id.
     """
 
-    implements(checkers.ICredentialsChecker)
     credentialInterfaces = (credentials.IUsernamePassword,)
 
     EXPECTED_USERNAME = "session_id"
@@ -47,11 +52,76 @@ class GoUserSessionAccessChecker(object):
         raise error.UnauthorizedLogin()
 
 
+@implementer(ICredentialFactory)
+class GoAuthBouncerCredentialFactory(BasicCredentialFactory):
+
+    scheme = 'bearer'
+
+    def decode(self, response, request):
+        return GoAuthBouncerCredentials(request)
+
+
+class IGoAuthBouncerCredentials(credentials.ICredentials):
+    def get_request():
+        """ Return the request to be authenticated. """
+
+
+@implementer(IGoAuthBouncerCredentials)
+class GoAuthBouncerCredentials(object):
+
+    def __init__(self, request):
+        self._request = request
+
+    def get_request(self):
+        return self._request
+
+
+@implementer(checkers.ICredentialsChecker)
+class GoAuthBouncerAccessChecker(object):
+    """Checks that a username and password matches some constant (usually
+    "session") and a Go session id.
+    """
+
+    credentialInterfaces = (IGoAuthBouncerCredentials,)
+
+    def __init__(self, auth_bouncer_url):
+        self._auth_bouncer_url = auth_bouncer_url
+
+    @inlineCallbacks
+    def _auth_request(self, request):
+        auth = request.getHeader('Authorization')
+        if not auth:
+            returnValue(None)
+        auth_headers = {'Authorization': auth}
+        uri = urlparse.urljoin(self._auth_bouncer_url, request.path)
+        resp = yield treq.get(uri, headers=auth_headers, persistent=False)
+        if resp.code >= 400:
+            returnValue(None)
+        x_owner_id = resp.headers.getRawHeaders('X-Owner-Id')
+        if x_owner_id is None or len(x_owner_id) != 1:
+            returnValue(None)
+        returnValue(x_owner_id[0])
+
+    @inlineCallbacks
+    def requestAvatarId(self, credentials):
+        request = credentials.get_request()
+        user_account_key = yield self._auth_request(request)
+        if user_account_key:
+            returnValue(user_account_key)
+        raise error.UnauthorizedLogin()
+
+
 class GoUserAuthSessionWrapper(HTTPAuthSessionWrapper):
-    def __init__(self, realm, vumi_api):
-        checkers = [
-            GoUserSessionAccessChecker(vumi_api.session_manager),
-        ]
+
+    AUTHENTICATION_REALM = "Vumi Go API"
+
+    def __init__(self, realm, vumi_api, auth_bouncer_url=None):
+        checkers = [GoUserSessionAccessChecker(vumi_api.session_manager)]
+        factories = [BasicCredentialFactory(self.AUTHENTICATION_REALM)]
+        if auth_bouncer_url:
+            checkers.append(GoAuthBouncerAccessChecker(auth_bouncer_url))
+            factories.append(
+                GoAuthBouncerCredentialFactory(self.AUTHENTICATION_REALM))
+
         p = portal.Portal(realm, checkers)
-        factory = BasicCredentialFactory("Vumi Go API")
-        super(GoUserAuthSessionWrapper, self).__init__(p, [factory])
+        super(GoUserAuthSessionWrapper, self).__init__(p, factories)

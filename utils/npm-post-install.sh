@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BINS='grunt bower yuglify'
+BINS='grunt bower uglifyjs'
 PROJECT_ROOT=$(cd "`dirname $0`/.."; pwd)
 
 link () {
