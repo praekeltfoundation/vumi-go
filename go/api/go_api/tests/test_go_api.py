@@ -2,7 +2,7 @@
 
 from xmlrpclib import METHOD_NOT_FOUND
 
-from txjsonrpc.web.jsonrpc import Proxy
+from txjsonrpc.web.jsonrpc import Proxy, QueryFactory, QueryProtocol
 from txjsonrpc.jsonrpclib import Fault
 
 from twisted.internet import reactor
@@ -15,6 +15,7 @@ from vumi.tests.helpers import VumiTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
 from go.vumitools.tests.helpers import VumiApiHelper
+from .utils import MockAuthServer
 
 
 class TestGoApiServer(VumiTestCase):
@@ -430,6 +431,19 @@ class TestGoApiServer(VumiTestCase):
                                  u"no such sub-handler unknown")
 
 
+class BearerQueryProtocol(QueryProtocol):
+    def sendHeader(self, name, value):
+        # this is a cludgy but simple way to add bearer authentication to
+        # txjsonrpc which only has hooks for basic authentication
+        if name == "Authorization":
+            value = "Bearer %s" % self.factory.user
+        QueryProtocol.sendHeader(self, name, value)
+
+
+class BearerQueryFactory(QueryFactory):
+    protocol = BearerQueryProtocol
+
+
 class TestGoApiWorker(VumiTestCase):
 
     def setUp(self):
@@ -437,28 +451,49 @@ class TestGoApiWorker(VumiTestCase):
             VumiApiHelper(), setup_vumi_api=False)
 
     @inlineCallbacks
-    def get_api_worker(self, config=None, start=True, auth=True):
+    def mk_session_auth(self, user_id=u"user-1", session_id="session-1"):
+        user_helper = yield self.vumi_helper.make_user(user_id)
+        session_id = "session-1"
+        session = {}
+        vumi_api = self.vumi_helper.get_vumi_api()
+        vumi_api.session_manager.set_user_account_key(
+            session, user_helper.account_key)
+        yield vumi_api.session_manager.create_session(
+            session_id, session, expire_seconds=30)
+        user, password = "session_id", session_id
+        returnValue((user, password))
+
+    @inlineCallbacks
+    def mk_auth_server(self, code=200, owner='owner-1'):
+        auth = MockAuthServer()
+        self.add_cleanup(auth.stop)
+        yield auth.start()
+        auth.add_response(code=code, headers={'X-Owner-ID': owner})
+        returnValue(auth.url)
+
+    @inlineCallbacks
+    def get_api_worker(self, config=None, start=True, auth="session"):
         config = {} if config is None else config
         config.setdefault('worker_name', 'test_api_worker')
         config.setdefault('twisted_endpoint', 'tcp:0')
         config.setdefault('web_path', 'api')
         config.setdefault('health_path', 'health')
+        if auth == "bearer":
+            auth_url = yield self.mk_auth_server()
+            config.setdefault('auth_bouncer_url', auth_url)
         config = self.vumi_helper.mk_config(config)
         worker = yield self.vumi_helper.get_worker_helper().get_worker(
             GoApiWorker, config, start)
+        self.vumi_helper.set_vumi_api(worker.vumi_api)
 
-        vumi_api = worker.vumi_api
-        self.vumi_helper.set_vumi_api(vumi_api)
-        user, password = None, None
-        if auth:
-            user_helper = yield self.vumi_helper.make_user(u"user-1")
-            session_id = "session-1"
-            session = {}
-            vumi_api.session_manager.set_user_account_key(
-                session, user_helper.account_key)
-            yield vumi_api.session_manager.create_session(
-                session_id, session, expire_seconds=30)
-            user, password = "session_id", session_id
+        proxy_kw = {}
+        if auth == "session":
+            user, password = yield self.mk_session_auth()
+        elif auth == "bearer":
+            user, password = "token-1", None
+            proxy_kw['factoryClass'] = BearerQueryFactory
+        else:
+            user, password = None, None
 
         if not start:
             returnValue(worker)
@@ -468,11 +503,15 @@ class TestGoApiWorker(VumiTestCase):
         addr = port.getHost()
 
         proxy = Proxy("http://%s:%d/api/" % (addr.host, addr.port),
-                      user=user, password=password)
+                      user=user, password=password, **proxy_kw)
         returnValue((worker, proxy))
 
     @inlineCallbacks
     def test_invalid_auth(self):
+        """
+        When no authentication is provided, a request should be rejected with a
+        401 Unauthorized response.
+        """
         worker, proxy = yield self.get_api_worker(auth=False)
         try:
             yield proxy.callRemote('system.listMethods')
@@ -482,8 +521,22 @@ class TestGoApiWorker(VumiTestCase):
             self.fail("Expected 401 Unauthorized")
 
     @inlineCallbacks
-    def test_valid_auth(self):
-        worker, proxy = yield self.get_api_worker()
+    def test_valid_session_auth(self):
+        """
+        When correct session information is provided via basic authentication,
+        a request should succeed.
+        """
+        worker, proxy = yield self.get_api_worker(auth="session")
+        yield proxy.callRemote('system.listMethods')
+        # if we reach here the proxy call didn't throw an authentication error
+
+    @inlineCallbacks
+    def test_valid_bearer_auth(self):
+        """
+        When a correct token is provided via bearer authentication, a request
+        should succeed.
+        """
+        worker, proxy = yield self.get_api_worker(auth="bearer")
         yield proxy.callRemote('system.listMethods')
         # if we reach here the proxy call didn't throw an authentication error
 

@@ -1,5 +1,27 @@
 from mock import Mock, patch
 
+from vumi.tests.utils import MockHttpServer
+
+
+class MockAuthServer(MockHttpServer):
+    def __init__(self):
+        self.responses = []
+        self.requests = []
+        super(MockAuthServer, self).__init__(self.handle_request)
+
+    def handle_request(self, request):
+        self.requests.append(request)
+        response = self.responses.pop(0)
+        for header, value in response['headers'].items():
+            request.setHeader(header, value)
+        request.setResponseCode(response['code'])
+        return response['body']
+
+    def add_response(self, code=200, body='', headers=None):
+        self.responses.append({
+            'code': code, 'body': body, 'headers': headers or {},
+        })
+
 
 class MockRpc(object):
     def __init__(self):
