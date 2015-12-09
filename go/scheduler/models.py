@@ -65,9 +65,8 @@ class Task(models.Model):
 
     status = models.CharField(
         max_length=32, choices=STATUS_CHOICES, default=STATUS_PENDING,
-        help_text=_("The status of this archive. One of archive_created, "
-                    "transactions_uploaded, archive_completed or "
-                    "archive_deleted."))
+        help_text=_("The status of this task. One of pending, "
+                    "completed, or cancelled."))
 
     scheduled_for = models.DateTimeField(
         blank=False, null=False,
