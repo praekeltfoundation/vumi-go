@@ -12,20 +12,25 @@ with djangotest_imports(globals()):
 
 class TestPerformTask(GoDjangoTestCase):
     def test_perform_task(self):
-        pass
+        now = datetime.datetime.utcnow()
+        task = Task.objects.create(
+            account_id="user-1", label="Task 1", scheduled_for=now)
+        [pending] = task.pendingtask_set.all()
+        tasks.perform_task(pending.pk)
+        self.assertEqual(list(task.pendingtask_set.all()), [])
 
 
 class TestPollTasks(GoDjangoTestCase):
 
     @mock.patch('go.scheduler.tasks.perform_task.s',
                 new_callable=mock.MagicMock)
-    def test_poll_tasks_empty(self, s):
+    def test_no_pending_tasks(self, s):
         tasks.poll_tasks()
         s.assert_not_called()
 
     @mock.patch('go.scheduler.tasks.perform_task.s',
                 new_callable=mock.MagicMock)
-    def test_poll_tasks_some(self, s):
+    def test_some_pending_task(self, s):
         now = datetime.datetime.utcnow()
         t1 = Task.objects.create(
             account_id="user-1", label="Task 1", scheduled_for=now)
