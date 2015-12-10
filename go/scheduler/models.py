@@ -1,7 +1,27 @@
 """ Models for go.scheduler. """
 
+import json
+
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils.six import with_metaclass
 from django.utils.translation import ugettext_lazy as _
+
+
+class JsonField(with_metaclass(models.SubfieldBase, models.TextField)):
+
+    description = _("JsonField")
+
+    def get_prep_value(self, value):
+        return json.dumps(value)
+
+    def to_python(self, value):
+        if isinstance(value, basestring):
+            try:
+                return json.loads(value)
+            except ValueError:
+                raise ValidationError("Invalid input for JsonField")
+        return value
 
 
 class PendingTask(models.Model):
@@ -60,7 +80,8 @@ class Task(models.Model):
         max_length=32, choices=TYPE_CHOICES, default=TYPE_CONVERSATION_ACTION,
         help_text=_("The type of the task."))
 
-    task_data = models.TextField(
+    task_data = JsonField(
+        null=False, default=None,
         help_text=_("The task details as JSON data."))
 
     status = models.CharField(
