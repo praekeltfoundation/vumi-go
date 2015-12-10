@@ -1,4 +1,5 @@
 import datetime
+import re
 
 from go.vumitools.tests.helpers import djangotest_imports
 
@@ -20,10 +21,8 @@ def mk_task(create=False, **kw):
 class TestPendingTask(GoDjangoTestCase):
 
     def assert_not_null_constraint_violated(self, pending, field):
-        self.assertRaisesMessage(
-            IntegrityError,
-            ("NOT NULL constraint failed: scheduler_pendingtask.%s"
-             % field),
+        self.assertRaisesRegexp(
+            IntegrityError, re.escape(field),
             pending.save)
 
     def test_validate_task_not_null(self):
@@ -48,10 +47,8 @@ class TestPendingTask(GoDjangoTestCase):
 class TestTask(GoDjangoTestCase):
 
     def assert_not_null_constraint_violated(self, task, field):
-        self.assertRaisesMessage(
-            IntegrityError,
-            ("NOT NULL constraint failed: scheduler_task.%s"
-             % field),
+        self.assertRaisesRegexp(
+            IntegrityError, re.escape(field),
             task.save)
 
     def test_default_task_type(self):
