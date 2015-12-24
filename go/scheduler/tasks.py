@@ -32,7 +32,7 @@ def perform_conversation_action(task):
                     action.
     """
     user_api = vumi_api().get_user_api(
-        task.task_data['user_account_key'])
+        task.task_data['user_account_key'], cleanup_api=True)
     conv = user_api.get_wrapped_conversation(
         task.task_data['conversation_key'])
     view_def = get_conversation_view_definition(
@@ -40,6 +40,7 @@ def perform_conversation_action(task):
     action = view_def.get_action(
         task.task_data['action_name'])
     action.perform_action(task.task_data['action_kwargs'])
+    user_api.close()
 
 
 @task()
