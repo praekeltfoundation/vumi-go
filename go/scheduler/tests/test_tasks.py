@@ -57,7 +57,8 @@ class TestPerformTask(GoDjangoTestCase):
 
         self.assertEqual(command['kwargs']['conversation_key'], conv.key)
         self.assertEqual(
-            command['kwargs']['user_account_key'], self.user_helper.account_key)
+            command['kwargs']['user_account_key'],
+            self.user_helper.account_key)
         self.assertEqual(command['command'], 'bulk_send')
         self.assertEqual(command['kwargs']['delivery_class'], 'sms')
         self.assertEqual(command['kwargs']['content'], 'test_message')

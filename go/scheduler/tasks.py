@@ -4,12 +4,10 @@ from go.vumitools.tests.helpers import djangotest_imports
 
 with djangotest_imports(globals()):
     from celery.task import task, group
-    from django.core.urlresolvers import reverse
-    from django.http import HttpRequest
 
     from go.scheduler.models import PendingTask, Task
     from go.base.utils import (
-        conversation_or_404, get_conversation_view_definition, vumi_api)
+        get_conversation_view_definition, vumi_api)
 
 
 @task()
