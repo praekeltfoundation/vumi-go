@@ -1,16 +1,47 @@
 import datetime
 
-from celery.task import task, group
+from go.vumitools.tests.helpers import djangotest_imports
 
-from go.scheduler.models import PendingTask
+with djangotest_imports(globals()):
+    from celery.task import task, group
+    from django.core.urlresolvers import reverse
+    from django.http import HttpRequest
+
+    from go.scheduler.models import PendingTask, Task
+    from go.base.utils import (
+        conversation_or_404, get_conversation_view_definition, vumi_api)
 
 
 @task()
 def perform_task(pending_id):
     """ Perform a task. """
     pending = PendingTask.objects.get(id=pending_id)
-    # TODO: perform task
+    task = pending.task
+    if task.task_type == Task.TYPE_CONVERSATION_ACTION:
+        perform_conversation_action(task)
     pending.delete()
+
+
+def perform_conversation_action(task):
+    """
+    Perform a conversation action. ``task_data`` must have the following
+    fields:
+
+    user_account_key - The key of the user account.
+    conversation_key - The key for the conversation.
+    action_name - The name of the action to be performed.
+    action_kwargs - A dictionary representing the keyword arguments for an
+                    action.
+    """
+    user_api = vumi_api().get_user_api(
+        task.task_data['user_account_key'])
+    conv = user_api.get_wrapped_conversation(
+        task.task_data['conversation_key'])
+    view_def = get_conversation_view_definition(
+        conv.conversation_type, conv=conv)
+    action = view_def.get_action(
+        task.task_data['action_name'])
+    action.perform_action(task.task_data['action_kwargs'])
 
 
 @task()
