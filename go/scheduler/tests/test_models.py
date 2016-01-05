@@ -36,6 +36,14 @@ class TestPendingTask(GoDjangoTestCase):
         pending = PendingTask(task=task)
         self.assert_not_null_constraint_violated(pending, 'scheduled_for')
 
+    def test_started_timestamp_null(self):
+        task = mk_task()
+        task.save()
+        pending = PendingTask(
+            task=task, scheduled_for=datetime.datetime(2015, 1, 1, 7, 0))
+        pending.save()
+        self.assertEqual(pending.started_timestamp, None)
+
     def test_unicode(self):
         task = Task(account_id="user-1", label="Send messages")
         pending = PendingTask(task=task)

@@ -35,6 +35,31 @@ class TestPerformTask(GoDjangoTestCase):
         tasks.perform_task(pending.pk)
         self.assertEqual(list(task.pendingtask_set.all()), [])
 
+    def test_skip_task_if_already_started(self):
+        '''If started_timestamp is not None, then the task has already been
+        started, and we should not try to run it again.'''
+        conv = self.user_helper.create_conversation(u'bulk_message')
+        now = datetime.datetime.utcnow()
+        task = Task.objects.create(
+            account_id="user-1", label="Task 1", scheduled_for=now,
+            task_data={
+                'user_account_key': self.user_helper.account_key,
+                'conversation_key': conv.key,
+                'action_name': 'bulk_send',
+                'action_kwargs': {
+                    'message': 'test_message',
+                    'delivery_class': 'sms',
+                    'dedupe': True,
+                },
+            })
+        [pending] = task.pendingtask_set.all()
+
+        pending.started_timestamp = now
+        pending.save()
+
+        tasks.perform_task(pending.pk)
+        self.assertEqual(list(task.pendingtask_set.all()), [pending])
+
     def test_perform_conversation_action(self):
         conv = self.user_helper.create_conversation(u'bulk_message')
         now = datetime.datetime.utcnow()

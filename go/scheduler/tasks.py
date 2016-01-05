@@ -14,9 +14,17 @@ with djangotest_imports(globals()):
 def perform_task(pending_id):
     """ Perform a task. """
     pending = PendingTask.objects.get(id=pending_id)
+    if pending.started_timestamp is None:
+        pending.started_timestamp = datetime.datetime.utcnow()
+        pending.save()
+    else:
+        return
+
     task = pending.task
+
     if task.task_type == Task.TYPE_CONVERSATION_ACTION:
         perform_conversation_action(task)
+
     pending.delete()
 
 
