@@ -22,15 +22,16 @@ Install the dependencies::
 
     $ virtualenv --no-site-packages ve
     $ source ve/bin/activate
-    (ve)$ pip install -r requirements.pip
+    (ve)$ pip install -r requirements.pip -r requirements-dev.pip
 
 Other stuff that's required:
 
 * Redis_
 * RabbitMQ_, after you've installed this run `sudo ./utils/rabbitmq.setup.sh` to set the correct permissions for the vumi RabbitMQ user.
 * Riak_, install as described in: http://wiki.basho.com/Installation.html
+* PostgreSQL_
 
-After installing Riak_, you will need to edit the `/etc/riak/app.config` file: set the storage backend to `eleveldb` instead of `bitcask`, and enable `riak_search`.
+After installing Riak_, you will need to edit the `/etc/riak/app.config` file: set the storage backend to `leveldb` instead of `bitcask`, and enable `search`.
 
 .. note::
     There is a Vagrantfile in the Vumi_ repository that can be used for Vumi Go as well.
@@ -39,33 +40,50 @@ After installing Riak_, you will need to edit the `/etc/riak/app.config` file: s
 Bootstrapping a development environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-After having installed the dependencies with pip and ensuring that Redis_,
-Riak_ and RabbitMQ_ are running execute the following command:
-
-::
-
-    (ve)$ ./setup_env.sh
-
-This will generate all the necessary config files for running a set of
-standard applications and Telnet transports emulating a USSD and SMS
-connection.
-
-If this is your first time bootstrapping the dev environment, you'll also need
-to create the RabbitMQ vhost used by the local dev environment (you may need to
-put ``sudo`` on the front of these commands)::
-
-    (ve)$ rabbitmqctl add_vhost /develop
-    (ve)$ rabbitmqctl set_permissions -p /develop vumi '.*' '.*' '.*'
-
-You'll also need to provide some extra Django config. Create a
-``production_settings.py`` file in ``/path/to/repo/go/`` (next to the existing
-``settings.py`` file) containing that following::
+After having installed the dependencies with pip, you'll need to provide some
+extra Django config. Create a ``production_settings.py`` file in
+``/path/to/repo/go/`` (next to the existing ``settings.py`` file) containing
+the following::
 
     from go.base import amqp
 
     amqp.connect('librabbitmq://vumi:vumi@localhost//develop')
 
     SECRET_KEY = 'hello'
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': 'go',
+            'USER': 'go',
+            'PASSWORD': 'go',
+            'HOST': 'localhost',
+            'PORT': '',
+        }
+    }
+
+You will then also need to create the database. Make sure the PostgreSQL is
+running, and then run::
+
+    (ve)$ psql -c "create user go with createdb password 'go';" -U postgres
+    (ve)$ psql -c 'create database go owner go;' -U postgres
+
+If this is your first time bootstrapping the dev environment, you'll also need
+to create the RabbitMQ vhost used by the local dev environment (you may need to
+put ``sudo`` on the front of these commands)::
+
+    (ve)$ rabbitmqctl add_user vumi vumi
+    (ve)$ rabbitmqctl add_vhost /develop
+    (ve)$ rabbitmqctl set_permissions -p /develop vumi '.*' '.*' '.*'
+
+After ensuring that Redis_, Riak_ and RabbitMQ_ are running execute the
+following command::
+
+    (ve)$ ./setup_env.sh
+
+This will generate all the necessary config files for running a set of
+standard applications and Telnet transports emulating a USSD and SMS
+connection.
 
 Next start everything using Supervisord_::
 
@@ -187,3 +205,4 @@ And give your account access to this new tagpool::
 .. _Riak: http://wiki.basho.com/Riak.html
 .. _Vumi: https://github.com/praekelt/vumi
 .. _Supervisord: http://www.supervisord.org
+.. _PostgreSQL: http://www.postgresql.org/
