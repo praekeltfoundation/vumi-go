@@ -52,12 +52,12 @@ class TestPerformTask(GoDjangoTestCase):
                     'dedupe': True,
                 },
             })
+        task.started_timestamp = now
+        task.save()
+
         [pending] = task.pendingtask_set.all()
-
-        pending.started_timestamp = now
-        pending.save()
-
         tasks.perform_task(pending.pk)
+
         self.assertEqual(list(task.pendingtask_set.all()), [pending])
 
     def test_perform_conversation_action(self):

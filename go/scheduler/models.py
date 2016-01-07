@@ -36,10 +36,6 @@ class PendingTask(models.Model):
         blank=False, null=False,
         help_text=_("When the task is or was scheduled to run."))
 
-    started_timestamp = models.DateTimeField(
-        null=True,
-        help_text=_("When the processing of the task was started."))
-
     def __unicode__(self):
         return u"[Pending] %s (%s for %s)" % (
             self.task.label, self.task.task_type, self.task.account_id)
@@ -100,6 +96,10 @@ class Task(models.Model):
     created = models.DateTimeField(
         auto_now_add=True,
         help_text=_("When this task was created."))
+
+    started_timestamp = models.DateTimeField(
+        null=True,
+        help_text=_("When the processing of the task was started."))
 
     def __unicode__(self):
         return u"%s (%s for %s)" % (

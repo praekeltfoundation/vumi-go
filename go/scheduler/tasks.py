@@ -4,6 +4,9 @@ from go.vumitools.tests.helpers import djangotest_imports
 
 with djangotest_imports(globals()):
     from celery.task import task, group
+    from celery.utils.log import get_task_logger
+
+    logger = get_task_logger(__name__)
 
     from go.scheduler.models import PendingTask, Task
     from go.base.utils import (
@@ -13,14 +16,20 @@ with djangotest_imports(globals()):
 @task()
 def perform_task(pending_id):
     """ Perform a task. """
-    pending = PendingTask.objects.get(id=pending_id)
-    if pending.started_timestamp is None:
-        pending.started_timestamp = datetime.datetime.utcnow()
-        pending.save()
-    else:
+    try:
+        pending = PendingTask.objects.get(id=pending_id)
+    except PendingTask.DoesNotExist:
+        logger.error('Cannot find pending task %s' % pending_id)
         return
 
     task = pending.task
+    if task.started_timestamp is None:
+        task.started_timestamp = datetime.datetime.utcnow()
+        task.save()
+    else:
+        logger.warning(
+            'Task %s (%s) has already been started.' % (task.pk, task))
+        return
 
     if task.task_type == Task.TYPE_CONVERSATION_ACTION:
         perform_conversation_action(task)
