@@ -582,7 +582,13 @@ class Command(BaseCommand):
             fp.write(self.auto_gen_warning)
             cp = ConfigParser()
             cp.add_section(section)
-            cp.set(section, "command", "./go-admin.sh runbillingserver")
+            cp.set(
+                section, "command",
+                "twistd -n web --class=go.billing.api.billing_api_resource "
+                "--port=910%(process_num)s")
+            cp.set(
+                section, "environment",
+                "DJANGO_SETTINGS_MODULE='go.settings',PYTHONPATH='.'")
             cp.set(section, "stdout_logfile",
                    "./logs/%(program_name)s_%(process_num)s.log")
 
