@@ -172,6 +172,7 @@ INSTALLED_APPS = (
     'go.contacts',
     'go.account',
     'go.billing',
+    'go.scheduler',
 
 
     'vxpolls.djdashboard',
@@ -309,6 +310,10 @@ CELERYBEAT_SCHEDULE = {
     #     'task': 'go.billing.tasks.generate_monthly_account_statements',
     #     'schedule': crontab(day_of_month=1),
     # },
+    'poll-scheduler-tasks': {
+        'task': 'go.scheduler.tasks.poll_tasks',
+        'schedule': crontab(minute='*/5'),
+    },
 }
 
 
