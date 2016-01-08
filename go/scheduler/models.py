@@ -23,6 +23,9 @@ class JsonField(with_metaclass(models.SubfieldBase, models.TextField)):
                 raise ValidationError("Invalid input for JsonField")
         return value
 
+from south.modelsinspector import add_introspection_rules
+add_introspection_rules([], ["^go\.scheduler\.models\.JsonField"])
+
 
 class PendingTask(models.Model):
     """ Tasks waiting to execute. """
