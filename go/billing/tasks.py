@@ -548,7 +548,8 @@ def create_low_credit_notification(
             'reference': notification.id,
         })
 
-    recipient_emails = [email_to, support_email]
+    # remove duplicate emails from the recipient list
+    recipient_emails = list(set([email_to, support_email]))
     email = EmailMessage(subject, message, email_from, recipient_emails)
     res = (
         send_email.s(email) |
