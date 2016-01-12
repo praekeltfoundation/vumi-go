@@ -531,6 +531,7 @@ def create_low_credit_notification(
         Decimal(100) - threshold_percent)
     email_from = settings.LOW_CREDIT_NOTIFICATION_EMAIL
     email_to = account.user.email
+    support_email = settings.LOW_CREDIT_NOTIFICATION_SUPPORT_EMAIL
     formatted_balance = format_currency(balance)
     if cutoff_notification:
         template = 'billing/credit_cutoff_notification_email.txt'
@@ -547,7 +548,8 @@ def create_low_credit_notification(
             'reference': notification.id,
         })
 
-    email = EmailMessage(subject, message, email_from, [email_to])
+    email = EmailMessage(subject, message, email_from, [email_to],
+                         [support_email])
     res = (
         send_email.s(email) |
         low_credit_notification_confirm_sent.s(notification.pk)).apply_async()
