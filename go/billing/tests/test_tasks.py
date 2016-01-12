@@ -1268,6 +1268,7 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
 
         self.assertEqual(email.recipients(),
                          [self.django_user.email, 'support@vumi.org'])
+        self.assertEqual(email.bcc, ['support@vumi.org'])
         self.assertEqual(email.from_email, 'support@vumi.org')
         self.assertEqual(
             'Vumi Go account %s (%s) at %s%% left of available credits' % (
@@ -1289,6 +1290,7 @@ class TestLowCreditNotificationTask(GoDjangoTestCase):
 
         self.assertEqual(email.recipients(),
                          [self.django_user.email, 'support@vumi.org'])
+        self.assertEqual(email.bcc, ['support@vumi.org'])
         self.assertEqual(email.from_email, 'support@vumi.org')
         self.assertEqual(
             'Vumi Go account %s (%s) at %s%% left of available credits' % (
