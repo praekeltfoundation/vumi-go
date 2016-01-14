@@ -179,7 +179,9 @@ class ShowConversationView(ConversationTemplateView):
             'is_editable': self.view_def.is_editable,
             'actions': self.view_def.get_actions(),
         }
-        templ = lambda name: self.get_template_name('includes/%s' % (name,))
+
+        def templ(name):
+            return self.get_template_name('includes/%s' % (name,))
 
         if conversation.archived():
             # HACK: This assumes "stopped" and "archived" are equivalent.
@@ -778,6 +780,7 @@ class ConversationViewDefinitionBase(object):
     extra_views = ()
     edit_view = None
     action_forms = {}
+    action_views = {}
 
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
@@ -857,6 +860,8 @@ class ConversationViewDefinitionBase(object):
     def get_action_view(self, action_name):
         for action in self._conv_def.get_actions():
             if action.action_name == action_name:
-                return ConversationActionView.as_view(
+                view_cls = self.action_views.get(
+                    action_name, ConversationActionView)
+                return view_cls.as_view(
                     view_def=self, action=action)
         raise Http404
