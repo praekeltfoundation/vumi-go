@@ -2,13 +2,10 @@
 
 import json
 
-from go.vumitools.tests.helpers import djangotest_imports
-
-with djangotest_imports(globals()):
-    from django.db import models
-    from django.core.exceptions import ValidationError
-    from django.utils.six import with_metaclass
-    from django.utils.translation import ugettext_lazy as _
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils.six import with_metaclass
+from django.utils.translation import ugettext_lazy as _
 
 
 class JsonField(with_metaclass(models.SubfieldBase, models.TextField)):
