@@ -1,0 +1,102 @@
+{% extends "app.html" %}
+{% load crispy_forms_tags %}
+
+{% block content_title %}{{ action.action_display_name }}{% endblock %}
+
+{% block content_actions_right %}
+<div class="pull-right">
+    <button name="schedule" class="btn btn-primary" value="Schedule" data-toggle="modal" data-target="#schedule-modal">{{ action.action_schedule_verb|default:"Schedule" }}</button>
+    <button type="submit" id="submit" name="submit" class="btn btn-primary" value="Apply">{{ action.action_display_verb|default:"Save" }}</button>
+</div>
+{% endblock %}
+
+{% block content_main %}
+<div class="main-content row">
+    {% if message %}
+        <div class="col-md-12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-4">
+            <form name="conversation_action" class="indent" id="conversation_action" method="post" action="">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="box shadow survey-box survey-questions">
+                            {{ form|crispy }}
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="schedule-modal" tabindex='-1'>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a class="close" aria-label="Close" data-dismiss="modal">×</a>
+                <h3>Pick a time in the future</h3>
+            </div>
+
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div id="datetimepicker"></div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div id="timezone" class="pull-right"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" type="submit" id="scheduled_submit">Save</button>
+                <button class="btn btn-primary" type="button" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extramedia %}
+    {{ form.media }}
+{% endblock %}
+
+{% block ondomready %}
+    $('#datetimepicker').datetimepicker({
+        inline: true,
+        sideBySide: true,
+        minDate: new Date()
+    });
+
+    $('#datetimepicker').on("dp.change", function(e) {
+        $('#id_scheduled_datetime').val(
+            e.date.utc().format("YYYY-MM-DD HH:mm")
+        );
+    });
+
+    $('#timezone').text(function() {
+        return 'Timezone: ' + moment.tz.guess();
+    });
+
+    $('#submit').on('click', function(e) {
+        $('#conversation_action').submit();
+    });
+
+    $('#scheduled_submit').on('click', function(e) {
+        if ($('#id_scheduled_datetime').val() === '') {
+            $('#id_scheduled_datetime').val(
+                moment().utc().format("YYYY-MM-DD HH:mm")
+            )
+        };
+        $('#conversation_action').submit();
+    });
+{% endblock %}
