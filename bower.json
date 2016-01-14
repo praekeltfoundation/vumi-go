@@ -47,7 +47,7 @@
     },
     "eonasdan-bootstrap-datetimepicker": {
       "js": "build/js/*",
-      "css": "build/css/*"
+      "css": "build/css/bootstrap-datetimepicker.min.css"
     },
     "jquery-simulate": {
       "js": "jquery.simulate.js"
