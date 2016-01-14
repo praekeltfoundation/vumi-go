@@ -42,6 +42,9 @@ client:
       - 'go/base/static/vendor/backbone.babysitter/js/backbone.babysitter.js'
       - 'go/base/static/vendor/diamondash/js/diamondash.js'
       - 'go/base/static/vendor/bootstrap-datepicker/js/bootstrap-datepicker.js'
+      - 'go/base/static/vendor/moment/js/moment-with-locales.min.js'
+      - 'go/base/static/vendor/moment-timezone/js/moment-timezone-with-data.min.js'
+      - 'go/base/static/vendor/eonasdan-bootstrap-datetimepicker/js/bootstrap-datetimepicker.min.js'
     go:
       - 'go/base/static/js/src/go.js'
       - 'go/base/static/js/src/utils.js'
@@ -108,6 +111,7 @@ client:
       - 'go/base/static/vendor/bootstrap/css/bootstrap.css'
       - 'go/base/static/vendor/diamondash/css/diamondash.css'
       - 'go/base/static/vendor/bootstrap-datepicker/css/bootstrap-datepicker3.css'
+      - 'go/base/static/vendor/eonasdan-bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css'
     go:
       - 'go/base/static/css/vumigo.css'
     invoice:
