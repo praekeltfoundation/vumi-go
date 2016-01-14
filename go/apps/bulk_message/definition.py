@@ -1,6 +1,9 @@
-from go.scheduler.models import Task
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.scheduler.models import Task
 
 
 class BulkSendAction(ConversationAction):
