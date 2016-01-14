@@ -1,5 +1,8 @@
+import datetime
+
 from vumi.tests.utils import RegexMatcher
 
+from go.scheduler.models import Task
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.tests.helpers import djangotest_imports
 from go.vumitools.token_manager import TokenManager
@@ -59,7 +62,8 @@ class TestBulkMessageViews(GoDjangoTestCase):
         self.assertContains(response,
                             '<option value="sms" selected="selected">SMS<')
         self.assertContains(response, 'name="dedupe"')
-        self.assertContains(response, '>Send message</button>')
+        self.assertContains(response, '>Send message now</button>')
+        self.assertContains(response, '>Schedule</button>')
 
     def test_action_bulk_send_no_group(self):
         conv_helper = self.app_helper.create_conversation_helper(started=True)
@@ -212,3 +216,35 @@ class TestBulkMessageViews(GoDjangoTestCase):
             batch_id=conversation.batch.key, msg_options={},
             delivery_class='sms',
             content='I am ham, not spam.', dedupe=True))
+
+    def test_action_bulk_send_schedule(self):
+        group = self.app_helper.create_group_with_contacts(u'test_group', 0)
+        channel = self.app_helper.create_channel(supports_generic_sends=True)
+        conv_helper = self.app_helper.create_conversation_helper(
+            started=True, channel=channel, groups=[group])
+        response = self.client.post(
+            conv_helper.get_action_view_url('bulk_send'),
+            {'message': 'I am ham, not spam.', 'delivery_class': 'sms',
+             'dedupe': True, 'scheduled_datetime': '2016-01-13 16:11'})
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+
+        conversation = conv_helper.get_conversation()
+        [task] = Task.objects.all()
+        self.assertEqual(
+            task.account_id, conversation.user_account.key)
+        self.assertEqual(task.label, 'Bulk Message Send')
+        self.assertEqual(task.task_type, Task.TYPE_CONVERSATION_ACTION)
+        self.assertEqual(task.task_data, {
+            'action_name': 'bulk_send',
+            'action_kwargs': {
+                'batch_id': conversation.batch.key,
+                'content': 'I am ham, not spam.',
+                'dedupe': True,
+                'delivery_class': 'sms',
+                'msg_options': {}
+            },
+        })
+        self.assertEqual(task.status, Task.STATUS_PENDING)
+        self.assertEqual(
+            task.scheduled_for, datetime.datetime.strptime(
+                '2016-01-13 16:11', '%Y-%m-%d %H:%M'))
