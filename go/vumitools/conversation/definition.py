@@ -94,6 +94,10 @@ class ConversationAction(object):
     # verb phrase describing the action in second person
     action_display_verb = None
     needs_confirmation = False
+    # allows for this action to be scheduled.
+    # MUST have a `scheduled_datetime` field in its form.
+    # perform_scheduled_action is then called if the action is to be scheduled
+    action_schedule_verb = None
 
     # Some actions are only possible under certain conditions.
     needs_group = False
@@ -104,8 +108,20 @@ class ConversationAction(object):
     def __init__(self, conv):
         self._conv = conv
 
+    def delegate_perform_action(self, action_data):
+        """Sends the action to the correct function depending on whether the
+        action should be scheduled or not. Use in place of `perform_action`."""
+        if action_data.get('scheduled_datetime') is not None:
+            return self.perform_scheduled_action(action_data)
+        return self.perform_action(action_data)
+
     def perform_action(self, action_data):
         """Perform whatever operations are necessary for this action."""
+        pass
+
+    def perform_scheduled_action(self, action_data):
+        """Perform whatever operations are necessary to schedule this action
+        to be performed later."""
         pass
 
     def send_command(self, command_name, **params):

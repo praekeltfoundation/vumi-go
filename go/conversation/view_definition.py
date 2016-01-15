@@ -574,7 +574,7 @@ class ConversationActionView(ConversationTemplateView):
 
     @check_action_is_enabled
     def perform_action(self, request, conversation, action_data):
-        self.action.perform_action(action_data)
+        self.action.delegate_perform_action(action_data)
         messages.info(request, 'Action successful: %s!' % (
             self.action.action_display_name,))
         return self._action_done(request, conversation)
@@ -780,7 +780,6 @@ class ConversationViewDefinitionBase(object):
     extra_views = ()
     edit_view = None
     action_forms = {}
-    action_views = {}
 
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
@@ -860,8 +859,6 @@ class ConversationViewDefinitionBase(object):
     def get_action_view(self, action_name):
         for action in self._conv_def.get_actions():
             if action.action_name == action_name:
-                view_cls = self.action_views.get(
-                    action_name, ConversationActionView)
-                return view_cls.as_view(
+                return ConversationActionView.as_view(
                     view_def=self, action=action)
         raise Http404

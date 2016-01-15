@@ -24,29 +24,29 @@ class BulkSendAction(ConversationAction):
                 " messages attached to this conversation.")
 
     def perform_action(self, action_data):
-        if action_data['scheduled_datetime'] is None:
-            return self.send_command(
-                'bulk_send', batch_id=self._conv.batch.key,
-                msg_options={}, content=action_data['message'],
-                delivery_class=action_data['delivery_class'],
-                dedupe=action_data['dedupe'])
-        else:
-            task = Task.objects.create(
-                account_id=self._conv.user_api.user_account_key,
-                label='Bulk Message Send',
-                task_type=Task.TYPE_CONVERSATION_ACTION,
-                task_data={
-                    'action_name': 'bulk_send',
-                    'action_kwargs': {
-                        'batch_id': self._conv.batch.key,
-                        'msg_options': {},
-                        'content': action_data['message'],
-                        'delivery_class': action_data['delivery_class'],
-                        'dedupe': action_data['dedupe'],
-                    },
+        return self.send_command(
+            'bulk_send', batch_id=self._conv.batch.key,
+            msg_options={}, content=action_data['message'],
+            delivery_class=action_data['delivery_class'],
+            dedupe=action_data['dedupe'])
+
+    def perform_scheduled_action(self, action_data):
+        task = Task.objects.create(
+            account_id=self._conv.user_api.user_account_key,
+            label='Bulk Message Send',
+            task_type=Task.TYPE_CONVERSATION_ACTION,
+            task_data={
+                'action_name': 'bulk_send',
+                'action_kwargs': {
+                    'batch_id': self._conv.batch.key,
+                    'msg_options': {},
+                    'content': action_data['message'],
+                    'delivery_class': action_data['delivery_class'],
+                    'dedupe': action_data['dedupe'],
                 },
-                scheduled_for=action_data['scheduled_datetime'])
-            task.save()
+            },
+            scheduled_for=action_data['scheduled_datetime'])
+        task.save()
 
 
 class ConversationDefinition(ConversationDefinitionBase):

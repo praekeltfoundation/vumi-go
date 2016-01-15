@@ -22,15 +22,7 @@ class MessageForm(forms.Form):
         widget=forms.HiddenInput(), required=False)
 
 
-class BulkSendView(ConversationActionView):
-    view_name = 'bulk_send'
-
-
 class ConversationViewDefinition(ConversationViewDefinitionBase):
     action_forms = {
         'bulk_send': MessageForm,
-    }
-
-    action_views = {
-        'bulk_send': BulkSendView,
     }
