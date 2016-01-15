@@ -1,7 +1,6 @@
 import json
 
-from django.http import HttpResponse
-from django.forms import Form
+from django import forms
 
 from go.api.go_api import client
 from go.api.go_api.client import GoApiError
@@ -62,9 +61,9 @@ class DialogueEditView(ConversationTemplateView):
         })
 
 
-class SendDialogueForm(Form):
-    # TODO: Something better than this?
-    pass
+class SendDialogueForm(forms.Form):
+    scheduled_datetime = forms.DateTimeField(
+        widget=forms.HiddenInput(), required=False)
 
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):
