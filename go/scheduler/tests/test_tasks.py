@@ -29,6 +29,7 @@ class TestPerformTask(GoDjangoTestCase):
                     'message': 'test_message',
                     'delivery_class': 'sms',
                     'dedupe': True,
+                    'scheduled_datetime': None,
                 },
             })
         [pending] = task.pendingtask_set.all()
@@ -50,6 +51,7 @@ class TestPerformTask(GoDjangoTestCase):
                     'message': 'test_message',
                     'delivery_class': 'sms',
                     'dedupe': True,
+                    'scheduled_datetime': None,
                 },
             })
         task.started_timestamp = now
@@ -73,6 +75,7 @@ class TestPerformTask(GoDjangoTestCase):
                     'message': 'test_message',
                     'delivery_class': 'sms',
                     'dedupe': True,
+                    'scheduled_datetime': None,
                 },
             })
         [pending] = task.pendingtask_set.all()

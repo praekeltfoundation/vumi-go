@@ -1,11 +1,16 @@
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
+from go.vumitools.tests.helpers import djangotest_imports
+
+with djangotest_imports(globals()):
+    from go.scheduler.models import Task
 
 
 class BulkSendAction(ConversationAction):
     action_name = 'bulk_send'
     action_display_name = 'Write and send bulk message'
-    action_display_verb = 'Send message'
+    action_display_verb = 'Send message now'
+    action_schedule_verb = 'Schedule'
 
     needs_confirmation = True
 
@@ -24,6 +29,24 @@ class BulkSendAction(ConversationAction):
             msg_options={}, content=action_data['message'],
             delivery_class=action_data['delivery_class'],
             dedupe=action_data['dedupe'])
+
+    def perform_scheduled_action(self, action_data):
+        task = Task.objects.create(
+            account_id=self._conv.user_api.user_account_key,
+            label='Bulk Message Send',
+            task_type=Task.TYPE_CONVERSATION_ACTION,
+            task_data={
+                'action_name': 'bulk_send',
+                'action_kwargs': {
+                    'batch_id': self._conv.batch.key,
+                    'msg_options': {},
+                    'content': action_data['message'],
+                    'delivery_class': action_data['delivery_class'],
+                    'dedupe': action_data['dedupe'],
+                },
+            },
+            scheduled_for=action_data['scheduled_datetime'])
+        task.save()
 
 
 class ConversationDefinition(ConversationDefinitionBase):

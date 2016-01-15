@@ -179,7 +179,9 @@ class ShowConversationView(ConversationTemplateView):
             'is_editable': self.view_def.is_editable,
             'actions': self.view_def.get_actions(),
         }
-        templ = lambda name: self.get_template_name('includes/%s' % (name,))
+
+        def templ(name):
+            return self.get_template_name('includes/%s' % (name,))
 
         if conversation.archived():
             # HACK: This assumes "stopped" and "archived" are equivalent.
@@ -572,7 +574,7 @@ class ConversationActionView(ConversationTemplateView):
 
     @check_action_is_enabled
     def perform_action(self, request, conversation, action_data):
-        self.action.perform_action(action_data)
+        self.action.delegate_perform_action(action_data)
         messages.info(request, 'Action successful: %s!' % (
             self.action.action_display_name,))
         return self._action_done(request, conversation)

@@ -1,6 +1,7 @@
 from django import forms
 
-from go.conversation.view_definition import ConversationViewDefinitionBase
+from go.conversation.view_definition import (
+    ConversationActionView, ConversationViewDefinitionBase)
 from go.base.widgets import BulkMessageWidget
 from go.vumitools.contact.models import DELIVERY_CLASSES
 
@@ -17,6 +18,8 @@ class MessageForm(forms.Form):
         choices=[(d_name, d['label']) for d_name, d
                  in DELIVERY_CLASSES.iteritems()])
     dedupe = forms.BooleanField(required=False)
+    scheduled_datetime = forms.DateTimeField(
+        widget=forms.HiddenInput(), required=False)
 
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):
