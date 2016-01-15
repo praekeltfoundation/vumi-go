@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from go.api.go_api.tests.utils import MockRpc
@@ -8,6 +9,7 @@ from go.vumitools.tests.helpers import djangotest_imports
 with djangotest_imports(globals()):
     from go.apps.tests.view_helpers import AppViewsHelper
     from go.base.tests.helpers import GoDjangoTestCase
+    from go.scheduler.models import Task
 
 
 class TestDialogueViews(GoDjangoTestCase):
@@ -36,6 +38,8 @@ class TestDialogueViews(GoDjangoTestCase):
             conv_helper.get_action_view_url('send_jsbox'))
         self.assertEqual([], self.app_helper.get_api_commands_sent())
         self.assertContains(response, '<h1>Send Dialogue</h1>')
+        self.assertContains(response, '>Send dialogue now</button>')
+        self.assertContains(response, '>Schedule dialogue send</button>')
 
     def test_action_send_dialogue_post(self):
         conv_helper = self.setup_conversation(started=True)
@@ -50,6 +54,34 @@ class TestDialogueViews(GoDjangoTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.batch.key))
+
+    def test_action_send_dialogue_schedule(self):
+        conv_helper = self.setup_conversation(started=True)
+        response = self.client.post(
+            conv_helper.get_action_view_url('send_jsbox'), {
+                'scheduled_datetime': '2016-01-13 16:11',
+            }, follow=True)
+        self.assertRedirects(response, conv_helper.get_view_url('show'))
+
+        commands = self.app_helper.get_api_commands_sent()
+        self.assertEqual(commands, [])
+
+        conversation = conv_helper.get_conversation()
+        [task] = Task.objects.all()
+        self.assertEqual(
+            task.account_id, conversation.user_account.key)
+        self.assertEqual(task.label, 'Dialogue Message Send')
+        self.assertEqual(task.task_type, Task.TYPE_CONVERSATION_ACTION)
+        self.assertEqual(task.task_data, {
+            'action_name': 'send_jsbox',
+            'action_kwargs': {
+                'batch_id': conversation.batch.key,
+            },
+        })
+        self.assertEqual(task.status, Task.STATUS_PENDING)
+        self.assertEqual(
+            task.scheduled_for, datetime.datetime.strptime(
+                '2016-01-13 16:11', '%Y-%m-%d %H:%M'))
 
     def test_action_send_dialogue_no_group(self):
         conv_helper = self.setup_conversation(started=True, with_group=False)
