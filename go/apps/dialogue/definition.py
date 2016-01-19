@@ -20,6 +20,7 @@ class SendDialogueAction(SendJsboxAction):
             label='Dialogue Message Send',
             task_type=Task.TYPE_CONVERSATION_ACTION,
             task_data={
+                'conversation_key': self._conv.key,
                 'action_name': 'send_jsbox',
                 'action_kwargs': {
                     'batch_id': self._conv.batch.key,

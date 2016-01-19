@@ -36,6 +36,7 @@ class BulkSendAction(ConversationAction):
             label='Bulk Message Send',
             task_type=Task.TYPE_CONVERSATION_ACTION,
             task_data={
+                'conversation_key': self._conv.key,
                 'action_name': 'bulk_send',
                 'action_kwargs': {
                     'batch_id': self._conv.batch.key,
