@@ -73,6 +73,7 @@ class TestDialogueViews(GoDjangoTestCase):
         self.assertEqual(task.label, 'Dialogue Message Send')
         self.assertEqual(task.task_type, Task.TYPE_CONVERSATION_ACTION)
         self.assertEqual(task.task_data, {
+            'conversation_key': conversation.key,
             'action_name': 'send_jsbox',
             'action_kwargs': {
                 'batch_id': conversation.batch.key,
