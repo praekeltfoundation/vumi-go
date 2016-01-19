@@ -42,14 +42,13 @@ def perform_conversation_action(task):
     Perform a conversation action. ``task_data`` must have the following
     fields:
 
-    user_account_key - The key of the user account.
     conversation_key - The key for the conversation.
     action_name - The name of the action to be performed.
     action_kwargs - A dictionary representing the keyword arguments for an
                     action.
     """
     user_api = vumi_api().get_user_api(
-        task.task_data['user_account_key'], cleanup_api=True)
+        task.account_id, cleanup_api=True)
     conv = user_api.get_wrapped_conversation(
         task.task_data['conversation_key'])
     view_def = get_conversation_view_definition(

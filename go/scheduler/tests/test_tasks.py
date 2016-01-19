@@ -20,9 +20,8 @@ class TestPerformTask(GoDjangoTestCase):
         conv = self.user_helper.create_conversation(u'bulk_message')
         now = datetime.datetime.utcnow()
         task = Task.objects.create(
-            account_id="user-1", label="Task 1", scheduled_for=now,
-            task_data={
-                'user_account_key': self.user_helper.account_key,
+            account_id=self.user_helper.account_key, label="Task 1",
+            scheduled_for=now, task_data={
                 'conversation_key': conv.key,
                 'action_name': 'bulk_send',
                 'action_kwargs': {
@@ -42,9 +41,8 @@ class TestPerformTask(GoDjangoTestCase):
         conv = self.user_helper.create_conversation(u'bulk_message')
         now = datetime.datetime.utcnow()
         task = Task.objects.create(
-            account_id="user-1", label="Task 1", scheduled_for=now,
-            task_data={
-                'user_account_key': self.user_helper.account_key,
+            account_id=self.user_helper.account_key, label="Task 1",
+            scheduled_for=now, task_data={
                 'conversation_key': conv.key,
                 'action_name': 'bulk_send',
                 'action_kwargs': {
@@ -66,9 +64,8 @@ class TestPerformTask(GoDjangoTestCase):
         conv = self.user_helper.create_conversation(u'bulk_message')
         now = datetime.datetime.utcnow()
         task = Task.objects.create(
-            account_id="user-1", label="Task 1", scheduled_for=now,
-            task_data={
-                'user_account_key': self.user_helper.account_key,
+            account_id=self.user_helper.account_key, label="Task 1",
+            scheduled_for=now, task_data={
                 'conversation_key': conv.key,
                 'action_name': 'bulk_send',
                 'action_kwargs': {
