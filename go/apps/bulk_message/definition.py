@@ -39,9 +39,7 @@ class BulkSendAction(ConversationAction):
                 'conversation_key': self._conv.key,
                 'action_name': 'bulk_send',
                 'action_kwargs': {
-                    'batch_id': self._conv.batch.key,
-                    'msg_options': {},
-                    'content': action_data['message'],
+                    'message': action_data['message'],
                     'delivery_class': action_data['delivery_class'],
                     'dedupe': action_data['dedupe'],
                 },

@@ -10,6 +10,7 @@ with djangotest_imports(globals()):
     from go.apps.tests.view_helpers import AppViewsHelper
     from go.base.tests.helpers import GoDjangoTestCase
     from go.scheduler.models import Task
+    from go.scheduler.tasks import perform_conversation_action
 
 
 class TestDialogueViews(GoDjangoTestCase):
@@ -68,17 +69,20 @@ class TestDialogueViews(GoDjangoTestCase):
 
         conversation = conv_helper.get_conversation()
         [task] = Task.objects.all()
+
+        perform_conversation_action(task)
+        [send_jsbox_cmd] = self.app_helper.get_api_commands_sent()
+        self.assertEqual(send_jsbox_cmd, VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,),
+            'send_jsbox', command_id=send_jsbox_cmd["command_id"],
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=conversation.batch.key))
+
         self.assertEqual(
             task.account_id, conversation.user_account.key)
         self.assertEqual(task.label, 'Dialogue Message Send')
         self.assertEqual(task.task_type, Task.TYPE_CONVERSATION_ACTION)
-        self.assertEqual(task.task_data, {
-            'conversation_key': conversation.key,
-            'action_name': 'send_jsbox',
-            'action_kwargs': {
-                'batch_id': conversation.batch.key,
-            },
-        })
         self.assertEqual(task.status, Task.STATUS_PENDING)
         self.assertEqual(
             task.scheduled_for, datetime.datetime.strptime(
