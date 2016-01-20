@@ -245,7 +245,7 @@ class TestBulkMessageViews(GoDjangoTestCase):
 
         self.assertEqual(
             task.account_id, conversation.user_account.key)
-        self.assertEqual(task.label, 'Bulk Message Send')
+        self.assertEqual(task.label, 'Write and send bulk message')
         self.assertEqual(task.task_type, Task.TYPE_CONVERSATION_ACTION)
         self.assertEqual(task.status, Task.STATUS_PENDING)
         self.assertEqual(
