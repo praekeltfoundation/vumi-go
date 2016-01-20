@@ -1,12 +1,8 @@
 from go.vumitools.conversation.definition import ConversationDefinitionBase
-from go.vumitools.tests.helpers import djangotest_imports
 
 from go.apps.dialogue.dialogue_api import DialogueActionDispatcher
 from go.apps.dialogue.utils import configured_endpoints
 from go.apps.jsbox.definition import SendJsboxAction
-
-with djangotest_imports(globals()):
-    from go.scheduler.models import Task
 
 
 class SendDialogueAction(SendJsboxAction):
@@ -15,6 +11,10 @@ class SendDialogueAction(SendJsboxAction):
     action_schedule_verb = 'Schedule dialogue send'
 
     def perform_scheduled_action(self, action_data):
+        # We're importing here to avoid top level django imports in the
+        # definition.
+        # TODO: Find a better solution.
+        from go.scheduler.models import Task
         task = Task.objects.create(
             account_id=self._conv.user_api.user_account_key,
             label='Dialogue Message Send',

@@ -1,9 +1,5 @@
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
-from go.vumitools.tests.helpers import djangotest_imports
-
-with djangotest_imports(globals()):
-    from go.scheduler.models import Task
 
 
 class BulkSendAction(ConversationAction):
@@ -31,6 +27,10 @@ class BulkSendAction(ConversationAction):
             dedupe=action_data['dedupe'])
 
     def perform_scheduled_action(self, action_data):
+        # We're importing here to avoid top level django imports in the
+        # definition.
+        # TODO: Find a better solution.
+        from go.scheduler.models import Task
         task = Task.objects.create(
             account_id=self._conv.user_api.user_account_key,
             label='Bulk Message Send',
