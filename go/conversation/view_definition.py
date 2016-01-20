@@ -28,6 +28,9 @@ from go.dashboard.dashboard import Dashboard, ConversationReportsLayout
 
 import go.conversation.settings as conversation_settings
 
+from go.scheduler.models import Task
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -574,10 +577,31 @@ class ConversationActionView(ConversationTemplateView):
 
     @check_action_is_enabled
     def perform_action(self, request, conversation, action_data):
-        self.action.delegate_perform_action(action_data)
-        messages.info(request, 'Action successful: %s!' % (
-            self.action.action_display_name,))
+        """Sends the action to the correct function depending on whether the
+        action should be scheduled or not."""
+        if action_data.get('scheduled_datetime') is None:
+            self.action.perform_action(action_data)
+            messages.info(request, 'Action successful: %s!' % (
+                self.action.action_display_name,))
+        else:
+            self.schedule_action(action_data, conversation)
+            messages.info(request, 'Action successfully scheduled: %s!' % (
+                self.action.action_display_name,))
         return self._action_done(request, conversation)
+
+    def schedule_action(self, action_data, conversation):
+        scheduled_for = action_data.pop('scheduled_datetime')
+        action_data.pop('display')
+        task = Task.objects.create(
+            account_id=conversation.user_api.user_account_key,
+            label=self.action.action_display_name,
+            task_type=Task.TYPE_CONVERSATION_ACTION,
+            task_data={
+                'conversation_key': conversation.key,
+                'action_name': self.action.action_name,
+                'action_kwargs': action_data,
+            },
+            scheduled_for=scheduled_for)
 
     def _action_done(self, request, conversation):
         next_view = self.get_next_view(conversation)
