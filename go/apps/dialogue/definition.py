@@ -22,9 +22,7 @@ class SendDialogueAction(SendJsboxAction):
             task_data={
                 'conversation_key': self._conv.key,
                 'action_name': 'send_jsbox',
-                'action_kwargs': {
-                    'batch_id': self._conv.batch.key,
-                },
+                'action_kwargs': {},
             },
             scheduled_for=action_data['scheduled_datetime'])
         task.save()
