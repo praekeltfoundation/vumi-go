@@ -26,27 +26,6 @@ class BulkSendAction(ConversationAction):
             delivery_class=action_data['delivery_class'],
             dedupe=action_data['dedupe'])
 
-    def perform_scheduled_action(self, action_data):
-        # We're importing here to avoid top level django imports in the
-        # definition.
-        # TODO: Find a better solution.
-        from go.scheduler.models import Task
-        task = Task.objects.create(
-            account_id=self._conv.user_api.user_account_key,
-            label='Bulk Message Send',
-            task_type=Task.TYPE_CONVERSATION_ACTION,
-            task_data={
-                'conversation_key': self._conv.key,
-                'action_name': 'bulk_send',
-                'action_kwargs': {
-                    'message': action_data['message'],
-                    'delivery_class': action_data['delivery_class'],
-                    'dedupe': action_data['dedupe'],
-                },
-            },
-            scheduled_for=action_data['scheduled_datetime'])
-        task.save()
-
 
 class ConversationDefinition(ConversationDefinitionBase):
     conversation_type = 'bulk_message'

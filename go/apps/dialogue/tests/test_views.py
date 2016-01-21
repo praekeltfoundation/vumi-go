@@ -81,7 +81,7 @@ class TestDialogueViews(GoDjangoTestCase):
 
         self.assertEqual(
             task.account_id, conversation.user_account.key)
-        self.assertEqual(task.label, 'Dialogue Message Send')
+        self.assertEqual(task.label, 'Send Dialogue')
         self.assertEqual(task.task_type, Task.TYPE_CONVERSATION_ACTION)
         self.assertEqual(task.status, Task.STATUS_PENDING)
         self.assertEqual(
