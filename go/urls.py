@@ -39,6 +39,7 @@ urlpatterns = patterns(
     url(r'^account/', include('go.account.urls', namespace='account')),
     url(r'^accounts/', include('registration.backends.default.urls')),
     url(r'^billing/', include('go.billing.urls', namespace='billing')),
+    url(r'^scheduler/', include('go.scheduler.urls', namespace='scheduler')),
 
     url(r'^routing/$', 'go.routing.views.routing', name='routing'),
 
