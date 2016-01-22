@@ -1,0 +1,32 @@
+<table class="table">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Label</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Scheduled for</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if tasks %}
+            {% for task in tasks %}
+            <tr>
+                <td></td>
+                <td> {{ task.label }} </td>
+                <td> {{ task.get_task_type_display }} </td>
+                <td> {{ task.get_status_display }} </td>
+                <td> 
+                    {{ task.scheduled_for }} {{ task.scheduled_for|date:"T" }}
+                    <br />
+                    (in {{ task.scheduled_for|timeuntil }})
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="5">No scheduled tasks</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
