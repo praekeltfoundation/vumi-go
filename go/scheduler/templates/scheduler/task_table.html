@@ -6,6 +6,7 @@
             <th>Type</th>
             <th>Status</th>
             <th>Scheduled for</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -21,11 +22,30 @@
                     <br />
                     (in {{ task.scheduled_for|timeuntil }})
                 </td>
+                <td>
+                    <div class='btn-group'>
+                        {% if task.status == task.STATUS_CANCELLED %}
+                        <form action="{% url 'scheduler:reactivate_task' task.id %}" method="post">
+                            {% csrf_token %}
+                            <button class="btn btn-primary"> Reactivate </button>
+                        </form>
+                        {% else %}
+                        <form action="{% url 'scheduler:delete_task' task.id %}" method="post">
+                            {% csrf_token %}
+                            <button
+                                class="btn btn-danger"
+                                {% if task.status != task.STATUS_PENDING %} disabled {% endif %}>
+                                Cancel
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="5">No scheduled tasks</td>
+                <td colspan="6">No scheduled tasks</td>
             </tr>
         {% endif %}
     </tbody>

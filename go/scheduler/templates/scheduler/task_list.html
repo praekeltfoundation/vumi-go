@@ -8,10 +8,7 @@
     <div class="row">
         <div class="col-md-12 main-content">
             {% include "base/includes/messages.html" %}
-            <form class="table-form-view" method="post" action="">
-                {% csrf_token %}
-                {% include "scheduler/task_table.html" %}
-            </form>
+            {% include "scheduler/task_table.html" %}
             {% include "scheduler/pagination.html" with page=page_obj %}
         </div>
     </div>
