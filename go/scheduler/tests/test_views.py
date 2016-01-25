@@ -9,6 +9,7 @@ with djangotest_imports(globals()):
     from go.scheduler.models import Task
     from go.scheduler.views import SchedulerListView
 
+
 class TestSchedulerListView(GoDjangoTestCase):
     def setUp(self):
         self.vumi_helper = self.add_helper(
@@ -43,29 +44,31 @@ class TestSchedulerListView(GoDjangoTestCase):
         self.assertContains(response, time_remaining)
 
     def test_single_task(self):
-        task = self.create_task('Test task') 
+        task = self.create_task('Test task')
         r = self.client.get(reverse('scheduler:tasks'))
         self.assert_contains_task(r, task)
 
     def test_multiple_pages(self):
+        '''If there are more tasks than fit in a single page view, then only
+        the tasks that fit should be shown, with navigation to go to next and
+        previous pages. Tasks are sorted in reverse chronological order.'''
         tasks = []
         for i in range(SchedulerListView.paginate_by + 1):
             task = self.create_task('Test task %d' % i)
             tasks.append(task)
 
-        r = self.client.get(reverse('scheduler:tasks'))
+        tasks.sort(key=lambda t: t.scheduled_for, reverse=True)
         excluded_task = tasks.pop()
+
+        r = self.client.get(reverse('scheduler:tasks'))
         for task in tasks:
             self.assert_contains_task(r, task)
         self.assertNotContains(r, excluded_task.label)
-
         self.assertContains(r, '&larr;</a>')
         self.assertContains(r, '&rarr;</a>')
 
-    def test_task_past(self):
-        task = self.create_task('Test task', delta=-7)
-        r = self.client.get(reverse('scheduler:tasks'))
-        self.assertNotContains(r, task.label)
+        r = self.client.get(reverse('scheduler:tasks'), {'page': 2})
+        self.assert_contains_task(r, excluded_task)
 
     def test_task_different_user(self):
         user2 = self.vumi_helper.make_django_user(email='user2@domain.com')
@@ -76,4 +79,3 @@ class TestSchedulerListView(GoDjangoTestCase):
     def test_scheduled_tasks_in_header(self):
         r = self.client.get(reverse('scheduler:tasks'))
         self.assertContains(r, '>Scheduled Tasks</a></li>')
-        
