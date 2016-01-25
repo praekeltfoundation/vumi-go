@@ -12,7 +12,7 @@
                 {% csrf_token %}
                 {% include "scheduler/task_table.html" %}
             </form>
-            {% include "base/includes/pagination.html" with page=page_obj %}
+            {% include "scheduler/pagination.html" with page=page_obj %}
         </div>
     </div>
 {% endblock %}
