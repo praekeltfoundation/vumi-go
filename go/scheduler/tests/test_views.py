@@ -79,3 +79,27 @@ class TestSchedulerListView(GoDjangoTestCase):
     def test_scheduled_tasks_in_header(self):
         r = self.client.get(reverse('scheduler:tasks'))
         self.assertContains(r, '>Scheduled Tasks</a></li>')
+
+    def test_scheduler_list_cancel_button(self):
+        task = self.create_task('Test task')
+        r = self.client.get(reverse('scheduler:tasks'))
+        self.assertContains(
+            r, '<button class="btn btn-danger">Cancel</button>', html=True)
+
+    def test_scheduler_list_disabled_cancel_button(self):
+        task = self.create_task('Test task')
+        task.status = Task.STATUS_COMPLETED
+        task.save()
+
+        r = self.client.get(reverse('scheduler:tasks'))
+        self.assertContains(
+            r, '<button class="btn btn-danger" disabled>Cancel</button>', html=True)
+
+    def test_scheduler_list_reactivate_button(self):
+        task = self.create_task('Test task')
+        task.status = Task.STATUS_CANCELLED
+        task.save()
+
+        r = self.client.get(reverse('scheduler:tasks'))
+        self.assertContains(
+            r, '<button class="btn btn-primary">Reactivate</button>', html=True)
