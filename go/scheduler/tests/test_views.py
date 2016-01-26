@@ -43,6 +43,13 @@ class TestSchedulerListView(GoDjangoTestCase):
         time_remaining = defaultfilters.timeuntil(task.scheduled_for)
         self.assertContains(response, time_remaining)
 
+    def test_login_required(self):
+        self.client.logout()
+        r = self.client.get(reverse('scheduler:tasks'))
+        expected_url = "%s?next=%s" % (
+            reverse('auth_login'), reverse('scheduler:tasks'))
+        self.assertRedirects(r, expected_url)
+
     def test_single_task(self):
         task = self.create_task('Test task')
         r = self.client.get(reverse('scheduler:tasks'))
