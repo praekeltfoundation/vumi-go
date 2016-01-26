@@ -182,3 +182,72 @@ class TestSchedulerDeleteView(GoDjangoTestCase, TestSchedulerBase):
         r = self.client.post(
             reverse('scheduler:delete_task', kwargs={'pk': task.pk}))
         self.assertContains(r, "403 Forbidden", status_code=403)
+
+
+class TestSchedulerCreatePendingView(GoDjangoTestCase, TestSchedulerBase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(
+            DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
+
+    def test_login_required(self):
+        self.client.logout()
+        r = self.client.post(
+            reverse('scheduler:reactivate_task', kwargs={'pk': 1}))
+        expected_url = "%s?next=%s" % (
+            reverse('auth_login'),
+            reverse('scheduler:reactivate_task', kwargs={'pk': 1}))
+        self.assertRedirects(r, expected_url)
+
+    def test_csrf_protect(self):
+        user = self.user_helper.get_django_user()
+        client = Client(
+            username=user.email,
+            password=user.password,
+            enforce_csrf_checks=True)
+        task = self.create_task('Test task')
+        r = client.post(
+            reverse('scheduler:reactivate_task', kwargs={'pk': task.pk}))
+        self.assertContains(r, 'CSRF verification failed.', status_code=403)
+
+    def test_reactivate_task(self):
+        task = self.create_task('Test task')
+        PendingTask.objects.get(task=task).delete()
+        task.status = Task.STATUS_CANCELLED
+        task.save()
+
+        r = self.client.post(
+            reverse('scheduler:reactivate_task', kwargs={'pk': task.pk}))
+
+        task = Task.objects.get(pk=task.pk)
+        self.assertEqual(task.status, Task.STATUS_PENDING)
+
+        pending_task = PendingTask.objects.get(task=task)
+        self.assertEqual(pending_task.task, task)
+
+        self.assertRedirects(r, reverse('scheduler:tasks'))
+
+    def test_reactivate_task_not_cancelled(self):
+        task_pending = self.create_task('Test task')
+        task_pending.status = Task.STATUS_PENDING
+        task_pending.save()
+
+        r = self.client.post(
+            reverse('scheduler:reactivate_task', kwargs={'pk': task_pending.pk}))
+        self.assertContains(r, "403 Forbidden", status_code=403)
+
+        task_completed = self.create_task('Test task')
+        task_completed.status = Task.STATUS_COMPLETED
+        task_completed.save()
+
+        r = self.client.post(
+            reverse('scheduler:reactivate_task', kwargs={'pk': task_completed.pk}))
+        self.assertContains(r, "403 Forbidden", status_code=403)
+
+    def test_reactivate_task_wrong_user(self):
+        user2 = self.vumi_helper.make_django_user(email='user2@domain.com')
+        task = self.create_task('Test task', account_id=user2.account_key)
+        r = self.client.post(
+            reverse('scheduler:reactivate_task', kwargs={'pk': task.pk}))
+        self.assertContains(r, "403 Forbidden", status_code=403)
