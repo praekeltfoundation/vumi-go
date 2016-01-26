@@ -33,6 +33,7 @@ class TestSchedulerBase(object):
         time_remaining = defaultfilters.timeuntil(task.scheduled_for)
         self.assertContains(response, time_remaining)
 
+
 class TestSchedulerListView(GoDjangoTestCase, TestSchedulerBase):
     def setUp(self):
         self.vumi_helper = self.add_helper(
@@ -233,16 +234,16 @@ class TestSchedulerCreatePendingView(GoDjangoTestCase, TestSchedulerBase):
         task_pending.status = Task.STATUS_PENDING
         task_pending.save()
 
-        r = self.client.post(
-            reverse('scheduler:reactivate_task', kwargs={'pk': task_pending.pk}))
+        r = self.client.post(reverse(
+            'scheduler:reactivate_task', kwargs={'pk': task_pending.pk}))
         self.assertContains(r, "403 Forbidden", status_code=403)
 
         task_completed = self.create_task('Test task')
         task_completed.status = Task.STATUS_COMPLETED
         task_completed.save()
 
-        r = self.client.post(
-            reverse('scheduler:reactivate_task', kwargs={'pk': task_completed.pk}))
+        r = self.client.post(reverse(
+            'scheduler:reactivate_task', kwargs={'pk': task_completed.pk}))
         self.assertContains(r, "403 Forbidden", status_code=403)
 
     def test_reactivate_task_wrong_user(self):
