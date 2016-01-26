@@ -4,19 +4,14 @@ from go.vumitools.tests.helpers import djangotest_imports
 with djangotest_imports(globals()):
     from django.core.urlresolvers import reverse
     from django.template import defaultfilters
+    from django.test.client import Client
     from django.conf import settings
     from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-    from go.scheduler.models import Task
+    from go.scheduler.models import Task, PendingTask
     from go.scheduler.views import SchedulerListView
 
 
-class TestSchedulerListView(GoDjangoTestCase):
-    def setUp(self):
-        self.vumi_helper = self.add_helper(
-            DjangoVumiApiHelper())
-        self.user_helper = self.vumi_helper.make_django_user()
-        self.client = self.vumi_helper.get_client()
-
+class TestSchedulerBase(object):
     def create_task(self, label, account_id=None, delta=7):
         now = datetime.datetime.now()
         scheduled_time = now + datetime.timedelta(days=delta)
@@ -24,11 +19,6 @@ class TestSchedulerListView(GoDjangoTestCase):
             account_id = self.user_helper.account_key
         return Task.objects.create(
             account_id=account_id, label=label, scheduled_for=scheduled_time)
-
-    def test_no_tasks(self):
-        r = self.client.get(reverse('scheduler:tasks'))
-        self.assertContains(r, '>Scheduled Tasks</a>')
-        self.assertContains(r, '>No scheduled tasks<')
 
     def assert_contains_task(self, response, task):
         self.assertContains(response, task.label)
@@ -42,6 +32,18 @@ class TestSchedulerListView(GoDjangoTestCase):
         self.assertContains(response, timezone)
         time_remaining = defaultfilters.timeuntil(task.scheduled_for)
         self.assertContains(response, time_remaining)
+
+class TestSchedulerListView(GoDjangoTestCase, TestSchedulerBase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(
+            DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
+
+    def test_no_tasks(self):
+        r = self.client.get(reverse('scheduler:tasks'))
+        self.assertContains(r, '>Scheduled Tasks</a>')
+        self.assertContains(r, '>No scheduled tasks<')
 
     def test_login_required(self):
         self.client.logout()
@@ -88,7 +90,7 @@ class TestSchedulerListView(GoDjangoTestCase):
         self.assertContains(r, '>Scheduled Tasks</a></li>')
 
     def test_scheduler_list_cancel_button(self):
-        task = self.create_task('Test task')
+        self.create_task('Test task')
         r = self.client.get(reverse('scheduler:tasks'))
         self.assertContains(
             r, '<button class="btn btn-danger">Cancel</button>', html=True)
@@ -100,7 +102,8 @@ class TestSchedulerListView(GoDjangoTestCase):
 
         r = self.client.get(reverse('scheduler:tasks'))
         self.assertContains(
-            r, '<button class="btn btn-danger" disabled>Cancel</button>', html=True)
+            r, '<button class="btn btn-danger" disabled>Cancel</button>',
+            html=True)
 
     def test_scheduler_list_reactivate_button(self):
         task = self.create_task('Test task')
@@ -109,4 +112,73 @@ class TestSchedulerListView(GoDjangoTestCase):
 
         r = self.client.get(reverse('scheduler:tasks'))
         self.assertContains(
-            r, '<button class="btn btn-primary">Reactivate</button>', html=True)
+            r, '<button class="btn btn-primary">Reactivate</button>',
+            html=True)
+
+
+class TestSchedulerDeleteView(GoDjangoTestCase, TestSchedulerBase):
+    def setUp(self):
+        self.vumi_helper = self.add_helper(
+            DjangoVumiApiHelper())
+        self.user_helper = self.vumi_helper.make_django_user()
+        self.client = self.vumi_helper.get_client()
+
+    def test_login_required(self):
+        self.client.logout()
+        r = self.client.post(
+            reverse('scheduler:delete_task', kwargs={'pk': 1}))
+        expected_url = "%s?next=%s" % (
+            reverse('auth_login'),
+            reverse('scheduler:delete_task', kwargs={'pk': 1}))
+        self.assertRedirects(r, expected_url)
+
+    def test_csrf_protect(self):
+        user = self.user_helper.get_django_user()
+        client = Client(
+            username=user.email,
+            password=user.password,
+            enforce_csrf_checks=True)
+        task = self.create_task('Test task')
+        r = client.post(
+            reverse('scheduler:delete_task', kwargs={'pk': task.pk}))
+        self.assertContains(r, 'CSRF verification failed.', status_code=403)
+
+    def test_delete_task(self):
+        task = self.create_task('Test task')
+        pending = PendingTask.objects.get(task=task)
+        self.assertEqual(pending.task, task)
+
+        r = self.client.post(
+            reverse('scheduler:delete_task', kwargs={'pk': task.pk}))
+
+        task = Task.objects.get(pk=task.pk)
+        self.assertEqual(task.status, Task.STATUS_CANCELLED)
+
+        pending_tasks = PendingTask.objects.filter(task=task)
+        self.assertEqual(len(pending_tasks), 0)
+
+        self.assertRedirects(r, reverse('scheduler:tasks'))
+
+    def test_delete_task_not_pending(self):
+        task_cancelled = self.create_task('Test task')
+        task_cancelled.status = Task.STATUS_CANCELLED
+        task_cancelled.save()
+
+        r = self.client.post(
+            reverse('scheduler:delete_task', kwargs={'pk': task_cancelled.pk}))
+        self.assertContains(r, "403 Forbidden", status_code=403)
+
+        task_completed = self.create_task('Test task')
+        task_completed.status = Task.STATUS_COMPLETED
+        task_completed.save()
+
+        r = self.client.post(
+            reverse('scheduler:delete_task', kwargs={'pk': task_completed.pk}))
+        self.assertContains(r, "403 Forbidden", status_code=403)
+
+    def test_delete_task_wrong_user(self):
+        user2 = self.vumi_helper.make_django_user(email='user2@domain.com')
+        task = self.create_task('Test task', account_id=user2.account_key)
+        r = self.client.post(
+            reverse('scheduler:delete_task', kwargs={'pk': task.pk}))
+        self.assertContains(r, "403 Forbidden", status_code=403)
