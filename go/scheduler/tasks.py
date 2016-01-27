@@ -1,16 +1,12 @@
+from celery.task import task, group
+from celery.utils.log import get_task_logger
 import datetime
 
-from go.vumitools.tests.helpers import djangotest_imports
+from go.scheduler.models import PendingTask, Task
+from go.base.utils import (
+    get_conversation_view_definition, vumi_api)
 
-with djangotest_imports(globals()):
-    from celery.task import task, group
-    from celery.utils.log import get_task_logger
-
-    logger = get_task_logger(__name__)
-
-    from go.scheduler.models import PendingTask, Task
-    from go.base.utils import (
-        get_conversation_view_definition, vumi_api)
+logger = get_task_logger(__name__)
 
 
 @task()
