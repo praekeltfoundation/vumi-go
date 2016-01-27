@@ -35,6 +35,8 @@ def perform_task(pending_id):
         perform_conversation_action(task)
 
     pending.delete()
+    task.status = Task.STATUS_COMPLETED
+    task.save()
 
 
 def perform_conversation_action(task):

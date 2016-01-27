@@ -76,6 +76,8 @@ class TestPerformTask(GoDjangoTestCase):
                 },
             })
         [pending] = task.pendingtask_set.all()
+        [task] = Task.objects.all()
+        self.assertEqual(task.status, Task.STATUS_PENDING)
         tasks.perform_task(pending.pk)
 
         [command] = conv.api.mapi.amqp_client.commands
@@ -88,6 +90,9 @@ class TestPerformTask(GoDjangoTestCase):
         self.assertEqual(command['kwargs']['delivery_class'], 'sms')
         self.assertEqual(command['kwargs']['content'], 'test_message')
         self.assertEqual(command['kwargs']['dedupe'], True)
+
+        [task] = Task.objects.all()
+        self.assertEqual(task.status, Task.STATUS_COMPLETED)
 
 
 class TestPollTasks(GoDjangoTestCase):

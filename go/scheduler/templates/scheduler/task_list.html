@@ -5,14 +5,68 @@
 {% endblock %}
 
 {% block content_main %}
-    <div class="row">
-        <div class="col-md-12 main-content">
-            {% include "base/includes/messages.html" %}
-            <form class="table-form-view" method="post" action="">
-                {% csrf_token %}
-                {% include "scheduler/task_table.html" %}
-            </form>
-            {% include "scheduler/pagination.html" with page=page_obj %}
+    {% include "base/includes/messages.html" %}
+    {% include "scheduler/task_table.html" %}
+    {% include "scheduler/pagination.html" with page=page_obj %}
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="schedule-modal" tabindex='-1'>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a class="close" aria-label="Close" data-dismiss="modal">×</a>
+                <h3>Pick a time in the future</h3>
+            </div>
+
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div id="datetimepicker"></div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div id="timezone" class="pull-right"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <form id="datechangeform" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="scheduled_datetime" id="id_scheduled_datetime">
+                </form>
+                <button class="btn btn-primary" type="submit" id="datechangebtn" form="datechangeform">Change date</button>
+                <button class="btn btn-primary" type="button" data-dismiss="modal">Cancel</button>
+            </div>
         </div>
     </div>
+</div>
+{% endblock %}
+
+{% block ondomready %}
+
+$('#datetimepicker').datetimepicker({
+    inline: true,
+    sideBySide: true,
+    minDate: new Date()
+});
+
+$('#datetimepicker').on("dp.change", function(e) {
+    $('#id_scheduled_datetime').val(
+        e.date.utc().format("YYYY-MM-DD HH:mm")
+    );
+});
+
+$('#timezone').text(function() {
+    return 'Timezone: ' + moment.tz.guess();
+});
+
+$('#schedule-modal').on('show.bs.modal', function(event) {
+    var button = $(event.relatedTarget);
+    $('#datechangeform').attr("action", button.data('task-url'));
+    $('#id_scheduled_datetime').val(moment.utc().format("YYYY-MM-DD HH:mm"));
+});
+
 {% endblock %}

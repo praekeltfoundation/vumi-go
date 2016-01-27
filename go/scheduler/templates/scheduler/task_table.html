@@ -6,6 +6,7 @@
             <th>Type</th>
             <th>Status</th>
             <th>Scheduled for</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -21,11 +22,42 @@
                     <br />
                     (in {{ task.scheduled_for|timeuntil }})
                 </td>
+                <td>
+                    <form action="{% url 'scheduler:reactivate_task' task.id %}" method="post" id="reactivateform{{task.id}}">
+                        {% csrf_token %}
+                    </form>
+                    <form action="{% url 'scheduler:delete_task' task.id %}" method="post" id="deleteform{{task.id}}">
+                        {% csrf_token %}
+                    </form>
+
+                    <div class='btn-group'>
+                        {% if task.status == task.STATUS_CANCELLED %}
+                        <button class="btn btn-primary" form="reactivateform{{task.id}}"> Reactivate </button>
+                        {% else %}
+                        <button
+                            class="btn btn-danger"
+                            {% if task.status != task.STATUS_PENDING %} disabled {% endif %}
+                            form="deleteform{{task.id}}">
+                            Cancel
+                        </button>
+                        {% endif %}
+
+                        <button
+                            class="btn btn-primary"
+                            {% if task.status != task.STATUS_PENDING %} disabled {% endif %}
+                            data-toggle="modal"
+                            data-target="#schedule-modal"
+                            data-task-url="{% url 'scheduler:modify_task' task.id %}">
+                            Change date
+                        </button>
+
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="5">No scheduled tasks</td>
+                <td colspan="6">No scheduled tasks</td>
             </tr>
         {% endif %}
     </tbody>
