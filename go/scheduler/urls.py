@@ -1,7 +1,8 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.decorators import login_required
 from go.scheduler.views import (
-    SchedulerCreatePendingTask, SchedulerDelete, SchedulerListView)
+    SchedulerCreatePendingTask, SchedulerDelete, SchedulerListView,
+    SchedulerModifyDate)
 
 
 urlpatterns = patterns(
@@ -14,4 +15,8 @@ urlpatterns = patterns(
         r'^(?P<pk>\d+)/reactivate$',
         login_required(SchedulerCreatePendingTask.as_view()),
         name='reactivate_task'),
+    url(
+        r'^(?P<pk>\d+)/modify$',
+        login_required(SchedulerModifyDate.as_view()),
+        name='modify_task'),
 )

@@ -61,3 +61,24 @@ class SchedulerCreatePendingTask(SingleObjectMixin, View):
         task.save()
 
         return HttpResponseRedirect(self.url)
+
+class SchedulerModifyDate(SingleObjectMixin, View):
+    model = Task
+    url = reverse_lazy('scheduler:tasks')
+
+    @method_decorator(csrf_protect)
+    def post(self, request, *args, **kwargs):
+        task = self.get_object()
+
+        if task.status != Task.STATUS_PENDING:
+            raise PermissionDenied
+        if task.account_id != self.request.user_api.user_account_key:
+            raise PermissionDenied
+
+        task.scheduled_for = request.POST['scheduled_datetime']
+        task.save()
+        pending_task = PendingTask.objects.get(task=task)
+        pending_task.scheduled_for = task.scheduled_for
+        pending_task.save()
+
+        return HttpResponseRedirect(self.url)
