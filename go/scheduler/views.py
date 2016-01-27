@@ -62,6 +62,7 @@ class SchedulerCreatePendingTask(SingleObjectMixin, View):
 
         return HttpResponseRedirect(self.url)
 
+
 class SchedulerModifyDate(SingleObjectMixin, View):
     model = Task
     url = reverse_lazy('scheduler:tasks')

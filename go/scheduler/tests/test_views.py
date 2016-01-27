@@ -91,10 +91,11 @@ class TestSchedulerListView(GoDjangoTestCase, TestSchedulerBase):
         self.assertContains(r, '>Scheduled Tasks</a></li>')
 
     def test_scheduler_list_cancel_button(self):
-        self.create_task('Test task')
+        task = self.create_task('Test task')
         r = self.client.get(reverse('scheduler:tasks'))
         self.assertContains(
-            r, '<button class="btn btn-danger">Cancel</button>', html=True)
+            r, '<button class="btn btn-danger" '
+            'form="deleteform%s">Cancel</button>' % task.pk, html=True)
 
     def test_scheduler_list_disabled_cancel_button(self):
         task = self.create_task('Test task')
@@ -103,7 +104,8 @@ class TestSchedulerListView(GoDjangoTestCase, TestSchedulerBase):
 
         r = self.client.get(reverse('scheduler:tasks'))
         self.assertContains(
-            r, '<button class="btn btn-danger" disabled>Cancel</button>',
+            r, '<button class="btn btn-danger" disabled '
+            'form="deleteform%s">Cancel</button>' % task.pk,
             html=True)
 
     def test_scheduler_list_reactivate_button(self):
@@ -113,7 +115,43 @@ class TestSchedulerListView(GoDjangoTestCase, TestSchedulerBase):
 
         r = self.client.get(reverse('scheduler:tasks'))
         self.assertContains(
-            r, '<button class="btn btn-primary">Reactivate</button>',
+            r,
+            '<button class="btn btn-primary" '
+            'form="reactivateform%s">Reactivate</button>' % task.pk,
+            html=True)
+
+    def test_scheduler_list_change_date_button(self):
+        task = self.create_task('Test task')
+        r = self.client.get(reverse('scheduler:tasks'))
+        self.assertContains(
+            r, '<button class="btn btn-primary" data-toggle="modal" '
+            'data-target="#schedule-modal" data-task-url="%s">'
+            'Change date</button>' % reverse(
+                'scheduler:modify_task', args=[task.pk]),
+            html=True)
+
+    def test_scheduler_list_disabled_change_date_button(self):
+        task = self.create_task('Test task')
+        task.status = Task.STATUS_CANCELLED
+        task.save()
+
+        r = self.client.get(reverse('scheduler:tasks'))
+        self.assertContains(
+            r, '<button class="btn btn-primary" disabled data-toggle="modal" '
+            'data-target="#schedule-modal" data-task-url="%s">'
+            'Change date</button>' % reverse(
+                'scheduler:modify_task', args=[task.pk]),
+            html=True)
+
+        task.status = Task.STATUS_COMPLETED
+        task.save()
+
+        r = self.client.get(reverse('scheduler:tasks'))
+        self.assertContains(
+            r, '<button class="btn btn-primary" disabled data-toggle="modal" '
+            'data-target="#schedule-modal" data-task-url="%s">'
+            'Change date</button>' % reverse(
+                'scheduler:modify_task', args=[task.pk]),
             html=True)
 
 
