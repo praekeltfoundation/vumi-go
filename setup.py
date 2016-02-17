@@ -31,7 +31,7 @@ django_requires = [
     'django-crispy-forms==1.4.0',
     'django-loginas==0.1.3',
     'boto',
-    'moto==0.4.19',
+    'moto>=0.4.22',
     # https://github.com/sehmaschine/django-grappelli/issues/407
     'django-grappelli==2.4.8',
     # The billing API currently pulls in some Django stuff, so its non-Django
