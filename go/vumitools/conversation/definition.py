@@ -1,5 +1,6 @@
 from go.vumitools.metrics import (
-    ConversationMetricSet, MessagesSentMetric, MessagesReceivedMetric)
+    ConversationMetricSet, MessagesSentMetric, MessagesReceivedMetric,
+    InboundUniqueAddressesMetric, OutboundUniqueAddressesMetric)
 
 
 def detach_removed_endpoints(conv, user_account, old, new):
@@ -30,7 +31,9 @@ class ConversationDefinitionBase(object):
 
     metrics = (
         MessagesSentMetric,
-        MessagesReceivedMetric)
+        MessagesReceivedMetric,
+        InboundUniqueAddressesMetric,
+        OutboundUniqueAddressesMetric)
 
     # set to an sub-class of go.api.go_api.action_dispatcher
     # .ConversationActionDispatcher to provide API methods
