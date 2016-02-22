@@ -603,6 +603,164 @@ class MetricsMiddleware(BaseMiddleware):
         return failure
 
 
+class ConversationMetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
+
+    manager_name = ConfigText(
+        "The name of the metrics publisher, this is used for the"
+        " MetricManager publisher and all metric names will be prefixed"
+        " with it.",
+        required=True, static=True)
+
+    redis_manager = ConfigDict(
+        "Redis configuration parameters", default={}, static=True)
+
+    op_mode = ConfigText(
+        """
+        What mode to operate in, options are `passive` or `active`.
+        Defaults to passive.
+        *passive*:  assumes the middleware connector names are to be used as
+                    the names for metrics publishing.
+        *active*:   assumes that the individual messages are to be inspected
+                    for their `transport_name` values.
+
+        NOTE:   This does not apply for events or failures, the connectors
+                names are always used for those since those message types are
+                not guaranteed to have a `transport_name` value.
+        """,
+        default="passive", static=True)
+
+    metric_connectors = ConfigList(
+        "List of connector names to fire metrics for. Useful for when"
+        " wrapping dispatchers with many connectors, only a subset of which"
+        " should generate metrics. Defaults to all connectors.",
+        required=False, static=True)
+
+
+class ConversationMetricsMiddleware(MetricsMiddleware):
+    """
+    Middleware that publishes metrics on messages flowing through connectors.
+
+    For each conversation it tracks:
+
+    * The number of messages sent and received.
+    * The number of unique addresses on inbound and outbound messages
+
+    :param str manager_name:
+        The name of the metrics publisher, this is used for the MetricManager
+        publisher and all metric names will be prefixed with it.
+    :param dict redis_manager:
+        Connection configuration details for Redis.
+    :param str op_mode:
+        What mode to operate in, options are `passive` or `active`.
+        Defaults to passive.
+        *passive*:  assumes the middleware connector names are to be used as
+                    the names for metrics publishing.
+        *active*:   assumes that the individual messages are to be inspected
+                    for their `transport_name` values.
+
+        NOTE:   This does not apply for events or failures, the connectors
+                names are always used for those since those message types are
+                not guaranteed to have a `transport_name` value.
+    :param list metric_connectors:
+        List of connector names to fire metrics for. Useful for when wrapping
+        dispatchers with many connectors, only a subset of which should
+        generate metrics. Defaults to all connectors.
+    """
+
+    CONFIG_CLASS = ConversationMetricsMiddlewareConfig
+
+    KNOWN_MODES = frozenset(['active', 'passive'])
+
+    def validate_config(self):
+        self.manager_name = self.config.manager_name
+        self.op_mode = self.config.op_mode
+        if self.op_mode not in self.KNOWN_MODES:
+            raise ConfigError('Unknown op_mode: %s' % (
+                self.op_mode,))
+        self.metric_connectors_specified = (
+            self.config.metric_connectors is not None)
+        self.metric_connectors = set(self.config.metric_connectors or [])
+
+    @inlineCallbacks
+    def setup_middleware(self):
+        self.validate_config()
+        self.metric_publisher = yield self.worker.start_publisher(
+            MetricPublisher)
+        # We don't use a VumiApi here because we don't have a Riak config for
+        # it.
+        self.redis = yield TxRedisManager.from_config(
+            self.config.redis_manager)
+        self.metric_manager = MetricManager(
+            self.manager_name + '.', publisher=self.metric_publisher)
+        self.metric_manager.start_polling()
+
+    def teardown_middleware(self):
+        self.metric_manager.stop_polling()
+        return self.redis.close_manager()
+
+    def get_or_create_metric(self, name, metric_class, *args, **kwargs):
+        """
+        Get the metric for `name`, create it with
+        `metric_class(*args, **kwargs)` if it doesn't exist yet.
+        """
+        if name not in self.metric_manager:
+            self.metric_manager.register(metric_class(name, *args, **kwargs))
+        return self.metric_manager[name]
+
+    def get_counter_metric(self, name):
+        return self.get_or_create_metric(name, Count)
+
+    def increment_counter(self, prefix, message_type):
+        metric = self.get_counter_metric('%s.%s' % (prefix, message_type))
+        metric.inc()
+
+    def get_name(self, message, connector_name):
+        if self.op_mode == 'active':
+            return message['transport_name']
+        return connector_name
+
+    def is_metric_connector(self, connector_name):
+        return (
+            not self.metric_connectors_specified or
+            connector_name in self.metric_connectors)
+
+    def fire_inbound_metrics(self, prefix, msg):
+        self.increment_counter(prefix, 'messages_received')
+
+    def fire_inbound_conversation_metrics(self, name, msg):
+        # get conv.key somehow
+        self.fire_inbound_metrics(
+            '%s.conversation.%s' % (name, conv.key), msg
+        )
+
+    def fire_outbound_metrics(self, prefix, msg, session_dt):
+        self.increment_counter(prefix, 'messages_sent')
+
+    def fire_outbound_conversation_metrics(self, name, msg):
+        # get conv.key somehow
+        self.fire_outbound_metrics(
+            '%s.conversations.%s' % (name, conv.key), msg
+        )
+
+    @inlineCallbacks
+    def handle_inbound(self, message, connector_name):
+        if not self.is_metric_connector(connector_name):
+            returnValue(message)
+        name = self.get_name(message, connector_name)
+
+        self.fire_inbound_conversation_metrics(name, message)
+        returnValue(message)
+
+    @inlineCallbacks
+    def handle_outbound(self, message, connector_name):
+        if not self.is_metric_connector(connector_name):
+            returnValue(message)
+        name = self.get_name(message, connector_name)
+
+        self.fire_outbound_conversation_metrics(name, message)
+        returnValue(message)
+
+
 class GoStoringMiddlewareConfig(StoringMiddlewareConfig):
     """
     GoStoringMiddleware configuration options.
