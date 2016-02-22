@@ -22,6 +22,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from go.vumitools.api import VumiApi
 from go.vumitools.model_object_cache import ModelObjectCache
 from go.vumitools.utils import MessageMetadataHelper
+from go.config import get_go_metrics_prefix
 
 
 class NormalizeMsisdnMiddlewareConfig(TransportMiddleware.CONFIG_CLASS):
@@ -605,12 +606,6 @@ class MetricsMiddleware(BaseMiddleware):
 
 class ConversationMetricsMiddlewareConfig(MetricsMiddlewareConfig):
 
-    manager_name = ConfigText(
-        "The name of the metrics publisher, this is used for the"
-        " MetricManager publisher and all metric names will be prefixed"
-        " with it.",
-        required=True, static=True)
-
     redis_manager = ConfigDict(
         "Redis configuration parameters", default={}, static=True)
 
@@ -645,9 +640,6 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
     * The number of messages sent and received.
     * The number of unique addresses on inbound and outbound messages
 
-    :param str manager_name:
-        The name of the metrics publisher, this is used for the MetricManager
-        publisher and all metric names will be prefixed with it.
     :param dict redis_manager:
         Connection configuration details for Redis.
     :param str op_mode:
@@ -672,7 +664,7 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
     KNOWN_MODES = frozenset(['active', 'passive'])
 
     def validate_config(self):
-        self.manager_name = self.config.manager_name
+        self.manager_name = get_go_metrics_prefix()+"campaigns"
         self.op_mode = self.config.op_mode
         if self.op_mode not in self.KNOWN_MODES:
             raise ConfigError('Unknown op_mode: %s' % (
@@ -714,56 +706,46 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
         metric = self.get_counter_metric('%s.%s' % (prefix, message_type))
         metric.inc()
 
-    def get_name(self, message, connector_name):
-        if self.op_mode == 'active':
-            return message['transport_name']
-        return connector_name
-
-    def is_metric_connector(self, connector_name):
-        return (
-            not self.metric_connectors_specified or
-            connector_name in self.metric_connectors)
+    def get_acc_key(self, msg):
+        mdh = MessageMetadataHelper(
+            self.vumi_api, msg, conversation_cache=self._conversation_cache)
+        acc_key = yield mdh.get_account_key()
+        returnValue(acc_key)
 
     def get_conv_key(self, msg):
         mdh = MessageMetadataHelper(
             self.vumi_api, msg, conversation_cache=self._conversation_cache)
         conv_key = yield mdh.get_conversation_key()
-        return conv_key
+        returnValue(conv_key)
+
+    def get_prefix(self, msg):
+        acc_key = self.get_acc_key(msg)
+        conv_key = self.get_conv_key(msg)
+        prefix = "."+acc_key+".conversations."+conv_key+"."
+        returnValue(prefix)
 
     def fire_inbound_metrics(self, prefix, msg):
         self.increment_counter(prefix, 'messages_received')
 
     def fire_inbound_conversation_metrics(self, name, msg):
-        conv_key = self.get_conv_key(msg)
-        self.fire_inbound_metrics(
-            '%s.conversation.%s' % (name, conv_key), msg
-        )
+        self.fire_inbound_metrics(name, msg)
 
-    def fire_outbound_metrics(self, prefix, msg, session_dt):
+    def fire_outbound_metrics(self, prefix, msg):
         self.increment_counter(prefix, 'messages_sent')
 
     def fire_outbound_conversation_metrics(self, name, msg):
-        conv_key = self.get_conv_key(msg)
-        self.fire_outbound_metrics(
-            '%s.conversations.%s' % (name, conv_key), msg
-        )
+        self.fire_outbound_metrics(name, msg)
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
-        if not self.is_metric_connector(connector_name):
-            returnValue(message)
-        name = self.get_name(message, connector_name)
-
-        self.fire_inbound_conversation_metrics(name, message)
+        name = self.get_prefix(message)
+        self.fire_inbound_metrics(name, message)
         returnValue(message)
 
     @inlineCallbacks
     def handle_outbound(self, message, connector_name):
-        if not self.is_metric_connector(connector_name):
-            returnValue(message)
-        name = self.get_name(message, connector_name)
-
-        self.fire_outbound_conversation_metrics(name, message)
+        name = self.get_prefix(message)
+        self.fire_outbound_metrics(name, message)
         returnValue(message)
 
 
