@@ -603,7 +603,7 @@ class MetricsMiddleware(BaseMiddleware):
         return failure
 
 
-class ConversationMetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
+class ConversationMetricsMiddlewareConfig(MetricsMiddlewareConfig):
 
     manager_name = ConfigText(
         "The name of the metrics publisher, this is used for the"
@@ -724,22 +724,28 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
             not self.metric_connectors_specified or
             connector_name in self.metric_connectors)
 
+    def get_conv_key(self, msg):
+        mdh = MessageMetadataHelper(
+            self.vumi_api, msg, conversation_cache=self._conversation_cache)
+        conv_key = yield mdh.get_conversation_key()
+        return conv_key
+
     def fire_inbound_metrics(self, prefix, msg):
         self.increment_counter(prefix, 'messages_received')
 
     def fire_inbound_conversation_metrics(self, name, msg):
-        # get conv.key somehow
+        conv_key = self.get_conv_key(msg)
         self.fire_inbound_metrics(
-            '%s.conversation.%s' % (name, conv.key), msg
+            '%s.conversation.%s' % (name, conv_key), msg
         )
 
     def fire_outbound_metrics(self, prefix, msg, session_dt):
         self.increment_counter(prefix, 'messages_sent')
 
     def fire_outbound_conversation_metrics(self, name, msg):
-        # get conv.key somehow
+        conv_key = self.get_conv_key(msg)
         self.fire_outbound_metrics(
-            '%s.conversations.%s' % (name, conv.key), msg
+            '%s.conversations.%s' % (name, conv_key), msg
         )
 
     @inlineCallbacks
