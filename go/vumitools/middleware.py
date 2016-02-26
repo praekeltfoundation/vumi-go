@@ -639,17 +639,16 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
 
     def record_conv_seen(self, msg):
         conv_key = self.get_conv_key(msg)
-
         return self.redis.sadd("active_coversations", conv_key)
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
-        self.record_conv_seen(message)
+        yield self.record_conv_seen(message)
         returnValue(message)
 
     @inlineCallbacks
     def handle_outbound(self, message, connector_name):
-        self.record_conv_seen(message)
+        yield self.record_conv_seen(message)
         returnValue(message)
 
 
