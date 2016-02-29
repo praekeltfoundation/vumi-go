@@ -637,7 +637,9 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
 
     def record_conv_seen(self, msg):
         conv_key = self.get_conv_key(msg)
-        return self.redis.sadd("active_coversations", conv_key)
+        # Note: This set will be emptied by a celery task that publishes the
+        # metrics for conversations we have seen
+        return self.redis.sadd("recent_coversations", conv_key)
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
