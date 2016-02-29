@@ -652,12 +652,12 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
         return self.redis.sadd("recent_coversations", json.dumps(conv_details))
 
     @inlineCallbacks
-    def handle_inbound(self, message, connector_name):
+    def handle_inbound(self, message):
         yield self.record_conv_seen(message)
         returnValue(message)
 
     @inlineCallbacks
-    def handle_outbound(self, message, connector_name):
+    def handle_outbound(self, message):
         yield self.record_conv_seen(message)
         returnValue(message)
 
