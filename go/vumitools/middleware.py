@@ -22,7 +22,6 @@ from vumi.persist.txredis_manager import TxRedisManager
 from go.vumitools.api import VumiApi
 from go.vumitools.model_object_cache import ModelObjectCache
 from go.vumitools.utils import MessageMetadataHelper
-from go.config import get_go_metrics_prefix
 
 
 class NormalizeMsisdnMiddlewareConfig(TransportMiddleware.CONFIG_CLASS):
@@ -630,12 +629,11 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
     def teardown_middleware(self):
         return self.redis.close_manager()
 
-    @inlineCallbacks
     def get_conv_key(self, msg):
         mdh = MessageMetadataHelper(
-            self.vumi_api, msg, conversation_cache=self._conversation_cache)
-        conv_key = yield mdh.get_conversation_key()
-        returnValue(conv_key)
+            self.vumi_api, msg)
+        conv_key = mdh.get_conversation_key()
+        return conv_key
 
     def record_conv_seen(self, msg):
         conv_key = self.get_conv_key(msg)
