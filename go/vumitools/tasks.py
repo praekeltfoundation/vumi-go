@@ -1,6 +1,5 @@
 import json
 from celery.task import task
-from vumi.persist.txredis_manager import TxRedisManager
 
 from go.base.command_utils import get_user_by_account_key
 from go.base.utils import vumi_api, vumi_api_for_user
@@ -10,9 +9,9 @@ from go.vumitools.metrics import get_conversation_metric_prefix
 
 @task(ignore_result=True)
 def send_recent_conversation_metrics():
-    conversation_keys = get_and_reset_recent_conversations()
+    conversation_details = get_and_reset_recent_conversations()
 
-    for conv_details in conversation_keys:
+    for conv_details in conversation_details:
         details = json.loads(conv_details)
         user_api = get_user_api(details.account_key)
         conv = get_conversation(details.account_key, details.conv_key)
@@ -20,10 +19,9 @@ def send_recent_conversation_metrics():
 
 
 def get_and_reset_recent_conversations():
-    # I'm not sure how to get the correct redis manager from here
-    redis = TxRedisManager.from_config()
-    conversation_keys = redis.getset("recent_coversations", )
-    return conversation_keys
+    redis = vumi_api().redis.sub_manager("conversation.metrics.middleware")
+    conversation_details = redis.getset("recent_coversations", )
+    return conversation_details
 
 
 def get_user_api(self, user_account_key):
