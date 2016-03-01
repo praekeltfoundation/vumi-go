@@ -640,27 +640,15 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
     def teardown_middleware(self):
         return self.subredis.close_manager()
 
-    def get_conv_key(self, msg):
+    def record_conv_seen(self, msg):
         mdh = MessageMetadataHelper(
             self.vumi_api, msg)
         conv_key = mdh.get_conversation_key()
-        return conv_key
-
-    def get_account_key(self, msg):
-        mdh = MessageMetadataHelper(
-            self.vumi_api, msg)
         acc_key = mdh.get_account_key()
-        return acc_key
-
-    def record_conv_seen(self, msg):
-        conv_key = self.get_conv_key(msg)
-        acc_key = self.get_account_key(msg)
-        conv_details = {"conv_key": conv_key,
-                        "account_key": acc_key}
+        conv_details = "%s:%s" % (acc_key, conv_key)
         # Note: This set will be emptied by a celery task that publishes the
         # metrics for conversations we have seen
-        return self.subredis.sadd("recent_coversations",
-                                  json.dumps(conv_details))
+        return self.subredis.sadd("recent_coversations", conv_details)
 
     @inlineCallbacks
     def handle_inbound(self, message):
