@@ -609,6 +609,10 @@ class ConversationMetricsMiddlewareConfig(MetricsMiddlewareConfig):
     redis_manager = ConfigDict(
         "Redis configuration parameters", default={}, static=True)
 
+    riak_manager = ConfigRiak(
+        "Riak configuration parameters. Must contain at least a bucket_prefix"
+        " key", required=True, static=True)
+
 
 class ConversationMetricsMiddleware(MetricsMiddleware):
     """
@@ -616,6 +620,8 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
 
     :param dict redis_manager:
         Connection configuration details for Redis.
+    :param dict riak_manager:
+        Configuration details for Riak.
     """
 
     CONFIG_CLASS = ConversationMetricsMiddlewareConfig
@@ -624,11 +630,14 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
     def setup_middleware(self):
         # We don't use a VumiApi here because we don't have a Riak config for
         # it.
-        self.redis = yield TxRedisManager.from_config(
-            self.config.redis_manager)
+        self.vumi_api = yield VumiApi.from_config_async({
+            "riak_manager": self.config.riak_manager,
+            "redis_manager": self.config.redis_manager,
+        })
+        self.subredis = self.vumi_api.redis.sub_manager("conversationMiddleware")
 
     def teardown_middleware(self):
-        return self.redis.close_manager()
+        return self.subredis.close_manager()
 
     def get_conv_key(self, msg):
         mdh = MessageMetadataHelper(
@@ -649,7 +658,7 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
                         "account_key": acc_key}
         # Note: This set will be emptied by a celery task that publishes the
         # metrics for conversations we have seen
-        return self.redis.sadd("recent_coversations", json.dumps(conv_details))
+        return self.subredis.sadd("recent_coversations", json.dumps(conv_details))
 
     @inlineCallbacks
     def handle_inbound(self, message):
