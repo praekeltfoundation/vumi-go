@@ -2,7 +2,6 @@
 import math
 import re
 import time
-import json
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
