@@ -604,7 +604,7 @@ class MetricsMiddleware(BaseMiddleware):
         return failure
 
 
-class ConversationMetricsMiddlewareConfig(MetricsMiddlewareConfig):
+class ConversationMetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
 
     redis_manager = ConfigDict(
         "Redis configuration parameters", default={}, static=True)
@@ -614,7 +614,7 @@ class ConversationMetricsMiddlewareConfig(MetricsMiddlewareConfig):
         " key", required=True, static=True)
 
 
-class ConversationMetricsMiddleware(MetricsMiddleware):
+class ConversationMetricsMiddleware(BaseMiddleware):
     """
     Middleware that stores which conversations have received or sent messages
 
