@@ -4,7 +4,9 @@ from vumi.tests.helpers import VumiTestCase
 
 from go.apps.subscription.definition import ConversationDefinition
 from go.apps.subscription.metrics import SubscribedMetric, UnsubscribedMetric
-from go.vumitools.metrics import MessagesReceivedMetric, MessagesSentMetric
+from go.vumitools.metrics import (
+    MessagesReceivedMetric, MessagesSentMetric, InboundUniqueAddressesMetric,
+    OutboundUniqueAddressesMetric)
 from go.vumitools.tests.helpers import VumiApiHelper
 
 
@@ -24,7 +26,7 @@ class TestSubscriptionConversationDefinition(VumiTestCase):
         self.conv_def = ConversationDefinition(self.conv)
 
     def test_metrics_retrieval(self):
-        [m1, m2, m3, m4, m5, m6] = self.conv_def.get_metrics()
+        [m1, m2, m3, m4, m5, m6, m7, m8] = self.conv_def.get_metrics()
 
         self.assertEqual(m1.metric.name, 'messages_sent')
         self.assertTrue(isinstance(m1, MessagesSentMetric))
@@ -32,14 +34,20 @@ class TestSubscriptionConversationDefinition(VumiTestCase):
         self.assertEqual(m2.metric.name, 'messages_received')
         self.assertTrue(isinstance(m2, MessagesReceivedMetric))
 
-        self.assertEqual(m3.metric.name, 'campaign-1.subscribed')
-        self.assertTrue(isinstance(m3, SubscribedMetric))
+        self.assertEqual(m3.metric.name, 'inbound_unique_addresses')
+        self.assertTrue(isinstance(m3, InboundUniqueAddressesMetric))
 
-        self.assertEqual(m4.metric.name, 'campaign-2.subscribed')
-        self.assertTrue(isinstance(m4, SubscribedMetric))
+        self.assertEqual(m4.metric.name, 'outbound_unique_addresses')
+        self.assertTrue(isinstance(m4, OutboundUniqueAddressesMetric))
 
-        self.assertEqual(m5.metric.name, 'campaign-1.unsubscribed')
-        self.assertTrue(isinstance(m5, UnsubscribedMetric))
+        self.assertEqual(m5.metric.name, 'campaign-1.subscribed')
+        self.assertTrue(isinstance(m5, SubscribedMetric))
 
-        self.assertEqual(m6.metric.name, 'campaign-2.unsubscribed')
-        self.assertTrue(isinstance(m6, UnsubscribedMetric))
+        self.assertEqual(m6.metric.name, 'campaign-2.subscribed')
+        self.assertTrue(isinstance(m6, SubscribedMetric))
+
+        self.assertEqual(m7.metric.name, 'campaign-1.unsubscribed')
+        self.assertTrue(isinstance(m7, UnsubscribedMetric))
+
+        self.assertEqual(m8.metric.name, 'campaign-2.unsubscribed')
+        self.assertTrue(isinstance(m8, UnsubscribedMetric))
