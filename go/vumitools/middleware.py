@@ -645,7 +645,11 @@ class ConversationMetricsMiddleware(BaseMiddleware):
             self.vumi_api, msg)
         conv_key = mdh.get_conversation_key()
         acc_key = mdh.get_account_key()
-        conv_details = "%s:%s" % (acc_key, conv_key)
+
+        # this string should be valid json
+        conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
+            (acc_key, conv_key)
+
         # Note: This set will be emptied by a celery task that publishes the
         # metrics for conversations we have seen
         return self.redis.sadd("recent_coversations", conv_details)

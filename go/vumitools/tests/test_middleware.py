@@ -1032,7 +1032,8 @@ class TestConversationMetricsMiddleware(VumiTestCase):
     @inlineCallbacks
     def assert_conv_in_redis(self, mw, msg):
         value = yield mw.redis.smembers("recent_coversations")
-        conv_details = "%s:%s" % (self.conv.user_account.key, self.conv.key)
+        conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
+            (self.conv.user_account.key, self.conv.key)
         self.assertTrue(conv_details in value)
         self.assertEqual(len(value), 1)
 
