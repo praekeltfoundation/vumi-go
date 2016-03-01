@@ -638,7 +638,7 @@ class ConversationMetricsMiddleware(BaseMiddleware):
             "conversation.metrics.middleware")
 
     def teardown_middleware(self):
-        return self.redis.close_manager()
+        return self.vumi_api.close()
 
     def record_conv_seen(self, msg):
         mdh = MessageMetadataHelper(
