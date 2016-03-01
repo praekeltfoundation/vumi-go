@@ -12,7 +12,6 @@ from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.helpers import VumiTestCase, generate_proxies, IHelper
 from vumi.worker import BaseWorker
 
-from go.base.tests.helpers import DjangoVumiApiHelper
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.middleware import (
     NormalizeMsisdnMiddleware, OptOutMiddleware, MetricsMiddleware,
@@ -1023,57 +1022,45 @@ class TestConversationMetricsMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.vumi_helper = self.add_helper(DjangoVumiApiHelper())
         self.mw_helper = self.add_helper(
             MiddlewareHelper(ConversationMetricsMiddleware))
-        yield self.mw_helper.setup_vumi_api()# not sure this line is necessary
+        yield self.mw_helper.setup_vumi_api()
         self.user_helper = yield self.mw_helper.make_user(u'user')
         self.conv = yield self.user_helper.create_conversation(
             u'bulk_message', name=u'Test Conversation', started=True)
 
     @inlineCallbacks
     def assert_conv_in_redis(self, mw, msg):
-        value = yield mw.subredis.get("recent_coversations")
-        conversation_details = json.loads(value[0])
-        print value
-        self.assertEqual(conversation_details.conv_key, "")
+        value = yield mw.redis.smembers("recent_coversations")
+        conv_details = "%s:%s" % (self.conv.user_account.key, self.conv.key)
+        self.assertTrue(conv_details in value)
+        self.assertEqual(len(value), 1)
 
     @inlineCallbacks
     def assert_conv_not_in_redis(self, mw):
-        value = yield mw.subredis.get("recent_coversations")
-        print value
-        self.assertIsNone(value)
+        value = yield mw.redis.smembers("recent_coversations")
+        self.assertSetEqual(value, set([]))
 
     @inlineCallbacks
     def test_inbound_message(self):
         mw = yield self.mw_helper.create_middleware(
             {'manager_name': 'metrics_manager', }
         )
-        msg_helper = GoMessageHelper(vumi_helper=self.vumi_helper)
+        msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
 
         yield self.assert_conv_not_in_redis(mw)
-        # msg1 = self.mw_helper.make_inbound("inbound", router=self.router)
-        msgs = msg_helper.add_inbound_to_conv(self.conv, 1)
-        yield mw.handle_inbound(msgs[0])
-        yield self.assert_conv_in_redis(mw, msgs[0])
-
-        # msg2 = self.mw_helper.make_inbound("inbound", router=self.router)
-        # yield mw.handle_inbound(msg2)
-        # yield self.assert_conv_in_redis(mw, msg2)
+        [msg] = yield msg_helper.add_inbound_to_conv(self.conv, 1)
+        yield mw.handle_inbound(msg)
+        yield self.assert_conv_in_redis(mw, msg)
 
     @inlineCallbacks
     def test_outbound_message(self):
         mw = yield self.mw_helper.create_middleware(
             {'manager_name': 'metrics_manager', }
         )
-        msg_helper = GoMessageHelper(vumi_helper=self.vumi_helper)
+        msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
 
         yield self.assert_conv_not_in_redis(mw)
-        # msg1 = self.mw_helper.make_outbound("outbound", router=self.router)
-        msgs = msg_helper.add_outbound_to_conv(self.conv, 1)
-        yield mw.handle_outbound(msgs[0])
-        yield self.assert_conv_in_redis(mw, msgs[0])
-
-        # msg2 = self.mw_helper.make_outbound("outbound", router=self.router)
-        # yield mw.handle_outbound(msg2)
-        # yield self.assert_conv_in_redis(mw, msg2)
+        [msg] = yield msg_helper.add_outbound_to_conv(self.conv, 1)
+        yield mw.handle_outbound(msg)
+        yield self.assert_conv_in_redis(mw, msg)
