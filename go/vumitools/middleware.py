@@ -634,11 +634,11 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
             "riak_manager": self.config.riak_manager,
             "redis_manager": self.config.redis_manager,
         })
-        self.subredis = self.vumi_api.redis.sub_manager(
-            "conversationMiddleware")
+        self.redis = self.vumi_api.redis.sub_manager(
+            "conversation.metrics.middleware")
 
     def teardown_middleware(self):
-        return self.subredis.close_manager()
+        return self.redis.close_manager()
 
     def record_conv_seen(self, msg):
         mdh = MessageMetadataHelper(
@@ -648,7 +648,7 @@ class ConversationMetricsMiddleware(MetricsMiddleware):
         conv_details = "%s:%s" % (acc_key, conv_key)
         # Note: This set will be emptied by a celery task that publishes the
         # metrics for conversations we have seen
-        return self.subredis.sadd("recent_coversations", conv_details)
+        return self.redis.sadd("recent_coversations", conv_details)
 
     @inlineCallbacks
     def handle_inbound(self, message):
