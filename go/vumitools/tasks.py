@@ -13,8 +13,8 @@ def send_recent_conversation_metrics():
 
     for conv_details in conversation_details:
         details = json.loads(conv_details)
-        user_api = get_user_api(details.account_key)
-        conv = get_conversation(details.account_key, details.conv_key)
+        user_api = get_user_api(details["account_key"])
+        conv = get_conversation(details["account_key"], details["conv_key"])
         publish_conversation_metrics(user_api, conv)
 
 

@@ -4,7 +4,8 @@ from go.vumitools.conversation.definition import ConversationDefinitionBase
 from go.vumitools.metrics import ConversationMetric
 from go.vumitools.tests.helpers import djangotest_imports
 from go.vumitools.tasks import (
-    get_and_reset_recent_conversations, publish_conversation_metrics)
+    get_and_reset_recent_conversations, publish_conversation_metrics,
+    send_recent_conversation_metrics)
 
 with djangotest_imports(globals()):
     from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
@@ -98,9 +99,38 @@ class TestMetricsTask(GoDjangoTestCase):
         [vumi_msg] = self.vumi_helper.amqp_connection.get_metrics()
 
         data = vumi_msg.payload['datapoints'][0]
-
         metric_name = data[0]
         self.assertEqual(metric_name, "%s.dummy_metric" % prefix)
+        [values] = data[2]
+        self.assertEqual(values[1], 42)
 
+    # largely combines the two previous tests
+    def test_send_recent_metrics_task(self):
+        conv = self.make_conv(u'my_conv')
+        acc_key = conv.user_account.key
+        conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
+            (acc_key, conv.key)
+        prefix = "go.campaigns.test-0-user.conversations.%s" % conv.key
+
+        # Add data to redis
+        subredis = self.redis.sub_manager("conversation.metrics.middleware")
+        subredis.sadd("recent_coversations", conv_details)
+
+        # Check that no messages have been sent
+        self.assertEqual(self.vumi_helper.amqp_connection.get_metrics(), [])
+
+        # collect and send the metrics
+        send_recent_conversation_metrics()
+
+        # Check that redis sets have been emptied
+        self.assertIsNone(subredis.get("recent_conversations"))
+        self.assertIsNone(subredis.get("old_recent_conversations"))
+
+        # Check that the correct metrics were sent
+        [vumi_msg] = self.vumi_helper.amqp_connection.get_metrics()
+
+        data = vumi_msg.payload['datapoints'][0]
+        metric_name = data[0]
+        self.assertEqual(metric_name, "%s.dummy_metric" % prefix)
         [values] = data[2]
         self.assertEqual(values[1], 42)
