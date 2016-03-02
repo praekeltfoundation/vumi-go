@@ -1,20 +1,13 @@
-from go.apps.tests.helpers import AppWorkerHelper
-from go.vumitools import app_worker
-from go.vumitools.app_worker import GoApplicationWorker
-from twisted.internet.defer import inlineCallbacks, returnValue
-
-from go.vumitools.tests.helpers import djangotest_imports
-from go.vumitools.metrics import ConversationMetric
+import go.base.utils
+from go.conversation.view_definition import ConversationViewDefinitionBase
 from go.vumitools.conversation.definition import ConversationDefinitionBase
+from go.vumitools.metrics import ConversationMetric
+from go.vumitools.tests.helpers import djangotest_imports
 from go.vumitools.tasks import (
     get_and_reset_recent_conversations, publish_conversation_metrics)
-from go.config import get_conversation_definition
-import go.base.utils
 
 with djangotest_imports(globals()):
     from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
-from go.conversation.view_definition import (
-    ConversationViewDefinitionBase)
 
 
 class DummyMetric(ConversationMetric):
@@ -28,20 +21,6 @@ class DummyConversationDefinition(ConversationDefinitionBase):
     conversation_type = 'dummy'
 
     metrics = (DummyMetric,)
-
-
-class DummyApplication(GoApplicationWorker):
-    worker_name = 'dummy_application'
-
-    @inlineCallbacks
-    def setup_application(self):
-        yield super(DummyApplication, self).setup_application()
-        self.msgs = []
-        self.events = []
-        # Set these to empty dictionaries because we're not interested
-        # in using any of the helper functions at this point.
-        self._event_handlers = {}
-        self._session_handlers = {}
 
 
 DUMMY_CONVERSATION_DEFS = {
@@ -79,17 +58,14 @@ class TestMetricsTask(GoDjangoTestCase):
         self.redis = self.vumi_helper.get_redis_manager()
         self.user_helper = self.vumi_helper.make_django_user()
 
-        self.app_helper = self.add_helper(AppWorkerHelper(DummyApplication))
-
     def _get_conversation_pkg(self, conversation_type, from_list=()):
         """Test stub for `go.base.utils.get_conversation_pkg()`
         """
         return FakeConversationPackage(conversation_type)
 
-    def make_conv(self, conv_name, conv_type=u'bulk_message',
-                  **kw):
-        conv = self.user_helper.create_conversation(u'dummy', name=u'myconv', **kw)
-        return conv
+    def make_conv(self, conv_name, conv_type=u'dummy', **kw):
+        return self.user_helper.create_conversation(
+            u'dummy', name=u'myconv', **kw)
 
     def test_get_conversation_metrics(self):
         conv = self.make_conv(u'my_conv')
@@ -110,11 +86,21 @@ class TestMetricsTask(GoDjangoTestCase):
 
     def test_publish_conversation_metrics(self):
         conv = self.make_conv(u'my_conv')
+        prefix = "go.campaigns.test-0-user.conversations.%s" % conv.key
 
+        # Check that no messages have been sent
+        self.assertEqual(self.vumi_helper.amqp_connection.get_metrics(), [])
+
+        # Send the metrics
         publish_conversation_metrics(self.user_helper.user_api, conv)
 
-        # Check that the metrics were published
-        prefix = "go.campaigns.test-0-user.conversations.%s" % conv.key
-        self.assertEqual(
-            self.app_helper.get_published_metrics(u'dummy'),# how do I get the app here
-            [("%s.messages_received" % prefix, 32)])
+        # Check that the correct metrics were sent
+        [vumi_msg] = self.vumi_helper.amqp_connection.get_metrics()
+
+        data = vumi_msg.payload['datapoints'][0]
+
+        metric_name = data[0]
+        self.assertEqual(metric_name, "%s.dummy_metric" % prefix)
+
+        [values] = data[2]
+        self.assertEqual(values[1], 42)
