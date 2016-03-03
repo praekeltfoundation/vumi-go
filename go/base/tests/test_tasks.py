@@ -84,7 +84,7 @@ class TestMetricsTask(GoDjangoTestCase):
 
         # Add data to redis
         subredis = self.redis.sub_manager("conversation.metrics.middleware")
-        subredis.sadd("recent_coversations", conv_details)
+        subredis.sadd("recent_conversations", conv_details)
 
         [details] = get_and_reset_recent_conversations(vumi_api)
 
@@ -123,7 +123,7 @@ class TestMetricsTask(GoDjangoTestCase):
 
         # Add data to redis
         subredis = self.redis.sub_manager("conversation.metrics.middleware")
-        subredis.sadd("recent_coversations", conv_details)
+        subredis.sadd("recent_conversations", conv_details)
 
         # Check that no messages have been sent
         self.assertEqual(self.vumi_helper.amqp_connection.get_metrics(), [])
