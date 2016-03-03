@@ -1,13 +1,13 @@
-import go.base.utils
 from go.conversation.view_definition import ConversationViewDefinitionBase
 from go.vumitools.conversation.definition import ConversationDefinitionBase
 from go.vumitools.metrics import ConversationMetric
 from go.vumitools.tests.helpers import djangotest_imports
-from go.base.tasks import (
-    get_and_reset_recent_conversations, publish_conversation_metrics,
-    send_recent_conversation_metrics)
 
 with djangotest_imports(globals()):
+    import go.base.utils
+    from go.base.tasks import (
+        get_and_reset_recent_conversations, publish_conversation_metrics,
+        send_recent_conversation_metrics)
     from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
 
 
