@@ -315,7 +315,7 @@ CELERYBEAT_SCHEDULE = {
         'schedule': crontab(minute='*/5'),
     },
     'update-daily-conversation-metrics': {
-        'task': 'go.vumitools.tasks.send_recent_conversation_metrics',
+        'task': 'go.base.tasks.send_recent_conversation_metrics',
         'schedule': crontab(hour=0, minute=0),
     },
 }
