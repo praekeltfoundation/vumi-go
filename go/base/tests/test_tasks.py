@@ -75,6 +75,9 @@ class TestMetricsTask(GoDjangoTestCase):
             (acc_key, conv.key)
         vumi_api = self.vumi_helper.get_vumi_api()
 
+        # Check the response before the key is set
+        self.assertEqual(get_and_reset_recent_conversations(vumi_api), [])
+
         # Add data to redis
         subredis = self.redis.sub_manager("conversation.metrics.middleware")
         subredis.sadd("recent_coversations", conv_details)
