@@ -28,9 +28,10 @@ def get_and_reset_recent_conversations(vumi_api):
 
     # makes use of redis atomic functions to ensure nothing is added to the set
     # before it is deleted
-    if not redis.exists("recent_conversations"):
+    try:
+        redis.rename("recent_conversations", "old_recent_conversations")
+    except vumi_api.redis.RESPONSE_ERROR:
         return []
-    redis.rename("recent_conversations", "old_recent_conversations")
     conversation_details = redis.smembers("old_recent_conversations")
     redis.delete("old_recent_conversations")
     return conversation_details
