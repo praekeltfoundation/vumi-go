@@ -642,7 +642,8 @@ class ConversationMetricsMiddleware(BaseMiddleware):
         conv_key = mdh.get_conversation_key()
         acc_key = mdh.get_account_key()
 
-        # this string should be valid json
+        # This string should be valid json. We construct it ourselves so that
+        # the order is consistent, otherwise we might add duplicates to the set
         conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
             (acc_key, conv_key)
 
