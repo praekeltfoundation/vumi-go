@@ -77,6 +77,22 @@ class MessagesReceivedMetric(ConversationMetric):
         return user_api.api.mdb.cache.count_inbound_message_keys(batch_id)
 
 
+class InboundUniqueAddressesMetric(ConversationMetric):
+    METRIC_NAME = 'inbound_unique_addresses'
+
+    def get_value(self, user_api):
+        batch_id = self.conv.batch.key
+        return user_api.api.mdb.cache.count_from_addrs(batch_id)
+
+
+class OutboundUniqueAddressesMetric(ConversationMetric):
+    METRIC_NAME = 'outbound_unique_addresses'
+
+    def get_value(self, user_api):
+        batch_id = self.conv.batch.key
+        return user_api.api.mdb.cache.count_to_addrs(batch_id)
+
+
 def get_account_metric_prefix(account_key, store):
     return "%scampaigns.%s.stores.%s." % (
         get_go_metrics_prefix(), account_key, store)

@@ -603,6 +603,65 @@ class MetricsMiddleware(BaseMiddleware):
         return failure
 
 
+class ConversationMetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
+
+    redis_manager = ConfigDict(
+        "Redis configuration parameters", default={}, static=True)
+
+    riak_manager = ConfigRiak(
+        "Riak configuration parameters. Must contain at least a bucket_prefix"
+        " key", required=True, static=True)
+
+
+class ConversationMetricsMiddleware(BaseMiddleware):
+    """
+    Middleware that stores which conversations have received or sent messages
+
+    :param dict redis_manager:
+        Connection configuration details for Redis.
+    :param dict riak_manager:
+        Configuration details for Riak.
+    """
+
+    CONFIG_CLASS = ConversationMetricsMiddlewareConfig
+    SUBMANAGER_PREFIX = "conversation.metrics.middleware"
+
+    @inlineCallbacks
+    def setup_middleware(self):
+        # We don't use a VumiApi here because we don't have a Riak config for
+        # it.
+        self.redis_manager = yield TxRedisManager.from_config(
+            self.config.redis_manager)
+        self.redis = self.redis_manager.sub_manager(self.SUBMANAGER_PREFIX)
+
+    def teardown_middleware(self):
+        return self.redis_manager.close_manager()
+
+    def record_conv_seen(self, msg):
+        mdh = MessageMetadataHelper(None, msg)
+        conv_key = mdh.get_conversation_key()
+        acc_key = mdh.get_account_key()
+
+        # This string should be valid json. We construct it ourselves so that
+        # the order is consistent, otherwise we might add duplicates to the set
+        conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
+            (acc_key, conv_key)
+
+        # Note: This set will be emptied by a celery task that publishes the
+        # metrics for conversations we have seen
+        return self.redis.sadd("recent_coversations", conv_details)
+
+    @inlineCallbacks
+    def handle_inbound(self, message):
+        yield self.record_conv_seen(message)
+        returnValue(message)
+
+    @inlineCallbacks
+    def handle_outbound(self, message):
+        yield self.record_conv_seen(message)
+        returnValue(message)
+
+
 class GoStoringMiddlewareConfig(StoringMiddlewareConfig):
     """
     GoStoringMiddleware configuration options.

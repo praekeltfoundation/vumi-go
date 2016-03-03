@@ -5,7 +5,8 @@ from vumi.tests.helpers import VumiTestCase
 
 from go.vumitools.metrics import (
     ConversationMetric, ConversationMetricSet, MessagesSentMetric,
-    MessagesReceivedMetric)
+    MessagesReceivedMetric, OutboundUniqueAddressesMetric,
+    InboundUniqueAddressesMetric)
 from go.vumitools.tests.helpers import GoMessageHelper, VumiApiHelper
 
 
@@ -60,6 +61,44 @@ class TestConversationMetrics(VumiTestCase):
 
         yield self.msg_helper.make_stored_inbound(conv, "in 1")
         yield self.msg_helper.make_stored_inbound(conv, "in 2")
+
+        self.assertEqual(
+            (yield metric.get_value(self.user_helper.user_api)), 2)
+
+    @inlineCallbacks
+    def test_outbound_unique_addresses_metric_value_retrieval(self):
+        conv = yield self.user_helper.create_conversation(u'some_conversation')
+        metric = OutboundUniqueAddressesMetric(conv)
+        self.assertEqual(
+            (yield metric.get_value(self.user_helper.user_api)), 0)
+
+        yield self.msg_helper.make_stored_outbound(conv, "out 1")
+        yield self.msg_helper.make_stored_outbound(conv, "out 2")
+
+        self.assertEqual(
+            (yield metric.get_value(self.user_helper.user_api)), 1)
+
+        yield self.msg_helper.make_stored_outbound(
+            conv, "in 1", to_addr='from-me')
+
+        self.assertEqual(
+            (yield metric.get_value(self.user_helper.user_api)), 2)
+
+    @inlineCallbacks
+    def test_inbound_unique_addresses_metric_value_retrieval(self):
+        conv = yield self.user_helper.create_conversation(u'some_conversation')
+        metric = InboundUniqueAddressesMetric(conv)
+        self.assertEqual(
+            (yield metric.get_value(self.user_helper.user_api)), 0)
+
+        yield self.msg_helper.make_stored_inbound(conv, "in 1")
+        yield self.msg_helper.make_stored_inbound(conv, "in 2")
+
+        self.assertEqual(
+            (yield metric.get_value(self.user_helper.user_api)), 1)
+
+        yield self.msg_helper.make_stored_inbound(
+            conv, "in 1", from_addr='from-me')
 
         self.assertEqual(
             (yield metric.get_value(self.user_helper.user_api)), 2)
