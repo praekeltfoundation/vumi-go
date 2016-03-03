@@ -624,6 +624,7 @@ class ConversationMetricsMiddleware(BaseMiddleware):
     """
 
     CONFIG_CLASS = ConversationMetricsMiddlewareConfig
+    SUBMANAGER_PREFIX = "conversation.metrics.middleware"
 
     @inlineCallbacks
     def setup_middleware(self):
@@ -631,8 +632,7 @@ class ConversationMetricsMiddleware(BaseMiddleware):
         # it.
         self.redis_manager = yield TxRedisManager.from_config(
             self.config.redis_manager)
-        self.redis = self.redis_manager.sub_manager(
-            "conversation.metrics.middleware")
+        self.redis = self.redis_manager.sub_manager(self.SUBMANAGER_PREFIX)
 
     def teardown_middleware(self):
         return self.redis_manager.close_manager()

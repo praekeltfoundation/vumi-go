@@ -4,6 +4,7 @@ from celery.task import task
 from go.base.utils import vumi_api
 from go.config import get_conversation_definition
 from go.vumitools.metrics import get_conversation_metric_prefix
+from go.vumitools.middleware import ConversationMetricsMiddleware
 
 
 @task(ignore_result=True)
@@ -22,7 +23,8 @@ def send_recent_conversation_metrics():
 
 
 def get_and_reset_recent_conversations(vumi_api):
-    redis = vumi_api.redis.sub_manager("conversation.metrics.middleware")
+    redis = vumi_api.redis.sub_manager(
+        ConversationMetricsMiddleware.SUBMANAGER_PREFIX)
 
     # makes use of redis atomic functions to ensure nothing is added to the set
     # before it is deleted
