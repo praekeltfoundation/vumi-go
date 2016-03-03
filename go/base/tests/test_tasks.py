@@ -1,4 +1,3 @@
-from go.conversation.view_definition import ConversationViewDefinitionBase
 from go.vumitools.conversation.definition import ConversationDefinitionBase
 from go.vumitools.metrics import ConversationMetric
 from go.vumitools.tests.helpers import djangotest_imports
@@ -9,6 +8,7 @@ with djangotest_imports(globals()):
         get_and_reset_recent_conversations, publish_conversation_metrics,
         send_recent_conversation_metrics)
     from go.base.tests.helpers import GoDjangoTestCase, DjangoVumiApiHelper
+    from go.conversation.view_definition import ConversationViewDefinitionBase
 
 
 class DummyMetric(ConversationMetric):
