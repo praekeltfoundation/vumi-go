@@ -15,9 +15,8 @@ def send_recent_conversation_metrics():
         for conv_details in conversation_details:
             details = json.loads(conv_details)
             user_api = api.get_user_api(details["account_key"])
-            conv = user_api.get_conversation(
-                details["account_key"], details["conv_key"])
-            publish_conversation_metrics(vumi_api, user_api, conv)
+            conv = user_api.get_conversation(details["conv_key"])
+            publish_conversation_metrics(api, user_api, conv)
     finally:
         api.close()
 
