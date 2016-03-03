@@ -2,7 +2,11 @@ from go.vumitools.conversation.definition import ConversationDefinitionBase
 from go.vumitools.metrics import ConversationMetric
 from go.vumitools.tests.helpers import djangotest_imports
 
-with djangotest_imports(globals()):
+dummy_classes = [
+    'ConversationViewDefinitionBase',
+]
+
+with djangotest_imports(globals(), dummy_classes=dummy_classes):
     import go.base.utils
     from go.base.tasks import (
         get_and_reset_recent_conversations, publish_conversation_metrics,
