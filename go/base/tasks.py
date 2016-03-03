@@ -1,25 +1,29 @@
 import json
 from celery.task import task
 
-from go.base.command_utils import get_user_by_account_key
-from go.base.utils import vumi_api, vumi_api_for_user
+from go.base.utils import vumi_api
 from go.config import get_conversation_definition
 from go.vumitools.metrics import get_conversation_metric_prefix
 
 
 @task(ignore_result=True)
 def send_recent_conversation_metrics():
-    conversation_details = get_and_reset_recent_conversations()
+    api = vumi_api()
+    try:
+        conversation_details = get_and_reset_recent_conversations(api)
 
-    for conv_details in conversation_details:
-        details = json.loads(conv_details)
-        user_api = get_user_api(details["account_key"])
-        conv = get_conversation(details["account_key"], details["conv_key"])
-        publish_conversation_metrics(user_api, conv)
+        for conv_details in conversation_details:
+            details = json.loads(conv_details)
+            user_api = api.get_user_api(details["account_key"])
+            conv = user_api.get_conversation(
+                details["account_key"], details["conv_key"])
+            publish_conversation_metrics(vumi_api, user_api, conv)
+    finally:
+        api.close()
 
 
-def get_and_reset_recent_conversations():
-    redis = vumi_api().redis.sub_manager("conversation.metrics.middleware")
+def get_and_reset_recent_conversations(vumi_api):
+    redis = vumi_api.redis.sub_manager("conversation.metrics.middleware")
 
     # makes use of redis atomic functions to ensure nothing is added to the set
     # before it is deleted
@@ -29,19 +33,9 @@ def get_and_reset_recent_conversations():
     return conversation_details
 
 
-def get_user_api(user_account_key):
-    user = get_user_by_account_key(user_account_key)
-    return vumi_api_for_user(user)
-
-
-def get_conversation(user_account_key, conversation_key):
-    user_api = get_user_api(user_account_key)
-    return user_api.get_conversation(conversation_key)
-
-
-def publish_conversation_metrics(user_api, conversation):
+def publish_conversation_metrics(vumi_api, user_api, conversation):
     prefix = get_conversation_metric_prefix(conversation)
-    metrics = vumi_api().get_metric_manager(prefix)
+    metrics = vumi_api.get_metric_manager(prefix)
 
     conv_type = conversation.conversation_type
     conv_def = get_conversation_definition(conv_type, conversation)
