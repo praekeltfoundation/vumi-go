@@ -629,19 +629,16 @@ class ConversationMetricsMiddleware(BaseMiddleware):
     def setup_middleware(self):
         # We don't use a VumiApi here because we don't have a Riak config for
         # it.
-        self.vumi_api = yield VumiApi.from_config_async({
-            "riak_manager": self.config.riak_manager,
-            "redis_manager": self.config.redis_manager,
-        })
-        self.redis = self.vumi_api.redis.sub_manager(
+        self.redis_manager = yield TxRedisManager.from_config(
+            self.config.redis_manager)
+        self.redis = self.redis_manager.sub_manager(
             "conversation.metrics.middleware")
 
     def teardown_middleware(self):
-        return self.vumi_api.close()
+        return self.redis_manager.close_manager()
 
     def record_conv_seen(self, msg):
-        mdh = MessageMetadataHelper(
-            self.vumi_api, msg)
+        mdh = MessageMetadataHelper(None, msg)
         conv_key = mdh.get_conversation_key()
         acc_key = mdh.get_account_key()
 
