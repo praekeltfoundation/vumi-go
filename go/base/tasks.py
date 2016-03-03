@@ -30,7 +30,7 @@ def get_and_reset_recent_conversations(vumi_api):
     # before it is deleted
     try:
         redis.rename("recent_coversations", "old_recent_conversations")
-    except:
+    except redis.RESPONSE_ERROR:
         return []
     conversation_details = redis.smembers("old_recent_conversations")
     redis.delete("old_recent_conversations")
