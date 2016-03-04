@@ -608,10 +608,6 @@ class ConversationMetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
     redis_manager = ConfigDict(
         "Redis configuration parameters", default={}, static=True)
 
-    riak_manager = ConfigRiak(
-        "Riak configuration parameters. Must contain at least a bucket_prefix"
-        " key", required=True, static=True)
-
 
 class ConversationMetricsMiddleware(BaseMiddleware):
     """
