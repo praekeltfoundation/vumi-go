@@ -1048,7 +1048,7 @@ class TestConversationMetricsMiddleware(VumiTestCase):
 
         yield self.assert_conv_not_in_redis(mw)
         [msg] = yield msg_helper.add_inbound_to_conv(self.conv, 1)
-        yield mw.handle_inbound(msg)
+        yield mw.handle_inbound(msg, "conn_1")
         yield self.assert_conv_in_redis(mw, msg)
 
     @inlineCallbacks
@@ -1058,5 +1058,5 @@ class TestConversationMetricsMiddleware(VumiTestCase):
 
         yield self.assert_conv_not_in_redis(mw)
         [msg] = yield msg_helper.add_outbound_to_conv(self.conv, 1)
-        yield mw.handle_outbound(msg)
+        yield mw.handle_outbound(msg, "conn_1")
         yield self.assert_conv_in_redis(mw, msg)

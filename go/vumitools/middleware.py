@@ -648,12 +648,12 @@ class ConversationMetricsMiddleware(BaseMiddleware):
         return self.redis.sadd("recent_coversations", conv_details)
 
     @inlineCallbacks
-    def handle_inbound(self, message):
+    def handle_inbound(self, message, connector_name):
         yield self.record_conv_seen(message)
         returnValue(message)
 
     @inlineCallbacks
-    def handle_outbound(self, message):
+    def handle_outbound(self, message, connector_name):
         yield self.record_conv_seen(message)
         returnValue(message)
 
