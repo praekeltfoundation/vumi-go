@@ -1043,9 +1043,7 @@ class TestConversationMetricsMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_message(self):
-        mw = yield self.mw_helper.create_middleware(
-            {'manager_name': 'metrics_manager', }
-        )
+        mw = yield self.mw_helper.create_middleware()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
 
         yield self.assert_conv_not_in_redis(mw)
@@ -1055,9 +1053,7 @@ class TestConversationMetricsMiddleware(VumiTestCase):
 
     @inlineCallbacks
     def test_outbound_message(self):
-        mw = yield self.mw_helper.create_middleware(
-            {'manager_name': 'metrics_manager', }
-        )
+        mw = yield self.mw_helper.create_middleware()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
 
         yield self.assert_conv_not_in_redis(mw)
