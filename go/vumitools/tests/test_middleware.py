@@ -1,6 +1,5 @@
 """Tests for go.vumitools.middleware"""
 import time
-import json
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
