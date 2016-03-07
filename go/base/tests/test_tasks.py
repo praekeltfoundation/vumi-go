@@ -1,5 +1,6 @@
 from go.vumitools.conversation.definition import ConversationDefinitionBase
 from go.vumitools.metrics import ConversationMetric
+from go.vumitools.middleware import ConversationMetricsMiddleware
 from go.vumitools.tests.helpers import djangotest_imports
 
 dummy_classes = [
@@ -52,6 +53,11 @@ class FakeConversationPackage(object):
 
 
 class TestMetricsTask(GoDjangoTestCase):
+
+    CMM_SUBMANAGER_PREFIX = ConversationMetricsMiddleware.SUBMANAGER_PREFIX
+    RECENT_CONV_KEY = ConversationMetricsMiddleware.RECENT_CONV_KEY
+    OLD_RECENT_CONV_KEY = ConversationMetricsMiddleware.OLD_RECENT_CONV_KEY
+
     def setUp(self):
         self.vumi_helper = self.add_helper(
             DjangoVumiApiHelper(), setup_vumi_api=False)
@@ -60,7 +66,8 @@ class TestMetricsTask(GoDjangoTestCase):
         self.vumi_helper.patch_config(
             VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
         self.vumi_helper.setup_vumi_api()
-        self.redis = self.vumi_helper.get_redis_manager()
+        self.redis = self.vumi_helper.get_redis_manager().sub_manager(
+            self.CMM_SUBMANAGER_PREFIX)
         self.user_helper = self.vumi_helper.make_django_user()
 
     def _get_conversation_pkg(self, conversation_type, from_list=()):
@@ -83,15 +90,14 @@ class TestMetricsTask(GoDjangoTestCase):
         self.assertEqual(get_and_reset_recent_conversations(vumi_api), [])
 
         # Add data to redis
-        subredis = self.redis.sub_manager("conversation.metrics.middleware")
-        subredis.sadd("recent_conversations", conv_details)
+        self.redis.sadd(self.RECENT_CONV_KEY, conv_details)
 
         [details] = get_and_reset_recent_conversations(vumi_api)
 
         # Check response and that redis sets are emtpy
         self.assertEqual(details, conv_details)
-        self.assertIsNone(subredis.get("recent_conversations"))
-        self.assertIsNone(subredis.get("old_recent_conversations"))
+        self.assertIsNone(self.redis.get(self.RECENT_CONV_KEY))
+        self.assertIsNone(self.redis.get(self.OLD_RECENT_CONV_KEY))
 
     def test_publish_conversation_metrics(self):
         conv = self.make_conv(u'my_conv')
@@ -122,8 +128,7 @@ class TestMetricsTask(GoDjangoTestCase):
         prefix = "go.campaigns.test-0-user.conversations.%s" % conv.key
 
         # Add data to redis
-        subredis = self.redis.sub_manager("conversation.metrics.middleware")
-        subredis.sadd("recent_conversations", conv_details)
+        self.redis.sadd(self.RECENT_CONV_KEY, conv_details)
 
         # Check that no messages have been sent
         self.assertEqual(self.vumi_helper.amqp_connection.get_metrics(), [])
@@ -132,8 +137,8 @@ class TestMetricsTask(GoDjangoTestCase):
         send_recent_conversation_metrics()
 
         # Check that redis sets have been emptied
-        self.assertIsNone(subredis.get("recent_conversations"))
-        self.assertIsNone(subredis.get("old_recent_conversations"))
+        self.assertIsNone(self.redis.get(self.RECENT_CONV_KEY))
+        self.assertIsNone(self.redis.get(self.OLD_RECENT_CONV_KEY))
 
         # Check that the correct metrics were sent
         [vumi_msg] = self.vumi_helper.amqp_connection.get_metrics()
