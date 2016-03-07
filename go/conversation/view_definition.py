@@ -735,6 +735,18 @@ class ConversationReportsView(ConversationTemplateView):
             'time_range': '1d',
             'name': 'Messages Received (24h)',
             'target': metrics.get('messages_received').get_target_spec(),
+        }, {
+            'type': 'diamondash.widgets.lvalue.LValueWidget',
+            'time_range': '1d',
+            'name': 'Unique Recipients (24h)',
+            'target': metrics.get(
+                'outbound_unique_addresses').get_target_spec(),
+        }, {
+            'type': 'diamondash.widgets.lvalue.LValueWidget',
+            'time_range': '1d',
+            'name': 'Unique Senders (24h)',
+            'target': metrics.get(
+                'inbound_unique_addresses').get_target_spec(),
         }, 'new_row', {
             'type': 'diamondash.widgets.graph.GraphWidget',
             'name': 'Messages Sent and Received (24h)',
@@ -760,6 +772,36 @@ class ConversationReportsView(ConversationTemplateView):
             }, {
                 'name': 'Messages Received',
                 'target': metrics.get('messages_received').get_target_spec(),
+            }]
+        }, 'new_row', {
+            'type': 'diamondash.widgets.graph.GraphWidget',
+            'name': 'Unique Recipients and Senders (24h)',
+            'width': 6,
+            'time_range': '24h',
+            'bucket_size': '15m',
+            'metrics': [{
+                'name': 'Unique Recipients',
+                'target': metrics.get(
+                    'outbound_unique_addresses').get_target_spec(),
+            }, {
+                'name': 'Unique Senders',
+                'target': metrics.get(
+                    'inbound_unique_addresses').get_target_spec(),
+            }]
+        }, {
+            'type': 'diamondash.widgets.graph.GraphWidget',
+            'name': 'Unique Recipients and Senders (30d)',
+            'width': 6,
+            'time_range': '30d',
+            'bucket_size': '1d',
+            'metrics': [{
+                'name': 'Unique Recipients',
+                'target': metrics.get(
+                    'outbound_unique_addresses').get_target_spec(),
+            }, {
+                'name': 'Unique Senders',
+                'target': metrics.get(
+                    'inbound_unique_addresses').get_target_spec(),
             }]
         }])
 
