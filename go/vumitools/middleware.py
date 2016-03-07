@@ -621,6 +621,8 @@ class ConversationMetricsMiddleware(BaseMiddleware):
 
     CONFIG_CLASS = ConversationMetricsMiddlewareConfig
     SUBMANAGER_PREFIX = "conversation.metrics.middleware"
+    RECENT_CONV_KEY = "recent_conversations"
+    OLD_RECENT_CONV_KEY = "old_recent_conversations"
 
     @inlineCallbacks
     def setup_middleware(self):
@@ -645,7 +647,7 @@ class ConversationMetricsMiddleware(BaseMiddleware):
 
         # Note: This set will be emptied by a celery task that publishes the
         # metrics for conversations we have seen
-        return self.redis.sadd("recent_coversations", conv_details)
+        return self.redis.sadd(self.RECENT_CONV_KEY, conv_details)
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
