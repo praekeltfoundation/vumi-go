@@ -1028,49 +1028,46 @@ class TestConversationMetricsMiddleware(VumiTestCase):
         self.conv = yield self.user_helper.create_conversation(
             u'bulk_message', name=u'Test Conversation', started=True)
 
-    @inlineCallbacks
     def assert_conv_key_stored(self, mw, msg):
-        value = yield mw.redis.smembers(
-            ConversationMetricsMiddleware.RECENT_CONV_KEY)
         conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
             (self.conv.user_account.key, self.conv.key)
-        self.assertTrue(conv_details in value)
-        self.assertEqual(len(value), 1)
         self.assertIn(conv_details, mw.local_recent_convs)
 
     @inlineCallbacks
-    def assert_conv_key_not_stored(self, mw):
+    def assert_redis_recent_convs_empty(self, mw):
         value = yield mw.redis.smembers(
             ConversationMetricsMiddleware.RECENT_CONV_KEY)
         self.assertSetEqual(value, set([]))
-        self.assertSetEqual(mw.local_recent_convs, set([]))
 
     @inlineCallbacks
     def test_inbound_message(self):
         mw = yield self.mw_helper.create_middleware()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
+        self.assertSetEqual(mw.local_recent_convs, set([]))
 
-        yield self.assert_conv_key_not_stored(mw)
         [msg] = yield msg_helper.add_inbound_to_conv(self.conv, 1)
         yield mw.handle_inbound(msg, "conn_1")
-        yield self.assert_conv_key_stored(mw, msg)
+        self.assert_conv_key_stored(mw, msg)
 
     @inlineCallbacks
     def test_outbound_message(self):
         mw = yield self.mw_helper.create_middleware()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
+        self.assertSetEqual(mw.local_recent_convs, set([]))
 
-        yield self.assert_conv_key_not_stored(mw)
         [msg] = yield msg_helper.add_outbound_to_conv(self.conv, 1)
         yield mw.handle_outbound(msg, "conn_1")
-        yield self.assert_conv_key_stored(mw, msg)
+        self.assert_conv_key_stored(mw, msg)
 
     @inlineCallbacks
-    def test_reset_local_recent_convs(self):
+    def test_update_redis_recent_convs(self):
         mw = yield self.mw_helper.create_middleware()
-
-        self.assertSetEqual(mw.local_recent_convs, set([]))
         mw.local_recent_convs.add("new key")
+        yield self.assert_redis_recent_convs_empty(mw)
 
-        mw.reset_local_recent_convs()
-        self.assertSetEqual(mw.local_recent_convs, set([]))
+        mw.update_redis_recent_convs()
+
+        value = yield mw.redis.smembers(
+            ConversationMetricsMiddleware.RECENT_CONV_KEY)
+        self.assertEqual(value, set(["new key"]))
+        self.assertEqual(mw.local_recent_convs, set([]))
