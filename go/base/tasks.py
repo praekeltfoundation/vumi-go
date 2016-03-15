@@ -26,6 +26,9 @@ def get_and_reset_recent_conversations(vumi_api):
     redis = vumi_api.redis.sub_manager(
         ConversationMetricsMiddleware.SUBMANAGER_PREFIX)
 
+    # Reset the local cache for recent conversations
+    ConversationMetricsMiddleware.LOCAL_RECENT_CONVS = set()
+
     # makes use of redis atomic functions to ensure nothing is added to the set
     # before it is deleted
     try:
