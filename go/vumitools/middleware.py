@@ -5,6 +5,7 @@ import time
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.task import LoopingCall
 
 from vumi.config import (
     ConfigBool, ConfigDict, ConfigFloat, ConfigInt, ConfigList, ConfigRiak,
@@ -632,9 +633,16 @@ class ConversationMetricsMiddleware(BaseMiddleware):
             self.config.redis_manager)
         self.redis = self.redis_manager.sub_manager(self.SUBMANAGER_PREFIX)
         self.local_recent_convs = set()
+        self._looper = LoopingCall(self.reset_local_recent_convs)
+        self._looper.start(3600)
 
     def teardown_middleware(self):
+        if self._looper.running:
+            self._looper.stop()
         return self.redis_manager.close_manager()
+
+    def reset_local_recent_convs(self):
+        self.local_recent_convs = set()
 
     def record_conv_seen(self, msg):
         mdh = MessageMetadataHelper(None, msg)

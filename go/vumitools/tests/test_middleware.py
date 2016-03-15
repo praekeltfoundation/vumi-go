@@ -1064,3 +1064,13 @@ class TestConversationMetricsMiddleware(VumiTestCase):
         [msg] = yield msg_helper.add_outbound_to_conv(self.conv, 1)
         yield mw.handle_outbound(msg, "conn_1")
         yield self.assert_conv_key_stored(mw, msg)
+
+    @inlineCallbacks
+    def test_reset_local_recent_convs(self):
+        mw = yield self.mw_helper.create_middleware()
+
+        self.assertSetEqual(mw.local_recent_convs, set([]))
+        mw.local_recent_convs.add("new key")
+
+        mw.reset_local_recent_convs()
+        self.assertSetEqual(mw.local_recent_convs, set([]))
