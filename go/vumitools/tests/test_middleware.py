@@ -1062,12 +1062,12 @@ class TestConversationMetricsMiddleware(VumiTestCase):
     @inlineCallbacks
     def test_update_redis_recent_convs(self):
         mw = yield self.mw_helper.create_middleware()
-        mw.local_recent_convs.add("new key")
+        mw.local_recent_convs.update(["conv1", "conv2"])
         yield self.assert_redis_recent_convs_empty(mw)
 
         mw.update_redis_recent_convs()
 
         value = yield mw.redis.smembers(
             ConversationMetricsMiddleware.RECENT_CONV_KEY)
-        self.assertEqual(value, set(["new key"]))
+        self.assertEqual(value, set(["conv1", "conv2"]))
         self.assertEqual(mw.local_recent_convs, set([]))
