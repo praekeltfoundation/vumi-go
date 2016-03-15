@@ -623,7 +623,6 @@ class ConversationMetricsMiddleware(BaseMiddleware):
     SUBMANAGER_PREFIX = "conversation.metrics.middleware"
     RECENT_CONV_KEY = "recent_conversations"
     OLD_RECENT_CONV_KEY = "old_recent_conversations"
-    LOCAL_RECENT_CONVS = set()
 
     @inlineCallbacks
     def setup_middleware(self):
@@ -632,6 +631,7 @@ class ConversationMetricsMiddleware(BaseMiddleware):
         self.redis_manager = yield TxRedisManager.from_config(
             self.config.redis_manager)
         self.redis = self.redis_manager.sub_manager(self.SUBMANAGER_PREFIX)
+        self.local_recent_convs = set()
 
     def teardown_middleware(self):
         return self.redis_manager.close_manager()
@@ -646,8 +646,8 @@ class ConversationMetricsMiddleware(BaseMiddleware):
         conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
             (acc_key, conv_key)
 
-        if conv_details not in self.LOCAL_RECENT_CONVS:
-            self.LOCAL_RECENT_CONVS.add(conv_details)
+        if conv_details not in self.local_recent_convs:
+            self.local_recent_convs.add(conv_details)
 
             # Note: This set will be emptied by a celery task that publishes
             # the metrics for conversations we have seen

@@ -1036,22 +1036,19 @@ class TestConversationMetricsMiddleware(VumiTestCase):
             (self.conv.user_account.key, self.conv.key)
         self.assertTrue(conv_details in value)
         self.assertEqual(len(value), 1)
-        self.assertIn(conv_details, mw.LOCAL_RECENT_CONVS)
+        self.assertIn(conv_details, mw.local_recent_convs)
 
     @inlineCallbacks
     def assert_conv_key_not_stored(self, mw):
         value = yield mw.redis.smembers(
             ConversationMetricsMiddleware.RECENT_CONV_KEY)
         self.assertSetEqual(value, set([]))
-        self.assertSetEqual(mw.LOCAL_RECENT_CONVS, set([]))
+        self.assertSetEqual(mw.local_recent_convs, set([]))
 
     @inlineCallbacks
     def test_inbound_message(self):
         mw = yield self.mw_helper.create_middleware()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
-        # Ensure middleware variable is reset before performing tests
-        # I'd love to do this at the end as 'clean-up' but that doesn't work
-        mw.LOCAL_RECENT_CONVS = set()
 
         yield self.assert_conv_key_not_stored(mw)
         [msg] = yield msg_helper.add_inbound_to_conv(self.conv, 1)
@@ -1061,9 +1058,6 @@ class TestConversationMetricsMiddleware(VumiTestCase):
     @inlineCallbacks
     def test_outbound_message(self):
         mw = yield self.mw_helper.create_middleware()
-        # Ensure middleware variable is reset before performing tests
-        # I'd love to do this at the end as 'clean-up' but that doesn't work
-        mw.LOCAL_RECENT_CONVS = set()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
 
         yield self.assert_conv_key_not_stored(mw)
