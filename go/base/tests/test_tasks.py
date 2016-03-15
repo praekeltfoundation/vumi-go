@@ -89,18 +89,15 @@ class TestMetricsTask(GoDjangoTestCase):
         # Check the response before the key is set
         self.assertEqual(get_and_reset_recent_conversations(vumi_api), [])
 
-        # Add data to redis and middleware cache
+        # Add data to redis
         self.redis.sadd(self.RECENT_CONV_KEY, conv_details)
-        ConversationMetricsMiddleware.LOCAL_RECENT_CONVS.add(conv_details)
 
         [details] = get_and_reset_recent_conversations(vumi_api)
 
-        # Check response and that redis and middleware cache sets are emtpy
+        # Check response and that redis sets are emtpy
         self.assertEqual(details, conv_details)
         self.assertIsNone(self.redis.get(self.RECENT_CONV_KEY))
         self.assertIsNone(self.redis.get(self.OLD_RECENT_CONV_KEY))
-        self.assertSetEqual(
-            ConversationMetricsMiddleware.LOCAL_RECENT_CONVS, set([]))
 
     def test_publish_conversation_metrics(self):
         conv = self.make_conv(u'my_conv')
