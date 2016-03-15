@@ -1029,36 +1029,44 @@ class TestConversationMetricsMiddleware(VumiTestCase):
             u'bulk_message', name=u'Test Conversation', started=True)
 
     @inlineCallbacks
-    def assert_conv_in_redis(self, mw, msg):
+    def assert_conv_key_stored(self, mw, msg):
         value = yield mw.redis.smembers(
             ConversationMetricsMiddleware.RECENT_CONV_KEY)
         conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
             (self.conv.user_account.key, self.conv.key)
         self.assertTrue(conv_details in value)
         self.assertEqual(len(value), 1)
+        self.assertIn(conv_details, mw.LOCAL_RECENT_CONVS)
 
     @inlineCallbacks
-    def assert_conv_not_in_redis(self, mw):
+    def assert_conv_key_not_stored(self, mw):
         value = yield mw.redis.smembers(
             ConversationMetricsMiddleware.RECENT_CONV_KEY)
         self.assertSetEqual(value, set([]))
+        self.assertSetEqual(mw.LOCAL_RECENT_CONVS, set([]))
 
     @inlineCallbacks
     def test_inbound_message(self):
         mw = yield self.mw_helper.create_middleware()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
+        # Ensure middleware variable is reset before performing tests
+        # I'd love to do this at the end as 'clean-up' but that doesn't work
+        mw.LOCAL_RECENT_CONVS = set()
 
-        yield self.assert_conv_not_in_redis(mw)
+        yield self.assert_conv_key_not_stored(mw)
         [msg] = yield msg_helper.add_inbound_to_conv(self.conv, 1)
         yield mw.handle_inbound(msg, "conn_1")
-        yield self.assert_conv_in_redis(mw, msg)
+        yield self.assert_conv_key_stored(mw, msg)
 
     @inlineCallbacks
     def test_outbound_message(self):
         mw = yield self.mw_helper.create_middleware()
+        # Ensure middleware variable is reset before performing tests
+        # I'd love to do this at the end as 'clean-up' but that doesn't work
+        mw.LOCAL_RECENT_CONVS = set()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
 
-        yield self.assert_conv_not_in_redis(mw)
+        yield self.assert_conv_key_not_stored(mw)
         [msg] = yield msg_helper.add_outbound_to_conv(self.conv, 1)
         yield mw.handle_outbound(msg, "conn_1")
-        yield self.assert_conv_in_redis(mw, msg)
+        yield self.assert_conv_key_stored(mw, msg)
