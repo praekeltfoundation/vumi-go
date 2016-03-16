@@ -633,7 +633,7 @@ class ConversationMetricsMiddleware(BaseMiddleware):
             self.config.redis_manager)
         self.redis = self.redis_manager.sub_manager(self.SUBMANAGER_PREFIX)
         self.local_recent_convs = set()
-        self._looper = LoopingCall(self.update_redis_recent_convs)
+        self._looper = LoopingCall(self.reset_local_recent_convs)
         self._looper.start(1800)
 
     def teardown_middleware(self):
@@ -641,11 +641,8 @@ class ConversationMetricsMiddleware(BaseMiddleware):
             self._looper.stop()
         return self.redis_manager.close_manager()
 
-    def update_redis_recent_convs(self):
-        # Note: This set will be emptied by a celery task that publishes
-        # the metrics for conversations we have seen
-        self.redis.sadd(self.RECENT_CONV_KEY, *self.local_recent_convs)
-        self.local_recent_convs = set()
+    def reset_local_recent_convs(self):
+        self.local_recent_convs.clear()
 
     def record_conv_seen(self, msg):
         mdh = MessageMetadataHelper(None, msg)
@@ -659,6 +656,9 @@ class ConversationMetricsMiddleware(BaseMiddleware):
 
         if conv_details not in self.local_recent_convs:
             self.local_recent_convs.add(conv_details)
+            # Note: This set will be emptied by a celery task that publishes
+            # the metrics for conversations we have seen
+            self.redis.sadd(self.RECENT_CONV_KEY, *self.local_recent_convs)
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
