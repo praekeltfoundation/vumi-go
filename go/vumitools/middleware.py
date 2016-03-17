@@ -608,6 +608,9 @@ class ConversationMetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
 
     redis_manager = ConfigDict(
         "Redis configuration parameters", default={}, static=True)
+    local_store_reset_timer = ConfigInt(
+        "Time in seconds to store conversations keys for locally.",
+        default=1800, static=True)
 
 
 class ConversationMetricsMiddleware(BaseMiddleware):
@@ -634,7 +637,7 @@ class ConversationMetricsMiddleware(BaseMiddleware):
         self.redis = self.redis_manager.sub_manager(self.SUBMANAGER_PREFIX)
         self.local_recent_convs = set()
         self._looper = LoopingCall(self.reset_local_recent_convs)
-        self._looper.start(1800)
+        self._looper.start(self.config.local_store_reset_timer)
 
     def teardown_middleware(self):
         if self._looper.running:
