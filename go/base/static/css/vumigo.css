@@ -181,6 +181,10 @@ button {
 .content .sidebar {
   max-width: 210px;
 }
+.content .text-message {
+  max-width: 30em;
+  word-wrap: break-word;
+}
 .main-content {
   padding: 0 0 22px 16px;
 }
