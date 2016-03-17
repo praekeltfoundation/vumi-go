@@ -69,7 +69,9 @@ class DummyRequest(test_web.DummyRequest):
             self.content = StringIO(json.dumps(content, cls=JSONEncoder))
         else:
             self.content = None
-        self.headers.update(headers or {})
+        headers = headers or {}
+        for header, value in headers.items():
+            self.requestHeaders.addRawHeader(header, value)
 
         args = args or {}
         for k, v in args.items():
