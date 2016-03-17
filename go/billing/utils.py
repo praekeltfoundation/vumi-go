@@ -71,7 +71,7 @@ class DummyRequest(test_web.DummyRequest):
             self.content = None
         headers = headers or {}
         for header, value in headers.items():
-            self.requestHeaders.addRawHeader(header, value)
+            self.addRawRequestHeader(header, value)
 
         args = args or {}
         for k, v in args.items():
@@ -79,6 +79,13 @@ class DummyRequest(test_web.DummyRequest):
 
     def value(self):
         return "".join(self.written)
+
+    def addRawRequestHeader(self, name, value):
+        if not hasattr(self, 'headers'):
+            # Twisted >= 16.0
+            self.requestHeaders.addRawHeader(name, value)
+        else:
+            self.headers[name] = value
 
 
 class DummySite(server.Site):

@@ -6,7 +6,7 @@ from twisted.cred import error
 from twisted.cred.credentials import UsernamePassword
 from twisted.internet.defer import inlineCallbacks
 from twisted.web import resource
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test import test_web
 from twisted.web.iweb import ICredentialFactory
 
 from vumi.tests.helpers import VumiTestCase, PersistenceHelper
@@ -20,6 +20,15 @@ from go.vumitools.tests.helpers import VumiApiHelper
 from .utils import MockAuthServer
 
 import mock
+
+
+class DummyRequest(test_web.DummyRequest):
+    def addRawRequestHeader(self, name, value):
+        if not hasattr(self, 'headers'):
+            # Twisted >= 16.0
+            self.requestHeaders.addRawHeader(name, value)
+        else:
+            self.headers[name] = value
 
 
 class TestGoUserRealm(VumiTestCase):
@@ -146,7 +155,7 @@ class TestGoAuthBouncerAccessChecker(VumiTestCase):
         request = DummyRequest([''])
         request.path = ''
         if token is not None:
-            request.requestHeaders.addRawHeader(
+            request.addRawRequestHeader(
                 "authorization", "Bearer %s" % (token,))
         return request
 
@@ -213,11 +222,11 @@ class TestGoUserAuthSessionWrapper(VumiTestCase):
         request = DummyRequest([''])
         request.path = ''
         if user is not None:
-            request.requestHeaders.addRawHeader("authorization", (
+            request.addRawRequestHeader("authorization", (
                 "Basic %s" % base64.b64encode("%s:%s" % (user, password))
             ))
         elif bearer is not None:
-            request.requestHeaders.addRawHeader(
+            request.addRawRequestHeader(
                 "authorization", "Bearer %s" % (bearer,))
         return request
 
