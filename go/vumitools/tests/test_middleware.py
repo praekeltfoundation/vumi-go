@@ -1028,6 +1028,7 @@ class TestConversationMetricsMiddleware(VumiTestCase):
         self.conv = yield self.user_helper.create_conversation(
             u'bulk_message', name=u'Test Conversation', started=True)
 
+    @inlineCallbacks
     def assert_conv_key_stored(self, mw, msg):
         value = yield mw.redis.smembers(
             ConversationMetricsMiddleware.RECENT_CONV_KEY)
@@ -1048,21 +1049,21 @@ class TestConversationMetricsMiddleware(VumiTestCase):
     def test_inbound_message(self):
         mw = yield self.mw_helper.create_middleware()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
-        self.assert_conv_key_not_stored(mw)
+        yield self.assert_conv_key_not_stored(mw)
 
         [msg] = yield msg_helper.add_inbound_to_conv(self.conv, 1)
         yield mw.handle_inbound(msg, "conn_1")
-        self.assert_conv_key_stored(mw, msg)
+        yield self.assert_conv_key_stored(mw, msg)
 
     @inlineCallbacks
     def test_outbound_message(self):
         mw = yield self.mw_helper.create_middleware()
         msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
-        self.assert_conv_key_not_stored(mw)
+        yield self.assert_conv_key_not_stored(mw)
 
         [msg] = yield msg_helper.add_outbound_to_conv(self.conv, 1)
         yield mw.handle_outbound(msg, "conn_1")
-        self.assert_conv_key_stored(mw, msg)
+        yield self.assert_conv_key_stored(mw, msg)
 
     @inlineCallbacks
     def test_reset_local_recent_convs(self):
