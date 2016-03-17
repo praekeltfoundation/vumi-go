@@ -13,6 +13,9 @@ matrix:
     # Test against Riak 2.1.1.
     - python: "2.7"
       env: RIAK_VERSION="2.1.1" VUMIGO_TEST_DB=postgres
+    # Test against Twisted 15.4
+    - python: "2.7"
+      env: TWISTED_VERSION="Twisted==15.4"
     # Test without Django.
     - python: "2.7"
       env: VUMIGO_SKIP_DJANGO=1 NO_COVERAGE=1
@@ -36,9 +39,11 @@ before_install:
   # Set up an appropriate version of Riak.
   - export RIAK_VERSION="${RIAK_VERSION-1.4.12}"
   - utils/setup_travis_riak.sh "${RIAK_VERSION}"
+  - export TWISTED_VERSION="${TWISTED_VERSION-Twisted}"
 install:
   # Travis seems to have pip 6.x, which doesn't build and cache wheels.
   - "pip install 'pip>=7.1.0'"
+  - "pip install ${TWISTED_VERSION}"
   - "if [ $VUMIGO_SKIP_DJANGO ]; then pip install -e .; else pip install -r requirements.pip; fi"
   - "pip install -r requirements-dev.pip"
   - "pip install overalls"
