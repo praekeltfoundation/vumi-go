@@ -610,7 +610,7 @@ class ConversationMetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
         "Redis configuration parameters", default={}, static=True)
     local_store_reset_timer = ConfigInt(
         "Time in seconds to store conversations keys for locally.",
-        default=1800, static=True)
+        default=300, static=True)
 
 
 class ConversationMetricsMiddleware(BaseMiddleware):
