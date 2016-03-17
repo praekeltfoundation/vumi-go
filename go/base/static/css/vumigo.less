@@ -214,6 +214,14 @@ a:link, button {
     max-width: 210px;
   }
 
+  // text messages might be long and not contain spaces. We wrap them
+  // to ~60 characters and break words if needed. This avoids overflowing
+  // the container holding the text and gives a sensible column width for
+  // reading.
+  .text-message {
+    max-width: 30em;
+    word-wrap: break-word;
+  }
 } // end content
 
 .main-content {
