@@ -146,7 +146,8 @@ class TestGoAuthBouncerAccessChecker(VumiTestCase):
         request = DummyRequest([''])
         request.path = ''
         if token is not None:
-            request.headers["authorization"] = "Bearer %s" % (token,)
+            request.requestHeaders.addRawHeader(
+                "authorization", "Bearer %s" % (token,))
         return request
 
     @inlineCallbacks
@@ -212,11 +213,12 @@ class TestGoUserAuthSessionWrapper(VumiTestCase):
         request = DummyRequest([''])
         request.path = ''
         if user is not None:
-            request.headers["authorization"] = (
+            request.requestHeaders.addRawHeader("authorization", (
                 "Basic %s" % base64.b64encode("%s:%s" % (user, password))
-            )
+            ))
         elif bearer is not None:
-            request.headers["authorization"] = "Bearer %s" % (bearer,)
+            request.requestHeaders.addRawHeader(
+                "authorization", "Bearer %s" % (bearer,))
         return request
 
     def mk_wrapper(self, text, bouncer=False):
