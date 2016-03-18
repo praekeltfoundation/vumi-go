@@ -5,6 +5,7 @@ import time
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.task import LoopingCall
 
 from vumi.config import (
     ConfigBool, ConfigDict, ConfigFloat, ConfigInt, ConfigList, ConfigRiak,
@@ -607,6 +608,9 @@ class ConversationMetricsMiddlewareConfig(BaseMiddleware.CONFIG_CLASS):
 
     redis_manager = ConfigDict(
         "Redis configuration parameters", default={}, static=True)
+    local_store_reset_timer = ConfigInt(
+        "Time in seconds to store conversations keys for locally.",
+        default=300, static=True)
 
 
 class ConversationMetricsMiddleware(BaseMiddleware):
@@ -631,9 +635,17 @@ class ConversationMetricsMiddleware(BaseMiddleware):
         self.redis_manager = yield TxRedisManager.from_config(
             self.config.redis_manager)
         self.redis = self.redis_manager.sub_manager(self.SUBMANAGER_PREFIX)
+        self.local_recent_convs = set()
+        self._looper = LoopingCall(self.reset_local_recent_convs)
+        self._looper.start(self.config.local_store_reset_timer)
 
     def teardown_middleware(self):
+        if self._looper.running:
+            self._looper.stop()
         return self.redis_manager.close_manager()
+
+    def reset_local_recent_convs(self):
+        self.local_recent_convs.clear()
 
     def record_conv_seen(self, msg):
         mdh = MessageMetadataHelper(None, msg)
@@ -645,9 +657,11 @@ class ConversationMetricsMiddleware(BaseMiddleware):
         conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
             (acc_key, conv_key)
 
-        # Note: This set will be emptied by a celery task that publishes the
-        # metrics for conversations we have seen
-        return self.redis.sadd(self.RECENT_CONV_KEY, conv_details)
+        if conv_details not in self.local_recent_convs:
+            self.local_recent_convs.add(conv_details)
+            # Note: This set will be emptied by a celery task that publishes
+            # the metrics for conversations we have seen
+            self.redis.sadd(self.RECENT_CONV_KEY, *self.local_recent_convs)
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
