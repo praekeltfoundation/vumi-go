@@ -1066,6 +1066,21 @@ class TestConversationMetricsMiddleware(VumiTestCase):
         yield self.assert_conv_key_stored(mw, msg)
 
     @inlineCallbacks
+    def test_local_recent_convs_shields_redis(self):
+        mw = yield self.mw_helper.create_middleware()
+        msg_helper = GoMessageHelper(vumi_helper=self.mw_helper)
+        conv_details = '{"account_key": "%s","conv_key": "%s"}' % \
+            (self.conv.user_account.key, self.conv.key)
+        yield self.assert_conv_key_not_stored(mw)
+
+        [msg] = yield msg_helper.add_inbound_to_conv(self.conv, 1)
+        mw.local_recent_convs.add(conv_details)
+        yield mw.record_conv_seen(msg)
+        value = yield mw.redis.smembers(
+            ConversationMetricsMiddleware.RECENT_CONV_KEY)
+        self.assertSetEqual(value, set([]))
+
+    @inlineCallbacks
     def test_reset_local_recent_convs(self):
         mw = yield self.mw_helper.create_middleware()
         mw.local_recent_convs.update(["conv1", "conv2"])
