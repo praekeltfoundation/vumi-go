@@ -23,7 +23,7 @@
                 {% else %}
                 <h6><i>{{message.to_addr}}</i> via {{message.transport_type}} (unsupported) - {{message.timestamp}}</h6>
                 {% endif %}
-                <p>{{message.content}}</p>
+                <p class="text-message">{{message.content}}</p>
             </td>
             {% if message_direction == 'inbound' and contact != None and conversation.has_channel_supporting_generic_sends %}
             <td>
