@@ -127,7 +127,8 @@ class ChannelType(Dict):
         uuid = channel.key
         conn = channel.get_connector()
         return {
-            'uuid': uuid, 'tag': (pool, tagname), 'name': tagname,
+            'uuid': uuid, 'tag': (pool, tagname),
+            'name': u'%s (%s)' % (tagname, pool),
             'description': u"%s: %s" % (
                 pool.replace('_', ' ').title(), tagname),
             'endpoints': [
