@@ -104,10 +104,10 @@ class JsBoxSendWorker(Worker):
     SUPPORTED_APPS = tuple(JSBOX_CONFIG.keys())
     SEND_DELAY = 0.01  # No more than 100 msgs/second to the queue.
 
-    def send_inbound_push_trigger(self, to_addr, conversation):
+    def send_inbound_push_trigger(self, to_addr, conversation, contact_key):
         self.emit('Starting %r [%s] -> %s' % (
             conversation.name, conversation.key, to_addr))
-        msg = mk_inbound_push_trigger(to_addr, conversation)
+        msg = mk_inbound_push_trigger(to_addr, conversation, contact_key)
         return self.send_to_conv(conversation, msg)
 
     @inlineCallbacks
@@ -119,8 +119,8 @@ class JsBoxSendWorker(Worker):
         to_addrs = yield self.get_contact_addrs_for_conv(
             conv, delivery_class, excluded_addrs)
         ticker = Ticker(hz=hz)
-        for i, to_addr in enumerate(to_addrs):
-            yield self.send_inbound_push_trigger(to_addr, conv)
+        for i, (to_addr, contact_key) in enumerate(to_addrs):
+            yield self.send_inbound_push_trigger(to_addr, conv, contact_key)
             if (i + 1) % 100 == 0:
                 self.emit("Messages sent: %s / %s" % (i + 1, len(to_addrs)))
             yield ticker.tick()
@@ -150,7 +150,7 @@ class JsBoxSendWorker(Worker):
             for contact in (yield contacts):
                 addr = contact.addr_for(delivery_class)
                 if addr not in excluded_addrs:
-                    addrs.append(addr)
+                    addrs.append((addr, contact.key))
             self.emit("Addresses collected: %s" % (len(addrs),))
         returnValue(addrs)
 

@@ -199,13 +199,14 @@ class TestJsBoxSend(VumiTestCase):
 
         self.assertEqual(worker_helper.get_dispatched_inbound(), [])
         self.assertEqual(worker.stdout.getvalue(), '')
-        yield worker.send_inbound_push_trigger('+27831234567', conv)
+        yield worker.send_inbound_push_trigger('+27831234567', conv, 'cont')
         self.assertEqual(
             worker.stdout.getvalue(),
             "Starting u'My Conversation' [%s] -> +27831234567\n" % (conv.key,))
         [msg] = worker_helper.get_dispatched_inbound()
         self.assertEqual(msg['inbound_push_trigger'], True)
         self.assertEqual(msg['from_addr'], '+27831234567')
+        self.assertEqual(msg['helper_metadata']['go']['contact_key'], 'cont')
 
     @inlineCallbacks
     def test_get_excluded_addrs_no_file(self):
@@ -255,7 +256,7 @@ class TestJsBoxSend(VumiTestCase):
         worker = yield self.get_worker()
         addrs = yield worker.get_contact_addrs_for_conv(conv, None, set())
         self.assertEqual(
-            sorted(addrs), sorted([c.msisdn for c in contacts]))
+            sorted(addrs), sorted([(c.msisdn, c.key) for c in contacts]))
         self.assertEqual(worker.stdout.getvalue(), 'Addresses collected: 3\n')
 
     @inlineCallbacks
@@ -271,21 +272,22 @@ class TestJsBoxSend(VumiTestCase):
             u'jsbox', groups=[grp])
         worker = yield self.get_worker()
         addrs = yield worker.get_contact_addrs_for_conv(conv, 'gtalk', set())
-        self.assertEqual(sorted(addrs), sorted([c.gtalk_id for c in contacts]))
+        self.assertEqual(
+            sorted(addrs), sorted([(c.gtalk_id, c.key) for c in contacts]))
 
     @inlineCallbacks
     def test_get_contacts_for_addrs_exclude_list(self):
         cs = self.user_helper.user_api.contact_store
         grp = yield cs.new_group(u'group')
-        yield cs.new_contact(msisdn=u'+01', groups=[grp])
+        c1 = yield cs.new_contact(msisdn=u'+01', groups=[grp])
         yield cs.new_contact(msisdn=u'+02', groups=[grp])
-        yield cs.new_contact(msisdn=u'+03', groups=[grp])
+        c3 = yield cs.new_contact(msisdn=u'+03', groups=[grp])
         conv = yield self.user_helper.create_conversation(
             u'jsbox', groups=[grp])
         worker = yield self.get_worker()
         excluded = set(['+02', '+04'])
         addrs = yield worker.get_contact_addrs_for_conv(conv, None, excluded)
-        self.assertEqual(sorted(addrs), ['+01', '+03'])
+        self.assertEqual(sorted(addrs), [('+01', c1.key), ('+03', c3.key)])
         self.assertEqual(worker.stdout.getvalue(), 'Addresses collected: 2\n')
 
     @inlineCallbacks
@@ -341,10 +343,11 @@ class TestJsBoxSend(VumiTestCase):
         worker = yield self.get_worker()
 
         def generate_contact_addrs(conv, delivery_class, excluded_addrs):
-            return ['+27831234%03s' % i for i in xrange(1000)]
+            return [('+27831234%03s' % i, ('contact-%s' % i))
+                    for i in xrange(1000)]
 
         worker.get_contact_addrs_for_conv = generate_contact_addrs
-        worker.send_inbound_push_trigger = lambda to_addr, conversation: None
+        worker.send_inbound_push_trigger = lambda *args: None
 
         yield worker.send_jsbox(self.user_helper.account_key, conv.key, 1000)
         self.assertEqual(worker.stdout.getvalue(), ''.join([

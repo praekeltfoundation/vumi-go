@@ -10,11 +10,13 @@ from vxsandbox import SandboxResource
 from vumi.message import TransportUserMessage
 from vumi import log
 
+from go.vumitools.utils import MessageMetadataDictHelper
+
 
 INBOUND_PUSH_TRIGGER = "inbound_push_trigger"
 
 
-def mk_inbound_push_trigger(to_addr, conversation):
+def mk_inbound_push_trigger(to_addr, conversation, contact_key=None):
     """
     Construct a dummy inbound message used to trigger a push of
     a new message from a sandbox application.
@@ -27,7 +29,10 @@ def mk_inbound_push_trigger(to_addr, conversation):
         # if it accidentally ends up elsewhere.
         INBOUND_PUSH_TRIGGER: True,
     }
-    conversation.set_go_helper_metadata(msg_options['helper_metadata'])
+    msg_md = MessageMetadataDictHelper(msg_options['helper_metadata'])
+    msg_md.add_conversation_metadata(conversation)
+    if contact_key is not None:
+        msg_md.set_contact_key(contact_key)
 
     # We reverse the to_addr & from_addr since we're faking input
     # from the client to start the survey.

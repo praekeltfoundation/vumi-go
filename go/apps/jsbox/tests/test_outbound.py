@@ -88,6 +88,26 @@ class TestInboundPushTriggerUtils(VumiTestCase):
             },
         })
 
+    @inlineCallbacks
+    def test_mk_inbound_push_trigger_with_contact_key(self):
+        conv = yield self.app_helper.create_conversation()
+        msg = mk_inbound_push_trigger(
+            "to-addr-1", conv, u'contact-1')
+        self.assertEqual(msg[INBOUND_PUSH_TRIGGER], True)
+        self.assertEqual(msg["content"], None)
+        self.assertEqual(msg["transport_name"], None)
+        self.assertEqual(msg["transport_type"], None)
+        self.assertEqual(msg["from_addr"], "to-addr-1")
+        self.assertEqual(msg["to_addr"], None)
+        self.assertEqual(msg["helper_metadata"], {
+            'go': {
+                'conversation_key': conv.key,
+                'conversation_type': u'dummy',
+                'user_account': u'test-0-user',
+                'contact_key': u'contact-1',
+            },
+        })
+
     def test_is_inbound_push_trigger_true(self):
         msg = self.msg_helper.make_inbound("content")
         msg[INBOUND_PUSH_TRIGGER] = True

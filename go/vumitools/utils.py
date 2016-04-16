@@ -120,6 +120,12 @@ class MessageMetadataDictHelper(object):
         self.set_user_account(router.user_account.key)
         self.set_router_info(router.router_type, router.key)
 
+    def get_contact_key(self):
+        return self._go_metadata.get('contact_key', None)
+
+    def set_contact_key(self, contact_key):
+        self._go_metadata['contact_key'] = contact_key
+
 
 class MessageMetadataHelper(MessageMetadataDictHelper):
     """Manage various bits of metadata for a Vumi Go message.

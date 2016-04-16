@@ -178,6 +178,18 @@ class TestMessageMetadataDictHelper(VumiTestCase):
             'router_key': router.key,
         })
 
+    def test_get_contact_key(self):
+        md = self.mk_md()
+        self.assertEqual(md.get_contact_key(), None)
+        md = self.mk_md(go_metadata={'contact_key': 'contact-1'})
+        self.assertEqual(md.get_contact_key(), 'contact-1')
+
+    def test_set_contact_key(self):
+        md = self.mk_md()
+        self.assertEqual(md._go_metadata, {})
+        md.set_contact_key('contact-1')
+        self.assertEqual(md._go_metadata, {'contact_key': 'contact-1'})
+
 
 class TestMessageMetadataHelper(VumiTestCase):
 
