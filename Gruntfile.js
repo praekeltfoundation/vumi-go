@@ -10,6 +10,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-exec');
   grunt.loadNpmTasks('grunt-contrib-less');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-pagespeed');
 
   grunt.initConfig({
     paths: require('./go/js_paths.yml'),
@@ -90,6 +91,20 @@ module.exports = function (grunt) {
         },
       }
     },
+    pagespeed: {
+      options: {
+        nokey: true,
+        url: 'http://localhost:8000'
+      },
+      paths: {
+        options: {
+          paths: ['.'],
+          locale: 'en_GB',
+          strategy: 'mobile',
+          threshold: 80
+        }
+      }
+    },
     watch: {
       less: {
         files: ['go/base/static/css/*.less'],
@@ -120,6 +135,10 @@ module.exports = function (grunt) {
 
   grunt.registerTask('default', [
     'test'
+  ]);
+
+  grunt.registerTask('perf', [
+    'pagespeed'
   ]);
 
 };
