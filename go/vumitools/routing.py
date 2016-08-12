@@ -668,7 +668,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         """Send a reply to the unroutable `msg` if the tagpool asks for one.
 
         If we can't find the tagpool or the tagpool isn't configured for
-        replies to unroutable messages, the original exception is reraised.
+        replies to unroutable messages, the original exception is logged.
         """
         msg_mdh = self.get_metadata_helper(msg)
         if msg_mdh.tag is None:
@@ -678,7 +678,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         tagpool_metadata = yield msg_mdh.get_tagpool_metadata()
         if not tagpool_metadata.get('reply_to_unroutable_inbound'):
-            f.raiseException()
+            log.err(f)
+            return
 
         config = self.get_static_config()
         default_response = config.default_unroutable_inbound_reply
