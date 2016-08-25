@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 base_requires = [
-    'vumi>=0.5.21,<0.6.0',
+    'vumi>=0.5.21',
     'vxsandbox>=0.6.0',
     'vxpolls',
     'vumi-wikipedia>=0.2.1',
