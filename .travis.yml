@@ -36,6 +36,8 @@ before_install:
   # If necessary, set up an appropriate version of pypy.
   - if [ ! -z "$PYPY_VERSION" ]; then source utils/setup-pypy-travis.sh; fi
   - if [ ! -z "$PYPY_VERSION" ]; then python --version 2>&1 | fgrep "PyPy $PYPY_VERSION"; fi
+  # It looks like we need a newer pytest
+  - pip install --upgrade pytest
   # Set up an appropriate version of Riak.
   - export RIAK_VERSION="${RIAK_VERSION-1.4.12}"
   - utils/setup_travis_riak.sh "${RIAK_VERSION}"
