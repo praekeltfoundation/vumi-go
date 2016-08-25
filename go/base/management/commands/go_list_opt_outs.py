@@ -1,12 +1,12 @@
 from optparse import make_option
 
-from django.core.management.base import BaseCommand
+from go.base.command_utils import BaseGoCommand
 
 from go.base.command_utils import get_user_by_email
 from go.vumitools.opt_out import OptOutStore
 
 
-class Command(BaseCommand):
+class Command(BaseGoCommand):
     help = "List opt-outs from a particular account"
 
     LOCAL_OPTIONS = (
@@ -14,7 +14,7 @@ class Command(BaseCommand):
                     dest='email-address',
                     help='Email address for the Vumi Go user'),
     )
-    option_list = BaseCommand.option_list + LOCAL_OPTIONS
+    option_list = BaseGoCommand.option_list + LOCAL_OPTIONS
 
     def handle(self, *args, **options):
         options = options.copy()
