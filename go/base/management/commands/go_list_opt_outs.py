@@ -33,10 +33,11 @@ class Command(BaseGoCommand):
                                     user_api.user_account_key)
         opt_outs = opt_out_store.list_opt_outs()
 
-        print "Address Type, Address, Message ID, Timestamp"
-        print "============================================"
+        self.stdout.write("Address Type, Address, Message ID, Timestamp\n")
+        self.stdout.write("============================================\n")
         for key in opt_outs:
             addr_type, _colon, addr = key.partition(":")
             opt_out = opt_out_store.get_opt_out(addr_type, addr)
-            print "%s, %s, %s, %s" % (addr_type, addr, opt_out.message,
-                                      opt_out.created_at)
+            self.stdout.write(
+                "%s, %s, %s, %s\n" % (addr_type, addr, opt_out.message,
+                                      opt_out.created_at))
