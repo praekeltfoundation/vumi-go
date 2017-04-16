@@ -874,6 +874,7 @@ class TestRoutingTableDispatcherWithBilling(RoutingTableDispatcherTestCase):
                 "app1", "app2", "router_ri", "optout",
                 "billing_dispatcher_ri"
             ],
+            "billing_enabled": True,
             "billing_inbound_connector": "billing_dispatcher_ri",
             "billing_outbound_connector": "billing_dispatcher_ro",
             "metrics_prefix": "foo",
