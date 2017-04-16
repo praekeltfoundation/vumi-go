@@ -3,8 +3,8 @@
 {% block container_extraclass %}error{% endblock %}
 
 {% block content %}
-  <div class='error-content'>
-    <h1 class='title'>{% block error_title %}{{ error_title }}{% endblock %}</h1>
-    <span class='reason'>{% block error_reason %}{{ error_reason }}{%endblock %}</span>
+  <div class="error-content">
+    <h1 class="title">{% block error_title %}{{ error_title }}{% endblock %}</h1>
+    <div class="reason">{% block error_reason %}{{ error_reason }}{%endblock %}</div>
   </div>
 {% endblock %}
