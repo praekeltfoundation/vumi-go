@@ -387,6 +387,10 @@ def import_and_update_contacts(api, account_key, contact_mangler, group_key,
     default_storage.delete(file_path)
 
 
+def mkdynamic(prefix, data):
+    return dict((prefix + k, v) for k, v in data.iteritems())
+
+
 @task(ignore_result=True)
 def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
                                          file_path, fields, has_header):
@@ -402,8 +406,8 @@ def import_upload_is_truth_contacts_file(account_key, group_key, file_name,
         new_subscription.update(dict(contact.subscription))
         new_subscription.update(contact_dictionary.pop('subscription', {}))
 
-        contact_dictionary['extra'] = new_extra
-        contact_dictionary['subscription'] = new_subscription
+        contact_dictionary.update(mkdynamic("extras-", new_extra))
+        contact_dictionary.update(mkdynamic("subscription-", new_subscription))
         contact_dictionary['groups'] = [group_key]
         return contact_dictionary
 
@@ -425,12 +429,13 @@ def import_existing_is_truth_contacts_file(account_key, group_key, file_name,
         new_extra = {}
         new_extra.update(contact_dictionary.pop('extra', {}))
         new_extra.update(dict(contact.extra))
-        cloned_contact_dictionary['extra'] = new_extra
+        cloned_contact_dictionary.update(mkdynamic("extras-", new_extra))
 
         new_subscription = {}
         new_subscription.update(contact_dictionary.pop('subscription', {}))
         new_subscription.update(dict(contact.subscription))
-        cloned_contact_dictionary['subscription'] = new_subscription
+        cloned_contact_dictionary.update(
+            mkdynamic("subscription-", new_subscription))
 
         for key in contact_dictionary.keys():
             # NOTE: If the contact already has any kind of value that

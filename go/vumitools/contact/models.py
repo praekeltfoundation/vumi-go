@@ -201,9 +201,23 @@ class ContactStore(PerAccountStore):
         fields = self.settable_contact_fields(**fields)
 
         contact = yield self.get_contact_by_key(key)
-        for field_name, field_value in fields.iteritems():
-            if field_name in contact.field_descriptors:
-                setattr(contact, field_name, field_value)
+
+        def dynamic_key(key, prefix):
+            if not isinstance(key, unicode):
+                key = key.decode("utf-8")
+            return key[len(descriptor.prefix):]
+
+        # TODO: Move this logic to the model or field code somehow.
+        for field_name, descriptor in contact.field_descriptors.iteritems():
+            if hasattr(descriptor, "prefix"):
+                dynamic_fields = dict(
+                    (dynamic_key(k, descriptor.prefix), v)
+                    for k, v in fields.iteritems()
+                    if k.startswith(descriptor.prefix))
+                getattr(contact, field_name).update(dynamic_fields)
+            else:
+                if descriptor.key in fields:
+                    setattr(contact, field_name, fields[descriptor.key])
 
         for group in groups:
             contact.add_to_group(group)
