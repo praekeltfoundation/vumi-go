@@ -1,4 +1,12 @@
 import os
+import sys
+import types
+
+# protect against importing production settings
+for name in ('production_settings', 'go.production_settings'):
+    sys.modules[name] = types.ModuleType(name)
+
+
 from settings import *
 
 SECRET_KEY = "test_secret"
