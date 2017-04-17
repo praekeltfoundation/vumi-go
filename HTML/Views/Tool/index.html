@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html><!-- InstanceBegin template="/Templates/Base.dwt" codeOutsideHTMLIsLocked="false" -->
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="../../css/bootstrap.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-responsive.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-select.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-fileupload.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-overrides.css" rel="stylesheet" media="screen">
+        <link href="../../css/prettyCheckable.css" rel="stylesheet" media="screen">
+        <link href="../../css/styles.css" rel="stylesheet" media="screen">
+        <link href="../../css/sprites.css" rel="stylesheet" media="screen">
+		
+        <link href="../../css/tool.css" rel="stylesheet" media="screen">		
+		
+        <link rel="apple-touch-icon" href="../../img/ico/apple-touch-icon.png" />
+		<link rel="shortcut icon" type="image/x-icon" href="../../img/ico/favicon.ico" />
+		<link rel="icon" type="image/gif" href="../../img/ico/favicon.gif" />
+        <!-- InstanceBeginEditable name="doctitle" -->
+        <title>Base Vumi Go Template</title>
+        <!-- InstanceEndEditable -->
+    </head>
+	<body>
+        <!----------------MAIN CONTAINER--------------------->
+        <div class="container-fluid">
+            <!----------------NAVIGATION--------------------->
+            <ul class="nav nav-pills">
+              <li class="sprite sprite-ico-logo logo"></li>
+              <li><a href="#">Dashboard</a></li>
+              <li class="disabled"><a>Recipients</a></li>
+              <li><a href="#">Help</a></li>
+            </ul>
+            
+			<div class="right">            
+            <ul class="nav nav-pills">
+	            <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                        Balance
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Pricing</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                       <div class="avatar">
+                       </div>
+                       Account
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Switch account</a></li>
+                      <li><a href="#">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+            </div>
+            <!----------------CONTENT--------------------->
+            <div class="content">
+                <div class="row-fluid">
+	                <!----------------TITLE--------------------->
+                    <div class="span6 titlebar">
+						<h3>Guiness Favourite Drinks</h3>
+                    </div>
+                    <!--
+					<div class="span6 breadcrumbs">
+                    	<ul>
+                        	<li>Breadcrum</li>
+                            <li>Breadcrum</li>
+                            <li>Breadcrum</li>
+                        </ul>
+                    </div>
+					-->
+				</div>
+                <!----------------CONTROLS---------------->
+                <div class="row-fluid">
+                    <div class="span12 controls">
+                        <div class="span6">
+                        	<div class="action">
+                            	<button type="button" class="btn btn-primary">Add new message</button>
+                            </div>
+                        </div>
+                        <div class="span6">
+                        	<div class="options right">
+                                <button type="button" class="btn btn-primary">Advanced view</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!----------------TOOL--------------------->
+				
+				<script type="text/html" id="tmpl_widget">			
+					<div class="header">
+						<span>Message <%=id%></span>
+						<% if (!editMode) { %>
+						<button type="button" class="btn btn-mini btn-primary">Edit</button>
+						<div class="sprite sprite-ico-del"></div>
+						<div class="sprite sprite-ico-drag"></div>					
+						<% } else { %>
+						<button type="button" class="btn btn-mini btn-primary">Save</button>
+						<button type="button" class="btn btn-mini btn-primary">Cancel</button>
+						<div class="sprite sprite-ico-del"></div>
+						<% } %>
+
+
+					</div>
+					<div class="dragend sprite sprite-ico-dragend"></div>
+					<div class="widget-inner">
+						<% if (!editMode) { %>
+						<div class="caption"><%=message%></div>
+						
+						<% } else { %>
+						<form>
+							<span>Type of message</span>
+							<select class="selectpicker span12">
+							  <option>Recipients select one option from a list</option>
+							  <option>Recipients can reply with their own text</option>
+							  <option>Display text only (Recipients can't answer)</option>
+						   </select>
+						   <span>Your message</span>
+						   <div class="right">
+							<span>100 characters left</span>
+						   </div>
+						   <textarea rows="3" class="span12">What is your favourite drink?</textarea>
+						   <% if (tails) { %>
+						   <span>Recipients&rsquo; answer</span>
+						   <ul class="answers">
+							<% for (var i = 0; i < tails.length; i++) { %>
+								<% if (tails[i].text) { %>
+								<li><span><%=(i+1)%></span><input type="text" value="<%=tails[i].text%>"></li>
+								<% } else { %>
+								<li><span>Recipients reply with their own text.</span>
+								<% } %>
+							<% } %>
+						   </ul>
+						   <button type="button" class="btn btn-mini btn-primary answer-btn">Add another answer</button>
+						   <% } %>
+						</form>
+						<% } %>
+					</div>
+					
+					<% if (!editMode) { %>
+					<div class="widget-content">
+						<% if (tails) { %>
+						<ul class="feedback">
+							<% for (var i = 0; i < tails.length; i++) { %>
+								<% if (tails[i].text) { %>
+							<li><span><%=(i+1)%></span><span><%=tails[i].text%></span><div class="dragstart sprite sprite-ico-dragstart"></div></li>
+								<% } else { %>
+							<li><span>Recipients reply with their &nbsp;<br/>own text.</span><div class="dragstart sprite sprite-ico-dragstart"></div></li>
+								<% } %>
+							<% } %>
+						</ul>
+						<% } else { %>
+						<ul class="feedback end">
+							<li><span>Recipients can&rsquo;t answer.</span></li>
+							<li class="end"><span>Campaign ends</span><div class="end-box"></div></li>
+						</ul>
+						<% } %>
+					</div>
+					<% } %>
+				</script>
+				
+
+				<div class="row-fluid">
+                    <div class="span12 tool">
+                        <div class="wrapper">
+                            <section class="viewport">  
+                                <section class="stage">
+								
+									<div id="overlay"></div>
+								
+                                    <div id="connections" class="connections"></div>
+                                    
+                                    <!--Start Widgets-->
+                                    <div id="widgets" class="widgets"></div>
+                                    <!--End Widgets-->
+                                    
+                                    <div class="rows">
+                                    	<!--Add new Widget Button-->
+                                        <div class="sprite sprite-ico-add add-btn" style="left:670px; top:155px;"></div>
+                                    </div>
+                                </section>
+                            </section>  
+                        </div>
+                    </div>
+                </div>
+                <!----------------END TOOL--------------------->
+            </div>
+            <!----------------END CONTENT--------------------->
+            
+        </div>
+        <!----------------END MAIN CONTAINER--------------------->
+        <!----------------END MAIN CONTAINER--------------------->
+        
+        
+        <!----------------Includes--------------------->
+        <!--JQuery Base Includes-->
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script src="http://code.jquery.com/ui/1.10.1/jquery-ui.min.js"></script>
+        
+        <!--jsPlumb Library-->
+        <script src="../../js/lib/jquery.jsPlumb-1.3.16-all-min.js"></script>
+        
+        <!--Bootstrap Library-->
+        <script src="../../js/lib/bootstrap.min.js"></script>
+        
+        <!--Bootstrap Extensions-->
+        <script src="../../js/lib/bootstrap-select.min.js"></script>
+        <script src="../../js/lib/bootstrap-fileupload.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.widgets.min.js"></script>
+        <script src="../../js/lib/prettyCheckable.js"></script>
+ 
+        
+        <!--Main app.js file-->
+        <script src="../../js/tool.js"></script>
+
+        
+	</body>
+</html>

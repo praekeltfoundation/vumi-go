@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html><!-- InstanceBegin template="/Templates/Base.dwt" codeOutsideHTMLIsLocked="false" -->
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="../../css/bootstrap.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-responsive.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-select.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-fileupload.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-overrides.css" rel="stylesheet" media="screen">
+        <link href="../../css/prettyCheckable.css" rel="stylesheet" media="screen">
+        <link href="../../css/styles.css" rel="stylesheet" media="screen">
+        <link href="../../css/sprites.css" rel="stylesheet" media="screen">
+        <link rel="apple-touch-icon" href="../../img/ico/apple-touch-icon.png" />
+		<link rel="shortcut icon" type="image/x-icon" href="../../img/ico/favicon.ico" />
+		<link rel="icon" type="image/gif" href="../../img/ico/favicon.gif" />
+        <!-- InstanceBeginEditable name="doctitle" -->
+        <title>Base Vumi Go Template</title>
+        <!-- InstanceEndEditable -->
+    </head>
+	<body>
+        <!----------------MAIN CONTAINER--------------------->
+        <div class="container-fluid">
+            <!----------------NAVIGATION--------------------->
+            <ul class="nav nav-pills">
+              <li class="sprite sprite-ico-logo logo"></li>
+              <li><a href="#">Dashboard</a></li>
+              <li class="disabled"><a>Recipients</a></li>
+              <li><a href="#">Help</a></li>
+            </ul>
+            
+			<div class="right">            
+            <ul class="nav nav-pills">
+	            <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                        Balance
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Pricing</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                       <div class="avatar">
+                       </div>
+                       Account
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Switch account</a></li>
+                      <li><a href="#">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+            </div>
+            <!-- InstanceBeginEditable name="content" -->
+            <!----------------CONTENT--------------------->
+            <div class="content">
+                <div class="row-fluid">
+	                <!----------------TITLEBAR--------------------->
+                    <div class="span5 titlebar">
+						<h3>Dashboard</h3>
+                    </div>
+                    <!----------------TASKBAR--------------------->
+                    <div class="span7 taskbar">
+                    	<ul>
+                        </ul>
+                    </div>
+				</div>
+                <!----------------CONTROLS---------------->
+                <div class="row-fluid">
+                    <div class="span12 controls">
+                    	<div class="row-fluid">
+                        	<div class="span2 action-dash">
+                            	<button type="button" class="btn btn-primary">New campaign</button>
+                            </div>
+                            <div class="span10 dash-options">
+                            	<button type="button" class="btn disabled">Copy</button>
+                                <button type="button" class="btn disabled">Archive</button>
+                                <button type="button" class="btn disabled">Edit</button>
+                                <div class="right">
+                                <input type="text" placeholder="Filter campaigns...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!----------------VIEWPORT--------------------->
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="sidebar span2">
+                            <div class="inner">
+                            	<ul class="selected">
+                                	<p><span class="sprite sprite-ico-sortdown-on"></span>All campaigns (5)</p>
+                                	<li>Running smoothly (1)</li>
+                                    <li>Offline (1)</li>
+                                    <li>Some promblems(1)</li>
+                                    <li>Paused (1)</li>
+                                    <li>Drafts (1)</li>
+                                </ul>
+                                <div class="breaker"></div>
+                                <ul>
+                                	<p><span class="sprite sprite-ico-sortdown"></span>Archived campaigns (1)</p>
+                                </ul>
+                                <div class="breaker"></div>
+                                <ul>
+                                	<p><span class="sprite sprite-ico-sortdown"></span>All channels (5)</p>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="inbox span10">
+	                        <div class="inner">
+                            	<table class="table table-hover">
+                                          <thead>
+                                            <tr>
+                                              <th>Campaigns</th>
+                                              <th>Status</th>
+                                              <th class="channel">Channel</th>
+                                              <th class="interactions">Interactions</th>
+                                              <th class="in-last">In last</th>
+                                              <th class="last-edited">Last edited</th>
+                                              <th class="clear"></th>
+                                              <th class="clear"></th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            <tr>
+                                              <td class="td-campaign">
+                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Crowdsourcing Congo"/>
+                                              </td>
+                                              <td class="td-status"><p><span class="sprite sprite-ico-draft"></span>Draft</p></td>
+                                              <td class="td-channel"></td>
+                                              <td></td>
+                                              <td></td>
+                                              <td class="td-lastedit"><p>09:02 today</p></td>
+                                              <td class="td-message"><p><a href="#">Messages</a></p></td>
+                                              <td class="td-report"><p><a href="#">Report</a></p></td>
+                                            </tr>
+                                            <tr>
+                                              <td class="td-campaign"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Guinness Favourite Drinks"/></td>
+                                              <td class="td-status">
+                                              	<p><span class="sprite sprite-ico-offline"></span>Offline</p>
+                                                <p><span class="sprite sprite-ico-offline"></span>Offline</p>
+                                              </td>
+                                              <td class="td-channel"><p><span class="sprite flag sprite-flag-kenya"></span><strong>SMS longcode</strong> <i>on</i> <strong>Safaricom</strong></span></p>
+                                              <p><span class="sprite flag sprite-flag-kenya"></span><strong>SMS longcode</strong> <i>on</i> <strong>Safaricom</strong></p></td>
+                                              <td><p>134</p></td>
+                                              <td><p>24 hours</p></td>
+                                              <td class="td-lastedit"><p>08:57 yesterday</p></td>
+                                              <td class="td-message"><p><a href="#">Messages</a></p></td>
+                                              <td class="td-report"><p><a href="#">Report</a></p></td>
+                                            </tr>
+                                            <tr>
+                                              <td class="td-campaign"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Environmental Needs"/></td>
+                                              <td class="td-status">
+                                              	<p><span class="sprite sprite-ico-problem"></span><a href="#">Some problems</a></p>
+                                              </td>
+                                              <td class="td-channel"><p><span class="sprite flag sprite-flag-zambia"></span><strong>SMS</strong> <i>on</i> <strong>MTN</strong></p></td>
+                                              <td><p>134</p></td>
+                                              <td><p>12 hours</p></td>
+                                              <td class="td-lastedit"><p>08:52 yesterday</p></td>
+                                              <td class="td-message"><p><a href="#">Messages</a></p></td>
+                                              <td class="td-report"><p><a href="#">Report</a></p></td>
+                                            </tr>
+                                            <tr>
+                                              <td class="td-campaign"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Environmental Needs"/></td>
+                                              <td class="td-status">
+                                              	<p><span class="sprite sprite-ico-online"></span>Running smoothly</p>
+                                              </td>
+                                              <td class="td-channel"><p><span class="sprite flag sprite-flag-nigeria"></span><strong>USSD</strong> <i>on</i> <strong>Vodacom</strong></p></td>
+                                              <td><p>134</p></td>
+                                              <td><p>12 hours</p></td>
+                                              <td class="td-lastedit"><p>08:52 yesterday</p></td>
+                                              <td class="td-message"><p><a href="#">Messages</a></p></td>
+                                              <td class="td-report"><p><a href="#">Report</a></p></td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                        
+                                        
+                                        <div class="pages">
+                                        	<ul>
+                                            	<li><button type="button" class="btn btn-primary"><strong><</strong></button></li>
+                                                <li class="result-count"><strong>1-50</strong> of <strong>2495</strong></li>
+                                                <li><button type="button" class="btn btn-primary"><strong>></strong></button></li>
+                                            </ul>
+                                       </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            <!----------------END CONTENT--------------------->
+            <!-- InstanceEndEditable -->
+        </div>
+        <!----------------END MAIN CONTAINER--------------------->
+        
+        
+        <!----------------Includes--------------------->
+        <!--JQuery Base Includes-->
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script src="http://code.jquery.com/ui/1.10.1/jquery-ui.min.js"></script>
+        
+        <!--jsPlumb Library-->
+        <script src="../../js/lib/jquery.jsPlumb-1.3.16-all-min.js"></script>
+        
+        <!--Bootstrap Library-->
+        <script src="../../js/lib/bootstrap.min.js"></script>
+        
+        <!--Bootstrap Extensions-->
+        <script src="../../js/lib/bootstrap-select.min.js"></script>
+        <script src="../../js/lib/bootstrap-fileupload.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.widgets.min.js"></script>
+        <script src="../../js/lib/prettyCheckable.js"></script>
+        
+        
+        <!----------------Page Specific JS--------------------->
+        <!-- InstanceBeginEditable name="includes" -->
+        <!--JQuery Base Includes-->
+        <script type="text/javascript">
+		$(function() {
+
+		  $.extend($.tablesorter.themes.bootstrap, {
+			// these classes are added to the table. To see other table classes available,
+			// look here: http://twitter.github.com/bootstrap/base-css.html#tables
+			table      : 'table',
+			header     : 'bootstrap-header', // give the header a gradient background
+			footerRow  : '',
+			footerCells: '',
+			icons      : '', // add "icon-white" to make them white; this icon class is added to the <i> in the header
+			sortNone   : 'sprite sprite-ico-unsorted',
+			sortAsc    : 'sprite sprite-ico-sortdown',
+			sortDesc   : 'sprite sprite-ico-sortup',
+			active     : '', // applied when column is sorted
+			hover      : '', // use custom css here - bootstrap class may not override it
+			filterRow  : '', // filter row class
+			even       : '', // odd row zebra striping
+			odd        : ''  // even row zebra striping
+		  });
+		
+		  // call the tablesorter plugin and apply the uitheme widget
+		  $("table").tablesorter({
+			theme : "bootstrap", // this will 
+		
+			widthFixed: true,
+		
+			headerTemplate : '{content} {icon}', // new in v2.7. Needed to add the bootstrap icon!
+		
+			// widget code contained in the jquery.tablesorter.widgets.js file
+			// use the zebra stripe widget if you plan on hiding any rows (filter widget)
+			widgets : [ "uitheme", "zebra" ],
+		
+			widgetOptions : {
+			  // using the default zebra striping class name, so it actually isn't included in the theme variable above
+			  // this is ONLY needed for bootstrap theming if you are using the filter widget, because rows are hidden
+			  zebra : ["even", "odd"],
+		
+			  // reset filters button
+			  filter_reset : ".reset",
+		
+			  // set the uitheme widget to use the bootstrap theme class names
+			  // uitheme : "bootstrap"
+		
+			}
+		  })
+		  .tablesorterPager({
+		
+			// target the pager markup - see the HTML block below
+			container: $(".pager"),
+		
+			// target the pager page select dropdown - choose a page
+			cssGoto  : ".pagenum",
+		
+			// remove rows from the table to speed up the sort of large tables.
+			// setting this to false, only hides the non-visible rows; needed if you plan to add/remove rows with the pager enabled.
+			removeRows: false,
+		
+			// output string - default is '{page}/{totalPages}';
+			// possible variables: {page}, {totalPages}, {filteredPages}, {startRow}, {endRow}, {filteredRows} and {totalRows}
+			output: '{startRow} - {endRow} / {filteredRows} ({totalRows})'
+		
+		  });
+		
+		});
+		
+		
+		
+		
+		$('input.prettyCheck').prettyCheckable({
+	    	color: 'red'
+		});
+
+		
+		</script>
+        <!-- InstanceEndEditable -->
+        
+	</body>
+<!-- InstanceEnd --></html>

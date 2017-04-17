@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html><!-- InstanceBegin template="/Templates/Base.dwt" codeOutsideHTMLIsLocked="false" -->
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="../../css/bootstrap.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-responsive.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-select.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-fileupload.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-overrides.css" rel="stylesheet" media="screen">
+        <link href="../../css/prettyCheckable.css" rel="stylesheet" media="screen">
+        <link href="../../css/styles.css" rel="stylesheet" media="screen">
+        <link href="../../css/sprites.css" rel="stylesheet" media="screen">
+        <link rel="apple-touch-icon" href="../../img/ico/apple-touch-icon.png" />
+		<link rel="shortcut icon" type="image/x-icon" href="../../img/ico/favicon.ico" />
+		<link rel="icon" type="image/gif" href="../../img/ico/favicon.gif" />
+        <!-- InstanceBeginEditable name="doctitle" -->
+        <title>Base Vumi Go Template</title>
+        <!-- InstanceEndEditable -->
+    </head>
+	<body>
+        <!----------------MAIN CONTAINER--------------------->
+        <div class="container-fluid">
+            <!----------------NAVIGATION--------------------->
+            <ul class="nav nav-pills">
+              <li class="sprite sprite-ico-logo logo"></li>
+              <li><a href="#">Dashboard</a></li>
+              <li class="disabled"><a>Recipients</a></li>
+              <li><a href="#">Help</a></li>
+            </ul>
+            
+			<div class="right">            
+            <ul class="nav nav-pills">
+	            <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                        Balance
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Pricing</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                       <div class="avatar">
+                       </div>
+                       Account
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Switch account</a></li>
+                      <li><a href="#">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+            </div>
+            <!-- InstanceBeginEditable name="content" -->
+            <!----------------CONTENT--------------------->
+            <div class="content">
+                <div class="row-fluid">
+	                <!----------------TITLEBAR--------------------->
+                    <div class="span5 titlebar">
+						<h3>Guiness Favourite Drinks</h3>
+                    </div>
+                    <!----------------TASKBAR--------------------->
+                    <div class="span7 taskbar">
+                    	<ul>
+                            <li class="unfocus"><div class="sprite sprite-ico-unfocus"></div>Preview & Activate</li>
+                            <li class="focus"><div class="sprite sprite-ico-focus"></div>Recipients</li>
+                            <li class="complete"><div class="sprite sprite-ico-complete"></div>Messages</li>
+                            <li class="complete"><div class="sprite sprite-ico-complete"></div>Details</li>
+                        </ul>
+                    </div>
+				</div>
+                <!----------------CONTROLS---------------->
+                <div class="row-fluid">
+                    <div class="span12 controls">
+                    	<!----------------ACTION BAR---------------->
+                        <div class="span12">
+                            <!----------------OPTIONS BAR---------------->
+                            <div class="options right">
+                                <button type="button" class="btn btn-link">Cancel</button>
+                                <button type="button" class="btn btn-primary">Save draft</button>
+                                <button type="button" class="btn btn-primary point-right">Next step</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!----------------VIEWPORT--------------------->
+                <div class="row-fluid">
+                    <div class="span12 content-inner">
+                        <div class="row-fluid">
+                        	<div class="span12 module">
+                            	<h3>Upload recipients</h3>
+                                <p>We support importing CSV files from Outlook, Outlook Express, Yahoo! Mail, Hotmal, Eudora and some other apps. <a href="">Learn more</a></p>
+                                
+                                <!--- Styled File uploader widget---->
+                                <p class="text-error hidden">Error handling message here</p>
+                                <div class="fileupload fileupload-new" data-provides="fileupload">
+                                  <div class="input-append">
+                                    <div class="uneditable-input span3"><i class="icon-file fileupload-exists"></i> <span class="fileupload-preview"></span></div><span class="btn btn-file"><span class="fileupload-new">Select .csv file</span><span class="fileupload-exists">Change</span><input type="file" /></span><a href="#" class="btn fileupload-exists" data-dismiss="fileupload">Remove</a>
+                                  </div>
+                                </div>
+                                
+                                <p>Which group would you like to create or to add?</p>
+                                <input type="text" placeholder="Enter group name…" data-provide="typeahead" data-items="4" data-source='["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Dakota","North Carolina","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"]'>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            <!----------------END CONTENT--------------------->
+            <!-- InstanceEndEditable -->
+        </div>
+        <!----------------END MAIN CONTAINER--------------------->
+        
+        
+        <!----------------Includes--------------------->
+        <!--JQuery Base Includes-->
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script src="http://code.jquery.com/ui/1.10.1/jquery-ui.min.js"></script>
+        
+        <!--jsPlumb Library-->
+        <script src="../../js/lib/jquery.jsPlumb-1.3.16-all-min.js"></script>
+        
+        <!--Bootstrap Library-->
+        <script src="../../js/lib/bootstrap.min.js"></script>
+        
+        <!--Bootstrap Extensions-->
+        <script src="../../js/lib/bootstrap-select.min.js"></script>
+        <script src="../../js/lib/bootstrap-fileupload.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.widgets.min.js"></script>
+        <script src="../../js/lib/prettyCheckable.js"></script>
+        
+        
+        <!----------------Page Specific JS--------------------->
+        <!-- InstanceBeginEditable name="includes" -->
+        <script type="text/javascript">
+			$('.typeahead').typeahead()
+		</script>
+        <!-- InstanceEndEditable -->
+        
+	</body>
+<!-- InstanceEnd --></html>

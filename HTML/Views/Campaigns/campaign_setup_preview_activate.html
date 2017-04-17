@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html><!-- InstanceBegin template="/Templates/Base.dwt" codeOutsideHTMLIsLocked="false" -->
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="../../css/bootstrap.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-responsive.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-select.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-fileupload.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-overrides.css" rel="stylesheet" media="screen">
+        <link href="../../css/prettyCheckable.css" rel="stylesheet" media="screen">
+        <link href="../../css/styles.css" rel="stylesheet" media="screen">
+        <link href="../../css/sprites.css" rel="stylesheet" media="screen">
+        <link rel="apple-touch-icon" href="../../img/ico/apple-touch-icon.png" />
+		<link rel="shortcut icon" type="image/x-icon" href="../../img/ico/favicon.ico" />
+		<link rel="icon" type="image/gif" href="../../img/ico/favicon.gif" />
+        <!-- InstanceBeginEditable name="doctitle" -->
+        <link href="../../css/tool.css" rel="stylesheet" media="screen">
+        <title>Base Vumi Go Template</title>
+        <!-- InstanceEndEditable -->
+    </head>
+	<body>
+        <!----------------MAIN CONTAINER--------------------->
+        <div class="container-fluid">
+            <!----------------NAVIGATION--------------------->
+            <ul class="nav nav-pills">
+              <li class="sprite sprite-ico-logo logo"></li>
+              <li><a href="#">Dashboard</a></li>
+              <li class="disabled"><a>Recipients</a></li>
+              <li><a href="#">Help</a></li>
+            </ul>
+            
+			<div class="right">            
+            <ul class="nav nav-pills">
+	            <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                        Balance
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Pricing</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                       <div class="avatar">
+                       </div>
+                       Account
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Switch account</a></li>
+                      <li><a href="#">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+            </div>
+            <!-- InstanceBeginEditable name="content" -->
+            <!----------------CONTENT--------------------->
+            <div class="content">
+                <div class="row-fluid">
+	                <!----------------TITLEBAR--------------------->
+                    <div class="span5 titlebar">
+						<h3>Campaign name</h3>
+                    </div>
+                    <!----------------TASKBAR--------------------->
+                    <div class="span7 taskbar">
+                    	<ul>
+                            <li class="focus"><div class="sprite sprite-ico-focus"></div>Preview & Activate</li>
+                            <li class="complete"><div class="sprite sprite-ico-complete"></div>Recipients</li>
+                            <li class="complete"><div class="sprite sprite-ico-complete"></div>Messages</li>
+                            <li class="complete"><div class="sprite sprite-ico-complete"></div>Details</li>
+                        </ul>
+                    </div>
+				</div>
+                <!----------------CONTROLS---------------->
+                <div class="row-fluid">
+                    <div class="span12 controls">
+                    	<!----------------ACTION BAR---------------->
+                        <div class="span12">
+                            <!----------------OPTIONS BAR---------------->
+                            <div class="options right">
+                                <button type="button" class="btn btn-link">Cancel</button>
+                                <button type="button" class="btn btn-primary point-right">Start</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!----------------VIEWPORT--------------------->
+                <div class="row-fluid">
+                    <div class="span12 content-inner">
+                        <div class="row-fluid">
+                        	<div class="span12 module">
+                            
+                            <div class="row-fluid">
+                            <!--Start Details-->
+                            <div class="details span8">
+                            	<h3>Details <button type="button" class="btn btn-primary btn-mini">Edit</button></h3>
+                                
+	                                <span class="title">Title</span>
+    	                            <h4>Guiness Favourite Drinks</h4>
+                                    <span class="title">Type</span>
+    	                            <h4>Interactive conversation</h4>
+                                    <span class="title">Channels</span>
+                                    
+
+                               <div class="boxes">
+                                    
+                                    <div class="row-fluid">
+	                               		<div class="box span3 master-small">
+                                        	<div class="campign-title">Kenya
+                                                </div>
+                                        </div>
+                                        <div class="boxset span3">
+                                        	<div class="box span12">
+                                                <span>SMS - 12345</span>
+	                                       </div>
+                                           <div class="row-fluid">
+                                               <div class="box span12">
+                                                    <span>USSD - *120*8864*1234#</span>
+                                               </div>
+                                           </div>
+                                       </div>
+                                       
+                                       
+                                       <div class="box span3">
+                                            <span>Keyword:</span> <small>Drinks</small>
+                                       </div>
+   
+                                    </div> 
+                               </div>
+                               <div class="row-fluid">
+	                               <div class="breaker"></div>  
+                               </div>
+                               <h3>Messages <button type="button" class="btn btn-primary btn-mini">Edit</button></h3> 
+                               <div class="">
+                                   <div class="widget">
+                                    <div class="header"><span>Message 1</span>
+                                    </div>
+    
+                                    <div class="widget-inner">
+                                    <div class="caption">What is your favourite drink?</div>
+                                    </div>
+                                    <div class="widget-content">
+                                    <ul class="feedback">
+                                    <div class="more-messages"><a href="">See more messages</a></div>
+                                    <li><span>1</span><span>Tea</span><div class="dragstart sprite sprite-msg-fade"></div></li>                                	<li><span>2</span><span>Coffee</span><div class="dragstart sprite sprite-msg-fade"></div></li>
+                                    <li><span>3</span><span>Gin</span><div class="dragstart sprite sprite-msg-fade"></div></li>
+                                    </ul>
+                                    </div>
+                                    </div>
+                                </div>
+                               
+                               <br/>
+                               <div class="row-fluid">
+	                               <div class="breaker"></div>  
+                               </div>
+                               <h3>Recipients <button type="button" class="btn btn-primary btn-mini">Edit</button></h3>
+                               <span class="title">Groups</span>
+    	                       <h4>First Upload (368)</h4>
+                               </div>
+                               <!--End Details-->
+                               <!--Start Preview-->
+                               <div class="cost span4">
+                               		<h3>Cost</h3>
+                                    <h4 class="text-success">330 credits at .03 cents per credit</h4>
+                                    <br/>
+                                    <h3 class="no-margin">Preview</h3>
+                                    <p>This is what your recipient will see on their phone</p>
+                                    <!--Start phone-->
+                                    <div class="phone">
+                                    	<div class="speaker"></div>
+                                        <div class="inner">
+                                            <div class="titlebar">
+                                                <div class="left">Message 1</div>
+												<div class="right"><button type="button" class="btn btn-primary btn-mini">Edit</button></div>
+                                            </div>
+                                            <div class="screen">
+                                            	<p>What is your favourite drink?</p>
+                                                <p>1 = Tea</p>
+                                                <p>2 = Coffee</p>
+                                                <p>3 = Gin</p>
+                                            </div>
+                                            <div class="left">
+                                            	<button type="button" class="btn btn-large btn-danger">Cancel</button>
+                                            </div>
+                                            <div class="right">
+                                            	<button type="button" class="btn btn-large btn-success">Send</button>
+                                            </div>
+                                            <div class="sprite sprite-phone-button">
+                                            </div>
+                                            <div class="keypad">
+                                            	<button type="button" class="btn btn-large">1</button>
+                                                <button type="button" class="btn btn-large">2 a b c</button>
+                                                <button type="button" class="btn btn-large">3 d e f</button>
+                                                <button type="button" class="btn btn-large">4 g h i</button>
+                                                <button type="button" class="btn btn-large">5 j k l</button>
+                                                <button type="button" class="btn btn-large">6 m n o</button>
+                                                <button type="button" class="btn btn-large">7 p q r s</button>
+                                                <button type="button" class="btn btn-large">8 t u v</button>
+                                                <button type="button" class="btn btn-large">9 w x y z</button>
+                                                <button type="button" class="btn btn-large">*</button>
+                                                <button type="button" class="btn btn-large">0 +</button>
+                                                <button type="button" class="btn btn-large">#</button>
+                                            </div>
+                                        </div>
+                                        <div class="mic"></div>
+                                    </div>
+                                    <!--End phone-->
+                               </div>
+                               <!--End Preview-->
+                               </div>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            <!----------------END CONTENT--------------------->
+            <!-- InstanceEndEditable -->
+        </div>
+        <!----------------END MAIN CONTAINER--------------------->
+        
+        
+        <!----------------Includes--------------------->
+        <!--JQuery Base Includes-->
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script src="http://code.jquery.com/ui/1.10.1/jquery-ui.min.js"></script>
+        
+        <!--jsPlumb Library-->
+        <script src="../../js/lib/jquery.jsPlumb-1.3.16-all-min.js"></script>
+        
+        <!--Bootstrap Library-->
+        <script src="../../js/lib/bootstrap.min.js"></script>
+        
+        <!--Bootstrap Extensions-->
+        <script src="../../js/lib/bootstrap-select.min.js"></script>
+        <script src="../../js/lib/bootstrap-fileupload.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.widgets.min.js"></script>
+        <script src="../../js/lib/prettyCheckable.js"></script>
+        
+        
+        <!----------------Page Specific JS--------------------->
+        <!-- InstanceBeginEditable name="includes" -->
+        <script type="text/javascript">
+			$('.selectpicker').selectpicker();
+		</script>
+        <!--JQuery Base Includes-->
+        <!-- InstanceEndEditable -->
+        
+	</body>
+<!-- InstanceEnd --></html>

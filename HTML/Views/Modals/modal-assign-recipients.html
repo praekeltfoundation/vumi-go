@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html><!-- InstanceBegin template="/Templates/Base.dwt" codeOutsideHTMLIsLocked="false" -->
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="../../css/bootstrap.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-responsive.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-select.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-fileupload.css" rel="stylesheet" media="screen">
+        <link href="../../css/bootstrap-overrides.css" rel="stylesheet" media="screen">
+        <link href="../../css/prettyCheckable.css" rel="stylesheet" media="screen">
+        <link href="../../css/styles.css" rel="stylesheet" media="screen">
+        <link href="../../css/sprites.css" rel="stylesheet" media="screen">
+        <link rel="apple-touch-icon" href="../../img/ico/apple-touch-icon.png" />
+		<link rel="shortcut icon" type="image/x-icon" href="../../img/ico/favicon.ico" />
+		<link rel="icon" type="image/gif" href="../../img/ico/favicon.gif" />
+        <!-- InstanceBeginEditable name="doctitle" -->
+        <title>Base Vumi Go Template</title>
+        <!-- InstanceEndEditable -->
+    </head>
+	<body>
+        <!----------------MAIN CONTAINER--------------------->
+        <div class="container-fluid">
+            <!----------------NAVIGATION--------------------->
+            <ul class="nav nav-pills">
+              <li class="sprite sprite-ico-logo logo"></li>
+              <li><a href="#">Dashboard</a></li>
+              <li class="disabled"><a>Recipients</a></li>
+              <li><a href="#">Help</a></li>
+            </ul>
+            
+			<div class="right">            
+            <ul class="nav nav-pills">
+	            <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                        Balance
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Pricing</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                       <div class="avatar">
+                       </div>
+                       Account
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Switch account</a></li>
+                      <li><a href="#">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+            </div>
+            <!-- InstanceBeginEditable name="content" -->
+            <!----------------CONTENT--------------------->
+            <div class="content">
+                <div class="row-fluid">
+	                <!----------------TITLEBAR--------------------->
+                    <div class="span5 titlebar">
+						<h3>Guinness Favourite Drinks</h3>
+                    </div>
+                    <!----------------TASKBAR--------------------->
+                    <div class="span7 taskbar">
+                    	<ul>
+                            <li class="complete"><div class="sprite sprite-ico-complete"></div>Preview & Activate</li>
+                            <li class="complete"><div class="sprite sprite-ico-complete"></div>Recipients</li>
+                            <li class="complete"><div class="sprite sprite-ico-complete"></div>Messages</li>
+                            <li class="focus"><div class="sprite sprite-ico-focus"></div>Details</li>
+                        </ul>
+                    </div>
+				</div>
+                <!----------------CONTROLS---------------->
+                <div class="row-fluid">
+                    <div class="span12 controls">
+                    	<!----------------ACTION BAR---------------->
+                        <div class="span12">
+                            <!----------------OPTIONS BAR---------------->
+                            <div class="options right">
+                                <button type="button" class="btn btn-link">Cancel</button>
+                                <button type="button" class="btn btn-primary">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!----------------VIEWPORT--------------------->
+                <div class="row-fluid">
+                    <div class="span12 content-inner">
+                        <div class="row-fluid">
+                        	<!-- Button to trigger modal -->
+                            <a href="#myModal" role="button" class="btn" data-toggle="modal">Launch modal</a>
+                            
+                             
+                            <!-- Modal -->
+                            <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                            
+                            <div class="modal-header">
+                            	<h3>Assign to group</h3>
+                            </div>
+                            
+                              <div class="modal-body">
+                              
+                                <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Group 1"/>
+                                <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Group 2"/>
+                                <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Group 3"/>
+                                <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Group 4"/>
+                                <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Group 5"/>
+                                <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Group 6"/>
+                                <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Group 7"/>
+                                <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Group 8"/>
+                              </div>
+                              <div class="modal-footer">
+                                <button class="btn btn-link" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                                <button class="btn btn-primary">Assign groups</button>
+                              </div>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            <!----------------END CONTENT--------------------->
+            <!-- InstanceEndEditable -->
+        </div>
+        <!----------------END MAIN CONTAINER--------------------->
+        
+        
+        <!----------------Includes--------------------->
+        <!--JQuery Base Includes-->
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script src="http://code.jquery.com/ui/1.10.1/jquery-ui.min.js"></script>
+        
+        <!--jsPlumb Library-->
+        <script src="../../js/lib/jquery.jsPlumb-1.3.16-all-min.js"></script>
+        
+        <!--Bootstrap Library-->
+        <script src="../../js/lib/bootstrap.min.js"></script>
+        
+        <!--Bootstrap Extensions-->
+        <script src="../../js/lib/bootstrap-select.min.js"></script>
+        <script src="../../js/lib/bootstrap-fileupload.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.min.js"></script>
+        <script src="../../js/lib/jquery.tablesorter.widgets.min.js"></script>
+        <script src="../../js/lib/prettyCheckable.js"></script>
+        
+        
+        <!----------------Page Specific JS--------------------->
+        <!-- InstanceBeginEditable name="includes" -->
+        <script type="text/javascript">
+			$('input.prettyCheck').prettyCheckable({
+		    	color: 'red'
+			});
+		</script>
+        <!--JQuery Base Includes-->
+        <!-- InstanceEndEditable -->
+        
+	</body>
+<!-- InstanceEnd --></html>

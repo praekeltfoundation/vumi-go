@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html><!-- InstanceBegin template="/Templates/Base.dwt" codeOutsideHTMLIsLocked="false" -->
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="css/bootstrap.css" rel="stylesheet" media="screen">
+        <link href="css/bootstrap-responsive.css" rel="stylesheet" media="screen">
+        <link href="css/bootstrap-select.css" rel="stylesheet" media="screen">
+        <link href="css/bootstrap-fileupload.css" rel="stylesheet" media="screen">
+        <link href="css/bootstrap-overrides.css" rel="stylesheet" media="screen">
+        <link href="css/prettyCheckable.css" rel="stylesheet" media="screen">
+        <link href="css/styles.css" rel="stylesheet" media="screen">
+        <link href="css/sprites.css" rel="stylesheet" media="screen">
+        <link rel="apple-touch-icon" href="img/ico/apple-touch-icon.png" />
+		<link rel="shortcut icon" type="image/x-icon" href="img/ico/favicon.ico" />
+		<link rel="icon" type="image/gif" href="img/ico/favicon.gif" />
+        <!-- InstanceBeginEditable name="doctitle" -->
+        <title>Base Vumi Go Template</title>
+        <!-- InstanceEndEditable -->
+    </head>
+	<body>
+        <!----------------MAIN CONTAINER--------------------->
+        <div class="container-fluid">
+            <!----------------NAVIGATION--------------------->
+            <ul class="nav nav-pills">
+              <li class="sprite sprite-ico-logo logo"></li>
+              <li><a href="#">Dashboard</a></li>
+              <li class="disabled"><a>Recipients</a></li>
+              <li><a href="#">Help</a></li>
+            </ul>
+            
+			<div class="right">            
+            <ul class="nav nav-pills">
+	            <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                        Balance
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Pricing</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       href="#">
+                       <div class="avatar">
+                       </div>
+                       Account
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                      <!-- links -->
+                      <li><a href="#">Switch account</a></li>
+                      <li><a href="#">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+            </div>
+            <!-- InstanceBeginEditable name="content" -->
+            <!----------------CONTENT--------------------->
+            <div class="content">
+                <div class="row-fluid">
+	                <!----------------TITLEBAR--------------------->
+                    <div class="span5 titlebar">
+						<h3>TitleBar</h3>
+                    </div>
+                    <!----------------TASKBAR--------------------->
+                    <div class="span7 taskbar">
+                    	<ul>
+                        	<li>TaskBar</li>
+                            <li>TaskBar</li>
+                            <li>TaskBar</li>
+                        </ul>
+                    </div>
+				</div>
+                <!----------------CONTROLS---------------->
+                <div class="row-fluid">
+                    <div class="span12 controls">
+                    	<!----------------ACTION BAR---------------->
+                        <div class="span6">
+                        	<div class="action">
+                            	<button type="button" class="btn btn-primary">Action Button</button>
+                            </div>
+                        </div>
+                        <!----------------OPTIONS BAR---------------->
+                        <div class="span6">
+                        	<div class="options right">
+                                <button type="button" class="btn btn-primary">Options</button>
+                                <button type="button" class="btn btn-primary">Options</button>
+                                <button type="button" class="btn btn-primary">Options</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!----------------VIEWPORT--------------------->
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="row-fluid">
+                        	<div class="span12">
+                            	<h1 style="text-align:center;">ViewPort Area</h1>
+                                <h3 style="text-align:center;">HTML Pages</h3>
+                                <div class="row-fluid">
+                                	<div class="span3 module">
+                                        <h3>Campaigns</h3>
+                                        <p><a href="Views/Campaigns/campaign_report.html"><button class="btn btn-success">Campaign Reports</button></a></p>
+                                        <h4>Campaign Setup</h4>
+                                        <p><a href="Views/Campaigns/campaign_setup_details.html"><button class="btn btn-success">Details (Prklt)</button></a></p>
+                                        <p><a href="Views/Campaigns/campaign_setup_messages_sms.html"><button class="btn btn-success">Messages SMS</button></a></p>
+                                        <p><a href="Views/Campaigns/campaign_setup_recipients_new.html"><button class="btn btn-success">Recipients New</button></a></p>
+                                        <p><a href="Views/Campaigns/campaign_setup_recipients_existing.html"><button class="btn btn-success">Recipients Existing</button></a></p>
+                                        <p><a href="Views/Campaigns/campaign_setup_preview_activate.html"><button class="btn btn-success">Preview and Activate (Prklt)</button></a></p>
+                                        <h4>Campaign Edit</h4>
+                                        <p><a href="Views/Campaigns/campaign_edit_details.html"><button class="btn btn-success">Edit Details (Prklt)</button></a></p>
+                                        <p><a href="Views/Campaigns/campaign_edit_recipients_existing.html"><button class="btn btn-success">Edit Recipients Existing</button></a></p>
+                                        
+                                        <h3>Conversation Builder Tool</h3>
+                                        <p><a href="Views/Tool/index.html"><button class="btn btn-info">Conversation Builder Tool</button></a></p>
+                                        
+                                    </div>
+                                    <div class="span3 module">
+										<h3>Dashboard</h3>
+                                        <p><a href="Views/Dashboard/dashboard_regular.html"><button class="btn btn-success">Dashboard - Regular</button></a></p>
+                                        <p><a href="Views/Dashboard/dashboard_channels.html"><button class="btn btn-success">Dashboard - Channels</button></a></p>
+                                        <h3>Messages</h3>
+                                        <p><a href="Views/Messages/messages-dashboard.html"><button class="btn btn-success">Messages - Dashboard</button></a></p>
+                                        <p><a href="Views/Messages/message-thread.html"><button class="btn btn-success">Message Thread</button></a></p>
+                                        <h3>Recipients</h3>
+                                        <p><a href="Views/Recipients/recipients_all.html"><button class="btn btn-success">Recipients - All</button></a></p>
+                                        <p><a href="Views/Recipients/recipients_details.html"><button class="btn btn-success">Recipients - Details</button></a></p>
+                                        <p><a href="Views/Recipients/recipients_results.html"><button class="btn btn-success">Recipients Results</button></a></p>
+                                        <p><a href="Views/Recipients/recipients_group_view.html"><button class="btn btn-success">Group View</button></a></p>
+                                        <p><a href="Views/Recipients/recipients_groups_listing.html"><button class="btn btn-success">Groups Listing</button></a></p>
+                                        <h3>Account</h3>
+                                        <p><a href="Views/Account/account_details.html"><button class="btn btn-success">Account - Details</button></a></p>
+                                        <p><a href="Views/Account/account_statements.html"><button class="btn btn-success">Account - Statements</button></a></p>
+                                        <p><a href="Views/Account/account_users.html"><button class="btn btn-success">Account - Users</button></a></p>
+                                        <h3>Pricing</h3>
+                                        <p><a href="Views/Pricing/pricing.html"><button class="btn btn-success">Pricing</button></a></p>
+                                    </div>
+                                    <div class="span3 module">
+
+                                        <h3>Modals</h3>
+                                        <h4>Account</h4>
+                                        <p><a href="Views/Modals/modal-account-edit-details.html"><button class="btn btn-success">Edit Personal Details</button></a></p>
+                                        <p><a href="Views/Modals/modal-account-change-password.html"><button class="btn btn-success">Change Password</button></a></p>
+                                        <p><a href="Views/Modals/modal-account-permissions.html"><button class="btn btn-success">Permissions Layover</button></a></p>
+                                        <h4>Campaign Setup</h4>
+                                        <p><a href="Views/Modals/modal-initiate-campaign-intent.html"><button class="btn btn-success">Initiate campaign intent</button></a></p>
+                                        <h4>Campaign Report</h4>
+                                        <p><a href="Views/Modals/modal-choose-metrics.html"><button class="btn btn-success">Choose metrics to show</button></a></p>
+                                        <h4>Campaign Details</h4>
+                                        <p><a href="Views/Modals/modal-disconnect-channel.html"><button class="btn btn-success">Disconnect channel</button></a></p>
+                                        <h4>Recipient Setup</h4>
+                                        <p><a href="Views/Modals/modal-import-recipients.html"><button class="btn btn-success">Import Recipients to Group</button></a></p>
+                                        <p><a href="Views/Modals/modal-assign-recipients.html"><button class="btn btn-success">Assign Recipients to Group</button></a></p>
+                                    </div>
+                                    <div class="span3 module">
+	                                    <h3>Developer Resources</h3>
+										<h4>External JS Components Used</h4>
+                                        <p><a href="http://silviomoreto.github.com/bootstrap-select/" target="_blank"><button class="btn btn-info">Bootstrap Select</button></a></p>
+                                        <p><a href="http://jasny.github.com/bootstrap/javascript.html#fileupload" target="_blank"><button class="btn btn-info">Jasny File Upload</button></a></p>
+                                        <p><a href="http://mottie.github.com/tablesorter/docs/example-widget-bootstrap-theme.html" target="_blank"><button class="btn btn-info">Table Sorter</button></a></p>
+                                        <p><a href="http://arthurgouveia.com/prettyCheckable/" target="_blank"><button class="btn btn-info">prettyCheckable (Checkboxes)</button></a></p>
+                                        <h4>Sprite Sheet Generator</h4>
+                                        <p><a href="http://draeton.github.com/stitches/" target="_blank"><button class="btn btn-inverse">Stitches</button></a></p>
+                                        
+                                        <h4>Great Bootstrap Resources</h4>
+                                        <p><a href="http://jasny.github.com/bootstrap/index.html" target="_blank"><button class="btn btn-inverse">Jasny Bootstrap Fork</button></a></p>
+                                        <p><a href="http://bootsnipp.com/resources" target="_blank"><button class="btn btn-inverse">Bootsnip: Bootstrap Resources </button></a></p>
+                                        <p><a href="http://bootstraphero.com/the-big-badass-list-of-twitter-bootstrap-resources" target="_blank"><button class="btn btn-inverse">Bootsraphero: Maore Bootstrap Resources </button></a></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+            </div>
+            <!----------------END CONTENT--------------------->
+            <!-- InstanceEndEditable -->
+        </div>
+        <!----------------END MAIN CONTAINER--------------------->
+        
+        
+        <!----------------Includes--------------------->
+        <!--JQuery Base Includes-->
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script src="http://code.jquery.com/ui/1.10.1/jquery-ui.min.js"></script>
+        
+        <!--jsPlumb Library-->
+        <script src="js/lib/jquery.jsPlumb-1.3.16-all-min.js"></script>
+        
+        <!--Bootstrap Library-->
+        <script src="js/lib/bootstrap.min.js"></script>
+        
+        <!--Bootstrap Extensions-->
+        <script src="js/lib/bootstrap-select.min.js"></script>
+        <script src="js/lib/bootstrap-fileupload.min.js"></script>
+        <script src="js/lib/jquery.tablesorter.min.js"></script>
+        <script src="js/lib/jquery.tablesorter.widgets.min.js"></script>
+        <script src="js/lib/prettyCheckable.js"></script>
+        
+        
+        <!----------------Page Specific JS--------------------->
+        <!-- InstanceBeginEditable name="includes" -->
+        <!-- InstanceEndEditable -->
+        
+	</body>
+<!-- InstanceEnd --></html>

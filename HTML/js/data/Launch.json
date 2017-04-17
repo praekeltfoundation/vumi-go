@@ -1,0 +1,23 @@
+{
+  "widgets": {
+    "widget": [
+      {
+		"id": "",
+        "x": "0",
+        "y": "0",
+		"type": "ussd",
+		"options": "",
+		"from": "start",
+		"to": "w1"
+      },
+      {
+        "x": "1",
+        "y": "0",
+		"type": "ussd",
+		"options": "",
+		"from": "w1",
+		"to": ""
+      }
+    ]
+  }
+}

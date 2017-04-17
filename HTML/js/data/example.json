@@ -1,0 +1,31 @@
+{
+    "nodes": [{
+            "id": 123,
+            "position": [0, 0],
+            "message": "Are you sure?",
+            "tails": [{
+                    "node_id": 48,
+                    "text": "Yes"
+                }, {
+                    "node_id": 99,
+                    "text": "Yes maybe"
+                }
+            ]
+        }, {
+            "id": 99,
+            "position": [1, 0],
+            "message": "How sure?",
+            "tails": [{
+                    "node_id": 48,
+                    "text": null
+                }
+            ]
+        }, {
+            "id": 48,
+            "position": [1, 1],
+            "type": "message",
+            "message": "Thank you for being sure.",
+            "tails": null
+        }
+    ]
+}
